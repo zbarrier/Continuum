@@ -1,0 +1,92 @@
+﻿using System.Threading.Tasks;
+using Xunit;
+
+namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
+{
+    public class MapTryTests_Task_Right : MapTryTestsBase
+    {        
+        #region MapTry for Result with function returning Task<K>
+        [Fact]
+        public async Task MapTry_execute_task_func_K_on_success_returns_success()
+        {
+            Result sut = Result.Success();
+
+            Result<K> result = await sut.MapTry(Task_Func_K);
+
+            AssertSuccess(result);
+        }
+
+        [Fact]
+        public async Task MapTry_execute_task_func_K_on_failure_returns_failure()
+        {
+            Result sut = Result.Failure(ErrorMessage);
+
+            Result<K> result = await sut.MapTry(Task_Func_K);
+
+            AssertFailure(result);
+        }
+
+        [Fact]
+        public async Task MapTry_execute_throwing_task_func_K_on_success_returns_failure_with_exception_message()
+        {
+            Result sut = Result.Success();
+
+            Result<K> result = await sut.MapTry(Task_Throwing_K);
+
+            AssertFailureFromDefaultHandler(result);
+        }
+
+        [Fact]
+        public async Task MapTry_execute_throwing_task_func_K_on_success_with_custom_error_handler_returns_failure_with_custom_message()
+        {
+            Result sut = Result.Success();
+
+            Result<K> result = await sut.MapTry(Task_Throwing_K, ErrorHandler);
+
+            AssertFailureFromHandler(result);
+        }
+        #endregion
+
+        #region MapTry for Result<T> with function returning Task<K>
+        [Fact]
+        public async Task MapTry_execute_task_func_K_on_success_T_returns_success()
+        {
+            Result<T> sut = Result.Success(T.Value);
+
+            Result<K> result = await sut.MapTry(Task_Func_T_K);
+
+            AssertSuccess(result);
+        }
+
+        [Fact]
+        public async Task MapTry_execute_task_func_K_on_failure_T_returns_failure()
+        {
+            Result<T> sut = Result.Failure<T>(ErrorMessage);
+
+            Result<K> result = await sut.MapTry(Task_Func_T_K);
+
+            AssertFailure(result);
+        }
+
+        [Fact]
+        public async Task MapTry_execute_throwing_task_func_K_on_success_T_returns_failure_with_exception_message()
+        {
+            Result<T> sut = Result.Success(T.Value);
+
+            Result<K> result = await sut.MapTry(Task_Throwing_T_K);
+
+            AssertFailureFromDefaultHandler(result);
+        }
+
+        [Fact]
+        public async Task MapTry_execute_throwing_task_func_K_on_success_T_with_custom_error_handler_returns_failure_with_custom_message()
+        {
+            Result<T> sut = Result.Success(T.Value);
+
+            Result<K> result = await sut.MapTry(Task_Throwing_T_K, ErrorHandler);
+
+            AssertFailureFromHandler(result);
+        }
+        #endregion
+    }
+}
