@@ -12,7 +12,6 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
         protected readonly static Error ExceptionMessage = RequestErrors.NewUnknown("{0}", ErrorMessageString);
         protected readonly static Error ErrorMessage2 = RequestErrors.NewUnknown("{0}", ErrorMessageString2);
 
-        protected readonly static Error DomainError = new DomainError(ErrorPriorityCode.UNKNOWN, 100, "{0}", "My Domain Error.");
         protected readonly static Error RequestError = new RequestError(ErrorPriorityCode.UNKNOWN, 
             System.Net.HttpStatusCode.InternalServerError, Grpc.Core.StatusCode.Unknown, "{0}", "My Request Error.");
         protected readonly static Error ValidationError = new ValidationError(new List<ValidationErrorEntry>

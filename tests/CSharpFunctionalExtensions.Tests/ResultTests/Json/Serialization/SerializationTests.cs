@@ -44,20 +44,6 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
         }
 
         [Fact]
-        public void Result_Failure_DomainError()
-        {
-            // Assign
-            var originalResult = Result.Failure(DomainError);
-
-            // Act
-            var result = SerializeAndDeserialize(originalResult);
-
-            // Assert
-            result.IsSuccess.Should().Be(originalResult.IsSuccess);
-            result.Error.GetFormattedMessage().Should().Be(originalResult.Error.GetFormattedMessage());
-        }
-
-        [Fact]
         public void Result_Failure_RequestError()
         {
             // Assign
@@ -140,20 +126,6 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
         {
             // Assign
             var originalResult = Result.Failure<int>(ErrorMessage);
-
-            // Act
-            var result = SerializeAndDeserialize(originalResult);
-
-            // Assert
-            result.IsSuccess.Should().Be(originalResult.IsSuccess);
-            result.Error.GetFormattedMessage().Should().Be(originalResult.Error.GetFormattedMessage());
-        }
-
-        [Fact]
-        public void ResultOfT_Failure_DomainError()
-        {
-            // Assign
-            var originalResult = Result.Failure<int>(DomainError);
 
             // Act
             var result = SerializeAndDeserialize(originalResult);

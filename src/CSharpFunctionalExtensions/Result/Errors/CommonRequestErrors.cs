@@ -46,7 +46,7 @@ public static class RequestErrors
         new RequestError(ErrorPriorityCode.UNIMPLEMENTED, System.Net.HttpStatusCode.NotImplemented, Grpc.Core.StatusCode.Unimplemented, 
             format ?? "Not Implemented.", []);
     public static RequestError NewNotImplemented(string? format, params object[] arguments) =>
-        new RequestError(ErrorPriorityCode.NOT_FOUND, System.Net.HttpStatusCode.NotFound, Grpc.Core.StatusCode.NotFound, format, arguments);
+        new RequestError(ErrorPriorityCode.UNIMPLEMENTED, System.Net.HttpStatusCode.NotImplemented, Grpc.Core.StatusCode.Unimplemented, format, arguments);
 
     public static RequestError NewUnavailable(string? format) =>
         new RequestError(ErrorPriorityCode.UNAVAILABLE, System.Net.HttpStatusCode.ServiceUnavailable, Grpc.Core.StatusCode.Unavailable, format, []);

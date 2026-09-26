@@ -92,7 +92,6 @@ internal class ResultOfTJsonConverter<T> : JsonConverter<Result<T>>
 
                 Error? error = errorTypeDiscriminator switch
                 {
-                    ResultErrorTypeDiscriminator.DomainError => JsonSerializer.Deserialize<DomainError>(ref reader, options),
                     ResultErrorTypeDiscriminator.RequestError => JsonSerializer.Deserialize<RequestError>(ref reader, options),
                     ResultErrorTypeDiscriminator.ValidationError => JsonSerializer.Deserialize<ValidationError>(ref reader, options),
                     _ => throw new NotSupportedException("The derived error type is not supported. You will need to create a custom ResultJsonConverter. Use the ResultJsonConverter as an example.")
@@ -126,13 +125,7 @@ internal class ResultOfTJsonConverter<T> : JsonConverter<Result<T>>
         }
         else
         {
-            if (result.Error is DomainError domainError)
-            {
-                writer.WriteNumber("ErrorTypeDiscriminator", (int)ResultErrorTypeDiscriminator.DomainError);
-                writer.WritePropertyName("Error");
-                JsonSerializer.Serialize(writer, domainError, options);
-            }
-            else if (result.Error is RequestError requestError)
+            if (result.Error is RequestError requestError)
             {
                 writer.WriteNumber("ErrorTypeDiscriminator", (int)ResultErrorTypeDiscriminator.RequestError);
                 writer.WritePropertyName("Error");

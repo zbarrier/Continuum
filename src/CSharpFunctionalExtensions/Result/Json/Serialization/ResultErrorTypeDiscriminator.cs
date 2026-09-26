@@ -2,7 +2,6 @@
 
 internal enum ResultErrorTypeDiscriminator
 {
-    DomainError = 1,
+    ValidationError = 1,
     RequestError = 2,
-    ValidationError = 3,
 }
