@@ -4,8 +4,6 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public static partial class ResultExtensions
 {
-    const string MaxLengthError = "The length of '{0}' must be {1} characters or fewer.";
-
     /// <summary>
     ///     Ensure collection count is less than or equal to value.
     /// </summary>
@@ -13,9 +11,13 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        return result.Value.Count() > maxLength
-            ? Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, MaxLengthError, propertyName, maxLength))
-            : result;
+        var count = result.Value.Count();
+        if (count > maxLength)
+        {
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.MaxCount, ValidatorErrorStrings.MaxCount, propertyName, maxLength, count));
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -25,10 +27,11 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (result.Value.Count() > maxLength)
+        var count = result.Value.Count();
+        if (count > maxLength)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, MaxLengthError, propertyName, maxLength));
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.MaxCount, ValidatorErrorStrings.MaxCount, propertyName, maxLength, count));
         }
 
         return result;
@@ -41,11 +44,14 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        return result.Value.Length > maxLength
-            ? Result.Failure<string>(new ValidationError(propertyName, MaxLengthError, propertyName, maxLength))
-            : result;
-    }
+        var length = result.Value.Length;
+        if (length > maxLength)
+        {
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.MaxLength, ValidatorErrorStrings.MaxLength, propertyName, maxLength, length));
+        }
 
+        return result;
+    }
 
     /// <summary>
     ///     Ensure string length is less than or equal to value.
@@ -54,10 +60,11 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (result.Value.Length > maxLength)
+        var length = result.Value.Length;
+        if (length > maxLength)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, MaxLengthError, propertyName, maxLength));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.MaxLength, ValidatorErrorStrings.MaxLength, propertyName, maxLength, length));
         }
 
         return result;

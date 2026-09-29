@@ -1,4 +1,3 @@
-#if !NET40
 using System;
 using System.Threading.Tasks;
 
@@ -111,4 +110,3 @@ namespace Continuum.CSharpFunctionalExtensions
         }
     }
 }
-#endif

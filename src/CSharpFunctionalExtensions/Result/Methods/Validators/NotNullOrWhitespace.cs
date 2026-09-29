@@ -12,7 +12,7 @@ public partial struct Result
     public static Result<string> NotNullOrWhitespace(string? value, string propertyName)
     {
         if (string.IsNullOrWhiteSpace(value))
-            return Result.Failure<string>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(value);
     }
@@ -25,7 +25,7 @@ public partial struct Result
         if (string.IsNullOrWhiteSpace(value))
         {
             string propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
             
         return Result.Success(value);

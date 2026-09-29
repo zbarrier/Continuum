@@ -1,7 +1,28 @@
-﻿namespace Continuum.CSharpFunctionalExtensions;
+// Portions of this file are adapted from FluentValidation (https://github.com/FluentValidation/FluentValidation).
+// Copyright (c) .NET Foundation and contributors.
+// Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
+//
+// Modified: validation logic wrapped in Continuum Result/ValidationError types.
 
+namespace Continuum.CSharpFunctionalExtensions;
+
+/// <summary>
+///     Helpers shared by the scale/precision validators.
+/// </summary>
 public static class ScalePrecisionHelpers
 {
+    /// <summary>
+    ///     Validates the requested scale/precision and calculates the actual scale, precision, and integer digit counts of <paramref name="value"/>.
+    /// </summary>
+    /// <param name="value">The decimal value to inspect.</param>
+    /// <param name="scale">The maximum allowed number of digits after the decimal point.</param>
+    /// <param name="precision">The maximum allowed total number of digits.</param>
+    /// <param name="ignoreTrailingZeroes">Whether trailing zeroes after the decimal point are ignored.</param>
+    /// <param name="valueScale">The actual scale of <paramref name="value"/>.</param>
+    /// <param name="valuePrecision">The actual precision of <paramref name="value"/>.</param>
+    /// <param name="actualIntegerDigits">The number of integer digits in <paramref name="value"/>.</param>
+    /// <param name="expectedIntegerDigits">The maximum allowed number of integer digits.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="scale"/> or <paramref name="precision"/> is negative, or <paramref name="precision"/> is less than <paramref name="scale"/>.</exception>
     public static void ValidateAndCalculateScaleAndPrecision(decimal value, int scale, int precision, bool ignoreTrailingZeroes,
         out int valueScale, out int valuePrecision, out int actualIntegerDigits, out int expectedIntegerDigits)
     {

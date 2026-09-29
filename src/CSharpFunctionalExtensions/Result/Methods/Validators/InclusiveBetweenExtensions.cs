@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -7,7 +7,6 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public static partial class ResultExtensions
 {
-    const string InclusiveBetweenError = "'{0}' must be between {1} and {2}. You entered {3}.";
 
     /// <summary>
     ///     Ensure value is between given range.
@@ -21,7 +20,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return comparer.Compare(result.Value, from) < 0 || comparer.Compare(result.Value, to) > 0
-            ? Result.Failure<T>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from!, to!, result.Value!))
+            ? Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(result.Value)))
             : result;
     }
 
@@ -39,7 +38,7 @@ public static partial class ResultExtensions
         if (comparer.Compare(result.Value, from) < 0 || comparer.Compare(result.Value, to) > 0)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<T>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from!, to!, result.Value!));
+            return Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(result.Value)));
         }
 
         return result;
@@ -56,7 +55,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value.CompareTo(from) < 0 || result.Value.CompareTo(to) > 0
-            ? Result.Failure<string>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from!, to!, result.Value!))
+            ? Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(result.Value)))
             : result;
     }
 
@@ -73,7 +72,7 @@ public static partial class ResultExtensions
         if (result.Value.CompareTo(from) < 0 || result.Value.CompareTo(to) > 0)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from!, to!, result.Value!));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(result.Value)));
         }
 
         return result;
@@ -90,7 +89,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<byte>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -107,7 +106,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<byte>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -124,7 +123,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<short>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -141,7 +140,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<short>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -158,7 +157,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<int>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -175,7 +174,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<int>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -192,7 +191,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<long>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -209,7 +208,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<long>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -226,7 +225,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<float>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -243,7 +242,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<float>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -260,7 +259,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<double>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -277,7 +276,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<double>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -294,7 +293,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<decimal>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -311,7 +310,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<decimal>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -328,7 +327,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<BigInteger>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -345,7 +344,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<BigInteger>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -362,7 +361,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<TimeSpan>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -379,7 +378,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<TimeSpan>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -396,7 +395,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<DateTime>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -413,7 +412,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTime>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;
@@ -430,7 +429,7 @@ public static partial class ResultExtensions
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return result.Value < from || result.Value > to
-            ? Result.Failure<DateTimeOffset>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value))
+            ? Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
             : result;
     }
 
@@ -448,7 +447,7 @@ public static partial class ResultExtensions
         if (result.Value < from || result.Value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, result.Value));
+            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
         }
 
         return result;

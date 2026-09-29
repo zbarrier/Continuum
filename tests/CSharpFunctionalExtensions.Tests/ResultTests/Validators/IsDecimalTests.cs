@@ -14,7 +14,6 @@ public class IsDecimalTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string IsDecimalErrorFormat = "'{0}' is not in the correct format.";
 
     [Theory]
     [InlineData("-79228162514264337593543950335")]
@@ -132,7 +131,7 @@ public class IsDecimalTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, IsDecimalErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -155,6 +154,6 @@ public class IsDecimalTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, IsDecimalErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

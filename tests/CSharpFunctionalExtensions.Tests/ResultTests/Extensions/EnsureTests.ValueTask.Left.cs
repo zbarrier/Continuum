@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Continuum.CSharpFunctionalExtensions.ValueTasks;
 using FluentAssertions;
@@ -51,7 +51,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
             Result<int?> result = await tResult.Ensure(value => !value.HasValue, 
                 value => RequestErrors.NewAlreadyExists("should be null but found {0}", value.Value));
 
-            result.Should().Be(tResult.Result);
+            result.Should().Be((await tResult));
         }
 
         [Fact]

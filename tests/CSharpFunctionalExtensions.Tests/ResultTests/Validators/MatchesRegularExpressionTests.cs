@@ -15,7 +15,6 @@ public class MatchesRegularExpressionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string RegularExpressionErrorFormat = "'{0}' is not in the correct format.";
 
     [Theory]
     [InlineData("Test", "^T[a-zA-Z0-9]+")] //Word that starts with letter T
@@ -96,7 +95,7 @@ public class MatchesRegularExpressionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, RegularExpressionErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -113,7 +112,7 @@ public class MatchesRegularExpressionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, RegularExpressionErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -131,7 +130,7 @@ public class MatchesRegularExpressionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, RegularExpressionErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 
     [Theory]
@@ -150,6 +149,6 @@ public class MatchesRegularExpressionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, RegularExpressionErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

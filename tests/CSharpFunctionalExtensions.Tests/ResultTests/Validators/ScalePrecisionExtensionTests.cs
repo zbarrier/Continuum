@@ -12,7 +12,6 @@ public class ScalePrecisionExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string ScalePrecisionErrorFormat = "'{0}' must not be more than {1} digits in total, with allowance for {2} decimals. {3} digits and {4} decimals were found.";
 
     [Fact]
     public void ScalePrecision_IsSameAsExpected_Success()
@@ -101,7 +100,7 @@ public class ScalePrecisionExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ScalePrecisionErrorFormat, MyPropertyName, expectedPrecision, expectedScale, digits, actualScale));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.ScalePrecision, ExpectedValidatorErrorStrings.ScalePrecision, MyPropertyName, expectedPrecision, expectedScale, digits, actualScale));
     }
 
     [Fact]
@@ -125,6 +124,6 @@ public class ScalePrecisionExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ScalePrecisionErrorFormat, multiPartPropertyName, expectedPrecision, expectedScale, digits, actualScale));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.ScalePrecision, ExpectedValidatorErrorStrings.ScalePrecision, multiPartPropertyName, expectedPrecision, expectedScale, digits, actualScale));
     }
 }

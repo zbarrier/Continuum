@@ -1,4 +1,3 @@
-﻿#if NET5_0_OR_GREATER
 using System;
 using System.Threading.Tasks;
 
@@ -11,7 +10,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         ///     If a given function throws an exception, an error is returned from the given error handler
         /// </summary>
         public static async ValueTask<Result<K>> MapTry<T, K>(this ValueTask<Result<T>> resultTask, Func<T, K> valueTask,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             Result<T> result = await resultTask;
             return result.MapTry(valueTask, errorHandler);
@@ -22,11 +21,10 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         ///     If a given function throws an exception, an error is returned from the given error handler
         /// </summary>
         public static async ValueTask<Result<K>> MapTry<K>(this ValueTask<Result> resultTask, Func<K> valueTask,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             Result result = await resultTask;
             return result.MapTry(valueTask, errorHandler);
         }
     }
 }
-#endif

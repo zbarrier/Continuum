@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -16,7 +16,6 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
 
         const string MultiPartPropertyNameFormat = "{0} {1}";
 
-        const string ValidationErrorFormat = "'{0}' must not be empty.";
 
         static readonly Exception CombineNotSupportedException = new NotSupportedException("Only validation errors can be combined.");
 
@@ -40,7 +39,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
         {
             //Arrange
             Result result1 = Result.Success();
-            Result result2 = Result.Failure(RequestErrors.NewInvalidArg("'{0}' must not be empty.", FirstNameProperty));
+            Result result2 = Result.Failure(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
             Result result3 = Result.Failure(RequestErrors.NewUnknown("Unknown error"));
 
             //Act
@@ -52,8 +51,8 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
             var apiError = result.Error as RequestError;
             Assert.NotNull(apiError);
             Assert.Equal(ErrorPriorityCode.UNKNOWN, apiError.PriorityCode);
-            Assert.Equal((int)HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
-            Assert.Equal((int)Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
+            Assert.Equal(HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
+            Assert.Equal(Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
             Assert.Equal("Unknown error", apiError.GetFormattedMessage());
         }
 
@@ -78,7 +77,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
         {
             //Arrange
             Result result1 = Result.Success();
-            Result result2 = Result.Failure(RequestErrors.NewInvalidArg("'{0}' must not be empty.", FirstNameProperty));
+            Result result2 = Result.Failure(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
             Result result3 = Result.Failure(RequestErrors.NewUnknown("Unknown error"));
             var results = new List<Result> { result1, result2, result3 };
 
@@ -91,8 +90,8 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
             var apiError = result.Error as RequestError;
             Assert.NotNull(apiError);
             Assert.Equal(ErrorPriorityCode.UNKNOWN, apiError.PriorityCode);
-            Assert.Equal((int)HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
-            Assert.Equal((int)Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
+            Assert.Equal(HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
+            Assert.Equal(Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
             Assert.Equal("Unknown error", apiError.GetFormattedMessage());
         }
 
@@ -116,7 +115,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
         {
             //Arrange
             var result1 = Result.Success("test");
-            var result2 = Result.Failure<string>(RequestErrors.NewInvalidArg("'{0}' must not be empty.", FirstNameProperty));
+            var result2 = Result.Failure<string>(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
             var result3 = Result.Failure<string>(RequestErrors.NewUnknown("Unknown error"));
 
             //Act
@@ -128,8 +127,8 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
             var apiError = result.Error as RequestError;
             Assert.NotNull(apiError);
             Assert.Equal(ErrorPriorityCode.UNKNOWN, apiError.PriorityCode);
-            Assert.Equal((int)HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
-            Assert.Equal((int)Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
+            Assert.Equal(HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
+            Assert.Equal(Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
             Assert.Equal("Unknown error", apiError.GetFormattedMessage());
         }
 
@@ -154,7 +153,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
         {
             //Arrange
             var result1 = Result.Success("test");
-            var result2 = Result.Failure<string>(RequestErrors.NewInvalidArg("'{0}' must not be empty.", FirstNameProperty));
+            var result2 = Result.Failure<string>(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
             var result3 = Result.Failure<string>(RequestErrors.NewUnknown("Unknown error"));
             var results = new List<Result<string>> { result1, result2, result3 };
 
@@ -167,8 +166,8 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
             var apiError = result.Error as RequestError;
             Assert.NotNull(apiError);
             Assert.Equal(ErrorPriorityCode.UNKNOWN, apiError.PriorityCode);
-            Assert.Equal((int)HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
-            Assert.Equal((int)Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
+            Assert.Equal(HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
+            Assert.Equal(Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
             Assert.Equal("Unknown error", apiError.GetFormattedMessage());
         }
     }

@@ -1,4 +1,3 @@
-#if NET5_0_OR_GREATER
 using System;
 using System.Threading.Tasks;
 
@@ -6,6 +5,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
    public static partial class AsyncResultExtensionsLeftOperand
     {
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.CheckIf{T}(Result{T}, bool, Func{T, Result})"/>
         public static ValueTask<Result<T>> CheckIf<T>(this ValueTask<Result<T>> resultTask, bool condition, Func<T, Result> valueTask)
         {
             if (condition)
@@ -14,6 +14,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
                 return resultTask;
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.CheckIf{T, K}(Result{T}, bool, Func{T, Result{K}})"/>
         public static ValueTask<Result<T>> CheckIf<T, K>(this ValueTask<Result<T>> resultTask, bool condition, Func<T, Result<K>> valueTask)
         {
             if (condition)
@@ -22,6 +23,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
                 return resultTask;
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.CheckIf{T}(Result{T}, Func{T, bool}, Func{T, Result})"/>
         public static async ValueTask<Result<T>> CheckIf<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, Result> valueTask)
         {
             Result<T> result = await resultTask;
@@ -32,6 +34,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
                 return result;
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.CheckIf{T, K}(Result{T}, Func{T, bool}, Func{T, Result{K}})"/>
         public static async ValueTask<Result<T>> CheckIf<T, K>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, Result<K>> valueTask)
         {
             Result<T> result = await resultTask;
@@ -43,4 +46,3 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         }
     }
 }
-#endif

@@ -6,7 +6,7 @@ public static partial class AsyncResultExtensionsBothOperands
     ///     Executes the given action if the calling result is a success and the condition is true. Returns the calling result.
     ///     If there is an exception, returns a new failure Result.
     /// </summary>
-    public static async ValueTask<Result> TapIfTry(this ValueTask<Result> resultTask, bool condition, Func<ValueTask> func, Func<Exception, Error> errorHandler = null)
+    public static async ValueTask<Result> TapIfTry(this ValueTask<Result> resultTask, bool condition, Func<ValueTask> func, Func<Exception, Error>? errorHandler = null)
     {
         var result = await resultTask.DefaultAwait();
 
@@ -31,7 +31,7 @@ public static partial class AsyncResultExtensionsBothOperands
     ///     Executes the given action if the calling result is a success and the condition is true. Returns the calling result.
     ///     If there is an exception, returns a new failure Result.
     /// </summary>
-    public static async ValueTask<Result<T>> TapIfTry<T>(this ValueTask<Result<T>> resultTask, bool condition, Func<ValueTask> func, Func<Exception, Error> errorHandler = null)
+    public static async ValueTask<Result<T>> TapIfTry<T>(this ValueTask<Result<T>> resultTask, bool condition, Func<ValueTask> func, Func<Exception, Error>? errorHandler = null)
     {
         var result = await resultTask.DefaultAwait();
 
@@ -56,7 +56,7 @@ public static partial class AsyncResultExtensionsBothOperands
     ///     Executes the given action if the calling result is a success and the condition is true. Returns the calling result.
     ///     If there is an exception, returns a new failure Result.
     /// </summary>
-    public static async ValueTask<Result<T>> TapIfTry<T>(this ValueTask<Result<T>> resultTask, bool condition, Func<T, ValueTask> func, Func<Exception, Error> errorHandler = null)
+    public static async ValueTask<Result<T>> TapIfTry<T>(this ValueTask<Result<T>> resultTask, bool condition, Func<T, ValueTask> func, Func<Exception, Error>? errorHandler = null)
     {
         var result = await resultTask.DefaultAwait();
 
@@ -81,7 +81,7 @@ public static partial class AsyncResultExtensionsBothOperands
     ///     Executes the given action if the calling result is a success and the predicate is true. Returns the calling result.
     ///     If there is an exception, returns a new failure Result.
     /// </summary>
-    public static async ValueTask<Result<T>> TapIfTry<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<ValueTask> func, Func<Exception, Error> errorHandler = null)
+    public static async ValueTask<Result<T>> TapIfTry<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<ValueTask> func, Func<Exception, Error>? errorHandler = null)
     {
         var result = await resultTask.DefaultAwait();
 
@@ -106,7 +106,7 @@ public static partial class AsyncResultExtensionsBothOperands
     ///     Executes the given action if the calling result is a success and the predicate is true. Returns the calling result.
     ///     If there is an exception, returns a new failure Result.
     /// </summary>
-    public static async ValueTask<Result<T>> TapIfTry<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, ValueTask> func, Func<Exception, Error> errorHandler = null)
+    public static async ValueTask<Result<T>> TapIfTry<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, ValueTask> func, Func<Exception, Error>? errorHandler = null)
     {
         var result = await resultTask.DefaultAwait();
 

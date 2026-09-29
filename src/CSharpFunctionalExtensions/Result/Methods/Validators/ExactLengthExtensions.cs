@@ -4,8 +4,6 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public static partial class ResultExtensions
 {
-    const string ExactLengthSimpleError = "'{0}' must be {1} characters in length.";
-
     /// <summary>
     ///     Ensure collection count is equal to value.
     /// </summary>
@@ -13,9 +11,13 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        return result.Value.Count() != length
-            ? Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ExactLengthSimpleError, propertyName, length))
-            : result;
+        var count = result.Value.Count();
+        if (count != length)
+        {
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.ExactCount, ValidatorErrorStrings.ExactCount, propertyName, length, count));
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -25,10 +27,11 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (result.Value.Count() != length)
+        var count = result.Value.Count();
+        if (count != length)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ExactLengthSimpleError, propertyName, length));
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.ExactCount, ValidatorErrorStrings.ExactCount, propertyName, length, count));
         }
 
         return result;
@@ -41,9 +44,13 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        return result.Value.Length != length
-            ? Result.Failure<string>(new ValidationError(propertyName, ExactLengthSimpleError, propertyName, length))
-            : result;
+        var actualLength = result.Value.Length;
+        if (actualLength != length)
+        {
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.ExactLength, ValidatorErrorStrings.ExactLength, propertyName, length, actualLength));
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -53,10 +60,11 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (result.Value.Length != length)
+        var actualLength = result.Value.Length;
+        if (actualLength != length)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, ExactLengthSimpleError, propertyName, length));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.ExactLength, ValidatorErrorStrings.ExactLength, propertyName, length, actualLength));
         }
 
         return result;

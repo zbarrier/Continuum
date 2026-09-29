@@ -7,7 +7,6 @@ public class MaxLengthExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string MaxLengthErrorFormat = "The length of '{0}' must be {1} characters or fewer.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -122,7 +121,7 @@ public class MaxLengthExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, MaxLengthErrorFormat, MyPropertyName, maxLength));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.MaxCount, ExpectedValidatorErrorStrings.MaxCount, MyPropertyName, maxLength, value.Count()));
     }
 
     [Fact]
@@ -140,7 +139,7 @@ public class MaxLengthExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, MaxLengthErrorFormat, multiPartPropertyName, maxLength));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MaxCount, ExpectedValidatorErrorStrings.MaxCount, multiPartPropertyName, maxLength, value.Count()));
     }
 
     #endregion
@@ -167,12 +166,11 @@ public class MaxLengthExtensionTests
     }
 
     [Theory]
-    [InlineData("testString", 10)]
-    [InlineData("123", 5)]
-    [InlineData("test", 4)]
-    [InlineData("JohnDoe", 10)]
-    [InlineData("My Awesome Company Name", 23)]
-    public void MaxLength_StringPreviousError_Failure(string value, int maxLength)
+    [InlineData(5)]
+    [InlineData(4)]
+    [InlineData(10)]
+    [InlineData(23)]
+    public void MaxLength_StringPreviousError_Failure(int maxLength)
     {
         //Arrange
 
@@ -205,12 +203,11 @@ public class MaxLengthExtensionTests
     }
 
     [Theory]
-    [InlineData("testString", 10)]
-    [InlineData("123", 5)]
-    [InlineData("test", 4)]
-    [InlineData("JohnDoe", 10)]
-    [InlineData("My Awesome Company Name", 23)]
-    public void MaxLengthMultiPart_StringPreviousError_Failure(string value, int maxLength)
+    [InlineData(5)]
+    [InlineData(4)]
+    [InlineData(10)]
+    [InlineData(23)]
+    public void MaxLengthMultiPart_StringPreviousError_Failure(int maxLength)
     {
         //Arrange
 
@@ -239,7 +236,7 @@ public class MaxLengthExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, MaxLengthErrorFormat, MyPropertyName, maxLength));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.MaxLength, ExpectedValidatorErrorStrings.MaxLength, MyPropertyName, maxLength, value.Length));
     }
 
     [Theory]
@@ -260,7 +257,7 @@ public class MaxLengthExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, MaxLengthErrorFormat, multiPartPropertyName, maxLength));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MaxLength, ExpectedValidatorErrorStrings.MaxLength, multiPartPropertyName, maxLength, value.Length));
     }
 
     #endregion

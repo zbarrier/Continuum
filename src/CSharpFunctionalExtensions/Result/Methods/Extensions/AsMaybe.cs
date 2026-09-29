@@ -1,4 +1,7 @@
-﻿namespace Continuum.CSharpFunctionalExtensions;
+namespace Continuum.CSharpFunctionalExtensions;
+/// <summary>
+///     Extension methods for composing <see cref="Result"/> and <see cref="Result{T}"/> operations.
+/// </summary>
 public static partial class ResultExtensions
 {
     /// <summary>

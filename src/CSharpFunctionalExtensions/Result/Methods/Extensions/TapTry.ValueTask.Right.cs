@@ -6,7 +6,7 @@ public static partial class AsyncResultExtensionsRightOperand
     ///     Executes the given action if the calling result is a success. Returns the calling result.
     ///     If there is an exception, returns a new failure Result.
     /// </summary>
-    public static async ValueTask<Result> TapTry(this Result result, Func<ValueTask> func, Func<Exception, Error> errorHandler = null)
+    public static async ValueTask<Result> TapTry(this Result result, Func<ValueTask> func, Func<Exception, Error>? errorHandler = null)
     {
         errorHandler ??= Result.Configuration.DefaultTryErrorHandler;
         
@@ -29,7 +29,7 @@ public static partial class AsyncResultExtensionsRightOperand
     ///     Executes the given action if the calling result is a success. Returns the calling result.
     ///     If there is an exception, returns a new failure Result.
     /// </summary>
-    public static async ValueTask<Result<T>> TapTry<T>(this Result<T> result, Func<ValueTask> func, Func<Exception, Error> errorHandler = null)
+    public static async ValueTask<Result<T>> TapTry<T>(this Result<T> result, Func<ValueTask> func, Func<Exception, Error>? errorHandler = null)
     {
         errorHandler ??= Result.Configuration.DefaultTryErrorHandler;
         
@@ -52,7 +52,7 @@ public static partial class AsyncResultExtensionsRightOperand
     ///     Executes the given action if the calling result is a success. Returns the calling result.
     ///     If there is an exception, returns a new failure Result.
     /// </summary>
-    public static async ValueTask<Result<T>> TapTry<T>(this Result<T> result, Func<T, ValueTask> func, Func<Exception, Error> errorHandler = null)
+    public static async ValueTask<Result<T>> TapTry<T>(this Result<T> result, Func<T, ValueTask> func, Func<Exception, Error>? errorHandler = null)
     {
         errorHandler ??= Result.Configuration.DefaultTryErrorHandler;
         

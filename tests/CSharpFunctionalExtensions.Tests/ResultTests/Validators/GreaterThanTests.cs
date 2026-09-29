@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Xunit.Sdk;
@@ -12,7 +12,6 @@ public class GreaterThanTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string GreaterThanErrorFormat = "'{0}' must be greater than '{1}'.";
 
     #region T
 
@@ -73,7 +72,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
     [Theory]
@@ -95,7 +94,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
     #endregion
@@ -144,7 +143,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -161,7 +160,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -219,7 +218,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -239,7 +238,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -297,7 +296,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -317,7 +316,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -381,7 +380,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -403,7 +402,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -473,7 +472,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -497,7 +496,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -555,7 +554,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -575,7 +574,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -639,7 +638,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -661,7 +660,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -731,7 +730,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -755,7 +754,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -831,7 +830,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -857,7 +856,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -921,7 +920,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -943,7 +942,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1004,7 +1003,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1025,7 +1024,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1086,7 +1085,7 @@ public class GreaterThanTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, GreaterThanErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1107,7 +1106,7 @@ public class GreaterThanTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, GreaterThanErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThan, ExpectedValidatorErrorStrings.GreaterThan, multiPartPropertyName, expectedValue));
     }
 
     #endregion

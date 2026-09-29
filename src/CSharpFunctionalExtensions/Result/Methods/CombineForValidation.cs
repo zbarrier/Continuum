@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Continuum.CSharpFunctionalExtensions;
@@ -7,11 +7,13 @@ public partial struct Result
 {
     /// <summary>
     ///     Combines several results (and any validation error messages) into a single result.
-    ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.</summary>
+    ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.
+    ///     Every failed result must carry a <see cref="ValidationError"/>; use <see cref="Combine(IEnumerable{Result})"/> for mixed error types.</summary>
     /// <param name="results">
     ///     The Results to be combined.</param>
     /// <returns>
     ///     A Result that is a success when all the input <paramref name="results"/> are also successes.</returns>
+    /// <exception cref="ArgumentException">A failed result carries an error that is not a <see cref="ValidationError"/>.</exception>
     public static Result CombineForValidation(IEnumerable<Result> results)
     {
         var failedResults = new List<Result>();
@@ -30,13 +32,13 @@ public partial struct Result
 
     /// <summary>
     ///     Combines several results (and any validation error messages) into a single result.
-    ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.</summary>
+    ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.
+    ///     Every failed result must carry a <see cref="ValidationError"/>; use <see cref="Combine(IEnumerable{Result})"/> for mixed error types.</summary>
     /// <param name="results">
     ///     The Results to be combined.</param>
-    /// <param name="errorMessagesSeparator">
-    ///     A string that is used to separate any concatenated error messages. If omitted, the default <see cref="Result.Configuration.ErrorMessagesSeparator" /> is used.</param>
     /// <returns>
     ///     A Result that is a success when all the input <paramref name="results"/> are also successes.</returns>
+    /// <exception cref="ArgumentException">A failed result carries an error that is not a <see cref="ValidationError"/>.</exception>
     public static Result CombineForValidation<T>(IEnumerable<Result<T>> results)
     {
         var failedResults = new List<Result>();
@@ -55,11 +57,13 @@ public partial struct Result
 
     /// <summary>
     ///     Combines several results (and any validation error messages) into a single result.
-    ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.</summary>
+    ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.
+    ///     Every failed result must carry a <see cref="ValidationError"/>; use <see cref="Combine(IEnumerable{Result})"/> for mixed error types.</summary>
     /// <param name="results">
     ///     The Results to be combined.</param>
     /// <returns>
     ///     A Result that is a success when all the input <paramref name="results"/> are also successes.</returns>
+    /// <exception cref="ArgumentException">A failed result carries an error that is not a <see cref="ValidationError"/>.</exception>
     public static Result CombineForValidation(params Result[] results)
     {
         var failedResults = new List<Result>();
@@ -81,12 +85,14 @@ public partial struct Result
     }
 
     /// <summary>
-    ///     Combines several results (and any valiation error messages) into a single result.
-    ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.</summary>
+    ///     Combines several results (and any validation error messages) into a single result.
+    ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.
+    ///     Every failed result must carry a <see cref="ValidationError"/>; use <see cref="Combine(IEnumerable{Result})"/> for mixed error types.</summary>
     /// <param name="results">
     ///     The Results to be combined.</param>
     /// <returns>
     ///     A Result that is a success when all the input <paramref name="results"/> are also successes.</returns>
+    /// <exception cref="ArgumentException">A failed result carries an error that is not a <see cref="ValidationError"/>.</exception>
     public static Result CombineForValidation<T>(params Result<T>[] results)
     {
         var failedResults = new List<Result>();

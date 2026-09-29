@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Xunit.Sdk;
@@ -12,7 +12,6 @@ public class EqualExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string EqualErrorFormat = "'{0}' must be equal to '{1}'.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -100,7 +99,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
     [Fact]
@@ -119,7 +118,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
     #endregion
@@ -146,12 +145,12 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData("testString", "testString")]
-    [InlineData("123", "123")]
-    [InlineData("test", "test")]
-    [InlineData("JohnDoe", "JohnDoe")]
-    [InlineData("My Awesome Company Name", "My Awesome Company Name")]
-    public void Equal_StringOfPreviousError_Failure(string value, string expectedValue)
+    [InlineData("testString")]
+    [InlineData("123")]
+    [InlineData("test")]
+    [InlineData("JohnDoe")]
+    [InlineData("My Awesome Company Name")]
+    public void Equal_StringOfPreviousError_Failure(string expectedValue)
     {
         //Arrange
 
@@ -184,12 +183,12 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData("testString", "testString")]
-    [InlineData("123", "123")]
-    [InlineData("test", "test")]
-    [InlineData("JohnDoe", "JohnDoe")]
-    [InlineData("My Awesome Company Name", "My Awesome Company Name")]
-    public void EqualMultiPart_StringOfPreviousError_Failure(string value, string expectedValue)
+    [InlineData("testString")]
+    [InlineData("123")]
+    [InlineData("test")]
+    [InlineData("JohnDoe")]
+    [InlineData("My Awesome Company Name")]
+    public void EqualMultiPart_StringOfPreviousError_Failure(string expectedValue)
     {
         //Arrange
 
@@ -218,7 +217,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -239,7 +238,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -265,11 +264,11 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(1, 1)]
-    [InlineData(12, 12)]
-    [InlineData(127, 127)]
-    [InlineData(255, 255)]
-    public void Equal_ByteOfPreviousError_Failure(byte value, byte expectedValue)
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(255)]
+    public void Equal_ByteOfPreviousError_Failure(byte expectedValue)
     {
         //Arrange
 
@@ -301,11 +300,11 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(1, 1)]
-    [InlineData(12, 12)]
-    [InlineData(127, 127)]
-    [InlineData(255, 255)]
-    public void EqualMultiPart_ByteOfPreviousError_Failure(byte value, byte expectedValue)
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(255)]
+    public void EqualMultiPart_ByteOfPreviousError_Failure(byte expectedValue)
     {
         //Arrange
 
@@ -333,7 +332,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -353,7 +352,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -381,13 +380,13 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-32_768, -32_768)]
-    [InlineData(-1023, -1023)]
-    [InlineData(-256, -256)]
-    [InlineData(256, 256)]
-    [InlineData(1023, 1023)]
-    [InlineData(32_767, 32_767)]
-    public void Equal_ShortOfPreviousError_Failure(short value, short expectedValue)
+    [InlineData(-32_768)]
+    [InlineData(-1023)]
+    [InlineData(-256)]
+    [InlineData(256)]
+    [InlineData(1023)]
+    [InlineData(32_767)]
+    public void Equal_ShortOfPreviousError_Failure(short expectedValue)
     {
         //Arrange
 
@@ -421,13 +420,13 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-32_768, -32_768)]
-    [InlineData(-1023, -1023)]
-    [InlineData(-256, -256)]
-    [InlineData(256, 256)]
-    [InlineData(1023, 1023)]
-    [InlineData(32_767, 32_767)]
-    public void EqualMultiPart_ShortOfPreviousError_Failure(short value, short expectedValue)
+    [InlineData(-32_768)]
+    [InlineData(-1023)]
+    [InlineData(-256)]
+    [InlineData(256)]
+    [InlineData(1023)]
+    [InlineData(32_767)]
+    public void EqualMultiPart_ShortOfPreviousError_Failure(short expectedValue)
     {
         //Arrange
 
@@ -457,7 +456,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -479,7 +478,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -509,15 +508,15 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-2_147_483_648, -2_147_483_648)]
-    [InlineData(-32_768, -32_768)]
-    [InlineData(-1023, -1023)]
-    [InlineData(-256, -256)]
-    [InlineData(256, 256)]
-    [InlineData(1023, 1023)]
-    [InlineData(32_767, 32_767)]
-    [InlineData(2_147_483_647, 2_147_483_647)]
-    public void Equal_IntOfPreviousError_Failure(int value, int expectedValue)
+    [InlineData(-2_147_483_648)]
+    [InlineData(-32_768)]
+    [InlineData(-1023)]
+    [InlineData(-256)]
+    [InlineData(256)]
+    [InlineData(1023)]
+    [InlineData(32_767)]
+    [InlineData(2_147_483_647)]
+    public void Equal_IntOfPreviousError_Failure(int expectedValue)
     {
         //Arrange
 
@@ -553,15 +552,15 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-2_147_483_648, -2_147_483_648)]
-    [InlineData(-32_768, -32_768)]
-    [InlineData(-1023, -1023)]
-    [InlineData(-256, -256)]
-    [InlineData(256, 256)]
-    [InlineData(1023, 1023)]
-    [InlineData(32_767, 32_767)]
-    [InlineData(2_147_483_647, 2_147_483_647)]
-    public void EqualMultiPart_IntOfPreviousError_Failure(int value, int expectedValue)
+    [InlineData(-2_147_483_648)]
+    [InlineData(-32_768)]
+    [InlineData(-1023)]
+    [InlineData(-256)]
+    [InlineData(256)]
+    [InlineData(1023)]
+    [InlineData(32_767)]
+    [InlineData(2_147_483_647)]
+    public void EqualMultiPart_IntOfPreviousError_Failure(int expectedValue)
     {
         //Arrange
 
@@ -593,7 +592,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -617,7 +616,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -649,17 +648,17 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-9_223_372_036_854_775_808, -9_223_372_036_854_775_808)]
-    [InlineData(-2_147_483_648, -2_147_483_648)]
-    [InlineData(-32_768, -32_768)]
-    [InlineData(-1023, -1023)]
-    [InlineData(-256, -256)]
-    [InlineData(256, 256)]
-    [InlineData(1023, 1023)]
-    [InlineData(32_767, 32_767)]
-    [InlineData(2_147_483_647, 2_147_483_647)]
-    [InlineData(9_223_372_036_854_775_807, 9_223_372_036_854_775_807)]
-    public void Equal_LongOfPreviousError_Failure(long value, long expectedValue)
+    [InlineData(-9_223_372_036_854_775_808)]
+    [InlineData(-2_147_483_648)]
+    [InlineData(-32_768)]
+    [InlineData(-1023)]
+    [InlineData(-256)]
+    [InlineData(256)]
+    [InlineData(1023)]
+    [InlineData(32_767)]
+    [InlineData(2_147_483_647)]
+    [InlineData(9_223_372_036_854_775_807)]
+    public void Equal_LongOfPreviousError_Failure(long expectedValue)
     {
         //Arrange
 
@@ -697,17 +696,17 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-9_223_372_036_854_775_808, -9_223_372_036_854_775_808)]
-    [InlineData(-2_147_483_648, -2_147_483_648)]
-    [InlineData(-32_768, -32_768)]
-    [InlineData(-1023, -1023)]
-    [InlineData(-256, -256)]
-    [InlineData(256, 256)]
-    [InlineData(1023, 1023)]
-    [InlineData(32_767, 32_767)]
-    [InlineData(2_147_483_647, 2_147_483_647)]
-    [InlineData(9_223_372_036_854_775_807, 9_223_372_036_854_775_807)]
-    public void EqualMultiPart_LongOfPreviousError_Failure(long value, long expectedValue)
+    [InlineData(-9_223_372_036_854_775_808)]
+    [InlineData(-2_147_483_648)]
+    [InlineData(-32_768)]
+    [InlineData(-1023)]
+    [InlineData(-256)]
+    [InlineData(256)]
+    [InlineData(1023)]
+    [InlineData(32_767)]
+    [InlineData(2_147_483_647)]
+    [InlineData(9_223_372_036_854_775_807)]
+    public void EqualMultiPart_LongOfPreviousError_Failure(long expectedValue)
     {
         //Arrange
 
@@ -741,7 +740,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -767,7 +766,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -793,11 +792,11 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-3.14, -3.14)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(1.225, 1.225)]
-    [InlineData(3.625, 3.625)]
-    public void Equal_FloatOfPreviousError_Failure(float value, float expectedValue)
+    [InlineData(-3.14)]
+    [InlineData(-1.3333)]
+    [InlineData(1.225)]
+    [InlineData(3.625)]
+    public void Equal_FloatOfPreviousError_Failure(float expectedValue)
     {
         //Arrange
 
@@ -829,11 +828,11 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-3.14, -3.14)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(1.225, 1.225)]
-    [InlineData(3.625, 3.625)]
-    public void EqualMultiPart_FloatOfPreviousError_Failure(float value, float expectedValue)
+    [InlineData(-3.14)]
+    [InlineData(-1.3333)]
+    [InlineData(1.225)]
+    [InlineData(3.625)]
+    public void EqualMultiPart_FloatOfPreviousError_Failure(float expectedValue)
     {
         //Arrange
 
@@ -861,7 +860,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -881,7 +880,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -909,13 +908,13 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-1234.123456789, -1234.123456789)]
-    [InlineData(-3.14, -3.14)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(1.225, 1.225)]
-    [InlineData(3.625, 3.625)]
-    [InlineData(1234.123456789, 1234.123456789)]
-    public void Equal_DoubleOfPreviousError_Failure(double value, double expectedValue)
+    [InlineData(-1234.123456789)]
+    [InlineData(-3.14)]
+    [InlineData(-1.3333)]
+    [InlineData(1.225)]
+    [InlineData(3.625)]
+    [InlineData(1234.123456789)]
+    public void Equal_DoubleOfPreviousError_Failure(double expectedValue)
     {
         //Arrange
 
@@ -949,13 +948,13 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-1234.123456789, -1234.123456789)]
-    [InlineData(-3.14, -3.14)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(1.225, 1.225)]
-    [InlineData(3.625, 3.625)]
-    [InlineData(1234.123456789, 1234.123456789)]
-    public void EqualMultiPart_DoubleOfPreviousError_Failure(double value, double expectedValue)
+    [InlineData(-1234.123456789)]
+    [InlineData(-3.14)]
+    [InlineData(-1.3333)]
+    [InlineData(1.225)]
+    [InlineData(3.625)]
+    [InlineData(1234.123456789)]
+    public void EqualMultiPart_DoubleOfPreviousError_Failure(double expectedValue)
     {
         //Arrange
 
@@ -985,7 +984,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1007,7 +1006,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1037,15 +1036,15 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-123456.123456789, -123456.123456789)]
-    [InlineData(-1234.123456789, -1234.123456789)]
-    [InlineData(-3.14, -3.14)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(1.225, 1.225)]
-    [InlineData(3.625, 3.625)]
-    [InlineData(1234.123456789, 1234.123456789)]
-    [InlineData(123456789.123456789, 123456789.123456789)]
-    public void Equal_DecimalOfPreviousError_Failure(decimal value, decimal expectedValue)
+    [InlineData(-123456.123456789)]
+    [InlineData(-1234.123456789)]
+    [InlineData(-3.14)]
+    [InlineData(-1.3333)]
+    [InlineData(1.225)]
+    [InlineData(3.625)]
+    [InlineData(1234.123456789)]
+    [InlineData(123456789.123456789)]
+    public void Equal_DecimalOfPreviousError_Failure(decimal expectedValue)
     {
         //Arrange
 
@@ -1081,15 +1080,15 @@ public class EqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-123456.123456789, -123456.123456789)]
-    [InlineData(-1234.123456789, -1234.123456789)]
-    [InlineData(-3.14, -3.14)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(1.225, 1.225)]
-    [InlineData(3.625, 3.625)]
-    [InlineData(1234.123456789, 1234.123456789)]
-    [InlineData(123456789.123456789, 123456789.123456789)]
-    public void EqualMultiPart_DecimalOfPreviousError_Failure(decimal value, decimal expectedValue)
+    [InlineData(-123456.123456789)]
+    [InlineData(-1234.123456789)]
+    [InlineData(-3.14)]
+    [InlineData(-1.3333)]
+    [InlineData(1.225)]
+    [InlineData(3.625)]
+    [InlineData(1234.123456789)]
+    [InlineData(123456789.123456789)]
+    public void EqualMultiPart_DecimalOfPreviousError_Failure(decimal expectedValue)
     {
         //Arrange
 
@@ -1121,7 +1120,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1145,7 +1144,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1269,7 +1268,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1295,7 +1294,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1404,7 +1403,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1427,7 +1426,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1531,7 +1530,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1553,7 +1552,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1657,7 +1656,7 @@ public class EqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, EqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1679,7 +1678,7 @@ public class EqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, EqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
     #endregion

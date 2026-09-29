@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 
 using FluentAssertions;
 
@@ -11,7 +11,6 @@ public class CombineForValidationTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string ValidationErrorFormat = "'{0}' must not be empty.";
 
     static readonly Exception CombineNotSupportedException = new NotSupportedException("Only validation errors can be combined.");
 
@@ -51,8 +50,8 @@ public class CombineForValidationTests
     {
         //Arrange
         Result result1 = Result.Success();
-        Result result2 = Result.Failure(new ValidationError(FirstNameProperty, "'{0}' must not be empty.", FirstNameProperty));
-        Result result3 = Result.Failure(new ValidationError(LastNameProperty, "'{0}' must not be empty.", LastNameProperty));
+        Result result2 = Result.Failure(new ValidationError(FirstNameProperty, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
+        Result result3 = Result.Failure(new ValidationError(LastNameProperty, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, LastNameProperty));
 
         //Act
         Result result = Result.CombineForValidation(result1, result2, result3);
@@ -62,17 +61,17 @@ public class CombineForValidationTests
 
         var valiationError = result.Error as ValidationError;
         Assert.NotNull(valiationError);
-        Assert.Equal((int)HttpStatusCode.UnprocessableEntity, valiationError.HttpStatusCode);
-        Assert.Equal((int)Grpc.Core.StatusCode.InvalidArgument, valiationError.GrpcStatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, valiationError.HttpStatusCode);
+        Assert.Equal(Grpc.Core.StatusCode.InvalidArgument, valiationError.GrpcStatusCode);
 
         var firstEntry = valiationError.Entries.First();
-        Assert.Equal(FirstNameProperty, firstEntry.Identifier);
-        Assert.Equal(ValidationErrorFormat, firstEntry.Format);
+        Assert.Equal(FirstNameProperty, firstEntry.Target);
+        Assert.Equal(ExpectedValidatorErrorStrings.NotEmpty, firstEntry.Format);
         Assert.Equal(FirstNameProperty, firstEntry.Arguments.First());
 
         var secondEntry = valiationError.Entries.Last();
-        Assert.Equal(LastNameProperty, secondEntry.Identifier);
-        Assert.Equal(ValidationErrorFormat, secondEntry.Format);
+        Assert.Equal(LastNameProperty, secondEntry.Target);
+        Assert.Equal(ExpectedValidatorErrorStrings.NotEmpty, secondEntry.Format);
         Assert.Equal(LastNameProperty, secondEntry.Arguments.First());
     }
 
@@ -81,8 +80,8 @@ public class CombineForValidationTests
     {
         //Arrange
         Result result1 = Result.Success();
-        Result result2 = Result.Failure(new ValidationError(FirstNameProperty, "'{0}' must not be empty.", FirstNameProperty));
-        Result result3 = Result.Failure(new ValidationError(LastNameProperty, "'{0}' must not be empty.", LastNameProperty));
+        Result result2 = Result.Failure(new ValidationError(FirstNameProperty, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
+        Result result3 = Result.Failure(new ValidationError(LastNameProperty, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, LastNameProperty));
         var results = new List<Result> { result1, result2, result3 };
 
         //Act
@@ -93,17 +92,17 @@ public class CombineForValidationTests
 
         var valiationError = result.Error as ValidationError;
         Assert.NotNull(valiationError);
-        Assert.Equal((int)HttpStatusCode.UnprocessableEntity, valiationError.HttpStatusCode);
-        Assert.Equal((int)Grpc.Core.StatusCode.InvalidArgument, valiationError.GrpcStatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, valiationError.HttpStatusCode);
+        Assert.Equal(Grpc.Core.StatusCode.InvalidArgument, valiationError.GrpcStatusCode);
 
         var firstEntry = valiationError.Entries.First();
-        Assert.Equal(FirstNameProperty, firstEntry.Identifier);
-        Assert.Equal(ValidationErrorFormat, firstEntry.Format);
+        Assert.Equal(FirstNameProperty, firstEntry.Target);
+        Assert.Equal(ExpectedValidatorErrorStrings.NotEmpty, firstEntry.Format);
         Assert.Equal(FirstNameProperty, firstEntry.Arguments.First());
 
         var secondEntry = valiationError.Entries.Last();
-        Assert.Equal(LastNameProperty, secondEntry.Identifier);
-        Assert.Equal(ValidationErrorFormat, secondEntry.Format);
+        Assert.Equal(LastNameProperty, secondEntry.Target);
+        Assert.Equal(ExpectedValidatorErrorStrings.NotEmpty, secondEntry.Format);
         Assert.Equal(LastNameProperty, secondEntry.Arguments.First());
     }
 
@@ -144,8 +143,8 @@ public class CombineForValidationTests
     {
         //Arrange
         var result1 = Result.Success("test");
-        var result2 = Result.Failure<string>(new ValidationError(FirstNameProperty, "'{0}' must not be empty.", FirstNameProperty));
-        var result3 = Result.Failure<string>(new ValidationError(LastNameProperty, "'{0}' must not be empty.", LastNameProperty));
+        var result2 = Result.Failure<string>(new ValidationError(FirstNameProperty, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
+        var result3 = Result.Failure<string>(new ValidationError(LastNameProperty, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, LastNameProperty));
 
         //Act
         Result result = Result.CombineForValidation(result1, result2, result3);
@@ -155,17 +154,17 @@ public class CombineForValidationTests
 
         var valiationError = result.Error as ValidationError;
         Assert.NotNull(valiationError);
-        Assert.Equal((int)HttpStatusCode.UnprocessableEntity, valiationError.HttpStatusCode);
-        Assert.Equal((int)Grpc.Core.StatusCode.InvalidArgument, valiationError.GrpcStatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, valiationError.HttpStatusCode);
+        Assert.Equal(Grpc.Core.StatusCode.InvalidArgument, valiationError.GrpcStatusCode);
 
         var firstEntry = valiationError.Entries.First();
-        Assert.Equal(FirstNameProperty, firstEntry.Identifier);
-        Assert.Equal(ValidationErrorFormat, firstEntry.Format);
+        Assert.Equal(FirstNameProperty, firstEntry.Target);
+        Assert.Equal(ExpectedValidatorErrorStrings.NotEmpty, firstEntry.Format);
         Assert.Equal(FirstNameProperty, firstEntry.Arguments.First());
 
         var secondEntry = valiationError.Entries.Last();
-        Assert.Equal(LastNameProperty, secondEntry.Identifier);
-        Assert.Equal(ValidationErrorFormat, secondEntry.Format);
+        Assert.Equal(LastNameProperty, secondEntry.Target);
+        Assert.Equal(ExpectedValidatorErrorStrings.NotEmpty, secondEntry.Format);
         Assert.Equal(LastNameProperty, secondEntry.Arguments.First());
     }
 
@@ -174,8 +173,8 @@ public class CombineForValidationTests
     {
         //Arrange
         var result1 = Result.Success("test");
-        var result2 = Result.Failure<string>(new ValidationError(FirstNameProperty, "'{0}' must not be empty.", FirstNameProperty));
-        var result3 = Result.Failure<string>(new ValidationError(LastNameProperty, "'{0}' must not be empty.", LastNameProperty));
+        var result2 = Result.Failure<string>(new ValidationError(FirstNameProperty, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
+        var result3 = Result.Failure<string>(new ValidationError(LastNameProperty, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, LastNameProperty));
         var results = new List<Result> { result1, result2, result3 };
 
         //Act
@@ -186,17 +185,17 @@ public class CombineForValidationTests
 
         var valiationError = result.Error as ValidationError;
         Assert.NotNull(valiationError);
-        Assert.Equal((int)HttpStatusCode.UnprocessableEntity, valiationError.HttpStatusCode);
-        Assert.Equal((int)Grpc.Core.StatusCode.InvalidArgument, valiationError.GrpcStatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, valiationError.HttpStatusCode);
+        Assert.Equal(Grpc.Core.StatusCode.InvalidArgument, valiationError.GrpcStatusCode);
 
         var firstEntry = valiationError.Entries.First();
-        Assert.Equal(FirstNameProperty, firstEntry.Identifier);
-        Assert.Equal(ValidationErrorFormat, firstEntry.Format);
+        Assert.Equal(FirstNameProperty, firstEntry.Target);
+        Assert.Equal(ExpectedValidatorErrorStrings.NotEmpty, firstEntry.Format);
         Assert.Equal(FirstNameProperty, firstEntry.Arguments.First());
 
         var secondEntry = valiationError.Entries.Last();
-        Assert.Equal(LastNameProperty, secondEntry.Identifier);
-        Assert.Equal(ValidationErrorFormat, secondEntry.Format);
+        Assert.Equal(LastNameProperty, secondEntry.Target);
+        Assert.Equal(ExpectedValidatorErrorStrings.NotEmpty, secondEntry.Format);
         Assert.Equal(LastNameProperty, secondEntry.Arguments.First());
     }
 
@@ -206,8 +205,8 @@ public class CombineForValidationTests
     {
         //Arrange
         Result result1 = Result.Success();
-        Result result2 = Result.Failure(RequestErrors.NewInvalidArg("'{0}' must not be empty.", FirstNameProperty));
-        Result result3 = Result.Failure(RequestErrors.NewInvalidArg("'{0}' must not be empty.", LastNameProperty));
+        Result result2 = Result.Failure(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
+        Result result3 = Result.Failure(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, LastNameProperty));
 
         Action action = () => { Result result = Result.CombineForValidation(result1, result2, result3); };
 
@@ -222,8 +221,8 @@ public class CombineForValidationTests
     {
         //Arrange
         Result result1 = Result.Success();
-        Result result2 = Result.Failure(RequestErrors.NewInvalidArg("'{0}' must not be empty.", FirstNameProperty));
-        Result result3 = Result.Failure(RequestErrors.NewInvalidArg("'{0}' must not be empty.", LastNameProperty));
+        Result result2 = Result.Failure(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
+        Result result3 = Result.Failure(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, LastNameProperty));
         var results = new List<Result> { result1, result2, result3 };
 
         Action action = () => { Result result = Result.CombineForValidation(results.AsEnumerable()); };
@@ -239,8 +238,8 @@ public class CombineForValidationTests
     {
         //Arrange
         var result1 = Result.Success("test");
-        var result2 = Result.Failure<string>(RequestErrors.NewInvalidArg("'{0}' must not be empty.", FirstNameProperty));
-        var result3 = Result.Failure<string>(RequestErrors.NewInvalidArg("'{0}' must not be empty.", LastNameProperty));
+        var result2 = Result.Failure<string>(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
+        var result3 = Result.Failure<string>(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, LastNameProperty));
 
         Action action = () => { Result result = Result.CombineForValidation(result1, result2, result3); };
 
@@ -255,8 +254,8 @@ public class CombineForValidationTests
     {
         //Arrange
         var result1 = Result.Success("test");
-        var result2 = Result.Failure<string>(RequestErrors.NewInvalidArg("'{0}' must not be empty.", FirstNameProperty));
-        var result3 = Result.Failure<string>(RequestErrors.NewInvalidArg("'{0}' must not be empty.", LastNameProperty));
+        var result2 = Result.Failure<string>(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, FirstNameProperty));
+        var result3 = Result.Failure<string>(RequestErrors.NewInvalidArg(ExpectedValidatorErrorStrings.NotEmpty, LastNameProperty));
         var results = new List<Result> { result1, result2, result3 };
 
         Action action = () => { Result result = Result.CombineForValidation(results.AsEnumerable()); };

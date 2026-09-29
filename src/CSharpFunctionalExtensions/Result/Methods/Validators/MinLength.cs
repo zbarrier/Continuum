@@ -4,16 +4,18 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public partial struct Result
 {
-    const string MinLengthSimpleError = "The length of '{0}' must be at least {1} characters.";
-
     /// <summary>
     ///     Ensure collection count is greater than or equal to value.
     /// </summary>
     public static Result<IEnumerable<T>> MinLength<T>(IEnumerable<T> value, int minLength, string propertyName)
     {
-        return value.Count() < minLength
-            ? Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, MinLengthSimpleError, propertyName, minLength))
-            : Result.Success(value);
+        var count = value.Count();
+        if (count < minLength)
+        {
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.MinCount, ValidatorErrorStrings.MinCount, propertyName, minLength, count));
+        }
+
+        return Result.Success(value);
     }
 
     /// <summary>
@@ -21,10 +23,11 @@ public partial struct Result
     /// </summary>
     public static Result<IEnumerable<T>> MinLength<T>(IEnumerable<T> value, int minLength, string propertyNameFormat, params object[] arguments)
     {
-        if (value.Count() < minLength)
+        var count = value.Count();
+        if (count < minLength)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, MinLengthSimpleError, propertyName, minLength));
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.MinCount, ValidatorErrorStrings.MinCount, propertyName, minLength, count));
         }
 
         return Result.Success(value);
@@ -35,9 +38,13 @@ public partial struct Result
     /// </summary>
     public static Result<string> MinLength(string value, int minLength, string propertyName)
     {
-        return value.Length < minLength
-            ? Result.Failure<string>(new ValidationError(propertyName, MinLengthSimpleError, propertyName, minLength))
-            : Result.Success(value);
+        var length = value.Length;
+        if (length < minLength)
+        {
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.MinLength, ValidatorErrorStrings.MinLength, propertyName, minLength, length));
+        }
+
+        return Result.Success(value);
     }
 
     /// <summary>
@@ -45,10 +52,11 @@ public partial struct Result
     /// </summary>
     public static Result<string> MinLength(string value, int minLength, string propertyNameFormat, params object[] arguments)
     {
-        if (value.Length < minLength)
+        var length = value.Length;
+        if (length < minLength)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, MinLengthSimpleError, propertyName, minLength));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.MinLength, ValidatorErrorStrings.MinLength, propertyName, minLength, length));
         }
 
         return Result.Success(value);

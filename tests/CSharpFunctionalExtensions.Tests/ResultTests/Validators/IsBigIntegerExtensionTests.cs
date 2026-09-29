@@ -14,7 +14,6 @@ public class IsBigIntegerExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string IsBigIntegerErrorFormat = "'{0}' is not in the correct format.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -40,16 +39,8 @@ public class IsBigIntegerExtensionTests
         Assert.Equal(result.Value.ToString(), value);
     }
 
-    [Theory]
-    [InlineData("-1234567890123456789012345678901234567890")]
-    [InlineData("-123456788")]
-    [InlineData("-1022")]
-    [InlineData("0")]
-    [InlineData("1")]
-    [InlineData("1024")]
-    [InlineData("123456790")]
-    [InlineData("1234567890123456789012345678901234567892")]
-    public void IsBigInteger_PreviousError_Failure(string value)
+    [Fact]
+    public void IsBigInteger_PreviousError_Failure()
     {
         //Arrange
 
@@ -84,16 +75,8 @@ public class IsBigIntegerExtensionTests
         Assert.Equal(result.Value.ToString(), value);
     }
 
-    [Theory]
-    [InlineData("-1234567890123456789012345678901234567890")]
-    [InlineData("-123456788")]
-    [InlineData("-1022")]
-    [InlineData("0")]
-    [InlineData("1")]
-    [InlineData("1024")]
-    [InlineData("123456790")]
-    [InlineData("1234567890123456789012345678901234567892")]
-    public void IsBigIntegerMultiPart_PreviousError_Failure(string value)
+    [Fact]
+    public void IsBigIntegerMultiPart_PreviousError_Failure()
     {
         //Arrange
 
@@ -140,7 +123,7 @@ public class IsBigIntegerExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, IsBigIntegerErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -164,6 +147,6 @@ public class IsBigIntegerExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, IsBigIntegerErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

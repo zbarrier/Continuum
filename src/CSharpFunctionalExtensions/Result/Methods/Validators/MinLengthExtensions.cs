@@ -4,8 +4,6 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public static partial class ResultExtensions
 {
-    const string MinLengthSimpleError = "The length of '{0}' must be at least {1} characters.";
-
     /// <summary>
     ///     Ensure collection count is greater than or equal to value.
     /// </summary>
@@ -13,9 +11,13 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        return result.Value.Count() < minLength
-            ? Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, MinLengthSimpleError, propertyName, minLength))
-            : result;
+        var count = result.Value.Count();
+        if (count < minLength)
+        {
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.MinCount, ValidatorErrorStrings.MinCount, propertyName, minLength, count));
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -25,10 +27,11 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (result.Value.Count() < minLength)
+        var count = result.Value.Count();
+        if (count < minLength)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, MinLengthSimpleError, propertyName, minLength));
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.MinCount, ValidatorErrorStrings.MinCount, propertyName, minLength, count));
         }
 
         return result;
@@ -41,9 +44,13 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        return result.Value.Length < minLength
-            ? Result.Failure<string>(new ValidationError(propertyName, MinLengthSimpleError, propertyName, minLength))
-            : result;
+        var length = result.Value.Length;
+        if (length < minLength)
+        {
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.MinLength, ValidatorErrorStrings.MinLength, propertyName, minLength, length));
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -53,10 +60,11 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (result.Value.Length < minLength)
+        var length = result.Value.Length;
+        if (length < minLength)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, MinLengthSimpleError, propertyName, minLength));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.MinLength, ValidatorErrorStrings.MinLength, propertyName, minLength, length));
         }
 
         return result;

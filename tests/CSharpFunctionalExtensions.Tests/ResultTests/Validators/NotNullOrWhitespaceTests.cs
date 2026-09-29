@@ -12,7 +12,6 @@ public class NotNullOrWhitespaceTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string NotNullOrEmptyErrorFormat = "'{0}' must not be empty.";
 
     [Theory]
     [InlineData("testString")]
@@ -61,7 +60,7 @@ public class NotNullOrWhitespaceTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -77,7 +76,7 @@ public class NotNullOrWhitespaceTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -91,7 +90,7 @@ public class NotNullOrWhitespaceTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -107,7 +106,7 @@ public class NotNullOrWhitespaceTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -121,7 +120,7 @@ public class NotNullOrWhitespaceTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -137,6 +136,6 @@ public class NotNullOrWhitespaceTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 }

@@ -7,12 +7,11 @@ public class CreditCardExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string CreditCardErrorFormat = "'{0}' is not a valid credit card number.";
 
-    static readonly Error CreditCardError = new ValidationError(MyPropertyName, CreditCardErrorFormat, MyPropertyName);
+    static readonly Error CreditCardError = new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.CreditCard, ExpectedValidatorErrorStrings.CreditCard, MyPropertyName);
 
     static readonly string MultiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-    static readonly Error MultiPartCreditCardError = new ValidationError(MultiPartPropertyName, CreditCardErrorFormat, MultiPartPropertyName);
+    static readonly Error MultiPartCreditCardError = new ValidationError(MultiPartPropertyName, ExpectedValidationErrorCodes.CreditCard, ExpectedValidatorErrorStrings.CreditCard, MultiPartPropertyName);
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -35,13 +34,8 @@ public class CreditCardExtensionTests
         Assert.Equal(result.Value, creditCardNumber);
     }
 
-    [Theory]
-    [InlineData("378282246310005")]  //American Express
-    [InlineData("30569309025904")]   //Diners Club
-    [InlineData("6011111111111117")] //Discover
-    [InlineData("5555555555554444")] //Mastercard
-    [InlineData("4111111111111111")] //Visa
-    public void IsCreditCard_PreviousFailure_Failure(string creditCardNumber)
+    [Fact]
+    public void IsCreditCard_PreviousFailure_Failure()
     {
         //Arrange
 
@@ -73,13 +67,8 @@ public class CreditCardExtensionTests
         Assert.Equal(result.Value, creditCardNumber);
     }
 
-    [Theory]
-    [InlineData("378282246310005")]  //American Express
-    [InlineData("30569309025904")]   //Diners Club
-    [InlineData("6011111111111117")] //Discover
-    [InlineData("5555555555554444")] //Mastercard
-    [InlineData("4111111111111111")] //Visa
-    public void IsCreditCardMultiPart_PreviousError_Failure(string creditCardNumber)
+    [Fact]
+    public void IsCreditCardMultiPart_PreviousError_Failure()
     {
         //Arrange
 

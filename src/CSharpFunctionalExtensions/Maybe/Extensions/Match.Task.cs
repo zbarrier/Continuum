@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ namespace Continuum.CSharpFunctionalExtensions
 {
     public static partial class MaybeExtensions
     {
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TE, T}(in Maybe{T}, Func{T, TE}, Func{TE})"/>
         public static async Task<TE> Match<TE, T>(
             this Maybe<T> maybe,
             Func<T, CancellationToken, Task<TE>> Some,
@@ -19,6 +20,7 @@ namespace Continuum.CSharpFunctionalExtensions
                 : await None(cancellationToken);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TE, T, TContext}(in Maybe{T}, Func{T, TContext, TE}, Func{TContext, TE}, TContext)"/>
         public static async Task<TE> Match<TE, T, TContext>(
             this Maybe<T> maybe,
             Func<T, TContext, CancellationToken, Task<TE>> Some,
@@ -32,6 +34,7 @@ namespace Continuum.CSharpFunctionalExtensions
                 : await None(context, cancellationToken);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{T}(in Maybe{T}, Action{T}, Action)"/>
         public static async Task Match<T>(
             this Maybe<T> maybe,
             Func<T, CancellationToken, Task> Some,
@@ -45,6 +48,7 @@ namespace Continuum.CSharpFunctionalExtensions
                 await None(cancellationToken);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{T, TContext}(in Maybe{T}, Action{T, TContext}, Action{TContext}, TContext)"/>
         public static async Task Match<T, TContext>(
             this Maybe<T> maybe,
             Func<T, TContext, CancellationToken, Task> Some,
@@ -59,6 +63,7 @@ namespace Continuum.CSharpFunctionalExtensions
                 await None(context, cancellationToken);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TE, TKey, TValue}(in Maybe{KeyValuePair{TKey, TValue}}, Func{TKey, TValue, TE}, Func{TE})"/>
         public static async Task<TE> Match<TE, TKey, TValue>(
             this Maybe<KeyValuePair<TKey, TValue>> maybe,
             Func<TKey, TValue, CancellationToken, Task<TE>> Some,
@@ -75,6 +80,7 @@ namespace Continuum.CSharpFunctionalExtensions
                 : await None.Invoke(cancellationToken);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TE, TKey, TValue, TContext}(in Maybe{KeyValuePair{TKey, TValue}}, Func{TKey, TValue, TContext, TE}, Func{TContext, TE}, TContext)"/>
         public static async Task<TE> Match<TE, TKey, TValue, TContext>(
             this Maybe<KeyValuePair<TKey, TValue>> maybe,
             Func<TKey, TValue, TContext, CancellationToken, Task<TE>> Some,
@@ -93,6 +99,7 @@ namespace Continuum.CSharpFunctionalExtensions
                 : await None.Invoke(context, cancellationToken);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TKey, TValue}(in Maybe{KeyValuePair{TKey, TValue}}, Action{TKey, TValue}, Action)"/>
         public static async Task Match<TKey, TValue>(
             this Maybe<KeyValuePair<TKey, TValue>> maybe,
             Func<TKey, TValue, CancellationToken, Task> Some,
@@ -114,6 +121,7 @@ namespace Continuum.CSharpFunctionalExtensions
             }
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TKey, TValue, TContext}(in Maybe{KeyValuePair{TKey, TValue}}, Action{TKey, TValue, TContext}, Action{TContext}, TContext)"/>
         public static async Task Match<TKey, TValue, TContext>(
             this Maybe<KeyValuePair<TKey, TValue>> maybe,
             Func<TKey, TValue, TContext, CancellationToken, Task> Some,

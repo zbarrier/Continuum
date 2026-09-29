@@ -1,4 +1,3 @@
-#if NET5_0_OR_GREATER
 using System;
 using System.Threading.Tasks;
 
@@ -6,6 +5,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
     public static partial class ResultExtensions
     {
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.MapIf{T}(Result{T}, bool, Func{T, T})"/>
         public static ValueTask<Result<T>> MapIf<T>(this Result<T> result, bool condition, Func<T, ValueTask<T>> valueTask)
         {
             if (!condition)
@@ -16,6 +16,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             return result.Map(valueTask);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.MapIf{T, TContext}(Result{T}, bool, Func{T, TContext, T}, TContext)"/>
         public static ValueTask<Result<T>> MapIf<T, TContext>(
             this Result<T> result,
             bool condition,
@@ -31,6 +32,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             return result.Map(valueTask, context);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.MapIf{T}(Result{T}, Func{T, bool}, Func{T, T})"/>
         public static ValueTask<Result<T>> MapIf<T>(this Result<T> result, Func<T, bool> predicate, Func<T, ValueTask<T>> valueTask)
         {
             if (!result.IsSuccess || !predicate(result.Value))
@@ -41,6 +43,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             return result.Map(valueTask);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.MapIf{T, TContext}(Result{T}, Func{T, TContext, bool}, Func{T, TContext, T}, TContext)"/>
         public static ValueTask<Result<T>> MapIf<T, TContext>(
             this Result<T> result,
             Func<T, TContext, bool> predicate,
@@ -57,4 +60,3 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         }
     }
 }
-#endif

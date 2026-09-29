@@ -55,15 +55,5 @@ namespace Continuum.CSharpFunctionalExtensions
 
             return Result.Success(func(context));
         }
-
-        //public static Result<Maybe<K>> Map<T, K>(
-        //    this Result<Maybe<T>> result,
-        //    Func<T, K> func)
-        //{
-        //    if (result.IsFailure)
-        //        return Result.Failure<Maybe<K>>(result.Error);
-
-        //    return Result.Success<Maybe<K>>(result.Value.Map(func));
-        //}
     }
 }

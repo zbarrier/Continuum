@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -7,7 +7,6 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public partial struct Result
 {
-    const string InclusiveBetweenError = "'{0}' must be between {1} and {2}. You entered {3}.";
 
     /// <summary>
     ///     Ensure value is between given range.
@@ -18,7 +17,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return comparer.Compare(value, from) < 0 || comparer.Compare(value, to) > 0
-            ? Result.Failure<T>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from!, to!, value!))
+            ? Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(value)))
             : Result.Success(value);
     }
 
@@ -33,7 +32,7 @@ public partial struct Result
         if (comparer.Compare(value, from) < 0 || comparer.Compare(value, to) > 0)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<T>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from!, to!, value!));
+            return Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(value)));
         }
 
         return Result.Success(value);
@@ -48,7 +47,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value.CompareTo(from) < 0 || value.CompareTo(to) > 0
-            ? Result.Failure<string>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from!, to!, value!))
+            ? Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(value)))
             : Result.Success(value);
     }
 
@@ -63,7 +62,7 @@ public partial struct Result
         if (value.CompareTo(from) < 0 || value.CompareTo(to) > 0)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from!, to!, value!));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(value)));
         }
 
         return Result.Success(value);
@@ -78,7 +77,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<byte>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -93,7 +92,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<byte>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -108,7 +107,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<short>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -123,7 +122,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<short>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -138,7 +137,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<int>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -153,7 +152,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<int>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -168,7 +167,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<long>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -183,7 +182,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<long>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -198,7 +197,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<float>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -213,7 +212,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<float>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -228,7 +227,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<double>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -243,7 +242,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<double>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -258,7 +257,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<decimal>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -273,7 +272,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<decimal>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -288,7 +287,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<BigInteger>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -303,7 +302,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<BigInteger>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -318,7 +317,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<TimeSpan>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -333,7 +332,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<TimeSpan>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -348,7 +347,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<DateTime>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -363,7 +362,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTime>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);
@@ -378,7 +377,7 @@ public partial struct Result
             throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
 
         return value < from || value > to
-            ? Result.Failure<DateTimeOffset>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value))
+            ? Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
             : Result.Success(value);
     }
 
@@ -394,7 +393,7 @@ public partial struct Result
         if (value < from || value > to)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, InclusiveBetweenError, propertyName, from, to, value));
+            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
         }
 
         return Result.Success(value);

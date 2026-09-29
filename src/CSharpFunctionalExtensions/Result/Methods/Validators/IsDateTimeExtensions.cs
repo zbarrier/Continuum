@@ -13,7 +13,7 @@ public static partial class ResultExtensions
 
         return DateTime.TryParse(result.Value, out DateTime dtValue)
             ? Result.Success(dtValue)
-            : Result.Failure<DateTime>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            : Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
@@ -26,7 +26,7 @@ public static partial class ResultExtensions
         if (!DateTime.TryParse(result.Value, out DateTime dtValue))
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTime>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
         return Result.Success(dtValue);

@@ -7,7 +7,6 @@ public class MaxLengthTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string MaxLengthErrorFormat = "The length of '{0}' must be {1} characters or fewer.";
 
     #region IEnumerable
 
@@ -83,7 +82,7 @@ public class MaxLengthTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, MaxLengthErrorFormat, MyPropertyName, maxLength));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.MaxCount, ExpectedValidatorErrorStrings.MaxCount, MyPropertyName, maxLength, value.Count()));
     }
 
     [Fact]
@@ -100,7 +99,7 @@ public class MaxLengthTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, MaxLengthErrorFormat, multiPartPropertyName, maxLength));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MaxCount, ExpectedValidatorErrorStrings.MaxCount, multiPartPropertyName, maxLength, value.Count()));
     }
 
     #endregion
@@ -158,7 +157,7 @@ public class MaxLengthTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, MaxLengthErrorFormat, MyPropertyName, maxLength));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.MaxLength, ExpectedValidatorErrorStrings.MaxLength, MyPropertyName, maxLength, value.Length));
     }
 
     [Theory]
@@ -178,7 +177,7 @@ public class MaxLengthTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, MaxLengthErrorFormat, multiPartPropertyName, maxLength));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MaxLength, ExpectedValidatorErrorStrings.MaxLength, multiPartPropertyName, maxLength, value.Length));
     }
 
     #endregion

@@ -1,6 +1,6 @@
-﻿namespace Continuum.CSharpFunctionalExtensions.Tests.ValueObjectTests
+namespace Continuum.CSharpFunctionalExtensions.Tests.ValueObjectTests
 {
-    public sealed class TestEnumValueObject : EnumValueObject<TestEnumValueObject>
+    public sealed partial class TestEnumValueObject : EnumValueObject<TestEnumValueObject>
     {
         public static readonly TestEnumValueObject One = new TestEnumValueObject(nameof(One));
 

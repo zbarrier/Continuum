@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 
 namespace Continuum.CSharpFunctionalExtensions
@@ -8,7 +8,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <summary>
         ///     Attempts to execute the supplied action. Returns a Result indicating whether the action executed successfully.
         /// </summary>
-        public static Result Try(Action action, Func<Exception, Error> errorHandler = null)
+        public static Result Try(Action action, Func<Exception, Error>? errorHandler = null)
         {
             errorHandler ??= Configuration.DefaultTryErrorHandler;
 
@@ -28,7 +28,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     Attempts to execute the supplied function. Returns a Result indicating whether the function executed successfully.
         ///     If the function executed successfully, the result contains its return value.
         /// </summary>
-        public static Result<T> Try<T>(Func<T> func, Func<Exception, Error> errorHandler = null)
+        public static Result<T> Try<T>(Func<T> func, Func<Exception, Error>? errorHandler = null)
         {
             errorHandler ??= Configuration.DefaultTryErrorHandler;
 

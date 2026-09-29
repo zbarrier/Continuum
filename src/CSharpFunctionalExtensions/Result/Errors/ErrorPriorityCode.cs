@@ -1,5 +1,9 @@
 ﻿namespace Continuum.CSharpFunctionalExtensions;
 
+/// <summary>
+///     Priority values for <see cref="Error.PriorityCode"/>. Lower values are more severe, which allows
+///     the most important error to be selected when several errors are combined.
+/// </summary>
 public static class ErrorPriorityCode
 {
     /// <summary>
@@ -108,4 +112,31 @@ public static class ErrorPriorityCode
     /// by retrying with a backoff. Note that it is not always safe to retry non-idempotent operations.
     /// </summary>
     public const int UNAVAILABLE = 16;
+
+    /// <summary>
+    ///     Gets the priority for a gRPC status code. This is the value of <see cref="Error.PriorityCode"/>.
+    /// </summary>
+    /// <param name="grpcStatusCode">The gRPC status code.</param>
+    /// <returns>The priority. Lower values are more severe.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="grpcStatusCode"/> is OK or not a defined status code.</exception>
+    public static int FromGrpcStatusCode(Grpc.Core.StatusCode grpcStatusCode) => grpcStatusCode switch
+    {
+        Grpc.Core.StatusCode.DataLoss => DATA_LOSS,
+        Grpc.Core.StatusCode.Internal => INTERNAL,
+        Grpc.Core.StatusCode.Unimplemented => UNIMPLEMENTED,
+        Grpc.Core.StatusCode.Unknown => UNKNOWN,
+        Grpc.Core.StatusCode.PermissionDenied => PERMISSION_DENIED,
+        Grpc.Core.StatusCode.Unauthenticated => UNAUTHENTICATED,
+        Grpc.Core.StatusCode.ResourceExhausted => RESOURCE_EXHAUSTED,
+        Grpc.Core.StatusCode.InvalidArgument => INVALID_ARGUMENT,
+        Grpc.Core.StatusCode.FailedPrecondition => FAILED_PRECONDITION,
+        Grpc.Core.StatusCode.OutOfRange => OUT_OF_RANGE,
+        Grpc.Core.StatusCode.NotFound => NOT_FOUND,
+        Grpc.Core.StatusCode.AlreadyExists => ALREADY_EXISTS,
+        Grpc.Core.StatusCode.Aborted => ABORTED,
+        Grpc.Core.StatusCode.DeadlineExceeded => DEADLINE_EXCEEDED,
+        Grpc.Core.StatusCode.Cancelled => CANCELLED,
+        Grpc.Core.StatusCode.Unavailable => UNAVAILABLE,
+        _ => throw new ArgumentOutOfRangeException(nameof(grpcStatusCode), grpcStatusCode, "Not a valid error status code."),
+    };
 }

@@ -1,5 +1,4 @@
-﻿#if NET5_0_OR_GREATER
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
@@ -15,4 +14,3 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             valueTask.ConfigureAwait(Result.Configuration.DefaultConfigureAwait);
     }
 }
-#endif

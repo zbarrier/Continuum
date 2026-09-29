@@ -1,16 +1,16 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-#if NET45_OR_GREATER || NETSTANDARD || NETCORE || NET5_0_OR_GREATER
 using System.Runtime.CompilerServices;
-#endif
-#if NET5_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
-#endif
 
 namespace Continuum.CSharpFunctionalExtensions
 {
+    /// <summary>
+    ///     Represents an optional value: either a value of type <typeparamref name="T"/> or no value.
+    /// </summary>
+    /// <typeparam name="T">The type of the optional value.</typeparam>
     [Serializable]
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public readonly partial struct Maybe<T> : IEquatable<Maybe<T>>, IEquatable<object>, IMaybe<T>
@@ -43,6 +43,10 @@ namespace Continuum.CSharpFunctionalExtensions
             return _value;
         }
 
+        /// <summary>
+        ///     Returns the inner value if there's one, otherwise <paramref name="defaultValue"/>.
+        /// </summary>
+        /// <param name="defaultValue">The value returned when there is no inner value.</param>
         public T GetValueOrDefault(T defaultValue)
         {
             if (HasNoValue)
@@ -51,6 +55,9 @@ namespace Continuum.CSharpFunctionalExtensions
             return _value;
         }
 
+        /// <summary>
+        ///     Returns the inner value if there's one, otherwise <see langword="default"/>.
+        /// </summary>
         public T? GetValueOrDefault()
         {
             if (HasNoValue)
@@ -63,13 +70,9 @@ namespace Continuum.CSharpFunctionalExtensions
         ///  Indicates whether the inner value is present and returns the value if it is.
         /// </summary>
         /// <param name="value">The inner value, if present; otherwise `default`</param>
-#if NET45_OR_GREATER || NETSTANDARD || NETCORE || NET5_0_OR_GREATER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         public bool TryGetValue(
-#if NET5_0_OR_GREATER
             [NotNullWhen(true), MaybeNullWhen(false)]
-#endif
             out T? value)
         {
             value = _value;
@@ -81,16 +84,21 @@ namespace Continuum.CSharpFunctionalExtensions
         /// </summary>
         public T Value => GetValueOrThrow();
 
+        /// <summary>
+        ///     Gets an instance with no value.
+        /// </summary>
         public static Maybe<T> None => new Maybe<T>();
 
-#if NET5_0_OR_GREATER
+        /// <summary>
+        ///     Gets a value indicating whether an inner value is present.
+        /// </summary>
         [MemberNotNullWhen(true, "_value")]
-#endif
         public bool HasValue => _isValueSet;
 
-#if NET5_0_OR_GREATER
+        /// <summary>
+        ///     Gets a value indicating whether no inner value is present.
+        /// </summary>
         [MemberNotNullWhen(false, "_value")]
-#endif
         public bool HasNoValue => !HasValue;
 
         private Maybe(T? value)
@@ -106,6 +114,10 @@ namespace Continuum.CSharpFunctionalExtensions
             _value = value;
         }
 
+        /// <summary>
+        ///     Wraps <paramref name="value"/>; a <see langword="null"/> value produces <see cref="None"/>.
+        /// </summary>
+        /// <param name="value">The value to wrap.</param>
         public static implicit operator Maybe<T>(T? value)
         {
             if (value is Maybe<T> m)
@@ -116,13 +128,24 @@ namespace Continuum.CSharpFunctionalExtensions
             return Maybe.From(value);
         }
 
+        /// <summary>
+        ///     Converts the non-generic <see cref="Maybe.None"/> into <see cref="None"/>.
+        /// </summary>
         public static implicit operator Maybe<T>(Maybe _) => None;
 
+        /// <summary>
+        ///     Creates a new <see cref="Maybe{T}"/> from <paramref name="value"/>; a <see langword="null"/> value produces <see cref="None"/>.
+        /// </summary>
+        /// <param name="value">The value to wrap.</param>
         public static Maybe<T> From(T? value)
         {
             return new Maybe<T>(value);
         }
         
+        /// <summary>
+        ///     Creates a new <see cref="Maybe{T}"/> from the value returned by <paramref name="func"/>.
+        /// </summary>
+        /// <param name="func">Produces the value to wrap.</param>
         public static Maybe<T> From(Func<T?> func)
         {
             T? value = func();
@@ -130,6 +153,10 @@ namespace Continuum.CSharpFunctionalExtensions
             return new Maybe<T>(value);
         }
         
+        /// <summary>
+        ///     Awaits <paramref name="valueTask"/> and wraps its result in a <see cref="Maybe{T}"/>.
+        /// </summary>
+        /// <param name="valueTask">The task producing the value to wrap.</param>
         public static async Task<Maybe<T>> From(Task<T?> valueTask)
         {
             T? value = await valueTask;
@@ -137,6 +164,10 @@ namespace Continuum.CSharpFunctionalExtensions
             return new Maybe<T>(value);
         }
         
+        /// <summary>
+        ///     Invokes and awaits <paramref name="valueTaskFunc"/> and wraps its result in a <see cref="Maybe{T}"/>.
+        /// </summary>
+        /// <param name="valueTaskFunc">Produces the task whose result is wrapped.</param>
         public static async Task<Maybe<T>> From(Func<Task<T?>> valueTaskFunc)
         {
             T? value = await valueTaskFunc();
@@ -144,6 +175,9 @@ namespace Continuum.CSharpFunctionalExtensions
             return new Maybe<T>(value);
         }
 
+        /// <summary>
+        ///     Determines whether <paramref name="maybe"/> contains a value equal to <paramref name="value"/>.
+        /// </summary>
         public static bool operator ==(Maybe<T> maybe, T? value)
         {
             if (value is Maybe<T> maybeValue)
@@ -155,31 +189,47 @@ namespace Continuum.CSharpFunctionalExtensions
             return maybe._value.Equals(value);
         }
 
+        /// <summary>
+        ///     Determines whether <paramref name="maybe"/> does not contain a value equal to <paramref name="value"/>.
+        /// </summary>
         public static bool operator !=(Maybe<T> maybe, T value)
         {
             return !(maybe == value);
         }
 
+        /// <summary>
+        ///     Determines whether <paramref name="maybe"/> equals <paramref name="other"/>.
+        /// </summary>
         public static bool operator ==(Maybe<T> maybe, object other)
         {
             return maybe.Equals(other);
         }
 
+        /// <summary>
+        ///     Determines whether <paramref name="maybe"/> does not equal <paramref name="other"/>.
+        /// </summary>
         public static bool operator !=(Maybe<T> maybe, object other)
         {
             return !(maybe == other);
         }
 
+        /// <summary>
+        ///     Determines whether two instances are equal. Two empty instances are equal.
+        /// </summary>
         public static bool operator ==(Maybe<T> first, Maybe<T> second)
         {
             return first.Equals(second);
         }
 
+        /// <summary>
+        ///     Determines whether two instances are not equal.
+        /// </summary>
         public static bool operator !=(Maybe<T> first, Maybe<T> second)
         {
             return !(first == second);
         }
 
+        /// <inheritdoc/>
         public override bool Equals(object? obj)
         {
             if (obj == null)
@@ -194,6 +244,10 @@ namespace Continuum.CSharpFunctionalExtensions
             return false;
         }
 
+        /// <summary>
+        ///     Determines whether this instance equals <paramref name="other"/>. Two empty instances are equal; otherwise the inner values are compared with the default equality comparer.
+        /// </summary>
+        /// <param name="other">The instance to compare with.</param>
         public bool Equals(Maybe<T> other)
         {
             if (HasNoValue && other.HasNoValue)
@@ -205,6 +259,7 @@ namespace Continuum.CSharpFunctionalExtensions
             return EqualityComparer<T>.Default.Equals(_value, other._value);
         }
 
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             if (HasNoValue)
@@ -213,6 +268,9 @@ namespace Continuum.CSharpFunctionalExtensions
             return _value.GetHashCode();
         }
 
+        /// <summary>
+        ///     Returns the inner value's string representation, or <c>No value</c> when empty.
+        /// </summary>
         public override string ToString()
         {
             if (HasNoValue)
@@ -227,6 +285,9 @@ namespace Continuum.CSharpFunctionalExtensions
     /// </summary>
     public readonly struct Maybe
     {
+        /// <summary>
+        ///     Gets an empty value that converts implicitly to <see cref="Maybe{T}.None"/> for any <c>T</c>.
+        /// </summary>
         public static Maybe None => new();
 
         /// <summary>
@@ -255,8 +316,17 @@ namespace Continuum.CSharpFunctionalExtensions
     /// </summary>
     public interface IMaybe<out T>
     {
+        /// <summary>
+        ///     Gets the inner value; throws when there is no value.
+        /// </summary>
         T Value { get; }
+        /// <summary>
+        ///     Gets a value indicating whether an inner value is present.
+        /// </summary>
         bool HasValue { get; }
+        /// <summary>
+        ///     Gets a value indicating whether no inner value is present.
+        /// </summary>
         bool HasNoValue { get; }
     }
 }

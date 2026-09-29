@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Continuum.CSharpFunctionalExtensions
 {
@@ -14,7 +14,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static Result BindTry<T>(this Result<T> result, Func<T, Result> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure(result.Error)
@@ -32,7 +32,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static Result<K> BindTry<T, K>(this Result<T> result, Func<T, Result<K>> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)
@@ -48,7 +48,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static Result BindTry(this Result result, Func<Result> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure(result.Error)
@@ -65,7 +65,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static Result<K> BindTry<K>(this Result result, Func<Result<K>> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)

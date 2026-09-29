@@ -13,7 +13,7 @@ public static partial class ResultExtensions
 
         return DateOnly.TryParse(result.Value, out DateOnly dateValue)
             ? Result.Success(dateValue)
-            : Result.Failure<DateOnly>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            : Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
@@ -26,7 +26,7 @@ public static partial class ResultExtensions
         if (!DateOnly.TryParse(result.Value, out DateOnly dateValue))
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateOnly>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            return Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
         return Result.Success(dateValue);

@@ -7,7 +7,6 @@ public class MinLengthExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string MinLengthErrorFormat = "The length of '{0}' must be at least {1} characters.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -122,7 +121,7 @@ public class MinLengthExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, MinLengthErrorFormat, MyPropertyName, minLength));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.MinCount, ExpectedValidatorErrorStrings.MinCount, MyPropertyName, minLength, value.Count()));
     }
 
     [Fact]
@@ -140,7 +139,7 @@ public class MinLengthExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, MinLengthErrorFormat, multiPartPropertyName, minLength));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MinCount, ExpectedValidatorErrorStrings.MinCount, multiPartPropertyName, minLength, value.Count()));
     }
 
     #endregion
@@ -167,12 +166,11 @@ public class MinLengthExtensionTests
     }
 
     [Theory]
-    [InlineData("testString", 10)]
-    [InlineData("123", 2)]
-    [InlineData("test", 2)]
-    [InlineData("JohnDoe", 7)]
-    [InlineData("My Awesome Company Name", 23)]
-    public void MinLength_StringPreviousError_Failure(string value, int minLength)
+    [InlineData(10)]
+    [InlineData(2)]
+    [InlineData(7)]
+    [InlineData(23)]
+    public void MinLength_StringPreviousError_Failure(int minLength)
     {
         //Arrange
 
@@ -205,12 +203,11 @@ public class MinLengthExtensionTests
     }
 
     [Theory]
-    [InlineData("testString", 10)]
-    [InlineData("123", 2)]
-    [InlineData("test", 2)]
-    [InlineData("JohnDoe", 7)]
-    [InlineData("My Awesome Company Name", 23)]
-    public void MinLengthMultiPart_StringPreviousError_Failure(string value, int minLength)
+    [InlineData(10)]
+    [InlineData(2)]
+    [InlineData(7)]
+    [InlineData(23)]
+    public void MinLengthMultiPart_StringPreviousError_Failure(int minLength)
     {
         //Arrange
 
@@ -239,7 +236,7 @@ public class MinLengthExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, MinLengthErrorFormat, MyPropertyName, minLength));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.MinLength, ExpectedValidatorErrorStrings.MinLength, MyPropertyName, minLength, value.Length));
     }
 
     [Theory]
@@ -260,7 +257,7 @@ public class MinLengthExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, MinLengthErrorFormat, multiPartPropertyName, minLength));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MinLength, ExpectedValidatorErrorStrings.MinLength, multiPartPropertyName, minLength, value.Length));
     }
 
     #endregion

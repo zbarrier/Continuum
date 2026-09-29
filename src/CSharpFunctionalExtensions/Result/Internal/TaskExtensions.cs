@@ -1,12 +1,7 @@
 ﻿using System.Threading.Tasks;
 
-#if NET40
-using Task = System.Threading.Tasks.TaskEx;
-using Microsoft.Runtime.CompilerServices;
-#else
 using Task = System.Threading.Tasks.Task;
 using System.Runtime.CompilerServices;
-#endif
 
 namespace Continuum.CSharpFunctionalExtensions
 {

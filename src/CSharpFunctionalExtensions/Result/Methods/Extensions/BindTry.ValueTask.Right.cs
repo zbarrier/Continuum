@@ -1,4 +1,3 @@
-﻿#if NET5_0_OR_GREATER
 using System.Threading.Tasks;
 using System;
 
@@ -17,7 +16,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <param name="errorHandler">Error handling function</param>
         /// <returns>Binding result</returns>
         public static async ValueTask<Result<K>> BindTry<T, K>(this Result<T> result, Func<T, ValueTask<Result<K>>> valueTask,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)
@@ -34,7 +33,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <param name="errorHandler">Error handling function</param>
         /// <returns>Binding result</returns>
         public static async ValueTask<Result<K>> BindTry<K>(this Result result, Func<ValueTask<Result<K>>> valueTask,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)
@@ -51,7 +50,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <param name="errorHandler">Error handling function</param>
         /// <returns>Binding result</returns>
         public static async ValueTask<Result> BindTry<T>(this Result<T> result, Func<T, ValueTask<Result>> valueTask,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure(result.Error)
@@ -67,7 +66,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <param name="errorHandler">Error handling function</param>
         /// <returns>Binding result</returns>
         public static async ValueTask<Result> BindTry(this Result result, Func<ValueTask<Result>> valueTask,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure(result.Error)
@@ -75,4 +74,3 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         }
     }
 }
-#endif

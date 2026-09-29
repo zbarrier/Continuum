@@ -14,8 +14,6 @@ public class IsGuidAndNotEmptyExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string NotEmptyErrorFormat = "'{0}' must not be empty.";
-    const string IsGuidAndNotEmptyErrorFormat = "'{0}' is not in the correct format.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -36,11 +34,8 @@ public class IsGuidAndNotEmptyExtensionTests
         Assert.Equal(result.Value.ToString(), value);
     }
 
-    [Theory]
-    [InlineData("d8865f38-600a-4ffd-ab32-25efcca9f54f")]
-    [InlineData("ae4597de-8386-41cd-89da-4188edcaee25")]
-    [InlineData("bc8b0ae1-0370-477f-8109-3fc373c1cc28")]
-    public void IsGuidAndNotEmpty_PreviousError_Failure(string value)
+    [Fact]
+    public void IsGuidAndNotEmpty_PreviousError_Failure()
     {
         //Arrange
 
@@ -70,11 +65,8 @@ public class IsGuidAndNotEmptyExtensionTests
         Assert.Equal(result.Value.ToString(), value);
     }
 
-    [Theory]
-    [InlineData("d8865f38-600a-4ffd-ab32-25efcca9f54f")]
-    [InlineData("ae4597de-8386-41cd-89da-4188edcaee25")]
-    [InlineData("bc8b0ae1-0370-477f-8109-3fc373c1cc28")]
-    public void IsGuidAndNotEmptyMultiPart_PreviousError_Failure(string value)
+    [Fact]
+    public void IsGuidAndNotEmptyMultiPart_PreviousError_Failure()
     {
         //Arrange
 
@@ -99,7 +91,7 @@ public class IsGuidAndNotEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Theory]
@@ -118,7 +110,7 @@ public class IsGuidAndNotEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, IsGuidAndNotEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -139,6 +131,6 @@ public class IsGuidAndNotEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, IsGuidAndNotEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

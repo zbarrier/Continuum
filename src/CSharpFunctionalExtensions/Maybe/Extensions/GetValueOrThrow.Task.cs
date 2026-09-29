@@ -1,9 +1,10 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace Continuum.CSharpFunctionalExtensions
 {
     public static partial class MaybeExtensions
     {
+        /// <inheritdoc cref="Maybe{T}.GetValueOrThrow(string)"/>
         public static async Task<T> GetValueOrThrow<T>(this Task<Maybe<T>> maybeTask)
         {
             var maybe = await maybeTask.DefaultAwait();

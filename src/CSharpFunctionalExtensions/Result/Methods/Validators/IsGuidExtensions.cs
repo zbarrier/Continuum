@@ -13,7 +13,7 @@ public static partial class ResultExtensions
 
         return Guid.TryParse(result.Value, out Guid guidValue)
             ? Result.Success(guidValue)
-            : Result.Failure<Guid>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            : Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
@@ -26,7 +26,7 @@ public static partial class ResultExtensions
         if (!Guid.TryParse(result.Value, out Guid guidValue))
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<Guid>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            return Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
         return Result.Success(guidValue);

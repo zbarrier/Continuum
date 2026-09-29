@@ -9,7 +9,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     Executes the given action if the calling result is a success. Returns the calling result.
         ///     If there is an exception, returns a new failure Result.
         /// </summary>
-        public static async Task<Result> TapTry(this Task<Result> resultTask, Func<Task> func, Func<Exception, Error> errorHandler = null)
+        public static async Task<Result> TapTry(this Task<Result> resultTask, Func<Task> func, Func<Exception, Error>? errorHandler = null)
         {
             var result = await resultTask.DefaultAwait();
 
@@ -33,7 +33,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     Executes the given action if the calling result is a success. Returns the calling result.
         ///     If there is an exception, returns a new failure Result.
         /// </summary>
-        public static async Task<Result<T>> TapTry<T>(this Task<Result<T>> resultTask, Func<Task> func, Func<Exception, Error> errorHandler = null)
+        public static async Task<Result<T>> TapTry<T>(this Task<Result<T>> resultTask, Func<Task> func, Func<Exception, Error>? errorHandler = null)
         {
             var result = await resultTask.DefaultAwait();
             
@@ -57,7 +57,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     Executes the given action if the calling result is a success. Returns the calling result.
         ///     If there is an exception, returns a new failure Result.
         /// </summary>
-        public static async Task<Result<T>> TapTry<T>(this Task<Result<T>> resultTask, Func<T, Task> func, Func<Exception, Error> errorHandler = null)
+        public static async Task<Result<T>> TapTry<T>(this Task<Result<T>> resultTask, Func<T, Task> func, Func<Exception, Error>? errorHandler = null)
         {
             var result = await resultTask.DefaultAwait();
 

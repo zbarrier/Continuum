@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Continuum.CSharpFunctionalExtensions
 {
@@ -8,7 +8,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     Executes the given action if the calling result is a success and the condition is true. Returns the calling result.
         ///     If there is an exception, returns a new failure Result.
         /// </summary>
-        public static Result TapIfTry(this Result result, bool condition, Action action, Func<Exception, Error> errorHandler = null)
+        public static Result TapIfTry(this Result result, bool condition, Action action, Func<Exception, Error>? errorHandler = null)
         {
             errorHandler ??= Result.Configuration.DefaultTryErrorHandler;
             
@@ -30,7 +30,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     Executes the given action if the calling result is a success and the condition is true. Returns the calling result.
         ///     If there is an exception, returns a new failure Result.
         /// </summary>
-        public static Result<T> TapIfTry<T>(this Result<T> result, bool condition, Action action, Func<Exception, Error> errorHandler = null)
+        public static Result<T> TapIfTry<T>(this Result<T> result, bool condition, Action action, Func<Exception, Error>? errorHandler = null)
         {
             errorHandler ??= Result.Configuration.DefaultTryErrorHandler;
             
@@ -52,7 +52,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     Executes the given action if the calling result is a success and the condition is true. Returns the calling result.
         ///     If there is an exception, returns a new failure Result.
         /// </summary>
-        public static Result<T> TapIfTry<T>(this Result<T> result, bool condition, Action<T> action, Func<Exception, Error> errorHandler = null)
+        public static Result<T> TapIfTry<T>(this Result<T> result, bool condition, Action<T> action, Func<Exception, Error>? errorHandler = null)
         {
             errorHandler ??= Result.Configuration.DefaultTryErrorHandler;
             
@@ -74,7 +74,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     Executes the given action if the calling result is a success and the predicate is true. Returns the calling result.
         ///     If there is an exception, returns a new failure Result.
         /// </summary>
-        public static Result<T> TapIfTry<T>(this Result<T> result, Func<T, bool> predicate, Action action, Func<Exception, Error> errorHandler = null)
+        public static Result<T> TapIfTry<T>(this Result<T> result, Func<T, bool> predicate, Action action, Func<Exception, Error>? errorHandler = null)
         {
             errorHandler ??= Result.Configuration.DefaultTryErrorHandler;
             
@@ -96,7 +96,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     Executes the given action if the calling result is a success and the predicate is true. Returns the calling result.
         ///     If there is an exception, returns a new failure Result.
         /// </summary>
-        public static Result<T> TapIfTry<T>(this Result<T> result, Func<T, bool> predicate, Action<T> action, Func<Exception, Error> errorHandler = null)
+        public static Result<T> TapIfTry<T>(this Result<T> result, Func<T, bool> predicate, Action<T> action, Func<Exception, Error>? errorHandler = null)
         {
             errorHandler ??= Result.Configuration.DefaultTryErrorHandler;
             

@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Numerics;
 
@@ -6,7 +6,6 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public static partial class ResultExtensions
 {
-    const string EqualError = "'{0}' must be equal to '{1}'.";
 
     /// <summary>
     ///     Ensure value is equal to given value.
@@ -21,7 +20,7 @@ public static partial class ResultExtensions
 
         return success
             ? result
-            : Result.Failure<T>(new ValidationError(propertyName, EqualError, propertyName, expectedValue!));
+            : Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
     /// <summary>
@@ -38,7 +37,7 @@ public static partial class ResultExtensions
         if (!success)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<T>(new ValidationError(propertyName, EqualError, propertyName, expectedValue!));
+            return Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, ErrorArgument.FromObject(expectedValue)));
         }
 
         return result;
@@ -53,7 +52,7 @@ public static partial class ResultExtensions
 
         return result.Value.Equals(expectedValue, stringComparisonType)
             ? result
-            : Result.Failure<string>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -67,7 +66,7 @@ public static partial class ResultExtensions
         if (!result.Value.Equals(expectedValue, stringComparisonType))
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -82,7 +81,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<byte>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -95,7 +94,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<byte>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -110,7 +109,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<short>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -123,7 +122,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<short>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -138,7 +137,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<int>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -151,7 +150,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<int>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -166,7 +165,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<long>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -179,7 +178,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<long>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -194,7 +193,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<float>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -207,7 +206,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<float>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -222,7 +221,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<double>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -235,7 +234,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<double>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -250,7 +249,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<decimal>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -263,7 +262,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<decimal>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -278,7 +277,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<BigInteger>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -291,7 +290,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<BigInteger>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -306,7 +305,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<TimeSpan>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -319,7 +318,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<TimeSpan>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -334,7 +333,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<DateTime>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -347,7 +346,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTime>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -362,7 +361,7 @@ public static partial class ResultExtensions
 
         return result.Value == expectedValue
             ? result
-            : Result.Failure<DateTimeOffset>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            : Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
     }
 
     /// <summary>
@@ -375,7 +374,7 @@ public static partial class ResultExtensions
         if (result.Value != expectedValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, EqualError, propertyName, expectedValue));
+            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;

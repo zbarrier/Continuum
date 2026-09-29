@@ -29,7 +29,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             HttpResponseMessage httpResponseMessage = null;
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync();
+            var result = await httpResponseMessage.ReadResultAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -42,7 +42,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             HttpResponseMessage httpResponseMessage = null;
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<int>();
+            var result = await httpResponseMessage.ReadResultAsync<int>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -55,7 +55,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             HttpResponseMessage httpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK);
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync();
+            var result = await httpResponseMessage.ReadResultAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -69,7 +69,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             HttpResponseMessage httpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK);
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<int>();
+            var result = await httpResponseMessage.ReadResultAsync<int>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -84,7 +84,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = new StringContent(string.Empty);
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync();
+            var result = await httpResponseMessage.ReadResultAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -99,7 +99,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = new StringContent(string.Empty);
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<int>();
+            var result = await httpResponseMessage.ReadResultAsync<int>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -115,7 +115,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
 
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync();
+            var result = await httpResponseMessage.ReadResultAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -131,7 +131,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
 
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<string>();
+            var result = await httpResponseMessage.ReadResultAsync<string>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -146,7 +146,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = JsonContent.Create(8);
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync();
+            var result = await httpResponseMessage.ReadResultAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -161,7 +161,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = JsonContent.Create(8);
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<string>();
+            var result = await httpResponseMessage.ReadResultAsync<string>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -176,7 +176,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = JsonContent.Create(8);
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<string>();
+            var result = await httpResponseMessage.ReadResultAsync<string>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -190,7 +190,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = JsonContent.Create(new object());
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync();
+            var result = await httpResponseMessage.ReadResultAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -205,7 +205,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = JsonContent.Create(new object());
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<string>();
+            var result = await httpResponseMessage.ReadResultAsync<string>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -220,7 +220,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = JsonContent.Create(Result.Success(), null, _options);
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync();
+            var result = await httpResponseMessage.ReadResultAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -235,7 +235,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = JsonContent.Create(Result.Success(value), null, _options);
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<string>();
+            var result = await httpResponseMessage.ReadResultAsync<string>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -251,7 +251,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = JsonContent.Create(Result.Failure(error));
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync();
+            var result = await httpResponseMessage.ReadResultAsync(cancellationToken: TestContext.Current.CancellationToken);
             // Assert
             result.IsSuccess.Should().BeFalse();
             result.Error.Should().Be(error);
@@ -266,7 +266,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = JsonContent.Create(Result.Failure<string>(error));
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<string>();
+            var result = await httpResponseMessage.ReadResultAsync<string>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -281,7 +281,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = new StringContent("{ \"IsSuccess\": true }");
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync();
+            var result = await httpResponseMessage.ReadResultAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -296,7 +296,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             httpResponseMessage.Content = new StringContent($"{{ \"IsSuccess\": true, \"Value\": \"{value}\"}}");
 
             // Act
-            var result = await httpResponseMessage.ReadResultAsync<string>();
+            var result = await httpResponseMessage.ReadResultAsync<string>(cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             result.IsSuccess.Should().BeTrue();

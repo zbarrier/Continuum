@@ -9,12 +9,11 @@ public class EmailTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string EmailErrorFormat = "'{0}' is not a valid email address.";
 
-    static readonly Error EmailError = new ValidationError(MyPropertyName, EmailErrorFormat, MyPropertyName);
+    static readonly Error EmailError = new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Email, ExpectedValidatorErrorStrings.Email, MyPropertyName);
 
     static readonly string MultiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-    static readonly Error MultiPartEmailError = new ValidationError(MultiPartPropertyName, EmailErrorFormat, MultiPartPropertyName);
+    static readonly Error MultiPartEmailError = new ValidationError(MultiPartPropertyName, ExpectedValidationErrorCodes.Email, ExpectedValidatorErrorStrings.Email, MultiPartPropertyName);
 
     [Fact]
     public void IsEmail_SimpleAddress_Success()

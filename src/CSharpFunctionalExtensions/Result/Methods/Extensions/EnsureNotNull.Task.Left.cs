@@ -3,22 +3,20 @@
 using System;
 using System.Threading.Tasks;
 
-#if NET40
-using Task = System.Threading.Tasks.TaskEx;
-#else
 using Task = System.Threading.Tasks.Task;
-#endif
 
 namespace Continuum.CSharpFunctionalExtensions
 {
     public static partial class ResultExtensions
     {
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.EnsureNotNull{T}(Result{T}, Func{Error})"/>
         public static Task<Result<T>> EnsureNotNull<T>(this Task<Result<T?>> resultTask, Func<Error> errorFactory)
             where T : class
         {
             return resultTask.Ensure(value => value != null, errorFactory).Map(value => value!);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.EnsureNotNull{T}(Result{T}, Func{Error})"/>
         public static Task<Result<T>> EnsureNotNull<T>(this Task<Result<T?>> resultTask, Func<Error> errorFactory)
             where T : struct
         {

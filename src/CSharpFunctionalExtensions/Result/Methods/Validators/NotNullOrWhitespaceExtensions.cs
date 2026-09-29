@@ -14,7 +14,7 @@ public static partial class ResultExtensions
         if (result.IsFailure) return result;
 
         if (string.IsNullOrWhiteSpace(result.Value))
-            return Result.Failure<string>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value);
     }
@@ -29,7 +29,7 @@ public static partial class ResultExtensions
         if (string.IsNullOrWhiteSpace(result.Value))
         {
             string propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
             
         return Result.Success(result.Value);

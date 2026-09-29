@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Continuum.CSharpFunctionalExtensions;
@@ -14,8 +14,8 @@ public partial struct Result
     ///     A Result that is a success when all the input <paramref name="results"/> are also successes.</returns>
     public static Result Combine(IEnumerable<Result> results)
     {
-        var nonValidationErrorResults = new List<Result>();
-        var validationErrorResults = new List<Result>();
+        List<Result>? nonValidationErrorResults = null;
+        List<Result>? validationErrorResults = null;
 
         foreach (var result in results)
         {
@@ -23,31 +23,31 @@ public partial struct Result
             {
                 if (result.Error is ValidationError)
                 {
-                    validationErrorResults.Add(result);
+                    (validationErrorResults ??= new List<Result>()).Add(result);
                 }
                 else
                 {
-                    nonValidationErrorResults.Add(result);
+                    (nonValidationErrorResults ??= new List<Result>()).Add(result);
                 }
             }
         }
 
-        if (nonValidationErrorResults.Count == 0 && validationErrorResults.Count == 0)
+        if (nonValidationErrorResults is null && validationErrorResults is null)
         {
             return Success();
         }
 
-        if (validationErrorResults.Count > 0)
+        if (validationErrorResults is not null)
         {
             var validationFailureResult = Failure(CombineValidationErrors(validationErrorResults));
-            if (nonValidationErrorResults.Count == 0)
+            if (nonValidationErrorResults is null)
             {
                 return validationFailureResult;
             }
             nonValidationErrorResults.Add(validationFailureResult);
         }
 
-        return Failure(SelectHighestPriorityError(nonValidationErrorResults));
+        return Failure(SelectHighestPriorityError(nonValidationErrorResults!));
     }
 
     /// <summary>
@@ -55,14 +55,12 @@ public partial struct Result
     ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.</summary>
     /// <param name="results">
     ///     The Results to be combined.</param>
-    /// <param name="errorMessagesSeparator">
-    ///     A string that is used to separate any concatenated error messages. If omitted, the default <see cref="Result.Configuration.ErrorMessagesSeparator" /> is used.</param>
     /// <returns>
     ///     A Result that is a success when all the input <paramref name="results"/> are also successes.</returns>
     public static Result Combine<T>(IEnumerable<Result<T>> results)
     {
-        var nonValidationErrorResults = new List<Result>();
-        var validationErrorResults = new List<Result>();
+        List<Result>? nonValidationErrorResults = null;
+        List<Result>? validationErrorResults = null;
 
         foreach (var result in results)
         {
@@ -70,31 +68,31 @@ public partial struct Result
             {
                 if (result.Error is ValidationError)
                 {
-                    validationErrorResults.Add(result);
+                    (validationErrorResults ??= new List<Result>()).Add(result);
                 }
                 else
                 {
-                    nonValidationErrorResults.Add(result);
+                    (nonValidationErrorResults ??= new List<Result>()).Add(result);
                 }
             }
         }
 
-        if (nonValidationErrorResults.Count == 0 && validationErrorResults.Count == 0)
+        if (nonValidationErrorResults is null && validationErrorResults is null)
         {
             return Success();
         }
 
-        if (validationErrorResults.Count > 0)
+        if (validationErrorResults is not null)
         {
             var validationFailureResult = Failure(CombineValidationErrors(validationErrorResults));
-            if (nonValidationErrorResults.Count == 0)
+            if (nonValidationErrorResults is null)
             {
                 return validationFailureResult;
             }
             nonValidationErrorResults.Add(validationFailureResult);
         }
 
-        return Failure(SelectHighestPriorityError(nonValidationErrorResults));
+        return Failure(SelectHighestPriorityError(nonValidationErrorResults!));
     }
 
     /// <summary>
@@ -106,8 +104,8 @@ public partial struct Result
     ///     A Result that is a success when all the input <paramref name="results"/> are also successes.</returns>
     public static Result Combine(params Result[] results)
     {
-        var nonValidationErrorResults = new List<Result>();
-        var validationErrorResults = new List<Result>();
+        List<Result>? nonValidationErrorResults = null;
+        List<Result>? validationErrorResults = null;
 
         var arraySpan = results.AsSpan();
         ref var searchSpace = ref MemoryMarshal.GetReference(arraySpan);
@@ -118,31 +116,31 @@ public partial struct Result
             {
                 if (result.Error is ValidationError)
                 {
-                    validationErrorResults.Add(result);
+                    (validationErrorResults ??= new List<Result>()).Add(result);
                 }
                 else
                 {
-                    nonValidationErrorResults.Add(result);
+                    (nonValidationErrorResults ??= new List<Result>()).Add(result);
                 }
             }
         }
 
-        if (nonValidationErrorResults.Count == 0 && validationErrorResults.Count == 0)
+        if (nonValidationErrorResults is null && validationErrorResults is null)
         {
             return Success();
         }
 
-        if (validationErrorResults.Count > 0)
+        if (validationErrorResults is not null)
         {
             var validationFailureResult = Failure(CombineValidationErrors(validationErrorResults));
-            if (nonValidationErrorResults.Count == 0)
+            if (nonValidationErrorResults is null)
             {
                 return validationFailureResult;
             }
             nonValidationErrorResults.Add(validationFailureResult);
         }
 
-        return Failure(SelectHighestPriorityError(nonValidationErrorResults));
+        return Failure(SelectHighestPriorityError(nonValidationErrorResults!));
     }
 
     /// <summary>
@@ -154,8 +152,8 @@ public partial struct Result
     ///     A Result that is a success when all the input <paramref name="results"/> are also successes.</returns>
     public static Result Combine<T>(params Result<T>[] results)
     {
-        var nonValidationErrorResults = new List<Result>();
-        var validationErrorResults = new List<Result>();
+        List<Result>? nonValidationErrorResults = null;
+        List<Result>? validationErrorResults = null;
 
         var arraySpan = results.AsSpan();
         ref var searchSpace = ref MemoryMarshal.GetReference(arraySpan);
@@ -166,31 +164,31 @@ public partial struct Result
             {
                 if (result.Error is ValidationError)
                 {
-                    validationErrorResults.Add(result);
+                    (validationErrorResults ??= new List<Result>()).Add(result);
                 }
                 else
                 {
-                    nonValidationErrorResults.Add(result);
+                    (nonValidationErrorResults ??= new List<Result>()).Add(result);
                 }
             }
         }
 
-        if (nonValidationErrorResults.Count == 0 && validationErrorResults.Count == 0)
+        if (nonValidationErrorResults is null && validationErrorResults is null)
         {
             return Success();
         }
 
-        if (validationErrorResults.Count > 0)
+        if (validationErrorResults is not null)
         {
             var validationFailureResult = Failure(CombineValidationErrors(validationErrorResults));
-            if (nonValidationErrorResults.Count == 0)
+            if (nonValidationErrorResults is null)
             {
                 return validationFailureResult;
             }
             nonValidationErrorResults.Add(validationFailureResult);
         }
 
-        return Failure(SelectHighestPriorityError(nonValidationErrorResults));
+        return Failure(SelectHighestPriorityError(nonValidationErrorResults!));
     }
 
     private static Error SelectHighestPriorityError(List<Result> failedResults)
@@ -207,7 +205,7 @@ public partial struct Result
         for (int i = 1; i < resultsAsSpan.Length; i++)
         {
             var nextResult = Unsafe.Add(ref resultSearchSpace, i);
-            if (nextResult.Error.PriorityCode < error.PriorityCode)
+            if (nextResult.Error.CompareTo(error) < 0)
             {
                 error = nextResult.Error;
             }

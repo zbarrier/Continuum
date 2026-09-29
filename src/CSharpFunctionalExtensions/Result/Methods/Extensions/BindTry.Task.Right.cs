@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using System;
 
 namespace Continuum.CSharpFunctionalExtensions
@@ -16,7 +16,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static async Task<Result<K>> BindTry<T, K>(this Result<T> result, Func<T, Task<Result<K>>> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)
@@ -33,7 +33,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static async Task<Result<K>> BindTry<K>(this Result result, Func<Task<Result<K>>> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)
@@ -50,7 +50,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static async Task<Result> BindTry<T>(this Result<T> result, Func<T, Task<Result>> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure(result.Error)
@@ -66,7 +66,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static async Task<Result> BindTry(this Result result, Func<Task<Result>> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure(result.Error)

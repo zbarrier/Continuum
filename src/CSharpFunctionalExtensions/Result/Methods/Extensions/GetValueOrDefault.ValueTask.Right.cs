@@ -1,4 +1,3 @@
-﻿#if NET5_0_OR_GREATER
 using System;
 using System.Threading.Tasks;
 
@@ -6,6 +5,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
     public static partial class ResultExtensions
     {
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.GetValueOrDefault{T}(in Result{T}, Func{T})"/>
         public static async ValueTask<T> GetValueOrDefault<T>(this Result<T> result, Func<ValueTask<T>> valueTask)
         {
             if (result.IsFailure)
@@ -14,6 +14,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             return result.Value;
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.GetValueOrDefault{T, K}(in Result{T}, Func{T, K}, Func{K})"/>
         public static async ValueTask<K> GetValueOrDefault<T, K>(this Result<T> result, Func<T, K> selector,
             Func<ValueTask<K>> valueTask)
         {
@@ -23,8 +24,9 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             return selector(result.Value);
         }
 
-        public static async ValueTask<K> GetValueOrDefault<T, K>(this Result<T> result, Func<T, ValueTask<K>> valueTask,
-            K defaultValue = default)
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.GetValueOrDefault{T, K}(in Result{T}, Func{T, K}, K)"/>
+        public static async ValueTask<K?> GetValueOrDefault<T, K>(this Result<T> result, Func<T, ValueTask<K>> valueTask,
+            K? defaultValue = default)
         {
             if (result.IsFailure)
                 return defaultValue;
@@ -32,6 +34,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             return await valueTask(result.Value);
         }
 
+        /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.GetValueOrDefault{T, K}(in Result{T}, Func{T, K}, Func{K})"/>
         public static async ValueTask<K> GetValueOrDefault<T, K>(this Result<T> result, Func<T, ValueTask<K>> valueTask,
             Func<ValueTask<K>> defaultValue)
         {
@@ -42,4 +45,3 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         }
     }
 }
-#endif

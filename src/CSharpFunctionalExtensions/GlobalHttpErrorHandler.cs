@@ -1,9 +1,15 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Continuum.CSharpFunctionalExtensions;
 
+/// <summary>
+///     Provides default mappings from HTTP client exceptions to <see cref="Error"/> instances.
+/// </summary>
 public static class GlobalHttpErrorHandler
 {
+    /// <summary>
+    ///     Logs the exception and maps it to an <see cref="Error"/>: timeouts and cancellations become deadline-exceeded errors; all other exceptions become unknown errors.
+    /// </summary>
     public static readonly Func<Exception, ILogger, Error> Default = (ex, logger) =>
     {
         Error error;

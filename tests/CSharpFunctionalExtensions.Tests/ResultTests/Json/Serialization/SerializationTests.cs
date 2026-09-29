@@ -173,6 +173,35 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
             }
         }
 
+        [Fact]
+        public void Result_Failure_RequestError_RoundTripsCode()
+        {
+            // Assign
+            var originalResult = Result.Failure(RequestErrors.NewNotFound("{0} missing", "Item").WithCode("orders.not_found"));
+
+            // Act
+            var result = SerializeAndDeserialize(originalResult);
+
+            // Assert
+            result.Error.Code.Should().Be("orders.not_found");
+            result.Error.Should().BeOfType<RequestError>();
+        }
+
+        [Fact]
+        public void Result_Failure_ValidationError_RoundTripsCodes()
+        {
+            // Assign
+            var originalResult = Result.Failure(ValidationError);
+
+            // Act
+            var result = SerializeAndDeserialize(originalResult);
+
+            // Assert
+            result.Error.Code.Should().Be(ErrorCodes.ValidationFailed);
+            var entries = ((ValidationError)result.Error).Entries;
+            entries.Select(e => e.Code).Should().Equal("code1", "code2", "code3");
+        }
+
         private TResult SerializeAndDeserialize<TResult>(TResult result)
         {
             return JsonSerializer.Deserialize<TResult>(

@@ -4,25 +4,30 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public partial struct Result
 {
-    const string MaxLengthError = "The length of '{0}' must be {1} characters or fewer.";
-
     /// <summary>
     ///     Ensure collection count is less than or equal to value.
     /// </summary>
     public static Result<IEnumerable<T>> MaxLength<T>(IEnumerable<T> value, int maxLength, string propertyName)
-    => value.Count() > maxLength
-        ? Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, MaxLengthError, propertyName, maxLength))
-        : Result.Success(value);
+    {
+        var count = value.Count();
+        if (count > maxLength)
+        {
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.MaxCount, ValidatorErrorStrings.MaxCount, propertyName, maxLength, count));
+        }
+
+        return Result.Success(value);
+    }
 
     /// <summary>
     ///     Ensure collection count is less than or equal to value.
     /// </summary>
     public static Result<IEnumerable<T>> MaxLength<T>(IEnumerable<T> value, int maxLength, string propertyNameFormat, params object[] arguments)
     {
-        if (value.Count() > maxLength)
+        var count = value.Count();
+        if (count > maxLength)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, MaxLengthError, propertyName, maxLength));
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.MaxCount, ValidatorErrorStrings.MaxCount, propertyName, maxLength, count));
         }
 
         return Result.Success(value);
@@ -32,19 +37,26 @@ public partial struct Result
     ///     Ensure string length is less than or equal to value.
     /// </summary>
     public static Result<string> MaxLength(string value, int maxLength, string propertyName)
-    => value.Length > maxLength
-        ? Result.Failure<string>(new ValidationError(propertyName, MaxLengthError, propertyName, maxLength))
-        : Result.Success(value);
+    {
+        var length = value.Length;
+        if (length > maxLength)
+        {
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.MaxLength, ValidatorErrorStrings.MaxLength, propertyName, maxLength, length));
+        }
+
+        return Result.Success(value);
+    }
 
     /// <summary>
     ///     Ensure string length is less than or equal to value.
     /// </summary>
     public static Result<string> MaxLength(string value, int maxLength, string propertyNameFormat, params object[] arguments)
     {
-        if (value.Length > maxLength)
+        var length = value.Length;
+        if (length > maxLength)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, MaxLengthError, propertyName, maxLength));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.MaxLength, ValidatorErrorStrings.MaxLength, propertyName, maxLength, length));
         }
 
         return Result.Success(value);

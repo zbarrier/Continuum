@@ -14,7 +14,6 @@ public class IsGuidExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string IsGuidErrorFormat = "'{0}' is not in the correct format.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -35,11 +34,8 @@ public class IsGuidExtensionTests
         Assert.Equal(result.Value.ToString(), value);
     }
 
-    [Theory]
-    [InlineData("d8865f38-600a-4ffd-ab32-25efcca9f54f")]
-    [InlineData("00000000-0000-0000-0000-000000000000")]
-    [InlineData("ae4597de-8386-41cd-89da-4188edcaee25")]
-    public void IsGuid_PreviousError_Failure(string value)
+    [Fact]
+    public void IsGuid_PreviousError_Failure()
     {
         //Arrange
 
@@ -69,11 +65,8 @@ public class IsGuidExtensionTests
         Assert.Equal(result.Value.ToString(), value);
     }
 
-    [Theory]
-    [InlineData("d8865f38-600a-4ffd-ab32-25efcca9f54f")]
-    [InlineData("00000000-0000-0000-0000-000000000000")]
-    [InlineData("ae4597de-8386-41cd-89da-4188edcaee25")]
-    public void IsGuidMultiPart_PreviousError_Failure(string value)
+    [Fact]
+    public void IsGuidMultiPart_PreviousError_Failure()
     {
         //Arrange
 
@@ -115,7 +108,7 @@ public class IsGuidExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, IsGuidErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -134,6 +127,6 @@ public class IsGuidExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, IsGuidErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

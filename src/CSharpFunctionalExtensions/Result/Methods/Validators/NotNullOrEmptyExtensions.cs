@@ -14,9 +14,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return result;
 
         if (result.Value is null)
-            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (!result.Value.Any())
-            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value);
     }
@@ -31,12 +31,12 @@ public static partial class ResultExtensions
         if (result.Value is null)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (!result.Value.Any())
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value);
@@ -50,7 +50,7 @@ public static partial class ResultExtensions
         if (result.IsFailure) return result;
 
         if (string.IsNullOrEmpty(result.Value))
-            return Result.Failure<string>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value);
     }
@@ -65,7 +65,7 @@ public static partial class ResultExtensions
         if (string.IsNullOrEmpty(result.Value))
         {
             string propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
             
         return Result.Success(result.Value);
@@ -79,9 +79,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<Guid>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<Guid>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == Guid.Empty)
-            return Result.Failure<Guid>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -96,12 +96,12 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<Guid>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (result.Value.Value == Guid.Empty)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<Guid>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -115,9 +115,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<byte>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<byte>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<byte>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -132,12 +132,12 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<byte>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<byte>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -151,9 +151,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<short>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<short>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<short>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -168,12 +168,12 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<short>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<short>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -187,9 +187,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<int>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<int>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<int>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -204,12 +204,12 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<int>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<int>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -223,9 +223,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<long>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<long>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<long>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -240,12 +240,12 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<long>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<long>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -259,9 +259,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<float>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<float>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<float>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -276,12 +276,12 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<float>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<float>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -295,9 +295,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<double>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<double>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<double>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -312,12 +312,12 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<double>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<double>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -331,9 +331,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<decimal>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<decimal>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<decimal>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -348,12 +348,12 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<decimal>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<decimal>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -367,9 +367,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<BigInteger>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<BigInteger>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == BigInteger.Zero)
-            return Result.Failure<BigInteger>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -384,12 +384,12 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<BigInteger>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<BigInteger>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -403,9 +403,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<TimeSpan>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<TimeSpan>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<TimeSpan>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -420,13 +420,13 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<TimeSpan>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
 
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<TimeSpan>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -440,9 +440,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<DateOnly>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<DateOnly>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<DateOnly>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -457,13 +457,13 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateOnly>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
 
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateOnly>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -477,9 +477,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<DateTime>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<DateTime>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<DateTime>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -494,13 +494,13 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTime>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
             
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTime>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);
@@ -514,9 +514,9 @@ public static partial class ResultExtensions
         if (result.IsFailure) return Result.Failure<DateTimeOffset>(result.Error);
 
         if (!result.Value.HasValue)
-            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         if (result.Value.Value == default)
-            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
 
         return Result.Success(result.Value.Value);
     }
@@ -531,13 +531,13 @@ public static partial class ResultExtensions
         if (!result.Value.HasValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, NotNullError, propertyName));
+            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
         }
 
         if (result.Value.Value == default)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
 
         return Result.Success(result.Value.Value);

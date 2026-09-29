@@ -1,0 +1,73 @@
+﻿#nullable enable
+
+namespace Continuum.CSharpFunctionalExtensions;
+
+/// <summary>
+///     Registry of built-in translations, keyed by culture name.
+/// </summary>
+internal static class Languages
+{
+    public static string? GetTranslation(string culture, string code) => culture switch
+    {
+        EnglishLanguage.Culture => EnglishLanguage.GetTranslation(code),
+        AlbanianLanguage.Culture => AlbanianLanguage.GetTranslation(code),
+        ArabicLanguage.Culture => ArabicLanguage.GetTranslation(code),
+        AzerbaijaneseLanguage.Culture => AzerbaijaneseLanguage.GetTranslation(code),
+        BelarusianLanguage.Culture => BelarusianLanguage.GetTranslation(code),
+        BengaliLanguage.Culture => BengaliLanguage.GetTranslation(code),
+        BosnianLanguage.Culture => BosnianLanguage.GetTranslation(code),
+        BulgarianLanguage.Culture => BulgarianLanguage.GetTranslation(code),
+        CatalanLanguage.Culture => CatalanLanguage.GetTranslation(code),
+        ChineseSimplifiedLanguage.Culture => ChineseSimplifiedLanguage.GetTranslation(code),
+        ChineseTraditionalLanguage.Culture => ChineseTraditionalLanguage.GetTranslation(code),
+        CroatianLanguage.Culture => CroatianLanguage.GetTranslation(code),
+        CzechLanguage.Culture => CzechLanguage.GetTranslation(code),
+        DanishLanguage.Culture => DanishLanguage.GetTranslation(code),
+        DutchLanguage.Culture => DutchLanguage.GetTranslation(code),
+        EstonianLanguage.Culture => EstonianLanguage.GetTranslation(code),
+        FinnishLanguage.Culture => FinnishLanguage.GetTranslation(code),
+        FrenchLanguage.Culture => FrenchLanguage.GetTranslation(code),
+        GeorgianLanguage.Culture => GeorgianLanguage.GetTranslation(code),
+        GermanLanguage.Culture => GermanLanguage.GetTranslation(code),
+        GreekLanguage.Culture => GreekLanguage.GetTranslation(code),
+        HebrewLanguage.Culture => HebrewLanguage.GetTranslation(code),
+        HindiLanguage.Culture => HindiLanguage.GetTranslation(code),
+        HungarianLanguage.Culture => HungarianLanguage.GetTranslation(code),
+        IcelandicLanguage.Culture => IcelandicLanguage.GetTranslation(code),
+        IndonesianLanguage.Culture => IndonesianLanguage.GetTranslation(code),
+        ItalianLanguage.Culture => ItalianLanguage.GetTranslation(code),
+        JapaneseLanguage.Culture => JapaneseLanguage.GetTranslation(code),
+        KazakhLanguage.Culture => KazakhLanguage.GetTranslation(code),
+        KhmerLanguage.Culture => KhmerLanguage.GetTranslation(code),
+        KoreanLanguage.Culture => KoreanLanguage.GetTranslation(code),
+        LatvianLanguage.Culture => LatvianLanguage.GetTranslation(code),
+        LithuanianLanguage.Culture => LithuanianLanguage.GetTranslation(code),
+        MacedonianLanguage.Culture => MacedonianLanguage.GetTranslation(code),
+        NorwegianBokmalLanguage.Culture => NorwegianBokmalLanguage.GetTranslation(code),
+        NorwegianNynorskLanguage.Culture => NorwegianNynorskLanguage.GetTranslation(code),
+        PersianLanguage.Culture => PersianLanguage.GetTranslation(code),
+        PolishLanguage.Culture => PolishLanguage.GetTranslation(code),
+        PortugueseBrazilLanguage.Culture => PortugueseBrazilLanguage.GetTranslation(code),
+        PortugueseLanguage.Culture => PortugueseLanguage.GetTranslation(code),
+        RomanianLanguage.Culture => RomanianLanguage.GetTranslation(code),
+        RomanshLanguage.Culture => RomanshLanguage.GetTranslation(code),
+        RussianLanguage.Culture => RussianLanguage.GetTranslation(code),
+        SerbianCyrillicLanguage.Culture => SerbianCyrillicLanguage.GetTranslation(code),
+        SerbianLatinLanguage.Culture => SerbianLatinLanguage.GetTranslation(code),
+        SlovakLanguage.Culture => SlovakLanguage.GetTranslation(code),
+        SlovenianLanguage.Culture => SlovenianLanguage.GetTranslation(code),
+        SpanishLanguage.Culture => SpanishLanguage.GetTranslation(code),
+        SwedishLanguage.Culture => SwedishLanguage.GetTranslation(code),
+        TajikLanguage.Culture => TajikLanguage.GetTranslation(code),
+        TamilLanguage.Culture => TamilLanguage.GetTranslation(code),
+        TeluguLanguage.Culture => TeluguLanguage.GetTranslation(code),
+        ThaiLanguage.Culture => ThaiLanguage.GetTranslation(code),
+        TurkishLanguage.Culture => TurkishLanguage.GetTranslation(code),
+        UkrainianLanguage.Culture => UkrainianLanguage.GetTranslation(code),
+        UzbekCyrillicLanguage.Culture => UzbekCyrillicLanguage.GetTranslation(code),
+        UzbekLatinLanguage.Culture => UzbekLatinLanguage.GetTranslation(code),
+        VietnameseLanguage.Culture => VietnameseLanguage.GetTranslation(code),
+        WelshLanguage.Culture => WelshLanguage.GetTranslation(code),
+        _ => null,
+    };
+}

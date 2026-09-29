@@ -1,0 +1,61 @@
+Continuum
+Copyright (c) 2026 Zach Barrier
+
+This product includes software adapted from CSharpFunctionalExtensions
+(https://github.com/vkhorikov/CSharpFunctionalExtensions).
+
+  The MIT License (MIT)
+
+  Copyright (c) 2015 Vladimir Khorikov
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of
+  this software and associated documentation files (the "Software"), to deal in
+  the Software without restriction, including without limitation the rights to
+  use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+  the Software, and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+  FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+  COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Adapted portions:
+  - The Result, Maybe, ValueObject, and related functional extension types
+    and methods in src/CSharpFunctionalExtensions/, excluding the validators
+    and localization described below.
+
+------------------------------------------------------------------------------
+
+This product includes software adapted from FluentValidation
+(https://github.com/FluentValidation/FluentValidation).
+
+  Copyright (c) .NET Foundation and Contributors
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+Adapted portions:
+  - Localized validation message translations in
+    src/CSharpFunctionalExtensions/Result/Errors/Localization/Languages/
+    (named placeholders were converted to positional placeholders and keys
+    were remapped to Continuum validation error codes).
+  - Validator message wording, validator design, and validation logic that
+    are based on FluentValidation. Logic copied from FluentValidation (credit
+    card Luhn check, email regular expression, and decimal scale/precision
+    calculation) is wrapped in Continuum Result types; see file headers (EmailValidation.cs, CreditCard*.cs,
+    ScalePrecisionHelpers.cs) in
+    src/CSharpFunctionalExtensions/Result/Methods/Validators/.

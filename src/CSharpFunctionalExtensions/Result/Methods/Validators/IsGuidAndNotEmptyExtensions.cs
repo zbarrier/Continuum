@@ -13,11 +13,11 @@ public static partial class ResultExtensions
             return Result.Failure<Guid>(result.Error);
 
         if (!Guid.TryParse(result.Value, out Guid guidValue)) 
-            return Result.Failure<Guid>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            return Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
 
         return guidValue != Guid.Empty
             ? Result.Success(guidValue)
-            : Result.Failure<Guid>(new ValidationError(propertyName, NotEmptyError, propertyName));
+            : Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
     }
 
     /// <summary>
@@ -32,9 +32,10 @@ public static partial class ResultExtensions
 
         if (isNotAGuid || guidValue == Guid.Empty)
         {
-            var errorFormat = isNotAGuid ? RegularExpressionError : NotEmptyError;
+            var errorFormat = isNotAGuid ? ValidatorErrorStrings.InvalidFormat : ValidatorErrorStrings.NotEmpty;
+            var errorCode = isNotAGuid ? ValidationErrorCodes.InvalidFormat : ValidationErrorCodes.NotEmpty;
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<Guid>(new ValidationError(propertyName, errorFormat, propertyName));
+            return Result.Failure<Guid>(new ValidationError(propertyName, errorCode, errorFormat, propertyName));
         }
 
         return Result.Success(guidValue);

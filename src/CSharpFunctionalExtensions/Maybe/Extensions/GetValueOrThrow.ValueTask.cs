@@ -1,4 +1,3 @@
-﻿#if NET5_0_OR_GREATER
 using System;
 using System.Threading.Tasks;
 
@@ -6,6 +5,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
     public static partial class MaybeExtensions
     {
+        /// <inheritdoc cref="Maybe{T}.GetValueOrThrow(string)"/>
         public static async ValueTask<T> GetValueOrThrow<T>(this ValueTask<Maybe<T>> maybeTask)
         {
             var maybe = await maybeTask;
@@ -24,4 +24,3 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         }
     }
 }
-#endif

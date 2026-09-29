@@ -14,7 +14,6 @@ public class IsBigIntegerAndNotEmptyTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string IsBigIntegerErrorFormat = "'{0}' is not in the correct format.";
 
     [Theory]
     [InlineData("-1234567890123456789012345678901234567890")]
@@ -67,7 +66,7 @@ public class IsBigIntegerAndNotEmptyTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, IsBigIntegerErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -89,7 +88,7 @@ public class IsBigIntegerAndNotEmptyTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, IsBigIntegerErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -113,6 +112,6 @@ public class IsBigIntegerAndNotEmptyTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, IsBigIntegerErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

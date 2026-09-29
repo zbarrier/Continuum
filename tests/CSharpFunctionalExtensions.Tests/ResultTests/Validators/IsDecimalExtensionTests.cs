@@ -14,7 +14,6 @@ public class IsDecimalExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string IsDecimalErrorFormat = "'{0}' is not in the correct format.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -62,16 +61,8 @@ public class IsDecimalExtensionTests
         Assert.Equal(result.Value.ToString("#,##0.#########"), value);
     }
 
-    [Theory]
-    [InlineData("-79228162514264337593543950335")]
-    [InlineData("-123456788.111334")]
-    [InlineData("-1022.001")]
-    [InlineData("0")]
-    [InlineData("1")]
-    [InlineData("1024.001")]
-    [InlineData("123456790.111334")]
-    [InlineData("79228162514264337593543950335")]
-    public void IsDecimal_PreviousError_Failure(string value)
+    [Fact]
+    public void IsDecimal_PreviousError_Failure()
     {
         //Arrange
 
@@ -128,16 +119,8 @@ public class IsDecimalExtensionTests
         Assert.Equal(result.Value.ToString("#,##0.#########"), value);
     }
 
-    [Theory]
-    [InlineData("-79228162514264337593543950335")]
-    [InlineData("-123456788.111334")]
-    [InlineData("-1022.001")]
-    [InlineData("0")]
-    [InlineData("1")]
-    [InlineData("1024.001")]
-    [InlineData("123456790.111334")]
-    [InlineData("79228162514264337593543950335")]
-    public void IsDecimalMultiPart_PreviousError_Failure(string value)
+    [Fact]
+    public void IsDecimalMultiPart_PreviousError_Failure()
     {
         //Arrange
 
@@ -184,7 +167,7 @@ public class IsDecimalExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, IsDecimalErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -208,6 +191,6 @@ public class IsDecimalExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, IsDecimalErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

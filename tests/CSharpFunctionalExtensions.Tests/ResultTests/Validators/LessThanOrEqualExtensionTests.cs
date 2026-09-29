@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Xunit.Sdk;
@@ -12,7 +12,6 @@ public class LessThanOrEqualExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string LessThanOrEqualErrorFormat = "'{0}' must be less than or equal to '{1}'.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -136,7 +135,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
     [Theory]
@@ -159,7 +158,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
     #endregion
@@ -188,14 +187,14 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData("a", "a")]
-    [InlineData("a", "z")]
-    [InlineData("b", "w")]
-    [InlineData("test", "test")]
-    [InlineData("123", "123")]
-    [InlineData("123", "1234")]
-    [InlineData("123.3", "123.4")]
-    public void LessThanOrEqual_StringOfPreviousError_Failure(string value, string expectedValue)
+    [InlineData("a")]
+    [InlineData("z")]
+    [InlineData("w")]
+    [InlineData("test")]
+    [InlineData("123")]
+    [InlineData("1234")]
+    [InlineData("123.4")]
+    public void LessThanOrEqual_StringOfPreviousError_Failure(string expectedValue)
     {
         //Arrange
 
@@ -230,14 +229,14 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData("a", "a")]
-    [InlineData("a", "z")]
-    [InlineData("b", "w")]
-    [InlineData("test", "test")]
-    [InlineData("123", "123")]
-    [InlineData("123", "1234")]
-    [InlineData("123.3", "123.4")]
-    public void LessThanOrEqualMultiPart_StringOfPreviousError_Failure(string value, string expectedValue)
+    [InlineData("a")]
+    [InlineData("z")]
+    [InlineData("w")]
+    [InlineData("test")]
+    [InlineData("123")]
+    [InlineData("1234")]
+    [InlineData("123.4")]
+    public void LessThanOrEqualMultiPart_StringOfPreviousError_Failure(string expectedValue)
     {
         //Arrange
 
@@ -265,7 +264,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -285,7 +284,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -314,14 +313,14 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(1, 2)]
-    [InlineData(12, 13)]
-    [InlineData(50, 50)]
-    [InlineData(127, 128)]
-    [InlineData(254, 255)]
-    public void LessThanOrEqual_ByteOfPreviousError_Failure(byte value, byte expectedValue)
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(13)]
+    [InlineData(50)]
+    [InlineData(128)]
+    [InlineData(255)]
+    public void LessThanOrEqual_ByteOfPreviousError_Failure(byte expectedValue)
     {
         //Arrange
 
@@ -356,14 +355,14 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(1, 2)]
-    [InlineData(12, 13)]
-    [InlineData(50, 50)]
-    [InlineData(127, 128)]
-    [InlineData(254, 255)]
-    public void LessThanOrEqualMultiPart_ByteOfPreviousError_Failure(byte value, byte expectedValue)
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(13)]
+    [InlineData(50)]
+    [InlineData(128)]
+    [InlineData(255)]
+    public void LessThanOrEqualMultiPart_ByteOfPreviousError_Failure(byte expectedValue)
     {
         //Arrange
 
@@ -391,7 +390,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -411,7 +410,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -442,16 +441,15 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-32_768, -32_768)]
-    [InlineData(-32_768, -32_767)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(256, 257)]
-    [InlineData(500, 500)]
-    [InlineData(1023, 1024)]
-    [InlineData(32_766, 32_767)]
-    [InlineData(32_767, 32_767)]
-    public void LessThanOrEqual_ShortOfPreviousError_Failure(short value, short expectedValue)
+    [InlineData(-32_768)]
+    [InlineData(-32_767)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(257)]
+    [InlineData(500)]
+    [InlineData(1024)]
+    [InlineData(32_767)]
+    public void LessThanOrEqual_ShortOfPreviousError_Failure(short expectedValue)
     {
         //Arrange
 
@@ -488,16 +486,15 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-32_768, -32_768)]
-    [InlineData(-32_768, -32_767)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(256, 257)]
-    [InlineData(500, 500)]
-    [InlineData(1023, 1024)]
-    [InlineData(32_766, 32_767)]
-    [InlineData(32_767, 32_767)]
-    public void LessThanOrEqualMultiPart_ShortOfPreviousError_Failure(short value, short expectedValue)
+    [InlineData(-32_768)]
+    [InlineData(-32_767)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(257)]
+    [InlineData(500)]
+    [InlineData(1024)]
+    [InlineData(32_767)]
+    public void LessThanOrEqualMultiPart_ShortOfPreviousError_Failure(short expectedValue)
     {
         //Arrange
 
@@ -525,7 +522,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -545,7 +542,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -577,17 +574,17 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-2_147_483_648, -2_147_483_648)]
-    [InlineData(-2_147_483_648, -2_147_483_647)]
-    [InlineData(-32_768, -32_767)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(256, 257)]
-    [InlineData(1023, 1024)]
-    [InlineData(5000, 5000)]
-    [InlineData(32_767, 32_768)]
-    [InlineData(2_147_483_646, 2_147_483_647)]
-    public void LessThanOrEqual_IntOfPreviousError_Failure(int value, int expectedValue)
+    [InlineData(-2_147_483_648)]
+    [InlineData(-2_147_483_647)]
+    [InlineData(-32_767)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(257)]
+    [InlineData(1024)]
+    [InlineData(5000)]
+    [InlineData(32_768)]
+    [InlineData(2_147_483_647)]
+    public void LessThanOrEqual_IntOfPreviousError_Failure(int expectedValue)
     {
         //Arrange
 
@@ -625,17 +622,17 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-2_147_483_648, -2_147_483_648)]
-    [InlineData(-2_147_483_648, -2_147_483_647)]
-    [InlineData(-32_768, -32_767)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(256, 257)]
-    [InlineData(1023, 1024)]
-    [InlineData(5000, 5000)]
-    [InlineData(32_767, 32_768)]
-    [InlineData(2_147_483_646, 2_147_483_647)]
-    public void LessThanOrEqualMultiPart_IntOfPreviousError_Failure(int value, int expectedValue)
+    [InlineData(-2_147_483_648)]
+    [InlineData(-2_147_483_647)]
+    [InlineData(-32_767)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(257)]
+    [InlineData(1024)]
+    [InlineData(5000)]
+    [InlineData(32_768)]
+    [InlineData(2_147_483_647)]
+    public void LessThanOrEqualMultiPart_IntOfPreviousError_Failure(int expectedValue)
     {
         //Arrange
 
@@ -665,7 +662,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -687,7 +684,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -720,18 +717,18 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-9_223_372_036_854_775_808, -9_223_372_036_854_775_808)]
-    [InlineData(-9_223_372_036_854_775_808, -9_223_372_036_854_775_807)]
-    [InlineData(-2_147_483_648, -2_147_483_647)]
-    [InlineData(-32_768, -32_767)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(256, 257)]
-    [InlineData(1023, 1024)]
-    [InlineData(32_767, 32_767)]
-    [InlineData(2_147_483_647, 2_147_483_648)]
-    [InlineData(9_223_372_036_854_775_806, 9_223_372_036_854_775_807)]
-    public void LessThanOrEqual_LongOfPreviousError_Failure(long value, long expectedValue)
+    [InlineData(-9_223_372_036_854_775_808)]
+    [InlineData(-9_223_372_036_854_775_807)]
+    [InlineData(-2_147_483_647)]
+    [InlineData(-32_767)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(257)]
+    [InlineData(1024)]
+    [InlineData(32_767)]
+    [InlineData(2_147_483_648)]
+    [InlineData(9_223_372_036_854_775_807)]
+    public void LessThanOrEqual_LongOfPreviousError_Failure(long expectedValue)
     {
         //Arrange
 
@@ -770,18 +767,18 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-9_223_372_036_854_775_808, -9_223_372_036_854_775_808)]
-    [InlineData(-9_223_372_036_854_775_808, -9_223_372_036_854_775_807)]
-    [InlineData(-2_147_483_648, -2_147_483_647)]
-    [InlineData(-32_768, -32_767)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(256, 257)]
-    [InlineData(1023, 1024)]
-    [InlineData(32_767, 32_767)]
-    [InlineData(2_147_483_647, 2_147_483_648)]
-    [InlineData(9_223_372_036_854_775_806, 9_223_372_036_854_775_807)]
-    public void LessThanOrEqualMultiPart_LongOfPreviousError_Failure(long value, long expectedValue)
+    [InlineData(-9_223_372_036_854_775_808)]
+    [InlineData(-9_223_372_036_854_775_807)]
+    [InlineData(-2_147_483_647)]
+    [InlineData(-32_767)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(257)]
+    [InlineData(1024)]
+    [InlineData(32_767)]
+    [InlineData(2_147_483_648)]
+    [InlineData(9_223_372_036_854_775_807)]
+    public void LessThanOrEqualMultiPart_LongOfPreviousError_Failure(long expectedValue)
     {
         //Arrange
 
@@ -814,7 +811,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -839,7 +836,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -869,15 +866,14 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-3.14, -3.14)]
-    [InlineData(-3.14, -3.13)]
-    [InlineData(-1.3333, -1.3332)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(1.225, 1.226)]
-    [InlineData(1.226, 1.226)]
-    [InlineData(3.625, 3.626)]
-    public void LessThanOrEqual_FloatOfPreviousError_Failure(float value, float expectedValue)
+    [InlineData(-3.14)]
+    [InlineData(-3.13)]
+    [InlineData(-1.3332)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(1.226)]
+    [InlineData(3.626)]
+    public void LessThanOrEqual_FloatOfPreviousError_Failure(float expectedValue)
     {
         //Arrange
 
@@ -913,15 +909,14 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-3.14, -3.14)]
-    [InlineData(-3.14, -3.13)]
-    [InlineData(-1.3333, -1.3332)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(1.225, 1.226)]
-    [InlineData(1.226, 1.226)]
-    [InlineData(3.625, 3.626)]
-    public void LessThanOrEqualMultiPart_FloatOfPreviousError_Failure(float value, float expectedValue)
+    [InlineData(-3.14)]
+    [InlineData(-3.13)]
+    [InlineData(-1.3332)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(1.226)]
+    [InlineData(3.626)]
+    public void LessThanOrEqualMultiPart_FloatOfPreviousError_Failure(float expectedValue)
     {
         //Arrange
 
@@ -950,7 +945,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -971,7 +966,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1002,16 +997,16 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-1234.123456789, -1234.123456789)]
-    [InlineData(-1234.123456789, -1234.123456788)]
-    [InlineData(-3.14, -3.13)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(1.225, 1.226)]
-    [InlineData(3.626, 3.626)]
-    [InlineData(1234.123456789, 1234.123456790)]
-    public void LessThanOrEqual_DoubleOfPreviousError_Failure(double value, double expectedValue)
+    [InlineData(-1234.123456789)]
+    [InlineData(-1234.123456788)]
+    [InlineData(-3.13)]
+    [InlineData(-1.3333)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(1.226)]
+    [InlineData(3.626)]
+    [InlineData(1234.123456790)]
+    public void LessThanOrEqual_DoubleOfPreviousError_Failure(double expectedValue)
     {
         //Arrange
 
@@ -1048,16 +1043,16 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-1234.123456789, -1234.123456789)]
-    [InlineData(-1234.123456789, -1234.123456788)]
-    [InlineData(-3.14, -3.13)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(1.225, 1.226)]
-    [InlineData(3.626, 3.626)]
-    [InlineData(1234.123456789, 1234.123456790)]
-    public void LessThanOrEqualMultiPart_DoubleOfPreviousError_Failure(double value, double expectedValue)
+    [InlineData(-1234.123456789)]
+    [InlineData(-1234.123456788)]
+    [InlineData(-3.13)]
+    [InlineData(-1.3333)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(1.226)]
+    [InlineData(3.626)]
+    [InlineData(1234.123456790)]
+    public void LessThanOrEqualMultiPart_DoubleOfPreviousError_Failure(double expectedValue)
     {
         //Arrange
 
@@ -1088,7 +1083,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1111,7 +1106,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1144,18 +1139,18 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-123456.123456789, -123456.123456789)]
-    [InlineData(-123456.123456789, -123456.123456788)]
-    [InlineData(-1234.123456789, -1234.123456788)]
-    [InlineData(-3.14, -3.13)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(1.225, 1.226)]
-    [InlineData(3.625, 3.625)]
-    [InlineData(1234.123456789, 1234.123456790)]
-    [InlineData(123456.123456789, 123456.123456790)]
-    public void LessThanOrEqual_DecimalOfPreviousError_Failure(decimal value, decimal expectedValue)
+    [InlineData(-123456.123456789)]
+    [InlineData(-123456.123456788)]
+    [InlineData(-1234.123456788)]
+    [InlineData(-3.13)]
+    [InlineData(-1.3333)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(1.226)]
+    [InlineData(3.625)]
+    [InlineData(1234.123456790)]
+    [InlineData(123456.123456790)]
+    public void LessThanOrEqual_DecimalOfPreviousError_Failure(decimal expectedValue)
     {
         //Arrange
 
@@ -1194,18 +1189,18 @@ public class LessThanOrEqualExtensionTests
     }
 
     [Theory]
-    [InlineData(-123456.123456789, -123456.123456789)]
-    [InlineData(-123456.123456789, -123456.123456788)]
-    [InlineData(-1234.123456789, -1234.123456788)]
-    [InlineData(-3.14, -3.13)]
-    [InlineData(-1.3333, -1.3333)]
-    [InlineData(0, 0)]
-    [InlineData(0, 1)]
-    [InlineData(1.225, 1.226)]
-    [InlineData(3.625, 3.625)]
-    [InlineData(1234.123456789, 1234.123456790)]
-    [InlineData(123456.123456789, 123456.123456790)]
-    public void LessThanOrEqualMultiPart_DecimalOfPreviousError_Failure(decimal value, decimal expectedValue)
+    [InlineData(-123456.123456789)]
+    [InlineData(-123456.123456788)]
+    [InlineData(-1234.123456788)]
+    [InlineData(-3.13)]
+    [InlineData(-1.3333)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(1.226)]
+    [InlineData(3.625)]
+    [InlineData(1234.123456790)]
+    [InlineData(123456.123456790)]
+    public void LessThanOrEqualMultiPart_DecimalOfPreviousError_Failure(decimal expectedValue)
     {
         //Arrange
 
@@ -1238,7 +1233,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1263,7 +1258,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1403,7 +1398,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1429,7 +1424,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1550,7 +1545,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1573,7 +1568,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1689,7 +1684,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1711,7 +1706,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion
@@ -1827,7 +1822,7 @@ public class LessThanOrEqualExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, LessThanOrEqualErrorFormat, MyPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, MyPropertyName, expectedValue));
     }
 
     [Theory]
@@ -1849,7 +1844,7 @@ public class LessThanOrEqualExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, LessThanOrEqualErrorFormat, multiPartPropertyName, expectedValue));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThanOrEqual, ExpectedValidatorErrorStrings.LessThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
     #endregion

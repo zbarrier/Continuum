@@ -6,7 +6,6 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public partial struct Result
 {
-    const string RegularExpressionError = "'{0}' is not in the correct format.";
 
     /// <summary>
     ///     Ensure value matches regular expression.

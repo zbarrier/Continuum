@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
@@ -35,7 +35,7 @@ namespace Continuum.CSharpFunctionalExtensions.Internal
             }
         }
 
-        internal static bool ErrorStateGuard(bool isFailure, Error error)
+        internal static bool ErrorStateGuard(bool isFailure, Error? error)
         {
             if (isFailure)
             {
@@ -51,13 +51,13 @@ namespace Continuum.CSharpFunctionalExtensions.Internal
             return isFailure;
         }
 
-        internal static Error GetErrorWithSuccessGuard(bool isFailure, Error error) =>
-            isFailure ? error : throw new ResultSuccessException();
+        internal static Error GetErrorWithSuccessGuard(bool isFailure, Error? error) =>
+            isFailure ? error! : throw new ResultSuccessException();
 
         internal static SerializationValue Deserialize(SerializationInfo info)
         {
             bool isFailure = info.GetBoolean("IsFailure");
-            Error? error = isFailure ? (Error)info.GetValue("Error", typeof(Error)) : default;
+            Error? error = isFailure ? (Error?)info.GetValue("Error", typeof(Error)) : default;
             return new SerializationValue(isFailure, error);
         }
     }

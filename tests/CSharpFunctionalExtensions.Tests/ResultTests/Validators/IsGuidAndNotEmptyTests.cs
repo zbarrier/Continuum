@@ -14,8 +14,6 @@ public class IsGuidAndNotEmptyTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string NotEmptyErrorFormat = "'{0}' must not be empty.";
-    const string IsGuidAndNotEmptyErrorFormat = "'{0}' is not in the correct format.";
 
     [Theory]
     [InlineData("d8865f38-600a-4ffd-ab32-25efcca9f54f")]
@@ -60,7 +58,7 @@ public class IsGuidAndNotEmptyTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Theory]
@@ -78,7 +76,7 @@ public class IsGuidAndNotEmptyTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, IsGuidAndNotEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -98,6 +96,6 @@ public class IsGuidAndNotEmptyTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, IsGuidAndNotEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

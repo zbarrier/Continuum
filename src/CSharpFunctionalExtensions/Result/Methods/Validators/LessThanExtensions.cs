@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Numerics;
 
@@ -6,7 +6,6 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public static partial class ResultExtensions
 {
-    const string LessThanError = "'{0}' must be less than '{1}'.";
 
     /// <summary>
     ///     Ensure value is less than given value.
@@ -17,7 +16,7 @@ public static partial class ResultExtensions
 
         return comparer.Compare(result.Value, comparisonValue) < 0
             ? result
-            : Result.Failure<T>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue!));
+            : Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, ErrorArgument.FromObject(comparisonValue)));
     }
 
     /// <summary>
@@ -30,7 +29,7 @@ public static partial class ResultExtensions
         if (comparer.Compare(result.Value, comparisonValue) >= 0)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<T>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue!));
+            return Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, ErrorArgument.FromObject(comparisonValue)));
         }
 
         return result;
@@ -45,7 +44,7 @@ public static partial class ResultExtensions
 
         return result.Value.CompareTo(comparisonValue) < 0
             ? result
-            : Result.Failure<string>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -58,7 +57,7 @@ public static partial class ResultExtensions
         if (result.Value.CompareTo(comparisonValue) >= 0)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -73,7 +72,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<byte>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -86,7 +85,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<byte>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -101,7 +100,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<short>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -114,7 +113,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<short>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -129,7 +128,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<int>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -142,7 +141,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<int>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -157,7 +156,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<long>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -170,7 +169,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<long>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -185,7 +184,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<float>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -198,7 +197,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<float>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -213,7 +212,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<double>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -226,7 +225,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<double>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -241,7 +240,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<decimal>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -254,7 +253,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<decimal>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -269,7 +268,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<BigInteger>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -282,7 +281,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<BigInteger>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -297,7 +296,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<TimeSpan>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -310,7 +309,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<TimeSpan>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -325,7 +324,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<DateTime>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -338,7 +337,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTime>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;
@@ -353,7 +352,7 @@ public static partial class ResultExtensions
 
         return result.Value < comparisonValue
             ? result
-            : Result.Failure<DateTimeOffset>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            : Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
     }
 
     /// <summary>
@@ -366,7 +365,7 @@ public static partial class ResultExtensions
         if (result.Value >= comparisonValue)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, LessThanError, propertyName, comparisonValue));
+            return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.LessThan, ValidatorErrorStrings.LessThan, propertyName, comparisonValue));
         }
 
         return result;

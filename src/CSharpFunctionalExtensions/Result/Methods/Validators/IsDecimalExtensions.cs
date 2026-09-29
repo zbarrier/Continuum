@@ -13,7 +13,7 @@ public static partial class ResultExtensions
 
         return decimal.TryParse(result.Value, out decimal decimalValue)
             ? Result.Success(decimalValue)
-            : Result.Failure<decimal>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            : Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
@@ -26,7 +26,7 @@ public static partial class ResultExtensions
         if (!decimal.TryParse(result.Value, out decimal decimalValue))
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<decimal>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
         return Result.Success(decimalValue);

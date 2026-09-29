@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
+    /// <summary>
+    ///     Async extension methods for <see cref="Result"/> and <see cref="Result{T}"/> where both the source result and the delegate are asynchronous.
+    /// </summary>
     public static partial class AsyncResultExtensionsBothOperands
     {
         /// <summary>

@@ -1,9 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <PackageId>Continuum.CSharpFunctionalExtensions</PackageId>
+    <Description>Functional extensions for C#: Result, Maybe, ValueObject, and a composable, localizable validation and error model.</Description>
+    <PackageTags>functional;result;maybe;railway;validation;error-handling;localization</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,8 +18,17 @@
   </ItemGroup>
 	
   <ItemGroup>
-    <PackageReference Include="Grpc.Net.Common" Version="2.83.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.11" />
+    <PackageReference Include="Grpc.Net.Common" Version="2.84.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.12" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Ship the EnumValueObject source generator inside this package so consumers get it automatically. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CSharpFunctionalExtensions.SourceGenerators\Continuum.CSharpFunctionalExtensions.SourceGenerators.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <None Include="..\CSharpFunctionalExtensions.SourceGenerators\bin\$(Configuration)\netstandard2.0\Continuum.CSharpFunctionalExtensions.SourceGenerators.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
 </Project>

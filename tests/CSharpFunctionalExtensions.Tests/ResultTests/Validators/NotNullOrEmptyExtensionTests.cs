@@ -12,7 +12,6 @@ public class NotNullOrEmptyExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string NotNullOrEmptyErrorFormat = "'{0}' must not be empty.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -90,7 +89,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -107,7 +106,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -122,7 +121,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -139,7 +138,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -165,13 +164,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData("testString")]
-    [InlineData("123")]
-    [InlineData("test")]
-    [InlineData("JohnDoe")]
-    [InlineData("My Awesome Company Name")]
-    public void NotNullOrEmpty_StringPreviousError_Failure(string value)
+    [Fact]
+    public void NotNullOrEmpty_StringPreviousError_Failure()
     {
         //Arrange
 
@@ -203,13 +197,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData("testString")]
-    [InlineData("123")]
-    [InlineData("test")]
-    [InlineData("JohnDoe")]
-    [InlineData("My Awesome Company Name")]
-    public void NotNullOrEmptyMultiPart_StringPreviousError_Failure(string value)
+    [Fact]
+    public void NotNullOrEmptyMultiPart_StringPreviousError_Failure()
     {
         //Arrange
 
@@ -234,7 +223,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -251,7 +240,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -266,7 +255,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -283,7 +272,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -308,12 +297,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(12)]
-    [InlineData(127)]
-    [InlineData(255)]
-    public void NotNullOrEmpty_BytePreviousError_Failure(byte value)
+    [Fact]
+    public void NotNullOrEmpty_BytePreviousError_Failure()
     {
         //Arrange
 
@@ -344,12 +329,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(12)]
-    [InlineData(127)]
-    [InlineData(255)]
-    public void NotNullOrEmptyMultiPart_BytePreviousError_Failure(byte value)
+    [Fact]
+    public void NotNullOrEmptyMultiPart_BytePreviousError_Failure()
     {
         //Arrange
 
@@ -374,7 +355,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -391,7 +372,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -406,7 +387,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -423,7 +404,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -449,13 +430,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-32_768)]
-    [InlineData(-256)]
-    [InlineData(256)]
-    [InlineData(1023)]
-    [InlineData(32_767)]
-    public void NotNullOrEmpty_ShortPreviousError_Failure(short value)
+    [Fact]
+    public void NotNullOrEmpty_ShortPreviousError_Failure()
     {
         //Arrange
 
@@ -487,13 +463,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-32_768)]
-    [InlineData(-256)]
-    [InlineData(256)]
-    [InlineData(1023)]
-    [InlineData(32_767)]
-    public void NotNullOrEmptyMultiPart_ShortPreviousError_Failure(short value)
+    [Fact]
+    public void NotNullOrEmptyMultiPart_ShortPreviousError_Failure()
     {
         //Arrange
 
@@ -518,7 +489,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -535,7 +506,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -550,7 +521,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -567,7 +538,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -594,14 +565,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-2_147_483_648)]
-    [InlineData(-32_768)]
-    [InlineData(256)]
-    [InlineData(1023)]
-    [InlineData(32_767)]
-    [InlineData(2_147_483_647)]
-    public void NotNullOrEmpty_IntPreviousError_Failure(int value)
+    [Fact]
+    public void NotNullOrEmpty_IntPreviousError_Failure()
     {
         //Arrange
 
@@ -634,14 +599,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-2_147_483_648)]
-    [InlineData(-32_768)]
-    [InlineData(256)]
-    [InlineData(1023)]
-    [InlineData(32_767)]
-    [InlineData(2_147_483_647)]
-    public void NotNullOrEmptyMultiPart_IntPreviousError_Failure(int value)
+    [Fact]
+    public void NotNullOrEmptyMultiPart_IntPreviousError_Failure()
     {
         //Arrange
 
@@ -666,7 +625,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -683,7 +642,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -698,7 +657,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -715,7 +674,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -744,16 +703,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-9_223_372_036_854_775_808)]
-    [InlineData(-2_147_483_648)]
-    [InlineData(-32_768)]
-    [InlineData(256)]
-    [InlineData(1023)]
-    [InlineData(32_767)]
-    [InlineData(2_147_483_647)]
-    [InlineData(9_223_372_036_854_775_807)]
-    public void NotNullOrEmpty_LongPreviousError_Failure(long value)
+    [Fact]
+    public void NotNullOrEmpty_LongPreviousError_Failure()
     {
         //Arrange
 
@@ -788,16 +739,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-9_223_372_036_854_775_808)]
-    [InlineData(-2_147_483_648)]
-    [InlineData(-32_768)]
-    [InlineData(256)]
-    [InlineData(1023)]
-    [InlineData(32_767)]
-    [InlineData(2_147_483_647)]
-    [InlineData(9_223_372_036_854_775_807)]
-    public void NotNullOrEmptyMultiPart_LongPreviousError_Failure(long value)
+    [Fact]
+    public void NotNullOrEmptyMultiPart_LongPreviousError_Failure()
     {
         //Arrange
 
@@ -822,7 +765,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -839,7 +782,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -854,7 +797,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -871,7 +814,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -896,12 +839,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-3.14)]
-    [InlineData(-1.3333)]
-    [InlineData(1.225)]
-    [InlineData(3.625)]
-    public void NotNullOrEmpty_FloatPreviousError_Failure(float value)
+    [Fact]
+    public void NotNullOrEmpty_FloatPreviousError_Failure()
     {
         //Arrange
 
@@ -932,12 +871,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-3.14)]
-    [InlineData(-1.3333)]
-    [InlineData(1.225)]
-    [InlineData(3.625)]
-    public void NotNullOrEmptyMultiPart_FloatPreviousError_Failure(float value)
+    [Fact]
+    public void NotNullOrEmptyMultiPart_FloatPreviousError_Failure()
     {
         //Arrange
 
@@ -962,7 +897,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -979,7 +914,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -994,7 +929,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1011,7 +946,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -1038,14 +973,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-1234.123456789)]
-    [InlineData(-3.14)]
-    [InlineData(-1.3333)]
-    [InlineData(1.225)]
-    [InlineData(3.625)]
-    [InlineData(1234.123456789)]
-    public void NotNullOrEmpty_DoublePreviousError_Failure(double value)
+    [Fact]
+    public void NotNullOrEmpty_DoublePreviousError_Failure()
     {
         //Arrange
 
@@ -1078,14 +1007,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-1234.123456789)]
-    [InlineData(-3.14)]
-    [InlineData(-1.3333)]
-    [InlineData(1.225)]
-    [InlineData(3.625)]
-    [InlineData(1234.123456789)]
-    public void NotNullOrEmptyMultiPart_DoublePreviousError_Failure(double value)
+    [Fact]
+    public void NotNullOrEmptyMultiPart_DoublePreviousError_Failure()
     {
         //Arrange
 
@@ -1110,7 +1033,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1127,7 +1050,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -1142,7 +1065,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1159,7 +1082,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -1188,16 +1111,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-123456.123456789)]
-    [InlineData(-1234.123456789)]
-    [InlineData(-3.14)]
-    [InlineData(-1.3333)]
-    [InlineData(1.225)]
-    [InlineData(3.625)]
-    [InlineData(1234.123456789)]
-    [InlineData(123456789.123456789)]
-    public void NotNullOrEmpty_DecimalPreviousError_Failure(decimal value)
+    [Fact]
+    public void NotNullOrEmpty_DecimalPreviousError_Failure()
     {
         //Arrange
 
@@ -1232,16 +1147,8 @@ public class NotNullOrEmptyExtensionTests
         Assert.Equal(result.Value, value);
     }
 
-    [Theory]
-    [InlineData(-123456.123456789)]
-    [InlineData(-1234.123456789)]
-    [InlineData(-3.14)]
-    [InlineData(-1.3333)]
-    [InlineData(1.225)]
-    [InlineData(3.625)]
-    [InlineData(1234.123456789)]
-    [InlineData(123456789.123456789)]
-    public void NotNullOrEmptyMultiPart_DecimalPreviousError_Failure(decimal value)
+    [Fact]
+    public void NotNullOrEmptyMultiPart_DecimalPreviousError_Failure()
     {
         //Arrange
 
@@ -1266,7 +1173,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1283,7 +1190,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -1298,7 +1205,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1315,7 +1222,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -1426,7 +1333,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1443,7 +1350,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -1458,7 +1365,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1475,7 +1382,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -1574,7 +1481,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1591,7 +1498,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -1606,7 +1513,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1623,7 +1530,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -1718,7 +1625,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1735,7 +1642,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -1750,7 +1657,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1767,7 +1674,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion
@@ -1862,7 +1769,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1879,7 +1786,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotEmpty, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     [Fact]
@@ -1894,7 +1801,7 @@ public class NotNullOrEmptyExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, NotNullOrEmptyErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, MyPropertyName));
     }
 
     [Fact]
@@ -1911,7 +1818,7 @@ public class NotNullOrEmptyExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, NotNullOrEmptyErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotEmpty, multiPartPropertyName));
     }
 
     #endregion

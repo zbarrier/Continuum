@@ -79,7 +79,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
             Result<int?> result = await sut.Ensure(value => !value.HasValue,
                 value => RequestErrors.NewUnknown("should be null but found {0}", value.Value));
 
-            result.Should().Be(sut.Result);
+            result.Should().Be((await sut));
         }
 
         [Fact]
@@ -89,7 +89,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result result = await sut.Ensure(() => true, ErrorMessage);
 
-            result.Should().Be(sut.Result);
+            result.Should().Be((await sut));
         }
 
         [Fact]
@@ -99,7 +99,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result result = await sut.Ensure(() => false, ErrorMessage);
 
-            result.Should().NotBe(sut.Result);
+            result.Should().NotBe((await sut));
             result.IsFailure.Should().BeTrue();
             result.Error.Should().Be(ErrorMessage);
         }
@@ -111,7 +111,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result result = await sut.Ensure(() => true, ErrorMessage);
 
-            result.Should().Be(sut.Result);
+            result.Should().Be((await sut));
         }
 
         [Fact]
@@ -121,7 +121,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result result = await sut.Ensure(() => Task.FromResult(false), ErrorMessage2);
 
-            result.Should().Be(sut.Result);
+            result.Should().Be((await sut));
         }
 
         [Fact]
@@ -131,7 +131,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result result = await sut.Ensure(() => Task.FromResult(false), ErrorMessage);
 
-            result.Should().NotBe(sut.Result);
+            result.Should().NotBe((await sut));
             result.IsFailure.Should().BeTrue();
             result.Error.Should().Be(ErrorMessage);
         }
@@ -143,7 +143,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result result = await sut.Ensure(() => Task.FromResult(true), ErrorMessage);
 
-            result.Should().Be(sut.Result);
+            result.Should().Be((await sut));
         }
 
         [Fact]
@@ -169,7 +169,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
         }
 
         [Fact]
-        public void Ensure_generic_source_result_is_success_predicate_is_passed_expected_error_result_success()
+        public async Task Ensure_generic_source_result_is_success_predicate_is_passed_expected_error_result_success()
         {
             Result<decimal> sut = Result.Success(.03m);
 
@@ -221,7 +221,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result<TimeSpan> result = await sut.Ensure(t => Task.FromResult(true), ErrorMessage2);
 
-            result.Should().Be(sut.Result);
+            result.Should().Be((await sut));
         }
 
         [Fact]
@@ -245,7 +245,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result<double> result = await sut.Ensure(d => Task.FromResult(true), ErrorMessage);
 
-            result.Should().Be(sut.Result);
+            result.Should().Be((await sut));
         }
 
         [Fact]
@@ -256,7 +256,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result<TimeSpan> result = await sut.Ensure(t => true, ErrorMessage2);
 
-            result.Should().Be(sut.Result);
+            result.Should().Be((await sut));
         }
 
         [Fact]
@@ -280,7 +280,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Extensions
 
             Result<double> result = await sut.Ensure(d => true, ErrorMessage);
 
-            result.Should().Be(sut.Result);
+            result.Should().Be((await sut));
         }
 
         [Fact]

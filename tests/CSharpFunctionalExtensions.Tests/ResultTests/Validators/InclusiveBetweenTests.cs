@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Microsoft.Extensions.Hosting;
@@ -14,7 +14,6 @@ public class InclusiveBetweenTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string InclusiveBetweenErrorFormat = "'{0}' must be between {1} and {2}. You entered {3}.";
 
     #region T
 
@@ -80,7 +79,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, fromValue, toValue, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, ErrorArgument.FromObject(fromValue), ErrorArgument.FromObject(toValue), ErrorArgument.FromObject(value)));
     }
 
     [Theory]
@@ -103,7 +102,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, fromValue, toValue, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, ErrorArgument.FromObject(fromValue), ErrorArgument.FromObject(toValue), ErrorArgument.FromObject(value)));
     }
 
     #endregion
@@ -162,7 +161,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -181,7 +180,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -243,7 +242,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -263,7 +262,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -336,7 +335,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -359,7 +358,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -438,7 +437,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -463,7 +462,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -548,7 +547,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -575,7 +574,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -643,7 +642,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -665,7 +664,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -744,7 +743,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -769,7 +768,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -854,7 +853,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -881,7 +880,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -969,7 +968,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -997,7 +996,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -1074,7 +1073,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -1099,7 +1098,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -1173,7 +1172,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -1197,7 +1196,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion
@@ -1271,7 +1270,7 @@ public class InclusiveBetweenTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, InclusiveBetweenErrorFormat, MyPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, MyPropertyName, from, to, value));
     }
 
     [Theory]
@@ -1295,7 +1294,7 @@ public class InclusiveBetweenTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, InclusiveBetweenErrorFormat, multiPartPropertyName, from, to, value));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InclusiveBetween, ExpectedValidatorErrorStrings.InclusiveBetween, multiPartPropertyName, from, to, value));
     }
 
     #endregion

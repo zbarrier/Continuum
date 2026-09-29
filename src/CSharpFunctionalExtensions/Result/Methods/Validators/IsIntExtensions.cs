@@ -13,7 +13,7 @@ public static partial class ResultExtensions
 
         return int.TryParse(result.Value, out int intValue)
             ? Result.Success(intValue)
-            : Result.Failure<int>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            : Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
@@ -26,7 +26,7 @@ public static partial class ResultExtensions
         if (!int.TryParse(result.Value, out int intValue))
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<int>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
         return Result.Success(intValue);

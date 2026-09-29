@@ -7,7 +7,6 @@ public class ExactLengthExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string ExactLengthErrorFormat = "'{0}' must be {1} characters in length.";
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -90,7 +89,7 @@ public class ExactLengthExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExactLengthErrorFormat, MyPropertyName, length));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.ExactCount, ExpectedValidatorErrorStrings.ExactCount, MyPropertyName, length, value.Count()));
     }
 
     [Fact]
@@ -108,7 +107,7 @@ public class ExactLengthExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExactLengthErrorFormat, multiPartPropertyName, length));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.ExactCount, ExpectedValidatorErrorStrings.ExactCount, multiPartPropertyName, length, value.Count()));
     }
 
     #endregion
@@ -135,12 +134,12 @@ public class ExactLengthExtensionTests
     }
 
     [Theory]
-    [InlineData("testString", 10)]
-    [InlineData("123", 3)]
-    [InlineData("test", 4)]
-    [InlineData("JohnDoe", 7)]
-    [InlineData("My Awesome Company Name", 23)]
-    public void ExactLength_StringIsPreviousError_Failure(string value, int length)
+    [InlineData(10)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(7)]
+    [InlineData(23)]
+    public void ExactLength_StringIsPreviousError_Failure(int length)
     {
         //Arrange
 
@@ -173,12 +172,12 @@ public class ExactLengthExtensionTests
     }
 
     [Theory]
-    [InlineData("testString", 10)]
-    [InlineData("123", 3)]
-    [InlineData("test", 4)]
-    [InlineData("JohnDoe", 7)]
-    [InlineData("My Awesome Company Name", 23)]
-    public void ExactLengthMultiPart_StringIsPreviousError_Failure(string value, int length)
+    [InlineData(10)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(7)]
+    [InlineData(23)]
+    public void ExactLengthMultiPart_StringIsPreviousError_Failure(int length)
     {
         //Arrange
 
@@ -207,7 +206,7 @@ public class ExactLengthExtensionTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExactLengthErrorFormat, MyPropertyName, length));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.ExactLength, ExpectedValidatorErrorStrings.ExactLength, MyPropertyName, length, value.Length));
     }
 
     [Theory]
@@ -228,7 +227,7 @@ public class ExactLengthExtensionTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExactLengthErrorFormat, multiPartPropertyName, length));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.ExactLength, ExpectedValidatorErrorStrings.ExactLength, multiPartPropertyName, length, value.Length));
     }
 
     #endregion

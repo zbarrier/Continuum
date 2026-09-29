@@ -6,7 +6,7 @@ namespace Continuum.CSharpFunctionalExtensions;
 
 public static partial class ResultExtensions
 {
-    const string RegularExpressionError = "'{0}' is not in the correct format.";
+    static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromSeconds(2.0);
 
     /// <summary>
     ///     Ensure value matches regular expression.
@@ -15,11 +15,9 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        var regex = new Regex(pattern);
-
-        return regex.IsMatch(result.Value)
+        return Regex.IsMatch(result.Value, pattern, RegexOptions.None, RegexMatchTimeout)
             ? result
-            : Result.Failure<string>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            : Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
@@ -29,12 +27,10 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        var regex = new Regex(pattern);
-
-        if (!regex.IsMatch(result.Value))
+        if (!Regex.IsMatch(result.Value, pattern, RegexOptions.None, RegexMatchTimeout))
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
         return result;
@@ -49,7 +45,7 @@ public static partial class ResultExtensions
 
         return regex.IsMatch(result.Value)
             ? result
-            : Result.Failure<string>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            : Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
@@ -62,7 +58,7 @@ public static partial class ResultExtensions
         if (!regex.IsMatch(result.Value))
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<string>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
         return result;

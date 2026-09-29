@@ -14,7 +14,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <summary>
         ///     Deconstructs the given result into success, failure and error out parameters
         /// </summary>
-        public static void Deconstruct(this Result result, out bool isSuccess, out bool isFailure, out Error error)
+        public static void Deconstruct(this Result result, out bool isSuccess, out bool isFailure, out Error? error)
         {
             isSuccess = result.IsSuccess;
             isFailure = result.IsFailure;
@@ -33,7 +33,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <summary>
         ///     Deconstructs the given result into success, failure and value out parameters
         /// </summary>
-        public static void Deconstruct<T>(this Result<T> result, out bool isSuccess, out bool isFailure, out T value)
+        public static void Deconstruct<T>(this Result<T> result, out bool isSuccess, out bool isFailure, out T? value)
         {
             isSuccess = result.IsSuccess;
             isFailure = result.IsFailure;
@@ -43,7 +43,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <summary>
         ///     Deconstructs the given result into success, failure, value and error out parameters
         /// </summary>
-        public static void Deconstruct<T>(this Result<T> result, out bool isSuccess, out bool isFailure, out T value, out Error error)
+        public static void Deconstruct<T>(this Result<T> result, out bool isSuccess, out bool isFailure, out T? value, out Error? error)
         {
             isSuccess = result.IsSuccess;
             isFailure = result.IsFailure;

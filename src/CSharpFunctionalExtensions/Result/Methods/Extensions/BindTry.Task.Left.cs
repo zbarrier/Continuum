@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using System;
 
 namespace Continuum.CSharpFunctionalExtensions
@@ -14,7 +14,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static async Task<Result> BindTry(this Task<Result> resultTask, Func<Result> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             var result = await resultTask.DefaultAwait();
             return result.BindTry(func, errorHandler);
@@ -30,7 +30,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static async Task<Result<K>> BindTry<K>(this Task<Result> resultTask, Func<Result<K>> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             var result = await resultTask.DefaultAwait();
             return result.BindTry(func, errorHandler);
@@ -46,7 +46,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static async Task<Result> BindTry<T>(this Task<Result<T>> resultTask, Func<T, Result> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             var result = await resultTask.DefaultAwait();
             return result.BindTry(func, errorHandler);
@@ -63,7 +63,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <param name="errorHandler">Error handling function</param>        
         /// <returns>Binding result</returns>
         public static async Task<Result<K>> BindTry<T, K>(this Task<Result<T>> resultTask, Func<T, Result<K>> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             var result = await resultTask.DefaultAwait();
             return result.BindTry(func, errorHandler);

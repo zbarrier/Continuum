@@ -1,9 +1,11 @@
-﻿#if NET5_0_OR_GREATER
 using System;
 using System.Threading.Tasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
+    /// <summary>
+    ///     Extension methods for composing <see cref="Maybe{T}"/> with <see cref="ValueTask{TResult}"/>-based delegates.
+    /// </summary>
     public static partial class MaybeExtensions
     {
         // ReSharper disable ConvertNullableToShortForm
@@ -32,4 +34,3 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 #nullable restore
     }
 }
-#endif

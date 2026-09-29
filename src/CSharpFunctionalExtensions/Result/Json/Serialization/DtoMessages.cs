@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 
 namespace Continuum.CSharpFunctionalExtensions.Json.Serialization
 {
@@ -10,16 +10,15 @@ namespace Continuum.CSharpFunctionalExtensions.Json.Serialization
         public static readonly Error ContentJsonIsSuccessfulResultWithoutValue = RequestErrors.NewUnknown("Result was successful and Value is null.");
 
         public static Error NotSuccessStatusCodeFormat(HttpStatusCode statusCode, string content,
-            Func<HttpStatusCode, Grpc.Core.StatusCode> errorCodeMapper = null)
+            Func<HttpStatusCode, Grpc.Core.StatusCode>? errorCodeMapper = null)
         {
             var grpcStatusCode = errorCodeMapper is null
                 ? DefaultErrorCodeMapper(statusCode)
                 : errorCodeMapper(statusCode);
-            var priorityCode = DefaultPriorityCodeMapper(grpcStatusCode);
 
             return RequestErrors.NewUnknown(
                 "HttpStatus code is {0}, GrpcStatusCode is {1}, Content {2}",
-                statusCode, grpcStatusCode, content);
+                statusCode.ToString(), grpcStatusCode.ToString(), content);
         }
 
         static Grpc.Core.StatusCode DefaultErrorCodeMapper(HttpStatusCode httpStatusCode)

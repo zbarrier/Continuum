@@ -15,7 +15,7 @@ public static partial class ResultExtensions
 
         return BigInteger.TryParse(result.Value, out BigInteger bigIntegerValue) && bigIntegerValue != BigInteger.Zero
             ? Result.Success(bigIntegerValue)
-            : Result.Failure<BigInteger>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            : Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
@@ -28,7 +28,7 @@ public static partial class ResultExtensions
         if (!BigInteger.TryParse(result.Value, out BigInteger bigIntegerValue) || bigIntegerValue == BigInteger.Zero)
         {
             var propertyName = string.Format(propertyNameFormat, arguments);
-            return Result.Failure<BigInteger>(new ValidationError(propertyName, RegularExpressionError, propertyName));
+            return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
         return Result.Success(bigIntegerValue);

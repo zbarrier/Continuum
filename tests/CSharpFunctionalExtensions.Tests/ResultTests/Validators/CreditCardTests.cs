@@ -7,12 +7,11 @@ public class CreditCardTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string CreditCardErrorFormat = "'{0}' is not a valid credit card number.";
 
-    static readonly Error CreditCardError = new ValidationError(MyPropertyName, CreditCardErrorFormat, MyPropertyName);
+    static readonly Error CreditCardError = new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.CreditCard, ExpectedValidatorErrorStrings.CreditCard, MyPropertyName);
 
     static readonly string MultiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-    static readonly Error MultiPartCreditCardError = new ValidationError(MultiPartPropertyName, CreditCardErrorFormat, MultiPartPropertyName);
+    static readonly Error MultiPartCreditCardError = new ValidationError(MultiPartPropertyName, ExpectedValidationErrorCodes.CreditCard, ExpectedValidatorErrorStrings.CreditCard, MultiPartPropertyName);
 
     [Theory]
     [InlineData("378282246310005")]  //American Express

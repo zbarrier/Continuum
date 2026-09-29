@@ -14,7 +14,6 @@ public class IsDateOnlyTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string IsGuidErrorFormat = "'{0}' is not in the correct format.";
 
     [Theory]
     [InlineData("2023-05-01")]
@@ -63,7 +62,7 @@ public class IsDateOnlyTests
 
         //Assert
         Assert.True(result.IsFailure);
-        Assert.Equal(result.Error, new ValidationError(MyPropertyName, IsGuidErrorFormat, MyPropertyName));
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, MyPropertyName));
     }
 
     [Theory]
@@ -81,6 +80,6 @@ public class IsDateOnlyTests
         Assert.True(result.IsFailure);
 
         var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, IsGuidErrorFormat, multiPartPropertyName));
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

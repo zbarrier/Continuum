@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Continuum.CSharpFunctionalExtensions
 {
@@ -9,7 +9,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     If a given function throws an exception, an error is returned from the given error handler
         /// </summary>
         public static Result<K> MapTry<T, K>(this Result<T> result, Func<T, K> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)
@@ -21,7 +21,7 @@ namespace Continuum.CSharpFunctionalExtensions
         ///     If a given function throws an exception, an error is returned from the given error handler
         /// </summary>
         public static Result<K> MapTry<K>(this Result result, Func<K> func,
-            Func<Exception, Error> errorHandler = null)
+            Func<Exception, Error>? errorHandler = null)
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)

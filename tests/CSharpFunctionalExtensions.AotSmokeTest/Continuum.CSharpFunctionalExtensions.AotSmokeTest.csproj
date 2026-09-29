@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<OutputType>Exe</OutputType>
+	<TargetFramework>net10.0</TargetFramework>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+	<IsPackable>false</IsPackable>
+	<PublishAot>true</PublishAot>
+	<InvariantGlobalization>false</InvariantGlobalization>
+	<!-- Fail the publish if any trim/AOT warnings leak through from the libraries. -->
+	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	<TrimmerSingleWarn>false</TrimmerSingleWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\..\src\CSharpFunctionalExtensions\Continuum.CSharpFunctionalExtensions.csproj" />
+    <ProjectReference Include="..\..\src\CSharpFunctionalExtensions.SourceGenerators\Continuum.CSharpFunctionalExtensions.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	<ProjectReference Include="..\..\src\CSharpFunctionalExtensions.Validators.US\Continuum.CSharpFunctionalExtensions.Validators.US.csproj" />
+  </ItemGroup>
+
+</Project>

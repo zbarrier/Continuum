@@ -1,13 +1,19 @@
 <Solution>
   <Folder Name="/SolutionItems/">
     <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
     <File Path="LICENSE" />
+    <File Path="NOTICE" />
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/CSharpFunctionalExtensions.SourceGenerators/Continuum.CSharpFunctionalExtensions.SourceGenerators.csproj" />
+    <Project Path="src/CSharpFunctionalExtensions.Validators.US/Continuum.CSharpFunctionalExtensions.Validators.US.csproj" />
     <Project Path="src/CSharpFunctionalExtensions/Continuum.CSharpFunctionalExtensions.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/CSharpFunctionalExtensions.AotSmokeTest/Continuum.CSharpFunctionalExtensions.AotSmokeTest.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.Tests/Continuum.CSharpFunctionalExtensions.Tests.csproj" />
+    <Project Path="tests/CSharpFunctionalExtensions.Validators.US.Tests/Continuum.CSharpFunctionalExtensions.Validators.US.Tests.csproj" />
   </Folder>
 </Solution>

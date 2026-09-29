@@ -9,12 +9,11 @@ public class EmailExtensionTests
 
     const string MultiPartPropertyNameFormat = "{0} {1}";
 
-    const string EmailErrorFormat = "'{0}' is not a valid email address.";
 
-    static readonly Error EmailError = new ValidationError(MyPropertyName, EmailErrorFormat, MyPropertyName);
+    static readonly Error EmailError = new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Email, ExpectedValidatorErrorStrings.Email, MyPropertyName);
 
     static readonly string MultiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
-    static readonly Error MultiPartEmailError = new ValidationError(MultiPartPropertyName, EmailErrorFormat, MultiPartPropertyName);
+    static readonly Error MultiPartEmailError = new ValidationError(MultiPartPropertyName, ExpectedValidationErrorCodes.Email, ExpectedValidatorErrorStrings.Email, MultiPartPropertyName);
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
 
@@ -37,7 +36,7 @@ public class EmailExtensionTests
     public void IsEmail_PreviousError_Failure()
     {
         //Arrange
-        var emailAddress = "simple@example.com";
+
 
         //Act
         var result = Result.Failure<string>(PreviousFailureError)
@@ -67,7 +66,7 @@ public class EmailExtensionTests
     public void IsEmailMultiPart_PreviousError_Failure()
     {
         //Arrange
-        var emailAddress = "simple@example.com";
+
 
         //Act
         var result = Result.Failure<string>(PreviousFailureError)
