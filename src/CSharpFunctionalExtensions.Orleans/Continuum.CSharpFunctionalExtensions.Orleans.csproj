@@ -1,9 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
     <RootNamespace>Continuum.CSharpFunctionalExtensions.Orleans</RootNamespace>
     <PackageId>Continuum.CSharpFunctionalExtensions.Orleans</PackageId>
     <Description>Microsoft Orleans serialization surrogates for Continuum.CSharpFunctionalExtensions (Result, Result&lt;T&gt;, Maybe&lt;T&gt;, RequestError, ValidationError).</Description>

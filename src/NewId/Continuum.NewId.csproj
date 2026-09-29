@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<TargetFramework>net10.0</TargetFramework>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+	<RootNamespace>Continuum</RootNamespace>
+	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	<IsAotCompatible>true</IsAotCompatible>
+	<PackageId>Continuum.NewId</PackageId>
+	<Description>Sequential, time-ordered, globally unique identifiers that interoperate with Guid and sort correctly in MSSQL Server, PostgreSQL, and MySQL.</Description>
+	<PackageTags>newid;guid;uuid;sequential;identifier;comb;snowflake</PackageTags>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

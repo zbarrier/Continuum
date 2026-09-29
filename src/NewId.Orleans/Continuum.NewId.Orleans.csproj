@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<TargetFramework>net10.0</TargetFramework>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+	<RootNamespace>Continuum.Orleans</RootNamespace>
+	<PackageId>Continuum.NewId.Orleans</PackageId>
+	<Description>Microsoft Orleans serialization surrogate for Continuum.NewId.</Description>
+	<PackageTags>newid;guid;sequential;orleans;serialization;surrogate</PackageTags>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Microsoft.Orleans.Sdk" Version="10.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\NewId\Continuum.NewId.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
