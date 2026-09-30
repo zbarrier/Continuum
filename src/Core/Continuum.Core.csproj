@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CSharpFunctionalExtensions\Continuum.CSharpFunctionalExtensions.csproj" />
+    <ProjectReference Include="..\NewId\Continuum.NewId.csproj" />
+  </ItemGroup>
+
+  <!-- Ship the type map registration source generator inside this package so consumers get it automatically. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Core.SourceGenerators\Continuum.Core.SourceGenerators.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <None Include="..\Core.SourceGenerators\bin\$(Configuration)\netstandard2.0\Continuum.Core.SourceGenerators.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
+</Project>

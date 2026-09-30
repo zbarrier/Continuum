@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Continuum.Orleans</RootNamespace>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.3.1" />
+    <PackageReference Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Continuum.Core.csproj" />
+    <ProjectReference Include="..\CSharpFunctionalExtensions.Orleans\Continuum.CSharpFunctionalExtensions.Orleans.csproj" />
+    <ProjectReference Include="..\NewId.Orleans\Continuum.NewId.Orleans.csproj" />
+  </ItemGroup>
+
+</Project>

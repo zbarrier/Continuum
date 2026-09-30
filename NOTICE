@@ -86,3 +86,29 @@ Adapted portions:
     Ssse3 intrinsics replaced with cross-platform Vector128, SpinLock replaced
     with System.Threading.Lock, and allocations removed from Guid conversions).
   - The tests in tests/NewId.Tests/ and benchmarks in tests/NewId.Benchmarks/.
+
+------------------------------------------------------------------------------
+
+This product includes software adapted from Eventuous
+(https://github.com/Eventuous/eventuous).
+
+  Copyright (C) Eventuous HQ OÜ
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+Adapted portions:
+  - The type mapping design and implementation in src/Core/TypeMapping/
+    (ITypeMapper, TypeMapper, DefaultTypeMapAttributeMapper, type map
+    attributes, and TypeMappingNotFoundException). Reflection-based assembly
+    replaced with a compile-time source generator and TypeMapRegistry for
+    Native AOT compatibility, attributes were split per TypeMapKinds, and
+    reads were made lock-free; see file headers.
