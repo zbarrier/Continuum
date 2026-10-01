@@ -113,7 +113,7 @@ public sealed class SurrogateRoundTripTests
         var copy = RoundTrip(error);
 
         Assert.Equal(error, copy);
-        Assert.Equal(2, copy.Entries.Count);
+        Assert.Equal(2, copy.Entries.Length);
         Assert.Equal(ValidationSeverity.Warning, copy.Entries[1].Severity);
     }
 

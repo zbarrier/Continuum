@@ -88,10 +88,8 @@ public class ErrorJsonRegistryTests
     private sealed class CustomError(string detail) : Error(HttpStatusCode.BadRequest, Grpc.Core.StatusCode.FailedPrecondition, "custom")
     {
         public string Detail { get; } = detail;
-        public override bool SupportsFormattedMessage => false;
         public override string ToString() => Code;
-        public override string GetFormattedMessage() => throw new NotSupportedException();
-        public override string GetFormattedMessage(CultureInfo culture, IErrorMessageLocalizer localizer = null) => throw new NotSupportedException();
+        public override string GetFormattedMessage() => Detail;
         protected override bool EqualsCore(Error other) => Detail == ((CustomError)other).Detail;
         protected override void AddHashCodeCore(ref HashCode hash) => hash.Add(Detail);
     }
@@ -121,10 +119,8 @@ public class ErrorJsonRegistryTests
 
     private sealed class UnregisteredError() : Error(HttpStatusCode.InternalServerError, Grpc.Core.StatusCode.Internal, "unregistered")
     {
-        public override bool SupportsFormattedMessage => false;
         public override string ToString() => Code;
-        public override string GetFormattedMessage() => throw new NotSupportedException();
-        public override string GetFormattedMessage(CultureInfo culture, IErrorMessageLocalizer localizer = null) => throw new NotSupportedException();
+        public override string GetFormattedMessage() => Code;
         protected override bool EqualsCore(Error other) => false;
         protected override void AddHashCodeCore(ref HashCode hash) { }
     }

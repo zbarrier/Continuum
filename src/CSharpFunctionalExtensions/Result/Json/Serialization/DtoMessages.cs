@@ -78,22 +78,22 @@ namespace Continuum.CSharpFunctionalExtensions.Json.Serialization
         {
             return grpcStatusCode switch
             {
-                Grpc.Core.StatusCode.Cancelled => ErrorPriorityCode.CANCELLED,
-                Grpc.Core.StatusCode.Unknown => ErrorPriorityCode.UNKNOWN,
-                Grpc.Core.StatusCode.InvalidArgument => ErrorPriorityCode.INVALID_ARGUMENT,
-                Grpc.Core.StatusCode.DeadlineExceeded => ErrorPriorityCode.DEADLINE_EXCEEDED,
-                Grpc.Core.StatusCode.NotFound => ErrorPriorityCode.NOT_FOUND,
-                Grpc.Core.StatusCode.AlreadyExists => ErrorPriorityCode.ALREADY_EXISTS,
-                Grpc.Core.StatusCode.PermissionDenied => ErrorPriorityCode.PERMISSION_DENIED,
-                Grpc.Core.StatusCode.ResourceExhausted => ErrorPriorityCode.RESOURCE_EXHAUSTED,
-                Grpc.Core.StatusCode.FailedPrecondition => ErrorPriorityCode.FAILED_PRECONDITION,
-                Grpc.Core.StatusCode.Aborted => ErrorPriorityCode.ABORTED,
-                Grpc.Core.StatusCode.OutOfRange => ErrorPriorityCode.OUT_OF_RANGE,
-                Grpc.Core.StatusCode.Unimplemented => ErrorPriorityCode.UNIMPLEMENTED,
-                Grpc.Core.StatusCode.Internal => ErrorPriorityCode.INTERNAL,
-                Grpc.Core.StatusCode.Unavailable => ErrorPriorityCode.UNAVAILABLE,
-                Grpc.Core.StatusCode.DataLoss => ErrorPriorityCode.DATA_LOSS,
-                Grpc.Core.StatusCode.Unauthenticated => ErrorPriorityCode.UNAUTHENTICATED,
+                Grpc.Core.StatusCode.Cancelled => ErrorPriorityCode.Cancelled,
+                Grpc.Core.StatusCode.Unknown => ErrorPriorityCode.Unknown,
+                Grpc.Core.StatusCode.InvalidArgument => ErrorPriorityCode.InvalidArgument,
+                Grpc.Core.StatusCode.DeadlineExceeded => ErrorPriorityCode.DeadlineExceeded,
+                Grpc.Core.StatusCode.NotFound => ErrorPriorityCode.NotFound,
+                Grpc.Core.StatusCode.AlreadyExists => ErrorPriorityCode.AlreadyExists,
+                Grpc.Core.StatusCode.PermissionDenied => ErrorPriorityCode.PermissionDenied,
+                Grpc.Core.StatusCode.ResourceExhausted => ErrorPriorityCode.ResourceExhausted,
+                Grpc.Core.StatusCode.FailedPrecondition => ErrorPriorityCode.FailedPrecondition,
+                Grpc.Core.StatusCode.Aborted => ErrorPriorityCode.Aborted,
+                Grpc.Core.StatusCode.OutOfRange => ErrorPriorityCode.OutOfRange,
+                Grpc.Core.StatusCode.Unimplemented => ErrorPriorityCode.Unimplemented,
+                Grpc.Core.StatusCode.Internal => ErrorPriorityCode.Internal,
+                Grpc.Core.StatusCode.Unavailable => ErrorPriorityCode.Unavailable,
+                Grpc.Core.StatusCode.DataLoss => ErrorPriorityCode.DataLoss,
+                Grpc.Core.StatusCode.Unauthenticated => ErrorPriorityCode.Unauthenticated,
                 _ => throw new ArgumentException(nameof(grpcStatusCode))
             };
         }

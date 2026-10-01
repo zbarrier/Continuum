@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Immutable;
 using System.Net;
 using System.Text.Json;
 
@@ -46,7 +47,7 @@ internal sealed class RequestErrorJsonConverter() : ErrorJsonConverter<RequestEr
     public override void WriteProperties(Utf8JsonWriter writer, RequestError error, JsonSerializerOptions options)
     {
         writer.WriteString(ErrorJson.Name(options, FormatName), error.Format);
-        ErrorJson.WriteArguments(writer, ArgumentsName, error.Arguments, options);
+        ErrorJson.WriteArguments(writer, ArgumentsName, error.ArgumentArray, options);
         if (error.Target is not null)
         {
             writer.WriteString(ErrorJson.Name(options, TargetName), error.Target);
@@ -71,7 +72,7 @@ internal sealed class ValidationErrorJsonConverter() : ErrorJsonConverter<Valida
 
     public override ValidationError Read(ref Utf8JsonReader reader, JsonSerializerOptions options)
     {
-        List<ValidationErrorEntry>? entries = null;
+        ImmutableArray<ValidationErrorEntry>.Builder? entries = null;
 
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
@@ -80,7 +81,7 @@ internal sealed class ValidationErrorJsonConverter() : ErrorJsonConverter<Valida
             {
                 reader.Read();
                 ErrorJson.Expect(ref reader, JsonTokenType.StartArray);
-                entries = [];
+                entries = ImmutableArray.CreateBuilder<ValidationErrorEntry>();
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                 {
                     entries.Add(ReadEntry(ref reader));
@@ -89,7 +90,7 @@ internal sealed class ValidationErrorJsonConverter() : ErrorJsonConverter<Valida
             else { reader.Read(); reader.Skip(); }
         }
 
-        return new ValidationError(entries ?? throw new JsonException("ValidationError is missing its entries."));
+        return new ValidationError(entries?.DrainToImmutable() ?? throw new JsonException("ValidationError is missing its entries."));
     }
 
     public override void WriteProperties(Utf8JsonWriter writer, ValidationError error, JsonSerializerOptions options)
@@ -102,7 +103,7 @@ internal sealed class ValidationErrorJsonConverter() : ErrorJsonConverter<Valida
             writer.WriteString(ErrorJson.Name(options, TargetName), entry.Target);
             writer.WriteString(ErrorJson.Name(options, ErrorJson.CodePropertyName), entry.Code);
             writer.WriteString(ErrorJson.Name(options, FormatName), entry.Format);
-            ErrorJson.WriteArguments(writer, ArgumentsName, entry.Arguments, options);
+            ErrorJson.WriteArguments(writer, ArgumentsName, entry.ArgumentArray, options);
             writer.WriteString(ErrorJson.Name(options, ErrorJson.MessagePropertyName), entry.GetFormattedMessage());
             writer.WriteEndObject();
         }

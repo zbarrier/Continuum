@@ -43,8 +43,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
             {
             }
 
-            public override bool SupportsFormattedMessage => false;
-            public override string GetFormattedMessage() => throw new NotSupportedException();
+            public override string GetFormattedMessage() => Code;
             protected override bool EqualsCore(Error other) => false;
             protected override void AddHashCodeCore(ref HashCode hash) { }
 
@@ -62,8 +61,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
             {
             }
 
-            public override bool SupportsFormattedMessage => false;
-            public override string GetFormattedMessage() => throw new NotSupportedException();
+            public override string GetFormattedMessage() => Code;
             protected override bool EqualsCore(Error other) => false;
             protected override void AddHashCodeCore(ref HashCode hash) { }
 

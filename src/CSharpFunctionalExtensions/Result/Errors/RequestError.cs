@@ -1,8 +1,11 @@
 #nullable enable
 
+using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
+using System.Runtime.InteropServices;
 
 using GrpcStatusCodeEnum = Grpc.Core.StatusCode;
 
@@ -46,6 +49,14 @@ namespace Continuum.CSharpFunctionalExtensions;
 ///     <para>
 ///         When <see cref="Format"/> is empty, the message is resolved from the localized template for <see cref="Error.Code"/>.
 ///     </para>
+///     <para>
+///         The format is validated on construction. Successful validations are cached per format and argument kinds, so a
+///         format such as <c>"Order {0} was not found."</c> is validated once regardless of the argument values. Put identifiers in
+///         the arguments, never in the format string (the CFE006 analyzer warns about interpolated formats). The cache is enabled by
+///         default and is configured with the AppContext switch
+///         <c>Continuum.CSharpFunctionalExtensions.RequestError.UseFormatValidationCache</c> (true/false) and the AppContext data
+///         <c>Continuum.CSharpFunctionalExtensions.RequestError.FormatValidationCacheSize</c> (maximum entries, default 1024, 0 disables).
+///     </para>
 /// </remarks>
 [DebuggerDisplay("{ToString(),nq}")]
 public sealed class RequestError : Error
@@ -59,10 +70,10 @@ public sealed class RequestError : Error
     /// <param name="format">
     ///     A composite format string for the message, or null/empty to use the localized template for <paramref name="code"/>.
     /// </param>
-    /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
+    /// <param name="arguments">The arguments used to format <paramref name="format"/>. The array is used as-is and must not be modified afterward.</param>
     /// <exception cref="ArgumentException"><paramref name="code"/> is null, empty, or whitespace.</exception>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public RequestError(HttpStatusCode httpStatusCode, GrpcStatusCodeEnum grpcStatusCode, string code, string? format = null, params ErrorArgument[] arguments)
+    public RequestError(HttpStatusCode httpStatusCode, GrpcStatusCodeEnum grpcStatusCode, string code, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments)
         : this(httpStatusCode, grpcStatusCode, code, format, arguments, target: null, retryAfter: null)
     { }
 
@@ -75,7 +86,7 @@ public sealed class RequestError : Error
     /// <param name="format">
     ///     A composite format string for the message, or null/empty to use the localized template for <paramref name="code"/>.
     /// </param>
-    /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
+    /// <param name="arguments">The arguments used to format <paramref name="format"/>. The array is used as-is and must not be modified afterward.</param>
     /// <param name="target">The resource, parameter or field the error is about, or null. See <see cref="Target"/>.</param>
     /// <param name="retryAfter">
     ///     How long the caller should wait before retrying, or null for no hint. See <see cref="RetryAfter"/>.
@@ -84,7 +95,7 @@ public sealed class RequestError : Error
     /// <exception cref="ArgumentException"><paramref name="code"/> is null, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="retryAfter"/> is negative.</exception>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public RequestError(HttpStatusCode httpStatusCode, GrpcStatusCodeEnum grpcStatusCode, string code, string? format, ErrorArgument[]? arguments,
+    public RequestError(HttpStatusCode httpStatusCode, GrpcStatusCodeEnum grpcStatusCode, string code, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format, ErrorArgument[]? arguments,
         string? target, TimeSpan? retryAfter)
         : base(httpStatusCode, grpcStatusCode, code)
     {
@@ -94,19 +105,20 @@ public sealed class RequestError : Error
         }
 
         Format = format ?? string.Empty;
-        Arguments = arguments ?? [];
+        ArgumentArray = arguments ?? [];
         Target = string.IsNullOrEmpty(target) ? null : target;
         RetryAfter = retryAfter;
 
-        // Validate, this will throw FormatException if invalid.
-        _ = string.Format(CultureInfo.InvariantCulture, Format, ErrorArgument.ToObjects(Arguments));
+        RequestErrorFormatValidationCache.Validate(Format, ArgumentArray);
     }
 
     /// <summary>Gets the composite format string for the message, or an empty string to use the localized template for <see cref="Error.Code"/>.</summary>
     public string Format { get; }
 
     /// <summary>Gets the arguments used to format the message.</summary>
-    public ErrorArgument[] Arguments { get; }
+    public ImmutableArray<ErrorArgument> Arguments => ImmutableCollectionsMarshal.AsImmutableArray(ArgumentArray);
+
+    internal ErrorArgument[] ArgumentArray { get; }
 
     /// <summary>
     ///     Gets the resource, parameter or field the error is about, such as <c>orderId</c> or <c>items[2].quantity</c>, or null.
@@ -128,7 +140,7 @@ public sealed class RequestError : Error
     /// <param name="code">The new error code.</param>
     /// <returns>A new <see cref="RequestError"/> with the same values and the specified code.</returns>
     public RequestError WithCode(string code) =>
-        new(HttpStatusCode, GrpcStatusCode, code, Format, Arguments, Target, RetryAfter);
+        new(HttpStatusCode, GrpcStatusCode, code, Format, ArgumentArray, Target, RetryAfter);
 
     /// <summary>
     ///     Creates a copy of this error with a different <see cref="Target"/>.
@@ -136,16 +148,14 @@ public sealed class RequestError : Error
     /// <param name="target">The new target, or null to clear it.</param>
     /// <returns>A new <see cref="RequestError"/> with the same values and the specified target.</returns>
     public RequestError WithTarget(string? target) =>
-        new(HttpStatusCode, GrpcStatusCode, Code, Format, Arguments, target, RetryAfter);
+        new(HttpStatusCode, GrpcStatusCode, Code, Format, ArgumentArray, target, RetryAfter);
 
     /// <inheritdoc/>
-    public override bool SupportsFormattedMessage => true;
-    /// <inheritdoc/>
     public override string GetFormattedMessage() =>
-        LocalizedMessageFormatter.Format(Code, Format, Arguments, false, CultureInfo.CurrentUICulture, CultureInfo.CurrentCulture, null);
+        LocalizedMessageFormatter.Format(Code, Format, ArgumentArray, false, CultureInfo.CurrentUICulture, CultureInfo.CurrentCulture, null);
     /// <inheritdoc/>
     public override string GetFormattedMessage(CultureInfo culture, IErrorMessageLocalizer? localizer = null) =>
-        LocalizedMessageFormatter.Format(Code, Format, Arguments, false, culture, culture, localizer);
+        LocalizedMessageFormatter.Format(Code, Format, ArgumentArray, false, culture, culture, localizer);
 
     /// <inheritdoc/>
     public override string ToString() => string.Create(CultureInfo.InvariantCulture,
@@ -158,7 +168,7 @@ public sealed class RequestError : Error
         return string.Equals(Format, o.Format, StringComparison.Ordinal) &&
             string.Equals(Target, o.Target, StringComparison.Ordinal) &&
             RetryAfter == o.RetryAfter &&
-            Arguments.AsSpan().SequenceEqual(o.Arguments);
+            ArgumentArray.AsSpan().SequenceEqual(o.ArgumentArray);
     }
 
     /// <inheritdoc/>
@@ -167,7 +177,7 @@ public sealed class RequestError : Error
         hash.Add(Format, StringComparer.Ordinal);
         hash.Add(Target, StringComparer.Ordinal);
         hash.Add(RetryAfter);
-        foreach (var argument in Arguments)
+        foreach (var argument in ArgumentArray)
         {
             hash.Add(argument);
         }

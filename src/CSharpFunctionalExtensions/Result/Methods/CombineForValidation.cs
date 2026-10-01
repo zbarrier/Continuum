@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -120,20 +121,23 @@ public partial struct Result
             throw new ArgumentException("Must have at least one failed result.", nameof(failedResults));
         }
 
-        var allEntries = new List<ValidationErrorEntry>(failedResults.Count);
-
         var listSpan = CollectionsMarshal.AsSpan(failedResults);
-        ref var searchSpace = ref MemoryMarshal.GetReference(listSpan);
-        for (int i = 0; i < listSpan.Length; i++)
+        int count = 0;
+        foreach (var failedResult in listSpan)
         {
-            var failedResult = Unsafe.Add(ref searchSpace, i);
             if (failedResult.Error is not ValidationError validationError)
             {
                 throw new ArgumentException("Only validation errors are expected.", nameof(failedResults));
             }
-            allEntries.AddRange(validationError.Entries);
+            count += validationError.Entries.Length;
         }
 
-        return new ValidationError(allEntries);
+        var allEntries = ImmutableArray.CreateBuilder<ValidationErrorEntry>(count);
+        foreach (var failedResult in listSpan)
+        {
+            allEntries.AddRange(((ValidationError)failedResult.Error).Entries);
+        }
+
+        return new ValidationError(allEntries.MoveToImmutable());
     }
 }

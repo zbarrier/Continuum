@@ -31,7 +31,7 @@ Check("Maybe map", maybe.HasValue && maybe.Value == "VALUE");
 var combined = Result.Combine(
     Result.NotNullOrEmpty("", "Name"),
     Result.IsInt32("abc", "Age"));
-Check("Validation combine", combined.IsFailure && combined.Error is ValidationError { Entries.Count: 2 });
+Check("Validation combine", combined.IsFailure && combined.Error is ValidationError { Entries.Length: 2 });
 
 // Localization of a core code
 var localizer = new ErrorMessageLocalizer();
@@ -67,7 +67,7 @@ Check("JSON Result<T> request error", failedBack.IsFailure && failedBack.Error i
 var validationJson = JsonSerializer.Serialize(Result.Combine(Result.NotNullOrEmpty("", "Name"), Result.IsInt32("abc", "Age")), resultInfo);
 var validationBack = JsonSerializer.Deserialize(validationJson, resultInfo);
 Check("JSON Result validation error",
-    validationBack.IsFailure && validationBack.Error is ValidationError { Entries.Count: 2 } v && v.Entries[0].Target == "Name");
+    validationBack.IsFailure && validationBack.Error is ValidationError { Entries.Length: 2 } v && v.Entries[0].Target == "Name");
 
 using (var response = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
 {

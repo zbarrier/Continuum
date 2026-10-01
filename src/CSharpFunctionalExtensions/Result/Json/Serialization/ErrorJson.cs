@@ -161,10 +161,7 @@ public static class ErrorJson
         writer.WriteNumber(Name(options, HttpStatusCodePropertyName), (int)error.HttpStatusCode);
         writer.WriteNumber(Name(options, GrpcStatusCodePropertyName), (int)error.GrpcStatusCode);
         converter.WriteProperties(writer, error, options);
-        if (error.SupportsFormattedMessage)
-        {
-            writer.WriteString(Name(options, MessagePropertyName), error.GetFormattedMessage());
-        }
+        writer.WriteString(Name(options, MessagePropertyName), error.GetFormattedMessage());
         writer.WriteEndObject();
     }
 

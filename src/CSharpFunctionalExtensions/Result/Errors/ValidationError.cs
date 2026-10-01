@@ -1,8 +1,11 @@
 #nullable enable
 
+using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Continuum.CSharpFunctionalExtensions;
@@ -14,7 +17,7 @@ namespace Continuum.CSharpFunctionalExtensions;
 ///     Always uses <see cref="ErrorCodes.ValidationFailed"/> as its <see cref="Error.Code"/>, HTTP 422 (Unprocessable Entity),
 ///     and gRPC <see cref="Grpc.Core.StatusCode.InvalidArgument"/>. Individual failures are identified by <see cref="ValidationErrorEntry.Code"/>.
 /// </remarks>
-[DebuggerDisplay("ValidationError {{ Code = {Code}, PriorityCode = {PriorityCode}, HttpStatusCode = {HttpStatusCode}, GrpcStatusCode = {GrpcStatusCode}, Entries = {Entries.Count} }}")]
+[DebuggerDisplay("ValidationError {{ Code = {Code}, PriorityCode = {PriorityCode}, HttpStatusCode = {HttpStatusCode}, GrpcStatusCode = {GrpcStatusCode}, Entries = {Entries.Length} }}")]
 public sealed class ValidationError : Error
 {
     /// <summary>
@@ -23,9 +26,9 @@ public sealed class ValidationError : Error
     /// <param name="target">The name of the property or field that failed validation.</param>
     /// <param name="code">A machine-readable code for the failure, such as a value from <see cref="ValidationErrorCodes"/>.</param>
     /// <param name="errorMessage">A composite format string for the message, or null/empty to use the localized template for <paramref name="code"/>.</param>
-    /// <param name="arguments">The arguments used to format <paramref name="errorMessage"/>.</param>
+    /// <param name="arguments">The arguments used to format <paramref name="errorMessage"/>. The array is used as-is and must not be modified afterward.</param>
     /// <exception cref="ArgumentException"><paramref name="code"/> is null, empty, or whitespace.</exception>
-    public ValidationError(string target, string code, string errorMessage, params ErrorArgument[] arguments)
+    public ValidationError(string target, string code, string? errorMessage, params ErrorArgument[] arguments)
         : this(ValidationSeverity.Error, target, code, errorMessage, arguments)
     { }
     /// <summary>
@@ -35,9 +38,9 @@ public sealed class ValidationError : Error
     /// <param name="target">The name of the property or field that failed validation.</param>
     /// <param name="code">A machine-readable code for the failure, such as a value from <see cref="ValidationErrorCodes"/>.</param>
     /// <param name="errorMessage">A composite format string for the message, or null/empty to use the localized template for <paramref name="code"/>.</param>
-    /// <param name="arguments">The arguments used to format <paramref name="errorMessage"/>.</param>
+    /// <param name="arguments">The arguments used to format <paramref name="errorMessage"/>. The array is used as-is and must not be modified afterward.</param>
     /// <exception cref="ArgumentException"><paramref name="code"/> is null, empty, or whitespace.</exception>
-    public ValidationError(ValidationSeverity severity, string target, string code, string errorMessage, params ErrorArgument[] arguments)
+    public ValidationError(ValidationSeverity severity, string target, string code, string? errorMessage, params ErrorArgument[] arguments)
         : base(HttpStatusCode.UnprocessableEntity, Grpc.Core.StatusCode.InvalidArgument, ErrorCodes.ValidationFailed)
     {
         Entries = [new ValidationErrorEntry(severity, target, code, errorMessage, arguments)];
@@ -47,30 +50,40 @@ public sealed class ValidationError : Error
     ///     Initializes a new instance of the <see cref="ValidationError"/> class with the specified entries.
     /// </summary>
     /// <param name="entries">The validation failures. Must contain at least one entry.</param>
-    /// <exception cref="ArgumentException"><paramref name="entries"/> is null or empty.</exception>
-    public ValidationError(List<ValidationErrorEntry> entries)
+    /// <exception cref="ArgumentException"><paramref name="entries"/> is empty or contains a null entry.</exception>
+    public ValidationError(ImmutableArray<ValidationErrorEntry> entries)
         : base(HttpStatusCode.UnprocessableEntity, Grpc.Core.StatusCode.InvalidArgument, ErrorCodes.ValidationFailed)
     {
-        if (entries is null || entries.Count == 0)
+        if (entries.IsDefaultOrEmpty)
         {
             throw new ArgumentException("Entries cannot be null or empty.", nameof(entries));
+        }
+        if (entries.Contains(null!))
+        {
+            throw new ArgumentException("Entries cannot contain null.", nameof(entries));
         }
 
         Entries = entries;
     }
 
-    /// <summary>Gets the individual validation failures.</summary>
-    public List<ValidationErrorEntry> Entries { get; }
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ValidationError"/> class with the specified entries.
+    /// </summary>
+    /// <param name="entries">The validation failures. Must contain at least one entry.</param>
+    /// <exception cref="ArgumentException"><paramref name="entries"/> is null, empty, or contains a null entry.</exception>
+    public ValidationError(IEnumerable<ValidationErrorEntry> entries)
+        : this(entries?.ToImmutableArray() ?? default)
+    { }
 
-    /// <inheritdoc/>
-    public override bool SupportsFormattedMessage => true;
+    /// <summary>Gets the individual validation failures.</summary>
+    public ImmutableArray<ValidationErrorEntry> Entries { get; }
 
     /// <summary>
-    ///     Gets the messages of all entries, one per line, localized for <see cref="CultureInfo.CurrentUICulture"/> and formatted with <see cref="CultureInfo.CurrentCulture"/>.
+    ///     Gets the messages of all entries, separated by a line feed with no trailing newline, localized for <see cref="CultureInfo.CurrentUICulture"/> and formatted with <see cref="CultureInfo.CurrentCulture"/>.
     /// </summary>
     public override string GetFormattedMessage() => GetFormattedMessageCore(null, null);
     /// <summary>
-    ///     Gets the messages of all entries, one per line, localized and formatted for <paramref name="culture"/>.
+    ///     Gets the messages of all entries, separated by a line feed with no trailing newline, localized and formatted for <paramref name="culture"/>.
     /// </summary>
     /// <param name="culture">The culture used to select message templates and to format arguments.</param>
     /// <param name="localizer">The localizer used to resolve message templates, or null to use the default.</param>
@@ -79,10 +92,19 @@ public sealed class ValidationError : Error
 
     private string GetFormattedMessageCore(CultureInfo? culture, IErrorMessageLocalizer? localizer)
     {
-        var sb = new StringBuilder();
-        foreach (var item in Entries)
+        if (Entries.Length == 1)
         {
-            _ = sb.AppendLine(culture is null ? item.GetFormattedMessage() : item.GetFormattedMessage(culture, localizer));
+            return culture is null ? Entries[0].GetFormattedMessage() : Entries[0].GetFormattedMessage(culture, localizer);
+        }
+
+        var sb = new StringBuilder();
+        for (int i = 0; i < Entries.Length; i++)
+        {
+            if (i > 0)
+            {
+                _ = sb.Append('\n');
+            }
+            _ = sb.Append(culture is null ? Entries[i].GetFormattedMessage() : Entries[i].GetFormattedMessage(culture, localizer));
         }
 
         return sb.ToString();
@@ -94,9 +116,9 @@ public sealed class ValidationError : Error
         var sb = new StringBuilder();
         _ = sb.Append(CultureInfo.InvariantCulture,
             $"ValidationError {{ Code = {Code}, PriorityCode = {PriorityCode}, HttpStatusCode = {(int)HttpStatusCode} ({HttpStatusCode}), " +
-            $"GrpcStatusCode = {(int)GrpcStatusCode} ({GrpcStatusCode}), Entries = {Entries.Count} }}");
+            $"GrpcStatusCode = {(int)GrpcStatusCode} ({GrpcStatusCode}), Entries = {Entries.Length} }}");
 
-        if (Entries.Count > 0)
+        if (Entries.Length > 0)
         {
             _ = sb.AppendLine();
         }
@@ -131,13 +153,18 @@ public sealed class ValidationErrorEntry : IEquatable<ValidationErrorEntry>
     /// <summary>
     ///     Initializes a new instance of the <see cref="ValidationErrorEntry"/> class.
     /// </summary>
+    /// <remarks>
+    ///     Unlike <see cref="RequestError"/>, <paramref name="format"/> is not validated at creation time. An invalid format
+    ///     throws a <see cref="FormatException"/> when the message is formatted. Constant formats are checked at compile time
+    ///     by analyzer CFE005; prefer constant formats over formats built per call (CFE006).
+    /// </remarks>
     /// <param name="severity">The severity of the failure.</param>
     /// <param name="target">The name of the property or field that failed validation.</param>
     /// <param name="code">A machine-readable code for the failure, such as a value from <see cref="ValidationErrorCodes"/>.</param>
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <paramref name="code"/>.</param>
-    /// <param name="arguments">The arguments used to format <paramref name="format"/>. By convention, the first argument is the property name.</param>
+    /// <param name="arguments">The arguments used to format <paramref name="format"/>. By convention, the first argument is the property name. The array is used as-is and must not be modified afterward.</param>
     /// <exception cref="ArgumentException"><paramref name="code"/> is null, empty, or whitespace.</exception>
-    public ValidationErrorEntry(ValidationSeverity severity, string target, string code, string? format, ErrorArgument[]? arguments)
+    public ValidationErrorEntry(ValidationSeverity severity, string target, string code, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format, ErrorArgument[]? arguments)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
 
@@ -145,7 +172,7 @@ public sealed class ValidationErrorEntry : IEquatable<ValidationErrorEntry>
         Target = target ?? string.Empty;
         Code = code;
         Format = format ?? string.Empty;
-        Arguments = arguments ?? [];
+        ArgumentArray = arguments ?? [];
     }
 
     /// <summary>Gets the severity of the failure.</summary>
@@ -157,13 +184,15 @@ public sealed class ValidationErrorEntry : IEquatable<ValidationErrorEntry>
     /// <summary>Gets the composite format string for the message, or an empty string to use the localized template for <see cref="Code"/>.</summary>
     public string Format { get; }
     /// <summary>Gets the arguments used to format the message. By convention, the first argument is the property name.</summary>
-    public ErrorArgument[] Arguments { get; }
+    public ImmutableArray<ErrorArgument> Arguments => ImmutableCollectionsMarshal.AsImmutableArray(ArgumentArray);
+
+    internal ErrorArgument[] ArgumentArray { get; }
 
     /// <summary>
     ///     Gets the message localized for <see cref="CultureInfo.CurrentUICulture"/> and formatted with <see cref="CultureInfo.CurrentCulture"/>.
     /// </summary>
     public string GetFormattedMessage() =>
-        LocalizedMessageFormatter.Format(Code, Format, Arguments, true, CultureInfo.CurrentUICulture, CultureInfo.CurrentCulture, null);
+        LocalizedMessageFormatter.Format(Code, Format, ArgumentArray, true, CultureInfo.CurrentUICulture, CultureInfo.CurrentCulture, null);
     /// <summary>
     ///     Gets the message localized and formatted for <paramref name="culture"/>.
     /// </summary>
@@ -171,7 +200,7 @@ public sealed class ValidationErrorEntry : IEquatable<ValidationErrorEntry>
     /// <param name="localizer">The localizer used to resolve message templates, or null to use the default.</param>
     /// <returns>The localized, formatted message.</returns>
     public string GetFormattedMessage(CultureInfo culture, IErrorMessageLocalizer? localizer = null) =>
-        LocalizedMessageFormatter.Format(Code, Format, Arguments, true, culture, culture, localizer);
+        LocalizedMessageFormatter.Format(Code, Format, ArgumentArray, true, culture, culture, localizer);
 
     /// <inheritdoc/>
     public override string ToString() => string.Create(CultureInfo.InvariantCulture,
@@ -188,7 +217,7 @@ public sealed class ValidationErrorEntry : IEquatable<ValidationErrorEntry>
         string.Equals(Target, other.Target, StringComparison.Ordinal) &&
         string.Equals(Code, other.Code, StringComparison.Ordinal) &&
         string.Equals(Format, other.Format, StringComparison.Ordinal) &&
-        Arguments.AsSpan().SequenceEqual(other.Arguments);
+        ArgumentArray.AsSpan().SequenceEqual(other.ArgumentArray);
 
     /// <summary>Determines whether two entries are equal.</summary>
     public static bool operator ==(ValidationErrorEntry? left, ValidationErrorEntry? right) => left is null ? right is null : left.Equals(right);
@@ -203,7 +232,7 @@ public sealed class ValidationErrorEntry : IEquatable<ValidationErrorEntry>
         hash.Add(Target, StringComparer.Ordinal);
         hash.Add(Code, StringComparer.Ordinal);
         hash.Add(Format, StringComparer.Ordinal);
-        foreach (var argument in Arguments)
+        foreach (var argument in ArgumentArray)
         {
             hash.Add(argument);
         }

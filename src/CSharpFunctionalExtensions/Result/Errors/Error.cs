@@ -62,12 +62,7 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
     public GrpcStatusCodeEnum GrpcStatusCode { get; }
 
     /// <summary>
-    ///     Gets a value indicating whether this error produces a message through <see cref="GetFormattedMessage()"/>.
-    /// </summary>
-    [JsonIgnore]
-    public abstract bool SupportsFormattedMessage { get; }
-    /// <summary>
-    ///     Gets the message localized for <see cref="CultureInfo.CurrentUICulture"/> and formatted with <see cref="CultureInfo.CurrentCulture"/>.
+    ///     Gets the message localized for
     /// </summary>
     public abstract string GetFormattedMessage();
 
@@ -131,7 +126,7 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
     /// </summary>
     /// <param name="other">The error to compare with.</param>
     /// <returns>A negative value when this error is more severe than <paramref name="other"/>, zero when equal, otherwise positive.</returns>
-    public int CompareTo(Error? other) => other is null ? -1 : PriorityCode.CompareTo(other.PriorityCode);
+    public int CompareTo(Error? other) => other is null ? 1 : PriorityCode.CompareTo(other.PriorityCode);
 
     /// <summary>Determines whether two errors are equal.</summary>
     public static bool operator ==(Error? left, Error? right) => left is null ? right is null : left.Equals(right);

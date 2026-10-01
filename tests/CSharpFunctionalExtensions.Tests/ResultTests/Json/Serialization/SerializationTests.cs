@@ -1,4 +1,4 @@
-﻿using Continuum.CSharpFunctionalExtensions.Json.Serialization;
+using Continuum.CSharpFunctionalExtensions.Json.Serialization;
 
 using FluentAssertions;
 
@@ -73,9 +73,9 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
 
             var originalValidationError = (ValidationError)originalResult.Error;
             var deserializedValidationError = (ValidationError)result.Error;
-            originalValidationError.Entries.Count.Should().Be(deserializedValidationError.Entries.Count);
+            originalValidationError.Entries.Length.Should().Be(deserializedValidationError.Entries.Length);
 
-            for (int i = 0; i < originalValidationError.Entries.Count; i++)
+            for (int i = 0; i < originalValidationError.Entries.Length; i++)
             {
                 originalValidationError.Entries[i].GetFormattedMessage().Should().Be(deserializedValidationError.Entries[i].GetFormattedMessage());
             }
@@ -165,9 +165,9 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Json.Serializat
 
             var originalValidationError = (ValidationError)originalResult.Error;
             var deserializedValidationError = (ValidationError)result.Error;
-            originalValidationError.Entries.Count.Should().Be(deserializedValidationError.Entries.Count);
+            originalValidationError.Entries.Length.Should().Be(deserializedValidationError.Entries.Length);
 
-            for (int i = 0; i < originalValidationError.Entries.Count; i++)
+            for (int i = 0; i < originalValidationError.Entries.Length; i++)
             {
                 originalValidationError.Entries[i].GetFormattedMessage().Should().Be(deserializedValidationError.Entries[i].GetFormattedMessage());
             }

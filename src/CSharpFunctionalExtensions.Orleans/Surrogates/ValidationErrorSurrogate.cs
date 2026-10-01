@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 using Orleans;
 
 namespace Continuum.CSharpFunctionalExtensions.Orleans;
@@ -39,19 +41,19 @@ public sealed class ValidationErrorSurrogateConverter : IConverter<ValidationErr
     /// <inheritdoc/>
     public ValidationError ConvertFromSurrogate(in ValidationErrorSurrogate surrogate)
     {
-        var entries = new List<ValidationErrorEntry>(surrogate.Entries.Count);
+        var entries = ImmutableArray.CreateBuilder<ValidationErrorEntry>(surrogate.Entries.Count);
         foreach (var item in surrogate.Entries)
         {
             entries.Add(new ValidationErrorEntry(item.Severity, item.Target, item.Code, item.Format, item.Arguments));
         }
 
-        return new ValidationError(entries);
+        return new ValidationError(entries.MoveToImmutable());
     }
 
     /// <inheritdoc/>
     public ValidationErrorSurrogate ConvertToSurrogate(in ValidationError value)
     {
-        var entries = new List<ValidationErrorEntrySurrogate>(value.Entries.Count);
+        var entries = new List<ValidationErrorEntrySurrogate>(value.Entries.Length);
         foreach (var item in value.Entries)
         {
             entries.Add(new ValidationErrorEntrySurrogate
@@ -60,7 +62,7 @@ public sealed class ValidationErrorSurrogateConverter : IConverter<ValidationErr
                 Target = item.Target,
                 Code = item.Code,
                 Format = item.Format,
-                Arguments = item.Arguments,
+                Arguments = [.. item.Arguments],
             });
         }
 

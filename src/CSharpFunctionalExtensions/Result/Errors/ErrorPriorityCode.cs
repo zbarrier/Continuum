@@ -1,4 +1,4 @@
-﻿namespace Continuum.CSharpFunctionalExtensions;
+namespace Continuum.CSharpFunctionalExtensions;
 
 /// <summary>
 ///     Priority values for <see cref="Error.PriorityCode"/>. Lower values are more severe, which allows
@@ -9,25 +9,25 @@ public static class ErrorPriorityCode
     /// <summary>
     /// Unrecoverable data loss or corruption.
     /// </summary>
-    public const int DATA_LOSS = 1;
+    public const int DataLoss = 1;
 
     /// <summary>
     /// Internal errors. This means that some invariants expected by the underlying system have been broken. 
     /// This error code is reserved for serious errors.
     /// </summary>
-    public const int INTERNAL = 2;
+    public const int Internal = 2;
 
     /// <summary>
     /// The operation is not implemented or is not supported/enabled in this service.
     /// </summary>
-    public const int UNIMPLEMENTED = 3;
+    public const int Unimplemented = 3;
 
     /// <summary>
     /// Unknown error. For example, this error may be returned when a Status value received from another address 
     /// space belongs to an error space that is not known in this address space. Also errors raised by APIs that 
     /// do not return enough error information may be converted to this error.
     /// </summary>
-    public const int UNKNOWN = 4;
+    public const int Unknown = 4;
 
     /// <summary>
     /// The caller does not have permission to execute the specified operation. PERMISSION_DENIED must not be 
@@ -35,23 +35,23 @@ public static class ErrorPriorityCode
     /// PERMISSION_DENIED must not be used if the caller can not be identified (use UNAUTHENTICATED instead for those errors). 
     /// This error code does not imply the request is valid or the requested entity exists or satisfies other pre-conditions.
     /// </summary>
-    public const int PERMISSION_DENIED = 5;
+    public const int PermissionDenied = 5;
 
     /// <summary>
     /// The request does not have valid authentication credentials for the operation.
     /// </summary>
-    public const int UNAUTHENTICATED = 6;
+    public const int Unauthenticated = 6;
 
     /// <summary>
     /// Some resource has been exhausted, perhaps a per-user quota, or perhaps the entire file system is out of space.
     /// </summary>
-    public const int RESOURCE_EXHAUSTED = 7;
+    public const int ResourceExhausted = 7;
 
     /// <summary>
     /// The client specified an invalid argument. Note that this differs from FAILED_PRECONDITION. 
     /// INVALID_ARGUMENT indicates arguments that are problematic regardless of the state of the system (e.g., a malformed file name).
     /// </summary>
-    public const int INVALID_ARGUMENT = 8;
+    public const int InvalidArgument = 8;
 
     /// <summary>
     /// The operation was rejected because the system is not in a state required for the operation's execution. 
@@ -64,7 +64,7 @@ public static class ErrorPriorityCode
     /// E.g., if an "rmdir" fails because the directory is non-empty, FAILED_PRECONDITION should be returned since the client 
     /// should not retry unless the files are deleted from the directory.
     /// </summary>
-    public const int FAILED_PRECONDITION = 9;
+    public const int FailedPrecondition = 9;
 
     /// <summary>
     /// The operation was attempted past the valid range. E.g., seeking or reading past end-of-file. 
@@ -75,43 +75,43 @@ public static class ErrorPriorityCode
     /// We recommend using OUT_OF_RANGE (the more specific error) when it applies so that callers who are iterating 
     /// through a space can easily look for an OUT_OF_RANGE error to detect when they are done.
     /// </summary>
-    public const int OUT_OF_RANGE = 10;
+    public const int OutOfRange = 10;
 
     /// <summary>
     /// Some requested entity (e.g., file or directory) was not found. Note to server developers: if a request is denied 
     /// for an entire class of users, such as gradual feature rollout or undocumented allow list, NOT_FOUND may be used. 
     /// If a request is denied for some users within a class of users, such as user-based access control, PERMISSION_DENIED must be used.
     /// </summary>
-    public const int NOT_FOUND = 11;
+    public const int NotFound = 11;
 
     /// <summary>
     /// The entity that a client attempted to create (e.g., file or directory) already exists.
     /// </summary>
-    public const int ALREADY_EXISTS = 12;
+    public const int AlreadyExists = 12;
 
     /// <summary>
     /// The operation was aborted, typically due to a concurrency issue such as a sequencer check failure or transaction abort. 
     /// See the guidelines above for deciding between FAILED_PRECONDITION, ABORTED, and UNAVAILABLE.
     /// </summary>
-    public const int ABORTED = 13;
+    public const int Aborted = 13;
 
     /// <summary>
     /// The deadline expired before the operation could complete. For operations that change the state of the 
     /// system, this error may be returned even if the operation has completed successfully. For example, a 
     /// successful response from a server could have been delayed long.
     /// </summary>
-    public const int DEADLINE_EXCEEDED = 14;
+    public const int DeadlineExceeded = 14;
 
     /// <summary>
     /// The operation was cancelled, typically by the caller.
     /// </summary>
-    public const int CANCELLED = 15;
+    public const int Cancelled = 15;
 
     /// <summary>
     /// The service is currently unavailable. This is most likely a transient condition, which can be corrected 
     /// by retrying with a backoff. Note that it is not always safe to retry non-idempotent operations.
     /// </summary>
-    public const int UNAVAILABLE = 16;
+    public const int Unavailable = 16;
 
     /// <summary>
     ///     Gets the priority for a gRPC status code. This is the value of <see cref="Error.PriorityCode"/>.
@@ -121,22 +121,22 @@ public static class ErrorPriorityCode
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="grpcStatusCode"/> is OK or not a defined status code.</exception>
     public static int FromGrpcStatusCode(Grpc.Core.StatusCode grpcStatusCode) => grpcStatusCode switch
     {
-        Grpc.Core.StatusCode.DataLoss => DATA_LOSS,
-        Grpc.Core.StatusCode.Internal => INTERNAL,
-        Grpc.Core.StatusCode.Unimplemented => UNIMPLEMENTED,
-        Grpc.Core.StatusCode.Unknown => UNKNOWN,
-        Grpc.Core.StatusCode.PermissionDenied => PERMISSION_DENIED,
-        Grpc.Core.StatusCode.Unauthenticated => UNAUTHENTICATED,
-        Grpc.Core.StatusCode.ResourceExhausted => RESOURCE_EXHAUSTED,
-        Grpc.Core.StatusCode.InvalidArgument => INVALID_ARGUMENT,
-        Grpc.Core.StatusCode.FailedPrecondition => FAILED_PRECONDITION,
-        Grpc.Core.StatusCode.OutOfRange => OUT_OF_RANGE,
-        Grpc.Core.StatusCode.NotFound => NOT_FOUND,
-        Grpc.Core.StatusCode.AlreadyExists => ALREADY_EXISTS,
-        Grpc.Core.StatusCode.Aborted => ABORTED,
-        Grpc.Core.StatusCode.DeadlineExceeded => DEADLINE_EXCEEDED,
-        Grpc.Core.StatusCode.Cancelled => CANCELLED,
-        Grpc.Core.StatusCode.Unavailable => UNAVAILABLE,
+        Grpc.Core.StatusCode.DataLoss => DataLoss,
+        Grpc.Core.StatusCode.Internal => Internal,
+        Grpc.Core.StatusCode.Unimplemented => Unimplemented,
+        Grpc.Core.StatusCode.Unknown => Unknown,
+        Grpc.Core.StatusCode.PermissionDenied => PermissionDenied,
+        Grpc.Core.StatusCode.Unauthenticated => Unauthenticated,
+        Grpc.Core.StatusCode.ResourceExhausted => ResourceExhausted,
+        Grpc.Core.StatusCode.InvalidArgument => InvalidArgument,
+        Grpc.Core.StatusCode.FailedPrecondition => FailedPrecondition,
+        Grpc.Core.StatusCode.OutOfRange => OutOfRange,
+        Grpc.Core.StatusCode.NotFound => NotFound,
+        Grpc.Core.StatusCode.AlreadyExists => AlreadyExists,
+        Grpc.Core.StatusCode.Aborted => Aborted,
+        Grpc.Core.StatusCode.DeadlineExceeded => DeadlineExceeded,
+        Grpc.Core.StatusCode.Cancelled => Cancelled,
+        Grpc.Core.StatusCode.Unavailable => Unavailable,
         _ => throw new ArgumentOutOfRangeException(nameof(grpcStatusCode), grpcStatusCode, "Not a valid error status code."),
     };
 }

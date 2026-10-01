@@ -24,6 +24,7 @@
     <Project Path="tests/Core.SourceGenerators.Tests/Continuum.Core.SourceGenerators.Tests.csproj" />
     <Project Path="tests/Core.Tests/Continuum.Core.Tests.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.AotSmokeTest/Continuum.CSharpFunctionalExtensions.AotSmokeTest.csproj" />
+    <Project Path="tests/CSharpFunctionalExtensions.Benchmarks/Continuum.CSharpFunctionalExtensions.Benchmarks.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.Orleans.Tests/Continuum.CSharpFunctionalExtensions.Orleans.Tests.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.Tests/Continuum.CSharpFunctionalExtensions.Tests.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.Validators.US.Tests/Continuum.CSharpFunctionalExtensions.Validators.US.Tests.csproj" />

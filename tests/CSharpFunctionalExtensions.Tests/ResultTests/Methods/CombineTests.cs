@@ -50,7 +50,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
 
             var apiError = result.Error as RequestError;
             Assert.NotNull(apiError);
-            Assert.Equal(ErrorPriorityCode.UNKNOWN, apiError.PriorityCode);
+            Assert.Equal(ErrorPriorityCode.Unknown, apiError.PriorityCode);
             Assert.Equal(HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
             Assert.Equal(Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
             Assert.Equal("Unknown error", apiError.GetFormattedMessage());
@@ -89,7 +89,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
 
             var apiError = result.Error as RequestError;
             Assert.NotNull(apiError);
-            Assert.Equal(ErrorPriorityCode.UNKNOWN, apiError.PriorityCode);
+            Assert.Equal(ErrorPriorityCode.Unknown, apiError.PriorityCode);
             Assert.Equal(HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
             Assert.Equal(Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
             Assert.Equal("Unknown error", apiError.GetFormattedMessage());
@@ -126,7 +126,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
 
             var apiError = result.Error as RequestError;
             Assert.NotNull(apiError);
-            Assert.Equal(ErrorPriorityCode.UNKNOWN, apiError.PriorityCode);
+            Assert.Equal(ErrorPriorityCode.Unknown, apiError.PriorityCode);
             Assert.Equal(HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
             Assert.Equal(Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
             Assert.Equal("Unknown error", apiError.GetFormattedMessage());
@@ -165,7 +165,7 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests
 
             var apiError = result.Error as RequestError;
             Assert.NotNull(apiError);
-            Assert.Equal(ErrorPriorityCode.UNKNOWN, apiError.PriorityCode);
+            Assert.Equal(ErrorPriorityCode.Unknown, apiError.PriorityCode);
             Assert.Equal(HttpStatusCode.InternalServerError, apiError.HttpStatusCode);
             Assert.Equal(Grpc.Core.StatusCode.Unknown, apiError.GrpcStatusCode);
             Assert.Equal("Unknown error", apiError.GetFormattedMessage());

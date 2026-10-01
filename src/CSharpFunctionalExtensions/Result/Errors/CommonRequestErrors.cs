@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 using GrpcStatusCode = Grpc.Core.StatusCode;
@@ -22,7 +23,7 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for the derived error code.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError New(HttpStatusCode httpStatusCode, GrpcStatusCode grpcStatusCode, string? format = null, params ErrorArgument[] arguments)
+    public static RequestError New(HttpStatusCode httpStatusCode, GrpcStatusCode grpcStatusCode, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments)
         => new(httpStatusCode, grpcStatusCode, ErrorCodes.FromGrpcStatusCode(grpcStatusCode), format, arguments);
 
     /// <summary>
@@ -31,13 +32,13 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.Aborted"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewAborted(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewAborted([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.Conflict, GrpcStatusCode.Aborted, ErrorCodes.Aborted, format, arguments);
     /// <inheritdoc cref="NewAborted(string?, ErrorArgument[])"/>
     /// <param name="retryAfter">How long the caller should wait before retrying, or null for no hint.</param>
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.Aborted"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
-    public static RequestError NewAborted(TimeSpan? retryAfter, string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewAborted(TimeSpan? retryAfter, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.Conflict, GrpcStatusCode.Aborted, ErrorCodes.Aborted, format, arguments, null, retryAfter);
 
     /// <summary>
@@ -46,7 +47,7 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.AlreadyExists"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewAlreadyExists(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewAlreadyExists([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.Conflict, GrpcStatusCode.AlreadyExists, ErrorCodes.AlreadyExists, format, arguments);
 
     /// <summary>
@@ -55,13 +56,13 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.DeadlineExceeded"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewDeadlineExceeded(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewDeadlineExceeded([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.GatewayTimeout, GrpcStatusCode.DeadlineExceeded, ErrorCodes.DeadlineExceeded, format, arguments);
     /// <inheritdoc cref="NewDeadlineExceeded(string?, ErrorArgument[])"/>
     /// <param name="retryAfter">How long the caller should wait before retrying, or null for no hint.</param>
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.DeadlineExceeded"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
-    public static RequestError NewDeadlineExceeded(TimeSpan? retryAfter, string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewDeadlineExceeded(TimeSpan? retryAfter, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.GatewayTimeout, GrpcStatusCode.DeadlineExceeded, ErrorCodes.DeadlineExceeded, format, arguments, null, retryAfter);
 
     /// <summary>
@@ -70,7 +71,7 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.FailedPrecondition"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewFailedPrecondition(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewFailedPrecondition([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.BadRequest, GrpcStatusCode.FailedPrecondition, ErrorCodes.FailedPrecondition, format, arguments);
 
     /// <summary>
@@ -79,7 +80,7 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.InvalidArgument"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewInvalidArg(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewInvalidArg([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.UnprocessableEntity, GrpcStatusCode.InvalidArgument, ErrorCodes.InvalidArgument, format, arguments);
 
     /// <summary>
@@ -88,7 +89,7 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.NotFound"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewNotFound(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewNotFound([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.NotFound, GrpcStatusCode.NotFound, ErrorCodes.NotFound, format, arguments);
 
     /// <summary>
@@ -97,13 +98,13 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.ResourceExhausted"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewResourceExhausted(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewResourceExhausted([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.TooManyRequests, GrpcStatusCode.ResourceExhausted, ErrorCodes.ResourceExhausted, format, arguments);
     /// <inheritdoc cref="NewResourceExhausted(string?, ErrorArgument[])"/>
     /// <param name="retryAfter">How long the caller should wait before retrying, or null for no hint.</param>
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.ResourceExhausted"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
-    public static RequestError NewResourceExhausted(TimeSpan? retryAfter, string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewResourceExhausted(TimeSpan? retryAfter, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.TooManyRequests, GrpcStatusCode.ResourceExhausted, ErrorCodes.ResourceExhausted, format, arguments, null, retryAfter);
 
     /// <summary>
@@ -112,7 +113,7 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.Unimplemented"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewNotImplemented(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewNotImplemented([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.NotImplemented, GrpcStatusCode.Unimplemented, ErrorCodes.Unimplemented, format, arguments);
 
     /// <summary>
@@ -121,13 +122,13 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.Unavailable"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewUnavailable(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewUnavailable([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.ServiceUnavailable, GrpcStatusCode.Unavailable, ErrorCodes.Unavailable, format, arguments);
     /// <inheritdoc cref="NewUnavailable(string?, ErrorArgument[])"/>
     /// <param name="retryAfter">How long the caller should wait before retrying, or null for no hint.</param>
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.Unavailable"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
-    public static RequestError NewUnavailable(TimeSpan? retryAfter, string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewUnavailable(TimeSpan? retryAfter, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.ServiceUnavailable, GrpcStatusCode.Unavailable, ErrorCodes.Unavailable, format, arguments, null, retryAfter);
 
     /// <summary>
@@ -136,6 +137,6 @@ public static class RequestErrors
     /// <param name="format">A composite format string for the message, or null/empty to use the localized template for <see cref="ErrorCodes.Unknown"/>.</param>
     /// <param name="arguments">The arguments used to format <paramref name="format"/>.</param>
     /// <exception cref="FormatException"><paramref name="format"/> is not a valid composite format string for <paramref name="arguments"/>.</exception>
-    public static RequestError NewUnknown(string? format = null, params ErrorArgument[] arguments) =>
+    public static RequestError NewUnknown([StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? format = null, params ErrorArgument[] arguments) =>
         new(HttpStatusCode.InternalServerError, GrpcStatusCode.Unknown, ErrorCodes.Unknown, format, arguments);
 }

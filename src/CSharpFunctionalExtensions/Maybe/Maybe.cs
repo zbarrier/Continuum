@@ -186,13 +186,13 @@ namespace Continuum.CSharpFunctionalExtensions
             if (maybe.HasNoValue)
                 return value == null;
 
-            return maybe._value.Equals(value);
+            return EqualityComparer<T>.Default.Equals(maybe._value, value);
         }
 
         /// <summary>
         ///     Determines whether <paramref name="maybe"/> does not contain a value equal to <paramref name="value"/>.
         /// </summary>
-        public static bool operator !=(Maybe<T> maybe, T value)
+        public static bool operator !=(Maybe<T> maybe, T? value)
         {
             return !(maybe == value);
         }
