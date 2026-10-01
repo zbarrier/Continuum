@@ -7,6 +7,8 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/ArrayPools/Continuum.ArrayPools.csproj" />
+    <Project Path="src/AsyncExtensions/Continuum.AsyncExtensions.csproj" />
     <Project Path="src/Core.Orleans/Continuum.Core.Orleans.csproj" />
     <Project Path="src/Core.SourceGenerators/Continuum.Core.SourceGenerators.csproj" />
     <Project Path="src/Core/Continuum.Core.csproj" />
@@ -18,6 +20,8 @@
     <Project Path="src/NewId/Continuum.NewId.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ArrayPools.Tests/Continuum.ArrayPools.Tests.csproj" />
+    <Project Path="tests/AsyncExtensions.Tests/Continuum.AsyncExtensions.Tests.csproj" />
     <Project Path="tests/Core.AotSmokeTest/Continuum.Core.AotSmokeTest.csproj" />
     <Project Path="tests/Core.Benchmarks/Continuum.Core.Benchmarks.csproj" />
     <Project Path="tests/Core.Orleans.Tests/Continuum.Core.Orleans.Tests.csproj" />
