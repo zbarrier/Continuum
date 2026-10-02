@@ -32,6 +32,7 @@
   <!-- XML docs only for library projects. -->
   <PropertyGroup Condition="'$(IsTestProject)' != 'true'">
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnablePackageValidation>true</EnablePackageValidation>
   </PropertyGroup>
 
   <!-- Every package ships the repository NOTICE (third-party attributions). -->

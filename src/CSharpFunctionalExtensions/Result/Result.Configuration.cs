@@ -26,8 +26,14 @@ public partial struct Result
         public static Func<ILogger, Exception, Error> DefaultTryErrorHandlerWithLogging =
             (logger, exc) =>
             {
-                logger.LogError(exc, "Exception caught! {ExceptionMessage}", exc.Message);
+                ResultLog.ExceptionCaught(logger, exc, exc.Message);
                 return RequestErrors.NewUnknown("{0}", exc.Message);
             };
     }
+}
+
+internal static partial class ResultLog
+{
+    [LoggerMessage(Level = LogLevel.Error, Message = "Exception caught! {ExceptionMessage}")]
+    public static partial void ExceptionCaught(ILogger logger, Exception exception, string exceptionMessage);
 }

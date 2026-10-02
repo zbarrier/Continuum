@@ -16,6 +16,9 @@
     <Project Path="src/CSharpFunctionalExtensions.SourceGenerators/Continuum.CSharpFunctionalExtensions.SourceGenerators.csproj" />
     <Project Path="src/CSharpFunctionalExtensions.Validators.US/Continuum.CSharpFunctionalExtensions.Validators.US.csproj" />
     <Project Path="src/CSharpFunctionalExtensions/Continuum.CSharpFunctionalExtensions.csproj" />
+    <Project Path="src/Domain.Orleans.TestHarness/Continuum.Domain.Orleans.TestHarness.csproj" />
+    <Project Path="src/Domain.Orleans/Continuum.Domain.Orleans.csproj" />
+    <Project Path="src/Domain/Continuum.Domain.csproj" />
     <Project Path="src/NewId.Orleans/Continuum.NewId.Orleans.csproj" />
     <Project Path="src/NewId/Continuum.NewId.csproj" />
   </Folder>
@@ -32,6 +35,9 @@
     <Project Path="tests/CSharpFunctionalExtensions.Orleans.Tests/Continuum.CSharpFunctionalExtensions.Orleans.Tests.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.Tests/Continuum.CSharpFunctionalExtensions.Tests.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.Validators.US.Tests/Continuum.CSharpFunctionalExtensions.Validators.US.Tests.csproj" />
+    <Project Path="tests/Domain.AotSmokeTest/Continuum.Domain.AotSmokeTest.csproj" />
+    <Project Path="tests/Domain.Orleans.Tests/Continuum.Domain.Orleans.Tests.csproj" />
+    <Project Path="tests/Domain.Tests/Continuum.Domain.Tests.csproj" />
     <Project Path="tests/NewId.Benchmarks/Continuum.NewId.Benchmarks.csproj" />
     <Project Path="tests/NewId.Orleans.Tests/Continuum.NewId.Orleans.Tests.csproj" />
     <Project Path="tests/NewId.Tests/Continuum.NewId.Tests.csproj" />

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Continuum.Domain.Orleans</PackageId>
+    <Description>Microsoft Orleans implementation of Continuum.Domain: journaled event-driven grains, deep-copied transactional sessions, and Stateless state machines.</Description>
+    <PackageTags>domain;ddd;event-sourcing;orleans;journaled-grain;state-machine;stateless</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.EventSourcing" Version="10.3.1" />
+    <PackageReference Include="Stateless" Version="5.20.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core.Orleans\Continuum.Core.Orleans.csproj" />
+    <ProjectReference Include="..\Domain\Continuum.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
