@@ -2,6 +2,7 @@
 
 using Continuum.Hosting;
 using Continuum.Hosting.Orleans;
+using Continuum.Orleans.KurrentDB;
 using Continuum.TypeMapping;
 
 using KurrentDB.Client;
@@ -22,7 +23,7 @@ public class TestSiloConfigurations : ISiloConfigurator
           .AddKurrentDBBasedLogConsistencyProviderAsDefault(options =>
           {
               options.ConnectionName = "journaledGrainLog";
-              options.Credentials = new KurrentDBLogConsistentStorageCredentialsOptions()
+              new KurrentDBCredentialsOptions()
               {
                   UseDefault = true,
               };

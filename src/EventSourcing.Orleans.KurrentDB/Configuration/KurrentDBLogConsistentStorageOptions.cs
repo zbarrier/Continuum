@@ -1,4 +1,5 @@
 ﻿using Continuum;
+using Continuum.Orleans.KurrentDB;
 using Continuum.TypeMapping;
 
 using KurrentDB.Client;
@@ -34,7 +35,7 @@ public sealed class KurrentDBLogConsistentStorageOptions : IStorageProviderSeria
     ///     UseDefault should be true for Insecure localhost connections.
     /// </summary>
     [Redact]
-    public KurrentDBLogConsistentStorageCredentialsOptions Credentials { get; set; } = new();
+    public KurrentDBCredentialsOptions Credentials { get; set; } = new();
 
     /// <summary>
     ///     The serializer used in serialize events to an Kurrent stream. 
@@ -85,57 +86,6 @@ public sealed class KurrentDBLogConsistentStorageOptions : IStorageProviderSeria
     ///     Gets set based on the connection name and type map kinds.
     /// </summary>
     public ITypeMapper TypeMapper { get; set; } = default!;
-}
-
-/// <summary>
-///     The credentials used to append and read events.
-/// </summary>
-public sealed class KurrentDBLogConsistentStorageCredentialsOptions
-{
-    /// <summary>
-    ///     Use the credentials from the KurrentDB client connection. Defaults to <see langword="true"/>.
-    /// </summary>
-    public bool UseDefault { get; set; } = true;
-
-    /// <summary>
-    ///     The user name, used with <see cref="Password"/> when <see cref="UseDefault"/> is false and no <see cref="AuthToken"/> is set.
-    /// </summary>
-    [Redact]
-    public string? Username { get; set; }
-
-    /// <summary>
-    ///     The password, used with <see cref="Username"/>.
-    /// </summary>
-    [Redact]
-    public string? Password { get; set; }
-
-    /// <summary>
-    ///     The auth token, used in preference to <see cref="Username"/> and <see cref="Password"/> when set.
-    /// </summary>
-    [Redact]
-    public string? AuthToken { get; set; }
-
-    /// <summary>
-    ///     Creates the KurrentDB user credentials.
-    /// </summary>
-    /// <returns>The credentials, or <see langword="null"/> to use the connection's credentials.</returns>
-    /// <exception cref="InvalidOperationException">Neither an auth token nor a user name and password are set.</exception>
-    public UserCredentials? ToUserCredentials()
-    {
-        if (UseDefault)
-        {
-            return null;
-        }
-        if (!string.IsNullOrWhiteSpace(AuthToken))
-        {
-            return new UserCredentials(AuthToken);
-        }
-        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
-        {
-            throw new InvalidOperationException("KurrentDB credentials require an AuthToken or a Username and Password when UseDefault is false.");
-        }
-        return new UserCredentials(Username, Password);
-    }
 }
 
 /// <summary>

@@ -27,6 +27,10 @@
     <Project Path="src/EventSourcing/Continuum.EventSourcing.csproj" />
     <Project Path="src/NewId.Orleans/Continuum.NewId.Orleans.csproj" />
     <Project Path="src/NewId/Continuum.NewId.csproj" />
+    <Project Path="src/Orleans.KurrentDB/Continuum.Orleans.KurrentDB.csproj" />
+    <Project Path="src/Persistence.Orleans.KurrentDB/Continuum.Persistence.Orleans.KurrentDB.csproj" />
+    <Project Path="src/Persistence.Orleans/Continuum.Persistence.Orleans.csproj" />
+    <Project Path="src/Persistence/Continuum.Persistence.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ArrayPools.Tests/Continuum.ArrayPools.Tests.csproj" />
@@ -52,5 +56,7 @@
     <Project Path="tests/NewId.Benchmarks/Continuum.NewId.Benchmarks.csproj" />
     <Project Path="tests/NewId.Orleans.Tests/Continuum.NewId.Orleans.Tests.csproj" />
     <Project Path="tests/NewId.Tests/Continuum.NewId.Tests.csproj" />
+    <Project Path="tests/Persistence.AotSmokeTest/Continuum.Persistence.AotSmokeTest.csproj" />
+    <Project Path="tests/Persistence.Orleans.KurrentDB.Tests/Continuum.Persistence.Orleans.KurrentDB.Tests.csproj" />
   </Folder>
 </Solution>

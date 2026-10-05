@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Continuum.Persistence.Orleans</PackageId>
+    <Description>Microsoft Orleans foundation for Continuum grain state persistence providers.</Description>
+    <PackageTags>persistence;orleans;grain-storage;state</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core.Orleans\Continuum.Core.Orleans.csproj" />
+    <ProjectReference Include="..\Persistence\Continuum.Persistence.csproj" />
+  </ItemGroup>
+
+</Project>

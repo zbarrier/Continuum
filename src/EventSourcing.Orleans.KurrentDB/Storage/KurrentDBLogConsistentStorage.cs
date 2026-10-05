@@ -1,6 +1,7 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 using Continuum.EventSourcing.Orleans.KurrentDB.Abstractions;
+using Continuum.Orleans.KurrentDB;
 using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
 
@@ -55,7 +56,8 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         _storageOptions = storageOptions;
         _storageSerializer = _storageOptions.GrainStorageSerializer;
 
-        bool isJsonSerializer = _storageSerializer is SystemTextJsonGrainStorageSerializer ||
+        bool isJsonSerializer = _storageSerializer is TypeMappedJsonGrainStorageSerializer ||
+                                _storageSerializer is SystemTextJsonGrainStorageSerializer ||
                                 _storageSerializer is JsonGrainStorageSerializer;
         _contentType = isJsonSerializer ? "application/json" : "application/octet-stream";
 
@@ -100,7 +102,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         catch (Exception ex)
         {
             _logger.LogError(ex, "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms", _name, _serviceId, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
-            throw new KurrentDBLogConsistentStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
+            throw new KurrentDBStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
         }
         return Task.CompletedTask;
     }
@@ -120,7 +122,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         catch (Exception ex)
         {
             _logger.LogError(ex, "Close: Name={Name} ServiceId={ServiceId}", _name, _serviceId);
-            throw new KurrentDBLogConsistentStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
+            throw new KurrentDBStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
         }
     }
 
@@ -157,7 +159,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         {
             operation.Fail(ex);
             _logger.LogError(ex, "Failed to read log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}", grainTypeName, grainId, streamName);
-            throw new KurrentDBLogConsistentStorageException(FormattableString.Invariant($"Failed to read log entries for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to read log entries for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
 
@@ -186,7 +188,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         {
             operation.Fail(ex);
             _logger.LogError(ex, "Failed to read last log entry for {GrainType} grain with ID {GrainId} and stream {StreamName}", grainTypeName, grainId, streamName);
-            throw new KurrentDBLogConsistentStorageException(FormattableString.Invariant($"Failed to read last log entry for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to read last log entry for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
 
@@ -224,13 +226,17 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         catch (WrongExpectedVersionException ex)
         {
             operation.Fail(ex);
-            throw new InconsistentStateException($"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion}.");
+            // Versions are event counts, so the stored version is one more than the stream's last revision.
+            var storedVersion = ex.ActualStreamState.HasPosition ? ex.ActualStreamState.ToInt64() + 1 : 0;
+            throw new InconsistentStateException(
+                $"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion} StoredVersion={storedVersion}.",
+                storedVersion.ToString(), expectedVersion.ToString(), ex);
         }
         catch (Exception ex) when (ex is not InconsistentStateException)
         {
             operation.Fail(ex);
             _logger.LogError(ex, "Failed to write log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}", grainTypeName, grainId, streamName);
-            throw new KurrentDBLogConsistentStorageException(FormattableString.Invariant($"Failed to write log entries for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to write log entries for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
 

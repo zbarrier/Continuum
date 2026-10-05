@@ -344,14 +344,18 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
             operation.AddRequestCharge(itemResponse.RequestCharge);
 
             var headerItem = itemResponse.EventItem
-                ?? throw new InconsistentStateException($"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion}. Stream does not exist.");
+                ?? throw new InconsistentStateException(
+                    $"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion} StoredVersion=0. Stream does not exist.",
+                    "0", expectedVersion.ToString());
             if (headerItem.Deleted)
             {
                 throw new CosmosDBLogConsistentStorageException(FormattableString.Invariant($"Failed to write log entries for {grainTypeName} with ID {grainId} and stream {streamName}. Stream is deleted."));
             }
             if (headerItem.Version != currentVersion)
             {
-                throw new InconsistentStateException($"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion}.");
+                throw new InconsistentStateException(
+                    $"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion} StoredVersion={headerItem.Version}.",
+                    headerItem.Version.ToString(), expectedVersion.ToString());
             }
 
             headerItem.Version += (ulong)entries.Count;
@@ -408,7 +412,10 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
 
         if (response.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.PreconditionFailed)
         {
-            throw new InconsistentStateException($"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion}. StatusCode={response.StatusCode}.");
+            // The batch response does not report the stored version, so it is left unknown.
+            throw new InconsistentStateException(
+                $"Version conflict ({nameof(AppendAsync)}): ServiceId={_serviceId} ProviderName={_name} GrainType={grainTypeName} GrainId={grainId} Version={expectedVersion}. StatusCode={response.StatusCode}.",
+                null, expectedVersion.ToString());
         }
         if (!response.IsSuccessStatusCode)
         {

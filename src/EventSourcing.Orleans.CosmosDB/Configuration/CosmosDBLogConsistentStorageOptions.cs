@@ -26,21 +26,18 @@ public class CosmosDBLogConsistentStorageOptions
     ///     The name of the Cosmos DB connection used to resolve the keyed CosmosClient, serializer and type mapper.
     ///     Must be set to a valid Cosmos DB connection name.
     /// </summary>
-    [Redact]
     [Required]
     public string ConnectionName { get; set; } = default!;
 
     /// <summary>
     ///     The Cosmos DB database holding the event container.
     /// </summary>
-    [Redact]
     [Required]
     public string DatabaseName { get; set; } = default!;
 
     /// <summary>
     ///     The Cosmos DB container events are written to. Its partition key path must be <c>/streamName</c>.
     /// </summary>
-    [Redact]
     [Required]
     public string ContainerName { get; set; } = default!;
 
@@ -74,20 +71,17 @@ public class CosmosDBLogConsistentStorageOptions
     ///     The second string is the ProviderName.
     ///     The third parameter is the GrainId which is 'GrainType/Key'.
     /// </summary>
-    [Redact]
     public Func<string, string, GrainId, string> StreamNameFormatter { get; set; } =
         (serviceId, providerName, grainId) => $"{serviceId}/{grainId}";
 
     /// <summary>
     ///     Generates the id of each appended event item.
     /// </summary>
-    [Redact]
     public Func<NewId> EventIdGenerator { get; set; } = NewId.Next;
 
     /// <summary>
     ///    The type map used to name stored events. Defaults to domain events and metadata.
     /// </summary>
-    [Redact]
     public TypeMapKinds TypeMapKinds { get; set; } = TypeMapKinds.DomainEvent | TypeMapKinds.Metadata;
 
     /// <summary>
@@ -95,7 +89,6 @@ public class CosmosDBLogConsistentStorageOptions
     ///     type name. Allows us to rename event classes without breaking deserialization.
     ///     Gets set based on the connection name and type map kinds.
     /// </summary>
-    [Redact]
     public ITypeMapper TypeMapper { get; set; } = default!;
 
     /// <summary>

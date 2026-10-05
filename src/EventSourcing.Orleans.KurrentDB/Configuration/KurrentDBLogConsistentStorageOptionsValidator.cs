@@ -32,14 +32,9 @@ public class KurrentDBLogConsistentStorageOptionsValidator : IConfigurationValid
         {
             throw new OrleansConfigurationException($"Invalid configuration for {nameof(KurrentDBLogConsistentStorage)} with name {_name}. {nameof(KurrentDBLogConsistentStorageOptions)}.{nameof(_options.Credentials)} is required.");
         }
-        if (!_options.Credentials.UseDefault)
+        if (!_options.Credentials.IsValid)
         {
-            bool isValid = !string.IsNullOrWhiteSpace(_options.Credentials.AuthToken) ||
-                (!string.IsNullOrWhiteSpace(_options.Credentials.Username) && !string.IsNullOrWhiteSpace(_options.Credentials.Password));
-            if (!isValid)
-            {
-                throw new OrleansConfigurationException($"Invalid configuration for {nameof(KurrentDBLogConsistentStorage)} with name {_name}. {nameof(KurrentDBLogConsistentStorageOptions)}.{nameof(_options.Credentials)} requires an AuthToken or Username and Password when not using the connection default.");
-            }
+            throw new OrleansConfigurationException($"Invalid configuration for {nameof(KurrentDBLogConsistentStorage)} with name {_name}. {nameof(KurrentDBLogConsistentStorageOptions)}.{nameof(_options.Credentials)} requires an AuthToken or Username and Password when not using the connection default.");
         }
         if (_options.GrainStorageSerializer is null)
         {

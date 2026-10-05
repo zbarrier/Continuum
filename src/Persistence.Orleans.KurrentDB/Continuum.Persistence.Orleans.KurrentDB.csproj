@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Continuum.Persistence.Orleans.KurrentDB</PackageId>
+    <Description>KurrentDB grain storage provider for Microsoft Orleans: each grain's state is appended to its own KurrentDB stream with optimistic concurrency and configurable retention.</Description>
+    <PackageTags>persistence;orleans;grain-storage;kurrentdb;eventstoredb</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="KurrentDB.Client" Version="1.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Persistence.Orleans\Continuum.Persistence.Orleans.csproj" />
+    <ProjectReference Include="..\Orleans.KurrentDB\Continuum.Orleans.KurrentDB.csproj" />
+  </ItemGroup>
+
+</Project>
