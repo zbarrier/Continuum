@@ -36,7 +36,9 @@ Licensed under the [Apache License 2.0](LICENSE).
 Continuum builds on the work of other open-source projects:
 
 - [CSharpFunctionalExtensions](https://github.com/vkhorikov/CSharpFunctionalExtensions) by Vladimir Khorikov (MIT) - the basis for `Result`, `Maybe`, and `ValueObject`.
+- [Eventuous](https://github.com/Eventuous/eventuous) by Eventuous HQ OÜ (Apache 2.0) - the basis for the type mapping design.
 - [FluentValidation](https://github.com/FluentValidation/FluentValidation) by the .NET Foundation and contributors (Apache 2.0) - the basis for the validators and their localized messages.
 - [NewId](https://github.com/phatboyg/NewId) by Chris Patterson (Apache 2.0) - the basis for `NewId`, the sequential, time-ordered identifier.
+- [Orleans.EventStore](https://github.com/hongliyu2002/Orleans.EventStore) by Leo Hong (MIT) - the basis for the KurrentDB (formerly EventStoreDB) log-consistency and grain storage providers.
 
-See [NOTICE](NOTICE) for full attribution.
+See [NOTICE]

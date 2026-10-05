@@ -1,6 +1,6 @@
 ﻿# Continuum.EventSourcing.Orleans.KurrentDB
 
-A [KurrentDB](https://www.kurrent.io/) log-consistency provider for [Microsoft Orleans](https://learn.microsoft.com/dotnet/orleans/) journaled grains. Each grain's events are appended to its own KurrentDB stream, and the latest view is snapshotted to a standard Orleans grain storage provider.
+A [KurrentDB](https://www.kurrent.io/) (formerly EventStoreDB) log-consistency provider
 
 ## Install
 

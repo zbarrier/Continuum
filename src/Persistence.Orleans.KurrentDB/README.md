@@ -1,6 +1,6 @@
 # Continuum.Persistence.Orleans.KurrentDB
 
-A [KurrentDB](https://www.kurrent.io/) grain storage provider for [Microsoft Orleans](https://learn.microsoft.com/dotnet/orleans/). Each grain's state is stored in its own KurrentDB stream. Every write appends the full state as a new event, and a read returns the latest event.
+A [KurrentDB](https://www.kurrent.io/) (formerly EventStoreDB) grain storage provider
 
 ## Install
 
