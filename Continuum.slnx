@@ -19,6 +19,12 @@
     <Project Path="src/Domain.Orleans.TestHarness/Continuum.Domain.Orleans.TestHarness.csproj" />
     <Project Path="src/Domain.Orleans/Continuum.Domain.Orleans.csproj" />
     <Project Path="src/Domain/Continuum.Domain.csproj" />
+    <Project Path="src/EventSourcing.Orleans.CosmosDB/Continuum.EventSourcing.Orleans.CosmosDB.csproj" />
+    <Project Path="src/EventSourcing.Orleans.KurrentDB.Abstractions/Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.csproj" Id="5038290f-20d6-4874-be2b-344f2ec60498" />
+    <Project Path="src/EventSourcing.Orleans.KurrentDB.Analyzers/Continuum.EventSourcing.Orleans.KurrentDB.Analyzers.csproj" />
+    <Project Path="src/EventSourcing.Orleans.KurrentDB/Continuum.EventSourcing.Orleans.KurrentDB.csproj" />
+    <Project Path="src/EventSourcing.Orleans/Continuum.EventSourcing.Orleans.csproj" />
+    <Project Path="src/EventSourcing/Continuum.EventSourcing.csproj" />
     <Project Path="src/NewId.Orleans/Continuum.NewId.Orleans.csproj" />
     <Project Path="src/NewId/Continuum.NewId.csproj" />
   </Folder>
@@ -38,6 +44,11 @@
     <Project Path="tests/Domain.AotSmokeTest/Continuum.Domain.AotSmokeTest.csproj" />
     <Project Path="tests/Domain.Orleans.Tests/Continuum.Domain.Orleans.Tests.csproj" />
     <Project Path="tests/Domain.Tests/Continuum.Domain.Tests.csproj" />
+    <Project Path="tests/EventSourcing.AotSmokeTest/Continuum.EventSourcing.AotSmokeTest.csproj" />
+    <Project Path="tests/EventSourcing.Orleans.CosmosDB.Tests/Continuum.EventSourcing.Orleans.CosmosDB.Tests.csproj" />
+    <Project Path="tests/EventSourcing.Orleans.KurrentDB.Abstractions.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.Tests.csproj" />
+    <Project Path="tests/EventSourcing.Orleans.KurrentDB.Analyzers.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Analyzers.Tests.csproj" />
+    <Project Path="tests/EventSourcing.Orleans.KurrentDB.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Tests.csproj" />
     <Project Path="tests/NewId.Benchmarks/Continuum.NewId.Benchmarks.csproj" />
     <Project Path="tests/NewId.Orleans.Tests/Continuum.NewId.Orleans.Tests.csproj" />
     <Project Path="tests/NewId.Tests/Continuum.NewId.Tests.csproj" />

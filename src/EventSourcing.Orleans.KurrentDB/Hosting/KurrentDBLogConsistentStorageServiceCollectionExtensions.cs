@@ -1,0 +1,101 @@
+﻿using Continuum.EventSourcing.Orleans;
+using Continuum.EventSourcing.Orleans.KurrentDB;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+using Orleans.Configuration;
+using Orleans.EventSourcing;
+using Orleans.Providers;
+using Orleans.Serialization;
+
+namespace Orleans.Hosting;
+
+/// <summary>
+/// </summary>
+public static class KurrentDBLogConsistentStorageServiceCollectionExtensions
+{
+    private const string DefaultConfigSection = "Orleans:EventSourcing:KurrentDB";
+
+    /// <summary>
+    ///     Configures KurrentDB as the default log consistency storage provider.
+    /// </summary>
+    public static IServiceCollection AddKurrentDBBasedLogConsistencyProviderAsDefault(this IServiceCollection services,
+        Action<KurrentDBLogConsistentStorageOptions> configureOptions)
+    {
+        return services.AddKurrentDBBasedLogConsistencyProvider(ProviderConstants.DEFAULT_LOG_CONSISTENCY_PROVIDER_NAME,
+            ob => ob.Configure(configureOptions));
+    }
+
+    /// <summary>
+    ///     Configures KurrentDB as a log consistency storage provider.
+    /// </summary>
+    public static IServiceCollection AddKurrentDBBasedLogConsistencyProvider(this IServiceCollection services, string name,
+        Action<KurrentDBLogConsistentStorageOptions> configureOptions)
+    {
+        return services.AddKurrentDBBasedLogConsistencyProvider(name, ob => ob.Configure(configureOptions));
+    }
+
+    /// <summary>
+    ///     Configures KurrentDB as the default log consistency storage provider.
+    /// </summary>
+    public static IServiceCollection AddKurrentDBBasedLogConsistencyProviderAsDefault(this IServiceCollection services,
+        Action<OptionsBuilder<KurrentDBLogConsistentStorageOptions>>? configureOptions = null)
+    {
+        return services.AddKurrentDBBasedLogConsistencyProvider(ProviderConstants.DEFAULT_LOG_CONSISTENCY_PROVIDER_NAME,
+            configureOptions);
+    }
+
+    /// <summary>
+    ///     Configures KurrentDB as a log consistency storage provider.
+    /// </summary>
+    public static IServiceCollection AddKurrentDBBasedLogConsistencyProvider(this IServiceCollection services, string name,
+        Action<OptionsBuilder<KurrentDBLogConsistentStorageOptions>>? configureOptions = null)
+    {
+        // Configure log storage. Validation is done by the Orleans IConfigurationValidator below, which runs at silo startup.
+        var optionsBuilder = services.AddOptions<KurrentDBLogConsistentStorageOptions>(name)
+            .BindConfiguration($"{DefaultConfigSection}:{name}");
+        configureOptions?.Invoke(optionsBuilder);
+        services.AddTransient<IConfigurationValidator>(sp => new KurrentDBLogConsistentStorageOptionsValidator(sp.GetRequiredService<IOptionsMonitor<KurrentDBLogConsistentStorageOptions>>().Get(name), name));
+        services.AddTransient<IConfigurationValidator>(sp => new KurrentDBGrainTypeValidator(sp, name));
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IPostConfigureOptions<KurrentDBLogConsistentStorageOptions>, DefaultKurrentDBLogConsistentStorageOptionsConfigurator>());
+        services.ConfigureNamedOptionForLogging<KurrentDBLogConsistentStorageOptions>(name);
+
+        services.AddKeyedSingleton<ILogConsistentStorage>(name, (sp, key) =>
+        {
+            return key is string strKey
+                ? KurrentDBLogConsistentStorageFactory.Create(sp, strKey)
+                : throw new ArgumentException($"The value provided for the {nameof(key)} parameter must be a string ({nameof(ILogConsistentStorage)}).", nameof(key));
+        });
+        if (string.Equals(name, ProviderConstants.DEFAULT_LOG_CONSISTENCY_PROVIDER_NAME, StringComparison.Ordinal))
+        {
+            services.TryAddSingleton(sp => sp.GetRequiredKeyedService<ILogConsistentStorage>(ProviderConstants.DEFAULT_LOG_CONSISTENCY_PROVIDER_NAME));
+        }
+        services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(sp => (ILifecycleParticipant<ISiloLifecycle>)sp.GetRequiredKeyedService<ILogConsistentStorage>(name));
+
+        // Configure log consistency.
+        services.TryAddSingleton<Factory<IGrainContext, ILogConsistencyProtocolServices>>(sp =>
+        {
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            var deepCopier = sp.GetRequiredService<DeepCopier>();
+            var siloDetails = sp.GetRequiredService<ILocalSiloDetails>();
+            return grainContext => new DefaultProtocolServices(grainContext, loggerFactory, deepCopier, siloDetails);
+        });
+
+        // Configure log view adaptor.
+        services.AddKeyedSingleton<ILogViewAdaptorFactory>(name, (sp, n) =>
+        {
+            return n is string strName
+                ? LogConsistencyProviderFactory.Create(sp, strName)
+                : throw new ArgumentException($"The value provided for the {nameof(n)} parameter must be a string ({nameof(ILogViewAdaptorFactory)}).", nameof(n));
+        });
+        if (string.Equals(name, ProviderConstants.DEFAULT_LOG_CONSISTENCY_PROVIDER_NAME, StringComparison.Ordinal))
+        {
+            services.TryAddSingleton(sp => sp.GetRequiredKeyedService<ILogViewAdaptorFactory>(ProviderConstants.DEFAULT_LOG_CONSISTENCY_PROVIDER_NAME));
+        }
+        return services;
+    }
+}
+

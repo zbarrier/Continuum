@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Continuum.EventSourcing.Orleans.KurrentDB</PackageId>
+    <Description>KurrentDB log-consistency provider for Microsoft Orleans journaled grains: events are appended to per-grain KurrentDB streams with snapshots kept in grain storage.</Description>
+    <PackageTags>event-sourcing;orleans;journaled-grain;log-consistency;kurrentdb;eventstoredb</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    <!-- GrainStorageSerializer and TypeMapper are interfaces that cannot come from configuration. They are set in code or
+         resolved by DefaultKurrentDBLogConsistentStorageOptionsConfigurator, so the binder skipping them is intended. -->
+    <NoWarn>$(NoWarn);SYSLIB1100;SYSLIB1101</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="KurrentDB.Client" Version="1.4.1" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Orleans.EventSourcing" Version="10.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EventSourcing.Orleans\Continuum.EventSourcing.Orleans.csproj" />
+    <ProjectReference Include="..\EventSourcing.Orleans.KurrentDB.Abstractions\Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Continuum.EventSourcing.Orleans.KurrentDB.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Ship the grain type analyzer inside this package so consumers get it automatically. -->
+  <ItemGroup>
+    <ProjectReference Include="..\EventSourcing.Orleans.KurrentDB.Analyzers\Continuum.EventSourcing.Orleans.KurrentDB.Analyzers.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <None Include="..\EventSourcing.Orleans.KurrentDB.Analyzers\bin\$(Configuration)\netstandard2.0\Continuum.EventSourcing.Orleans.KurrentDB.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
+</Project>

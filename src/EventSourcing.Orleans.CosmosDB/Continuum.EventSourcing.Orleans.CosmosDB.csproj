@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Continuum.EventSourcing.Orleans.CosmosDB</PackageId>
+    <Description>Azure Cosmos DB log-consistency provider for Microsoft Orleans journaled grains: events are stored as items in a Cosmos DB container with snapshots kept in grain storage.</Description>
+    <PackageTags>event-sourcing;orleans;journaled-grain;log-consistency;cosmosdb;azure</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    <!-- GrainStorageSerializer, TypeMapper and the delegates cannot come from configuration. They are set in code or
+         resolved by DefaultCosmosDBLogConsistentStorageOptionsConfigurator, so the binder skipping them is intended. -->
+    <NoWarn>$(NoWarn);SYSLIB1100;SYSLIB1101</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.63.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Orleans.EventSourcing" Version="10.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EventSourcing.Orleans\Continuum.EventSourcing.Orleans.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

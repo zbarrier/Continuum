@@ -1,0 +1,7 @@
+﻿using Continuum.TypeMapping;
+
+namespace Continuum.EventSourcing.Orleans.CosmosDB.Tests.Events;
+
+[DomainEventType("Tests.SnackNameChangedEvent"), Immutable, GenerateSerializer]
+public sealed record SnackNameChangedEvent(Guid Id, string Name, Guid TraceId, DateTimeOffset OperatedAt, string OperatedBy, int Version) 
+    : SnackEvent(Id, TraceId, OperatedAt, OperatedBy, Version);
