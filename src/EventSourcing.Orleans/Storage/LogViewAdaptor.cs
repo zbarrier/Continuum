@@ -81,8 +81,7 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
     ///     (0, n) returns the whole log.
     /// </remarks>
     public override Task<IReadOnlyList<TLogEntry>> RetrieveLogSegment(int fromVersion, int toVersion)
-        // Entries may legitimately be null; Orleans declares the list as non-nullable, so nulls pass through unchanged.
-        => _logStorage.ReadAsync<TLogEntry>(_grainTypeName, Services.GrainId, fromVersion, toVersion - fromVersion)!;
+        => _logStorage.ReadAsync<TLogEntry>(_grainTypeName, Services.GrainId, fromVersion, toVersion - fromVersion);
 
     /// <inheritdoc />
     protected override SubmissionEntry<TLogEntry> MakeSubmissionEntry(TLogEntry entry)

@@ -61,11 +61,6 @@ public class CosmosDBLogConsistentStorageOptions
     public int QueryMaxItemCount { get; set; } = 1000;
 
     /// <summary>
-    ///     When true, events whose type can no longer be resolved are skipped instead of failing the read.
-    /// </summary>
-    public bool IgnoreMissingTypes { get; set; } = false;
-
-    /// <summary>
     ///     Used to generate the stream name for a grain.
     ///     The first string is the ServiceId.
     ///     The second string is the ProviderName.

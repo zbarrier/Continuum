@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 using Continuum.EventSourcing.Orleans.KurrentDB.Abstractions;
 using Continuum.Orleans.KurrentDB;
@@ -131,7 +131,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
     #region Storage
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<TLogEntry?>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId, int fromVersion, int maxCount)
+    public async Task<IReadOnlyList<TLogEntry>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId, int fromVersion, int maxCount)
     {
         EnsureInitialized();
         ArgumentOutOfRangeException.ThrowIfNegative(fromVersion);
@@ -281,11 +281,12 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
     /// <param name="evt"></param>
     /// <typeparam name="TLogEntry"></typeparam>
     /// <returns></returns>
-    private TLogEntry? DeserializeEvent<TLogEntry>(ResolvedEvent evt)
+    private TLogEntry DeserializeEvent<TLogEntry>(ResolvedEvent evt)
     {
         var evtType = _typeMapper.GetType(evt.Event.EventType);
         var evtDataWithType = new BinaryDataWithType(evt.Event.Data, evtType);
-        return _storageSerializer.Deserialize<TLogEntry>(evtDataWithType);
+        return _storageSerializer.Deserialize<TLogEntry>(evtDataWithType)
+            ?? throw new InvalidOperationException($"Event of type '{evt.Event.EventType}' in stream '{evt.Event.EventStreamId}' with revision '{evt.Event.EventNumber}' deserialized to null.");
     }
 
     #endregion

@@ -36,7 +36,6 @@ Options can also be bound from configuration
 | `ContainerName` | (required) | Cosmos DB container events are written to. |
 | `BatchSize` | `100` | Maximum operations per transactional batch (2-100). An append is written atomically with the stream header, so at most `BatchSize - 1` events can be appended per write. |
 | `QueryMaxItemCount` | `1000` | Maximum items returned per query page. |
-| `IgnoreMissingTypes` | `false` | Skip events whose type can no longer be resolved instead of failing. |
 | `StreamNameFormatter` | `{ServiceId}/{GrainId}` | Stream name (partition) for a grain. |
 | `EventIdGenerator` | `NewId.Next` | Event id for each appended event. |
 | `TypeMapKinds` | `DomainEvent \| Metadata` | Which type map is used to name stored events. |

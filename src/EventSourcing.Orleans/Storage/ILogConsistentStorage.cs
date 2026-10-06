@@ -1,4 +1,4 @@
-namespace Continuum.EventSourcing.Orleans;
+﻿namespace Continuum.EventSourcing.Orleans;
 
 /// <summary>
 ///     Stores the event log of a log-consistent grain.
@@ -30,8 +30,8 @@ public interface ILogConsistentStorage
     /// <param name="fromVersion">The version to read after (exclusive), which is also the zero-based position of the first entry to read (inclusive).</param>
     /// <param name="maxCount">The maximum number of entries to read.</param>
     /// <typeparam name="TLogEntry">The log entry type.</typeparam>
-    /// <returns>The entries read, which is empty if the log does not exist.</returns>
-    Task<IReadOnlyList<TLogEntry?>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId, int fromVersion, int maxCount);
+    /// <returns>The entries read, which is empty if the log does not exist. Implementations throw rather than return a null entry.</returns>
+    Task<IReadOnlyList<TLogEntry>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId, int fromVersion, int maxCount);
 
     /// <summary>
     ///     Gets the number of events in the log.
