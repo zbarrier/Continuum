@@ -31,6 +31,13 @@
     <Project Path="src/Persistence.Orleans.KurrentDB/Continuum.Persistence.Orleans.KurrentDB.csproj" />
     <Project Path="src/Persistence.Orleans/Continuum.Persistence.Orleans.csproj" />
     <Project Path="src/Persistence/Continuum.Persistence.csproj" />
+    <Project Path="src/Streaming.Orleans.Azure.CosmosDB/Continuum.Streaming.Orleans.Azure.CosmosDB.csproj" />
+    <Project Path="src/Streaming.Orleans.Azure.Storage/Continuum.Streaming.Orleans.Azure.Storage.csproj" />
+    <Project Path="src/Streaming.Orleans.KurrentDB.Abstractions/Continuum.Streaming.Orleans.KurrentDB.Abstractions.csproj" />
+    <Project Path="src/Streaming.Orleans.KurrentDB/Continuum.Streaming.Orleans.KurrentDB.csproj" />
+    <Project Path="src/Streaming.Orleans.KurrentDBStreamProvider/Continuum.Streaming.Orleans.KurrentDBStreamProvider.csproj" />
+    <Project Path="src/Streaming.Orleans/Continuum.Streaming.Orleans.csproj" />
+    <Project Path="src/Streaming/Continuum.Streaming.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ArrayPools.Tests/Continuum.ArrayPools.Tests.csproj" />
@@ -58,5 +65,9 @@
     <Project Path="tests/NewId.Tests/Continuum.NewId.Tests.csproj" />
     <Project Path="tests/Persistence.AotSmokeTest/Continuum.Persistence.AotSmokeTest.csproj" />
     <Project Path="tests/Persistence.Orleans.KurrentDB.Tests/Continuum.Persistence.Orleans.KurrentDB.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.KurrentDB.Abstractions.Tests/Continuum.Streaming.Orleans.KurrentDB.Abstractions.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.KurrentDBStreamProvider.Tests/Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.Tests/Continuum.Streaming.Orleans.Tests.csproj" />
+    <Project Path="tests/Streaming.Tests/Continuum.Streaming.Tests.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Aspire.KurrentDB" Version="13.6.0" />
+    <PackageReference Include="coverlet.collector" Version="10.1.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.12" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="Microsoft.Orleans.TestingHost" Version="10.3.1" />
+    <PackageReference Include="Testcontainers.XunitV3" Version="4.15.0" />
+    <PackageReference Include="Xunit.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="Xunit.DependencyInjection.Logging" Version="12.0.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Domain.Orleans.TestHarness\Continuum.Domain.Orleans.TestHarness.csproj" />
+    <ProjectReference Include="..\..\src\Domain.Orleans\Continuum.Domain.Orleans.csproj" />
+    <ProjectReference Include="..\..\src\EventSourcing.Orleans.KurrentDB\Continuum.EventSourcing.Orleans.KurrentDB.csproj" />
+    <ProjectReference Include="..\..\src\Persistence.Orleans.KurrentDB\Continuum.Persistence.Orleans.KurrentDB.csproj" />
+    <ProjectReference Include="..\..\src\Streaming.Orleans.KurrentDBStreamProvider\Continuum.Streaming.Orleans.KurrentDBStreamProvider.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
