@@ -1,6 +1,6 @@
-using System.Numerics;
+﻿using System.Numerics;
 
-namespace Continuum.Streaming;
+namespace Continuum.Streaming.Orleans;
 
 /// <summary>
 ///     Converts an <see cref="IStreamedEvent{T}.SequenceNumber" /> into the fixed-width integers that some transports

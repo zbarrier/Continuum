@@ -6,6 +6,10 @@ using Continuum.TypeMapping;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
+using Continuum.Serialization.Orleans;
+
+using Orleans.Storage;
+
 namespace Continuum.Streaming.Orleans.KurrentDB.Configuration;
 
 public class KurrentDBCatchupSubscriptionOptions
@@ -31,7 +35,7 @@ public class KurrentDBCatchupSubscriptionOptions
     public ICheckpointStore<ulong> CheckpointStore { get; set; } = default!;
 
     [Required]
-    public IStreamedEventSerde StreamEventSerde { get; set; } = default!;
+    public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;
 
     [Required]
     public TypeMapKinds TypeMapKinds { get; set; } = TypeMapKinds.DomainEvent;
@@ -73,9 +77,9 @@ public class DefaultKurrentDBChannelCatchupSubscriptionOptionsConfigurator : IPo
                 ? _serviceProvider.GetRequiredService<ICheckpointStore<ulong>>()
                 : _serviceProvider.GetRequiredKeyedService<ICheckpointStore<ulong>>(options.CheckpointConnectionName);
         }
-        if (options.StreamEventSerde is null)
+        if (options.GrainStorageSerializer is null)
         {
-            options.StreamEventSerde = _serviceProvider.GetRequiredKeyedService<IStreamedEventSerde>(options.ConnectionName);
+            options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.ConnectionName);
         }
         if (options.TypeMapper is null)
         {

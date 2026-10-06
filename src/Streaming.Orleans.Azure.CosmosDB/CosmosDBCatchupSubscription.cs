@@ -59,7 +59,7 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
 
     public string SubscriptionName => Name;
 
-    public async Task Start(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         if (!_options.Enabled)
         {
@@ -102,7 +102,7 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
         _logger.LogWarning("Subscription {SubscriptionName} for instance {InstanceName} has started.", SubscriptionName, _options.InstanceName);
     }
 
-    public async Task Stop(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogWarning("Subscription {SubscriptionName} for instance {InstanceName} is stopping.", SubscriptionName, _options.InstanceName);
 

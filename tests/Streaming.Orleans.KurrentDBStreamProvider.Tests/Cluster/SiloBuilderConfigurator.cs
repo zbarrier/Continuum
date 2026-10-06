@@ -128,7 +128,7 @@ public class TestSiloConfigurations : ISiloConfigurator
             });
             // There is no configuration connection string in the test host, so the explicit settings overload is used.
             services.AddKeyedKurrentDBPersistentSubscriptionsClient(Constants.StreamProviderName, streamClientSettings);
-            services.AddSystemTextJsonStreamEventSerde(Constants.StreamProviderName);
+            services.AddTypeMappedJsonGrainStorageSerializer(Constants.StreamProviderName);
             services.AddDefaultTypeMapAttributeMappers(Constants.StreamProviderName, TypeMapKinds.DomainEvent);
 
             // The $all provider needs the same client, serializer and type mapper so it can convert events written
@@ -137,7 +137,7 @@ public class TestSiloConfigurations : ISiloConfigurator
             {
                 return provider.GetRequiredKeyedService<KurrentDBClient>("journaledGrainLog");
             });
-            services.AddSystemTextJsonStreamEventSerde(Constants.AllStreamProviderName);
+            services.AddTypeMappedJsonGrainStorageSerializer(Constants.AllStreamProviderName);
             services.AddDefaultTypeMapAttributeMappers(Constants.AllStreamProviderName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
             // The $all strategy owns its read position, so it needs a checkpoint store keyed by the same name.
             services.AddKeyedSingleton<ICheckpointStore<ulong>>(Constants.AllStreamProviderName, (provider, key) =>
@@ -150,7 +150,7 @@ public class TestSiloConfigurations : ISiloConfigurator
             {
                 return provider.GetRequiredKeyedService<KurrentDBClient>("journaledGrainLog");
             });
-            services.AddSystemTextJsonStreamEventSerde(Constants.ImplicitProviderName);
+            services.AddTypeMappedJsonGrainStorageSerializer(Constants.ImplicitProviderName);
             services.AddDefaultTypeMapAttributeMappers(Constants.ImplicitProviderName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
             services.AddKeyedSingleton<ICheckpointStore<ulong>>(Constants.ImplicitProviderName, (provider, key) =>
             {

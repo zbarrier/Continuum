@@ -1,4 +1,4 @@
-namespace Continuum.Streaming;
+﻿namespace Continuum.Streaming;
 
 /// <summary>
 ///     Producer supplied metadata describing a streamed event, keyed by name.
@@ -6,7 +6,7 @@ namespace Continuum.Streaming;
 /// <remarks>
 ///     <para>
 ///         Metadata is for values a consumer may want to read without deserializing the event, such as routing hints
-///         and observability data. Structured data belongs in the event payload, where the type mapper and the serde
+///         and observability data. Structured data belongs in the event payload, where the type mapper and the serializer
 ///         already resolve types properly. Values are therefore plain strings and are never interpreted here.
 ///     </para>
 ///     <para>

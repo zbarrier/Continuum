@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace Continuum.Streaming.Orleans.KurrentDB;
 
@@ -16,7 +16,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB;
 ///         Reading lifts the reserved tracing entries onto their own values and passes everything else through as
 ///         metadata. Values are surfaced as text: JSON is a structured format, but this contract deliberately does not
 ///         interpret structure, because nothing here knows what type a nested value was meant to be. Callers that need
-///         structure should put it in the event payload, where the type mapper and serde resolve it properly.
+///         structure should put it in the event payload, where the type mapper and serializer resolve it properly.
 ///     </para>
 /// </remarks>
 public static class KurrentDBEventMetadataCodec

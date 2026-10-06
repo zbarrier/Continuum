@@ -14,6 +14,8 @@ using Orleans.Streams;
 using MetadataCodec = global::Continuum.Streaming.Orleans.KurrentDB.KurrentDBEventMetadataCodec;
 using StreamPosition = Orleans.Streams.StreamPosition;
 
+using Continuum.Serialization.Orleans;
+
 namespace Orleans.Providers.Streams.KurrentDB;
 
 /// <summary>
@@ -95,7 +97,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
             }
             return KurrentDBEventMaterialization.Faulted(fault);
         }
-        return KurrentDBEventMaterialization.Resolved(_options.StreamEventSerde.Deserialize(kurrentDBMessage.Data.Span, eventType));
+        return KurrentDBEventMaterialization.Resolved(_options.GrainStorageSerializer.Deserialize<object>(new BinaryDataWithType(kurrentDBMessage.Data, eventType!)));
     }
 
     /// <summary>

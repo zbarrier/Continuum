@@ -25,7 +25,7 @@ public sealed class CosmosDBCatchupSubscriptionHostedService : IHostedService
         var tasks = new List<Task>(_subscriptions.Count());
         foreach (var subscription in _subscriptions)
         {
-            tasks.Add(subscription.Start(cancellationToken));
+            tasks.Add(subscription.StartAsync(cancellationToken));
         }
         await Task.WhenAll(tasks);
 
@@ -39,7 +39,7 @@ public sealed class CosmosDBCatchupSubscriptionHostedService : IHostedService
         var tasks = new List<Task>(_subscriptions.Count());
         foreach (var subscription in _subscriptions)
         {
-            tasks.Add(subscription.Stop(cancellationToken));
+            tasks.Add(subscription.StopAsync(cancellationToken));
         }
         await Task.WhenAll(tasks);
 

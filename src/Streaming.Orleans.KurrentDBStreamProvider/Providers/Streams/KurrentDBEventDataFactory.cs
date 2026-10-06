@@ -1,4 +1,4 @@
-using Continuum;
+﻿using Continuum;
 using Continuum.Streaming.Orleans;
 using Continuum.Streaming.Orleans.KurrentDB;
 
@@ -6,6 +6,8 @@ using KurrentDB.Client;
 
 using Orleans.Configuration;
 using Orleans.Runtime;
+
+using Continuum.Serialization.Orleans;
 
 namespace Orleans.Providers.Streams.KurrentDB;
 
@@ -75,7 +77,7 @@ internal static class KurrentDBEventDataFactory
         var metadata = KurrentDBEventMetadataCodec.Write(
             StreamedEventMetadata.Create([new KeyValuePair<string, string?>(KurrentDBEventMetadataCodec.OrleansStreamIdName, streamId)]),
             transaction);
-        var data = new ReadOnlyMemory<byte>(options.StreamEventSerde.Serialize(@event));
+        var data = @event is null ? ReadOnlyMemory<byte>.Empty : options.GrainStorageSerializer.Serialize(@event).ToMemory();
         return new EventData(Uuid.NewUuid(), eventType, data, metadata, options.ContentType);
     }
 }

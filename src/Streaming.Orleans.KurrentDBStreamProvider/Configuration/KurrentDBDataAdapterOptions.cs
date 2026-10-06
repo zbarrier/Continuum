@@ -1,4 +1,4 @@
-using Continuum;
+﻿using Continuum;
 using Continuum.Streaming;
 using Continuum.TypeMapping;
 
@@ -6,6 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using Orleans.Runtime;
+
+using Continuum.Serialization.Orleans;
+
+using Orleans.Storage;
 
 namespace Orleans.Configuration;
 
@@ -49,14 +53,14 @@ public class KurrentDBDataAdapterOptions
     ///     The serializer used to write and read event payloads.
     /// </summary>
     [Redact]
-    public IStreamedEventSerde StreamEventSerde { get; set; } = default!;
+    public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;
 
     /// <summary>
     ///     The KurrentDB content type recorded on each event this provider appends.
     /// </summary>
     /// <remarks>
-    ///     This describes what <see cref="StreamEventSerde" /> produces. The default serde is JSON, which KurrentDB
-    ///     can index and project over; change this alongside the serde if a binary format is configured, otherwise the
+    ///     This describes what <see cref="GrainStorageSerializer" /> produces. The default serializer is JSON, which KurrentDB
+    ///     can index and project over; change this alongside the serializer if a binary format is configured, otherwise the
     ///     server will try to read the payload as JSON.
     /// </remarks>
     public string ContentType { get; set; } = "application/json";
@@ -132,9 +136,9 @@ public class DefaultKurrentDBDataAdapterOptionsConfigurator : IPostConfigureOpti
         }
         // Resolved without throwing so a missing registration surfaces through the validator, which names the
         // stream provider and the key that was looked for, rather than as a bare DI exception during silo start up.
-        if (options.StreamEventSerde is null)
+        if (options.GrainStorageSerializer is null)
         {
-            options.StreamEventSerde = _serviceProvider.GetKeyedService<IStreamedEventSerde>(options.ConnectionName)!;
+            options.GrainStorageSerializer = _serviceProvider.GetKeyedService<IGrainStorageSerializer>(options.ConnectionName)!;
         }
         if (options.TypeMapper is null)
         {
@@ -172,9 +176,9 @@ public class KurrentDBDataAdapterOptionsValidator : IConfigurationValidator
         {
             throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.StreamIdMapper)} is required.");
         }
-        if (_options.StreamEventSerde is null)
+        if (_options.GrainStorageSerializer is null)
         {
-            throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.StreamEventSerde)} could not be resolved. Register a keyed IStreamedEventSerde for \"{_options.ConnectionName}\" or set it explicitly.");
+            throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.GrainStorageSerializer)} could not be resolved. Register a keyed IGrainStorageSerializer (for example with AddTypeMappedJsonGrainStorageSerializer) for \"{_options.ConnectionName}\" or set it explicitly.");
         }
         if (_options.TypeMapper is null)
         {

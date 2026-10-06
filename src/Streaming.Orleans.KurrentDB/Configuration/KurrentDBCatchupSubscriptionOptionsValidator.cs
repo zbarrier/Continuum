@@ -1,4 +1,6 @@
-﻿namespace Continuum.Streaming.Orleans.KurrentDB.Configuration;
+﻿using Continuum.Serialization.Orleans;
+
+namespace Continuum.Streaming.Orleans.KurrentDB.Configuration;
 
 /// <summary>
 ///     Configuration validator for KurrentDBChannelCatchupSubscriptionOptions.
@@ -52,9 +54,9 @@ public class KurrentDBCatchupSubscriptionOptionsValidator : IConfigurationValida
         {
             throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCatchupSubscriptionOptions)}.{nameof(_options.CheckpointStore)} is required.");
         }
-        if (_options.StreamEventSerde is null)
+        if (_options.GrainStorageSerializer is null)
         {
-            throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCatchupSubscriptionOptions)}.{nameof(_options.StreamEventSerde)} is required.");
+            throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCatchupSubscriptionOptions)}.{nameof(_options.GrainStorageSerializer)} is required.");
         }
         if (_options.TypeMapper is null)
         {

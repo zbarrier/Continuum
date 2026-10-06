@@ -1,6 +1,6 @@
-using System.Numerics;
+﻿using System.Numerics;
 
-namespace Continuum.Streaming.Tests;
+namespace Continuum.Streaming.Orleans.Tests;
 
 /// <summary>
 ///     Covers the points where a <see cref="BigInteger" /> sequence number has to be narrowed for a transport that

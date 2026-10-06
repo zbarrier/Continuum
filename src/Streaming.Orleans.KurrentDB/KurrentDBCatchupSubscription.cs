@@ -12,6 +12,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using Continuum.Serialization.Orleans;
+
+using Orleans.Storage;
+
+using Continuum.Streaming.Orleans;
+
 namespace Continuum.Streaming.Orleans.KurrentDB;
 
 public record KurrentDBCatchupSubscriptionInfo(string Name, Type Type);
@@ -43,7 +49,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
     protected readonly TOptions _options;
     protected readonly KurrentDBClient _client;
     protected readonly KurrentDBCheckpointMonitor _checkpointMonitor;
-    protected readonly IStreamedEventSerde _streamEventSerde;
+    protected readonly IGrainStorageSerializer _storageSerializer;
     protected readonly ITypeMapper _typeMapper;
 
     protected readonly Channel<StreamedEvent<object>> _channel;
@@ -59,7 +65,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
         _client = _serviceProvider.GetRequiredKeyedService<KurrentDBClient>(_options.ConnectionName);
         _checkpointMonitor = new KurrentDBCheckpointMonitor(_logger, _options.CheckpointMonitorOptions, _options.CheckpointStore,
             SubscriptionName, StreamName);
-        _streamEventSerde = _options.StreamEventSerde;
+        _storageSerializer = _options.GrainStorageSerializer;
         _typeMapper = _options.TypeMapper;
 
         _channel = Channel.CreateBounded<StreamedEvent<object>>(new BoundedChannelOptions(_options.BufferOptions.MaxUnprocessedEventsBeforeStop)
@@ -187,7 +193,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
                 resolvedEvent.Event.EventType, StreamName, SubscriptionName);
             return;
         }
-        var deserializedEvent = _streamEventSerde.Deserialize(resolvedEvent.Event.Data.Span, eventType!);
+        var deserializedEvent = _storageSerializer.Deserialize<object>(new BinaryDataWithType(resolvedEvent.Event.Data, eventType!));
         if (deserializedEvent is null)
         {
             _logger.LogError("Failed to deserialize event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'.",
@@ -345,7 +351,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
                 resolvedEvent.Event.EventType, StreamName, SubscriptionName);
             return;
         }
-        var deserializedEvent = _streamEventSerde.Deserialize(resolvedEvent.Event.Data.Span, eventType!);
+        var deserializedEvent = _storageSerializer.Deserialize<object>(new BinaryDataWithType(resolvedEvent.Event.Data, eventType!));
         if (deserializedEvent is null)
         {
             _logger.LogError("Failed to deserialize event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'.",
