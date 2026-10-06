@@ -203,6 +203,13 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         {
             return await GetLastVersionAsync(grainTypeName, grainId);
         }
+        foreach (var entry in entries)
+        {
+            if (entry is null)
+            {
+                throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to write log entries for {grainTypeName} with ID {grainId} and stream {streamName}. Cannot append null entries."));
+            }
+        }
         using var operation = _instrumentation.Start(LogConsistentStorageInstrumentation.AppendOperation, grainTypeName, grainId, streamName);
         try
         {
@@ -252,8 +259,6 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
 
     #region Serialize & Deserialize
 
-    private readonly static ReadOnlyMemory<byte> ReadonlyEmptyData = new();
-
     /// <summary>
     /// </summary>
     /// <param name="entry"></param>
@@ -265,12 +270,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         var eventId = Uuid.FromGuid(_eventIdGenerator());
         var metadata = KurrentDBEventMetadataCodec.Write(null, transaction);
         var readonlyMetadata = metadata is null ? null : (ReadOnlyMemory<byte>?)metadata;
-        if (entry is null)
-        {
-            var typeName = _typeMapper.GetTypeName<TLogEntry>();
-            return new EventData(eventId, typeName, ReadonlyEmptyData, readonlyMetadata, _contentType);
-        }
-        var entryTypeName = _typeMapper.GetTypeName(entry.GetType());
+        var entryTypeName = _typeMapper.GetTypeName(entry!.GetType());
         var entryData = _storageSerializer.Serialize(entry);
         var readonlyEntryData = entryData.ToMemory();
         return new EventData(eventId, entryTypeName, readonlyEntryData, readonlyMetadata, _contentType);
