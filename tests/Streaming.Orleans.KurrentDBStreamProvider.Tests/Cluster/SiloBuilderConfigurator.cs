@@ -2,6 +2,7 @@
 
 using Continuum.Hosting;
 using Continuum.Hosting.Orleans;
+using Continuum.Orleans.KurrentDB;
 using Continuum.Streaming;
 using Continuum.Streaming.Orleans.KurrentDB;
 using Continuum.TypeMapping;
@@ -47,7 +48,7 @@ public class TestSiloConfigurations : ISiloConfigurator
           .AddKurrentDBPubSubStore(options =>
           {
               options.ConnectionName = Constants.PubSubStoreName;
-              options.Credentials = new KurrentDBGrainStorageCredentialsOptions()
+              options.Credentials = new KurrentDBCredentialsOptions()
               {
                   UseDefault = true,
               };
@@ -55,7 +56,7 @@ public class TestSiloConfigurations : ISiloConfigurator
           .AddKurrentDBBasedLogConsistencyProviderAsDefault(options =>
           {
               options.ConnectionName = "journaledGrainLog";
-              options.Credentials = new KurrentDBLogConsistentStorageCredentialsOptions()
+              options.Credentials = new KurrentDBCredentialsOptions()
               {
                   UseDefault = true,
               };
@@ -175,7 +176,7 @@ public class TestSiloConfigurations : ISiloConfigurator
                 return options;
             });
             services.AddDefaultTypeMapAttributeMappers("journaledGrainLog", TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
-            services.AddDefaultSystemTextJsonGrainStorageSerializer("journaledGrainLog");
+            services.AddTypeMappedJsonGrainStorageSerializer("journaledGrainLog");
         });
     }
 }
