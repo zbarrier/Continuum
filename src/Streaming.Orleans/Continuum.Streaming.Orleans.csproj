@@ -2,14 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>Continuum.Streaming.Orleans</PackageId>
+    <Description>Microsoft Orleans integration for Continuum streaming: stream subscriber and projection grains with duplicate protection, and Orleans-serializable streamed events and metadata.</Description>
+    <PackageTags>streaming;orleans;projections;subscriptions</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Surrogates\**" />
-    <EmbeddedResource Remove="Surrogates\**" />
-    <None Remove="Surrogates\**" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,70 +2,31 @@
 
 namespace Continuum.Streaming.Orleans;
 
-[GenerateSerializer, Immutable]
-public readonly record struct StreamSequence(BigInteger SequenceNumber, ulong SubSequenceNumber)
+/// <summary>
+/// The position of an event within a topic partition, ordered by <see cref="SequenceNumber"/> and then by
+/// <see cref="SubSequenceNumber"/>.
+/// </summary>
+/// <param name="SequenceNumber">The sequence number of the event.</param>
+/// <param name="SubSequenceNumber">The order of the event among events sharing <paramref name="SequenceNumber"/>.</param>
+[Alias("Continuum.Streaming.StreamSequence.V1"), GenerateSerializer, Immutable]
+public readonly record struct StreamSequence(BigInteger SequenceNumber, ulong SubSequenceNumber) : IComparable<StreamSequence>
 {
-    public static bool operator >(StreamSequence left, StreamSequence right)
+    /// <inheritdoc />
+    public int CompareTo(StreamSequence other)
     {
-        if (left.SequenceNumber > right.SequenceNumber)
-        {
-            return true;
-        }
-        else if (left.SequenceNumber == right.SequenceNumber)
-        {
-            return left.SubSequenceNumber > right.SubSequenceNumber;
-        }
-        else
-        {
-            return false;
-        }
+        var result = SequenceNumber.CompareTo(other.SequenceNumber);
+        return result != 0 ? result : SubSequenceNumber.CompareTo(other.SubSequenceNumber);
     }
 
-    public static bool operator <(StreamSequence left, StreamSequence right)
-    {
-        if (left.SequenceNumber < right.SequenceNumber)
-        {
-            return true;
-        }
-        else if (left.SequenceNumber == right.SequenceNumber)
-        {
-            return left.SubSequenceNumber < right.SubSequenceNumber;
-        }
-        else
-        {
-            return false;
-        }
-    }
+    /// <summary>Determines whether <paramref name="left"/> is ordered after <paramref name="right"/>.</summary>
+    public static bool operator >(StreamSequence left, StreamSequence right) => left.CompareTo(right) > 0;
 
-    public static bool operator >=(StreamSequence left, StreamSequence right)
-    {
-        if (left.SequenceNumber > right.SequenceNumber)
-        {
-            return true;
-        }
-        else if (left.SequenceNumber == right.SequenceNumber)
-        {
-            return left.SubSequenceNumber >= right.SubSequenceNumber;
-        }
-        else
-        {
-            return false;
-        }
-    }
+    /// <summary>Determines whether <paramref name="left"/> is ordered before <paramref name="right"/>.</summary>
+    public static bool operator <(StreamSequence left, StreamSequence right) => left.CompareTo(right) < 0;
 
-    public static bool operator <=(StreamSequence left, StreamSequence right)
-    {
-        if (left.SequenceNumber < right.SequenceNumber)
-        {
-            return true;
-        }
-        else if (left.SequenceNumber == right.SequenceNumber)
-        {
-            return left.SubSequenceNumber <= right.SubSequenceNumber;
-        }
-        else
-        {
-            return false;
-        }
-    }
+    /// <summary>Determines whether <paramref name="left"/> is ordered after or equal to <paramref name="right"/>.</summary>
+    public static bool operator >=(StreamSequence left, StreamSequence right) => left.CompareTo(right) >= 0;
+
+    /// <summary>Determines whether <paramref name="left"/> is ordered before or equal to <paramref name="right"/>.</summary>
+    public static bool operator <=(StreamSequence left, StreamSequence right) => left.CompareTo(right) <= 0;
 }
