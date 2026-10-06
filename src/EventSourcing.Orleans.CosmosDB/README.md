@@ -2,6 +2,8 @@
 
 An [Azure Cosmos DB](https://learn.microsoft.com/azure/cosmos-db/) log-consistency provider for [Microsoft Orleans](https://learn.microsoft.com/dotnet/orleans/) journaled grains. Each grain's events are stored as items in a Cosmos DB container, and the latest view is snapshotted to a standard Orleans grain storage provider.
 
+The storage design is based on [Eveneum](https://github.com/Eveneum/Eveneum) (MIT).
+
 ## Install
 
 ```
