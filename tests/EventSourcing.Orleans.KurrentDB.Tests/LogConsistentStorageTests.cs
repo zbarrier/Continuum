@@ -1,5 +1,6 @@
 using Continuum.EventSourcing.Orleans.KurrentDB.Abstractions;
 using Continuum.EventSourcing.Orleans.KurrentDB.Tests.Events;
+using Continuum.Orleans.KurrentDB;
 
 using KurrentDB.Client;
 
@@ -127,5 +128,41 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
         Assert.Equal(1, last.TransactionSize);
         Assert.Equal(1, last.TransactionPartitionSize);
         Assert.Equal(0, last.TransactionPartitionIndex);
+    }
+
+    [Fact]
+    public async Task Should_Reject_Null_Entries_On_Append()
+    {
+        var grainId = NewGrainId();
+        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(1), 0);
+
+        SnackEvent[] entries = [CreateEvents(1)[0], null!];
+        await Assert.ThrowsAsync<KurrentDBStorageException>(() => Storage.AppendAsync(GrainTypeName, grainId, entries, 1));
+        Assert.Equal(1, await Storage.GetLastVersionAsync(GrainTypeName, grainId));
+    }
+
+    [Fact]
+    public async Task Should_Throw_When_Reading_An_Unregistered_Event_Type()
+    {
+        var grainId = NewGrainId();
+        await AppendRawEventAsync(grainId, "Tests.UnregisteredEvent", "{}");
+
+        await Assert.ThrowsAsync<KurrentDBStorageException>(() => Storage.ReadAsync<SnackEvent>(GrainTypeName, grainId, 0, 1));
+    }
+
+    [Fact]
+    public async Task Should_Throw_When_A_Stored_Event_Reads_As_Null()
+    {
+        var grainId = NewGrainId();
+        await AppendRawEventAsync(grainId, "Tests.SnackInitializedEvent", "null");
+
+        await Assert.ThrowsAsync<KurrentDBStorageException>(() => Storage.ReadAsync<SnackEvent>(GrainTypeName, grainId, 0, 1));
+    }
+
+    private async Task AppendRawEventAsync(GrainId grainId, string eventType, string json)
+    {
+        var client = SiloServices.GetRequiredKeyedService<KurrentDBClient>("journaledGrainLog");
+        var eventData = new EventData(Uuid.NewUuid(), eventType, System.Text.Encoding.UTF8.GetBytes(json));
+        await client.AppendToStreamAsync($"{grainId.Type}-{grainId.Key}", StreamState.NoStream, [eventData], cancellationToken: TestContext.Current.CancellationToken);
     }
 }

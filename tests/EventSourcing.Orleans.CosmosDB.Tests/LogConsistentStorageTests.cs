@@ -139,6 +139,44 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
         Assert.All(events, e => Assert.False(string.IsNullOrEmpty(e.dataType)));
     }
 
+    [Fact]
+    public async Task Should_Reject_Null_Entries_On_Append()
+    {
+        var grainId = NewGrainId();
+        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(1), 0);
+
+        SnackEvent[] entries = [CreateEvents(1)[0], null!];
+        await Assert.ThrowsAsync<CosmosDBLogConsistentStorageException>(() => Storage.AppendAsync(GrainTypeName, grainId, entries, 1));
+        Assert.Equal(1, await Storage.GetLastVersionAsync(GrainTypeName, grainId));
+    }
+
+    [Fact]
+    public async Task Should_Throw_When_Reading_An_Unregistered_Event_Type()
+    {
+        var grainId = NewGrainId();
+        await InsertEventItemAsync(grainId, "Tests.UnregisteredEvent", new { });
+
+        await Assert.ThrowsAsync<CosmosDBLogConsistentStorageException>(() => Storage.ReadAsync<SnackEvent>(GrainTypeName, grainId, 0, 1));
+    }
+
+    [Fact]
+    public async Task Should_Throw_When_A_Stored_Event_Reads_As_Null()
+    {
+        var grainId = NewGrainId();
+        await InsertEventItemAsync(grainId, "Tests.SnackInitializedEvent", null);
+
+        await Assert.ThrowsAsync<CosmosDBLogConsistentStorageException>(() => Storage.ReadAsync<SnackEvent>(GrainTypeName, grainId, 0, 1));
+    }
+
+    private async Task InsertEventItemAsync(GrainId grainId, string dataType, object? data)
+    {
+        var streamName = $"{fixture.Cluster.Options.ServiceId}/{grainId}";
+        var client = SiloServices.GetRequiredKeyedService<CosmosClient>(TestSiloConfigurations.ConnectionName);
+        var container = client.GetContainer(ClusterFixture.DatabaseName, ClusterFixture.ContainerName);
+        var item = new { id = Guid.NewGuid().ToString(), type = "evt", streamName, ver = 1UL, subSeq = 0UL, dataType, data };
+        await container.CreateItemAsync(item, new PartitionKey(streamName), cancellationToken: TestContext.Current.CancellationToken);
+    }
+
     // Lower-case property names match the stored JSON so the SDK's default serializer can read the projection.
     private sealed record StoredItem(string id, string type, ulong ver, ulong subSeq, string dataType);
 }
