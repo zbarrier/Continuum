@@ -1,6 +1,11 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 namespace Continuum.Streaming;
+
+/// <summary>
+/// An event delivered from a stream, together with its position and metadata.
+/// </summary>
+/// <typeparam name="T">The type of the event payload.</typeparam>
 public interface IStreamedEvent<out T> where T : class
 {
     /// <summary>
@@ -80,7 +85,7 @@ public interface IStreamedEvent<out T> where T : class
     ///     <see cref="long"/> in its <c>EventSequenceToken</c>, so only sequence numbers within <see cref="long"/> range
     ///     can be delivered that way. Providers exceeding it, Kinesis among them, must be consumed through a catch-up
     ///     subscription, which compares sequence numbers as <see cref="BigInteger"/> values and never narrows them.
-    ///     See <see cref="StreamSequenceNumber"/>, where that conversion is guarded.
+    ///     See <c>Continuum.Streaming.Orleans.StreamSequenceNumber</c>, where that conversion is guarded.
     /// </para>
     /// </summary>
     BigInteger SequenceNumber { get; }

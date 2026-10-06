@@ -3,8 +3,16 @@ using System.Runtime.InteropServices;
 
 namespace Continuum.Streaming;
 
+/// <summary>
+/// Grouping helpers for batches of streamed events, used by subscriptions to route events to the grain that owns each stream.
+/// </summary>
 public static class IStreamedEventCollectionExtensions
 {
+    /// <summary>
+    /// Groups the events by <see cref="IStreamedEvent{T}.StreamName"/>, preserving their order within each group.
+    /// </summary>
+    /// <param name="streamEvents">The events to group.</param>
+    /// <returns>The events keyed by stream name.</returns>
     public static Dictionary<string, List<IStreamedEvent<object>>> GroupByStreamName(this List<IStreamedEvent<object>> streamEvents)
     {
         var streamEventsByStreamName = new Dictionary<string, List<IStreamedEvent<object>>>();
@@ -28,6 +36,11 @@ public static class IStreamedEventCollectionExtensions
         return streamEventsByStreamName;
     }
 
+    /// <summary>
+    /// Groups the events by <see cref="IStreamedEvent{T}.StreamKey"/>, preserving their order within each group.
+    /// </summary>
+    /// <param name="streamEvents">The events to group.</param>
+    /// <returns>The events keyed by stream key.</returns>
     public static Dictionary<string, List<IStreamedEvent<object>>> GroupByStreamKey(this List<IStreamedEvent<object>> streamEvents)
     {
         var streamEventsByStreamKey = new Dictionary<string, List<IStreamedEvent<object>>>();

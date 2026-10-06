@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Continuum.Streaming;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -5,9 +7,15 @@ using Microsoft.Extensions.Hosting;
 
 namespace Continuum.Hosting;
 
+/// <summary>
+/// Registers keyed <see cref="IStreamedNameParser" /> implementations.
+/// </summary>
 public static class StreamedNameParserBuilderExtensions
 {
-    public static IHostApplicationBuilder AddStreamedNameParser<TParser>(this IHostApplicationBuilder builder, string connectionName)
+    /// <summary>
+    ///     Registers a keyed <see cref="IStreamedNameParser" /> for the supplied connection name.
+    /// </summary>
+    public static IHostApplicationBuilder AddStreamedNameParser<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TParser>(this IHostApplicationBuilder builder, string connectionName)
         where TParser : class, IStreamedNameParser
     {
         _ = builder.Services.AddStreamedNameParser<TParser>(connectionName);
@@ -30,7 +38,7 @@ public static class StreamedNameParserBuilderExtensions
     ///         configurator.
     ///     </para>
     /// </remarks>
-    public static IServiceCollection AddStreamedNameParser<TParser>(this IServiceCollection services, string connectionName)
+    public static IServiceCollection AddStreamedNameParser<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TParser>(this IServiceCollection services, string connectionName)
         where TParser : class, IStreamedNameParser
     {
         services.AddKeyedSingleton<IStreamedNameParser, TParser>(connectionName);
