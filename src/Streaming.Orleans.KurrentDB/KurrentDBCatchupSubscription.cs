@@ -359,37 +359,10 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
         await _channel.Writer.WriteAsync(streamEvent, cancellationToken);
     }
 
-    /// <summary>
-    /// Deserializes the event, logging and skipping it when it has no payload, cannot be read or reads as null, so that
-    /// a bad event written by a producer outside our control does not halt the subscription.
-    /// </summary>
     private bool TryDeserialize(ResolvedEvent resolvedEvent, Type eventType, [NotNullWhen(true)] out object? deserializedEvent)
     {
-        deserializedEvent = null;
         var record = resolvedEvent.Event;
-        if (record.Data.IsEmpty)
-        {
-            _logger.LogWarning("Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it has no payload.",
-                record.EventType, record.EventStreamId, SubscriptionName);
-            return false;
-        }
-        try
-        {
-            deserializedEvent = _storageSerializer.Deserialize<object>(new BinaryDataWithType(record.Data, eventType));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it could not be deserialized.",
-                record.EventType, record.EventStreamId, SubscriptionName);
-            return false;
-        }
-        if (deserializedEvent is null)
-        {
-            _logger.LogWarning("Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it deserialized to null.",
-                record.EventType, record.EventStreamId, SubscriptionName);
-            return false;
-        }
-        return true;
+        return KurrentDBCatchupEventDeserializer.TryDeserialize(_storageSerializer, _logger, record.EventType, record.EventStreamId, record.Data, eventType, SubscriptionName, out deserializedEvent);
     }
 
     private async Task ReceiveFromStreamChannel()

@@ -66,6 +66,7 @@
     <Project Path="tests/Persistence.AotSmokeTest/Continuum.Persistence.AotSmokeTest.csproj" />
     <Project Path="tests/Persistence.Orleans.KurrentDB.Tests/Continuum.Persistence.Orleans.KurrentDB.Tests.csproj" />
     <Project Path="tests/Streaming.Orleans.KurrentDB.Abstractions.Tests/Continuum.Streaming.Orleans.KurrentDB.Abstractions.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.KurrentDB.Tests/Continuum.Streaming.Orleans.KurrentDB.Tests.csproj" />
     <Project Path="tests/Streaming.Orleans.KurrentDBStreamProvider.Tests/Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests.csproj" />
     <Project Path="tests/Streaming.Orleans.Tests/Continuum.Streaming.Orleans.Tests.csproj" />
     <Project Path="tests/Streaming.Tests/Continuum.Streaming.Tests.csproj" />
