@@ -27,7 +27,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     private readonly Serializer _serializer;
     private readonly KurrentDBDataAdapterOptions _options;
     private readonly ILogger<KurrentDBQueueDataAdapter>? _logger;
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _reportedHaltedEventIds = new();
+    private readonly HaltedEventReporter _haltedEventReporter = new();
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="KurrentDBQueueDataAdapter" /> class.
@@ -99,7 +99,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
             }
             // Orleans retries a faulted delivery repeatedly and only logs its own warning, so the cause is reported
             // here as an error, once per event, to keep a halted subscription from looking merely slow.
-            if (_reportedHaltedEventIds.TryAdd(kurrentDBMessage.EventId, 0))
+            if (_haltedEventReporter.ShouldReport(kurrentDBMessage.EventId))
             {
                 _logger?.LogError("{Fault} Delivery is halted because {Option} is {Behavior}.", fault, nameof(KurrentDBDataAdapterOptions.UnknownEventTypeBehavior), nameof(KurrentDBUnknownEventTypeBehavior.Halt));
             }

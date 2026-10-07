@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="KurrentDB.Client" Version="1.4.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.12" />
     <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.3.1" />
     <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.3.1" />
@@ -18,6 +19,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Streaming.Orleans.KurrentDB.Abstractions\Continuum.Streaming.Orleans.KurrentDB.Abstractions.csproj" />
     <ProjectReference Include="..\Streaming.Orleans\Continuum.Streaming.Orleans.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests" />
   </ItemGroup>
 
 </Project>
