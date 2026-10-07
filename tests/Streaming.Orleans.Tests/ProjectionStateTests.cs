@@ -1,9 +1,11 @@
-using System.Numerics;
+﻿using System.Numerics;
+
+using Orleans.Runtime;
 
 namespace Continuum.Streaming.Orleans.Tests;
 
 /// <summary>
-///     Verifies the de-duplication contract of <see cref="StreamProjectionState{TState}" />.
+///     Verifies the de-duplication contract of <see cref="ProjectionState{TState}" />.
 /// </summary>
 /// <remarks>
 ///     These are provider agnostic and run without a cluster, because the behaviour under test is the sequence
@@ -11,7 +13,7 @@ namespace Continuum.Streaming.Orleans.Tests;
 ///     payload twice produces two distinct events at two distinct positions, which is genuinely two events. Handing
 ///     the same envelope to the state twice is what actually reproduces a redelivery after a failed write.
 /// </remarks>
-public class StreamProjectionStateTests
+public class ProjectionStateTests
 {
     private const string Topic = "counted";
     private const string StreamName = "counted-1";
@@ -179,6 +181,100 @@ public class StreamProjectionStateTests
         Assert.Equal(1, state.Applied);
     }
 
+    [Fact]
+    public async Task Applies_A_Batch_In_Order_And_Skips_Redelivered_Events()
+    {
+        var state = new CountingProjectionState();
+
+        await state.WhenAsync(Event(sequenceNumber: 2));
+        var hasChanges = await state.WhenAsync([Event(sequenceNumber: 1), Event(sequenceNumber: 2), Event(sequenceNumber: 3)]);
+
+        // The batch path shares the watermark with single-event delivery, so only the event not yet seen is applied.
+        Assert.True(hasChanges);
+        Assert.Equal(2, state.Applied);
+    }
+
+    [Fact]
+    public async Task Reports_No_Changes_For_A_Batch_Already_Applied()
+    {
+        var state = new CountingProjectionState();
+        List<IStreamedEvent<object>> batch = [Event(sequenceNumber: 1), Event(sequenceNumber: 2)];
+
+        await state.WhenAsync(batch);
+        var hasChanges = await state.WhenAsync(batch);
+
+        Assert.False(hasChanges);
+        Assert.Equal(2, state.Applied);
+    }
+
+    [Fact]
+    public void Records_A_Subscription_Once()
+    {
+        var state = new CountingProjectionState();
+
+        Assert.True(state.AddSubscription(Source("a")));
+        Assert.False(state.AddSubscription(Source("a")));
+
+        Assert.Equal(new[] { Source("a") }, state.Subscriptions);
+    }
+
+    [Fact]
+    public void Treats_The_Same_Stream_On_Another_Provider_As_A_Different_Subscription()
+    {
+        var state = new CountingProjectionState();
+
+        state.AddSubscription(Source("a"));
+        var added = state.AddSubscription(Source("a", provider: "other"));
+
+        Assert.True(added);
+        Assert.Equal(2, state.Subscriptions.Count);
+    }
+
+    [Fact]
+    public void Removes_Only_The_Given_Subscription()
+    {
+        var state = new CountingProjectionState();
+        state.AddSubscription(Source("a"));
+        state.AddSubscription(Source("b"));
+
+        Assert.True(state.RemoveSubscription(Source("a")));
+        Assert.False(state.RemoveSubscription(Source("a")));
+
+        Assert.Equal(new[] { Source("b") }, state.Subscriptions);
+    }
+
+    [Fact]
+    public void Clears_Subscriptions_And_Reports_Whether_Any_Were_Removed()
+    {
+        var state = new CountingProjectionState();
+        state.AddSubscription(Source("a"));
+        state.AddSubscription(Source("b"));
+
+        Assert.True(state.ClearSubscriptions());
+        Assert.False(state.ClearSubscriptions());
+
+        Assert.Empty(state.Subscriptions);
+    }
+
+    [Fact]
+    public async Task Keeps_The_Watermark_After_A_Subscription_Is_Removed()
+    {
+        var state = new CountingProjectionState();
+        state.AddSubscription(Source(StreamKey));
+        await state.WhenAsync(Event(sequenceNumber: 1));
+
+        state.RemoveSubscription(Source(StreamKey));
+        state.AddSubscription(Source(StreamKey));
+        var hasChanges = await state.WhenAsync(Event(sequenceNumber: 1));
+
+        // Resubscribing may redeliver events already projected; they must not be applied again.
+        Assert.False(hasChanges);
+        Assert.Equal(1, state.Applied);
+    }
+
+    private static StreamSubscriptionSource Source(string key, string provider = "provider")
+        => new(provider, StreamId.Create(Topic, key));
+
     private static StreamedEvent<object> Event(
         long sequenceNumber,
         ulong subSequenceNumber = 0,
@@ -202,7 +298,7 @@ public class StreamProjectionStateTests
             evt: new object());
     }
 
-    private sealed class CountingProjectionState : StreamProjectionState<CountingProjectionState>
+    private sealed class CountingProjectionState : ProjectionState<CountingProjectionState>
     {
         public int Applied { get; private set; }
 

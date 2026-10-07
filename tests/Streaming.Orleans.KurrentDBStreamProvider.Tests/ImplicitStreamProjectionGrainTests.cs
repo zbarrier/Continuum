@@ -7,7 +7,7 @@ using KurrentDB.Client;
 namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 
 /// <summary>
-///     Verifies that a <see cref="StreamProjectionGrain{TGrain, TState}" /> works under an implicit subscription,
+///     Verifies that a <see cref="ProjectionGrain{TGrain, TState}" /> works under an implicit subscription,
 ///     where the runtime activates the grain because an event arrived rather than because a caller asked for it.
 /// </summary>
 /// <remarks>

@@ -1,15 +1,12 @@
 using Continuum.Streaming.Orleans;
 
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-
 using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.Tests;
 
 /// <summary>
-///     Covers how <see cref="StreamSubscriberGrain{TGrain}" /> classifies a stream as implicitly or explicitly
+///     Covers how <see cref="StreamSubscriptionManager{TGrain}" /> classifies a stream as implicitly or explicitly
 ///     subscribed, which is what decides whether the grain subscribes itself or waits for the runtime.
 /// </summary>
 /// <remarks>
@@ -18,7 +15,7 @@ namespace Continuum.Streaming.Orleans.Tests;
 ///     wrongly treated as explicit produces a second, duplicate subscription that still delivers, so the events
 ///     arrive and only the duplication is wrong. Asserting on the decision directly is what makes that observable.
 /// </remarks>
-public class StreamSubscriberGrainImplicitDetectionTests
+public class StreamSubscriptionManagerImplicitDetectionTests
 {
     [Fact]
     public void Treats_A_Stream_As_Explicit_When_The_Grain_Declares_No_Implicit_Subscription()
@@ -77,17 +74,12 @@ public class StreamSubscriberGrainImplicitDetectionTests
     }
 
     /// <summary>
-    ///     Exposes the classification, which is protected because it is an implementation detail of subscribing.
+    ///     Supplies the grain type whose attributes drive the classification.
     /// </summary>
-    private abstract class TestSubscriberGrain<TGrain> : StreamSubscriberGrain<TGrain>
+    private abstract class TestSubscriberGrain<TGrain> : Grain
         where TGrain : TestSubscriberGrain<TGrain>
     {
-        protected override ILogger Logger => NullLogger.Instance;
-
-        protected override Task OnNextAsync(IStreamedEvent<object> streamedEvent, StreamSequenceToken? token)
-            => Task.CompletedTask;
-
-        internal static bool Classify(StreamId streamId) => IsImplicit(streamId);
+        internal static bool Classify(StreamId streamId) => StreamSubscriptionManager<TGrain>.IsImplicit(streamId);
     }
 
     private sealed class ExplicitOnlyGrain : TestSubscriberGrain<ExplicitOnlyGrain>;
@@ -100,13 +92,7 @@ public class StreamSubscriberGrainImplicitDetectionTests
     private sealed class MultipleImplicitGrain : TestSubscriberGrain<MultipleImplicitGrain>;
 
     [ImplicitStreamSubscription("chat")]
-    private sealed class MixedSubscriptionGrain : TestSubscriberGrain<MixedSubscriptionGrain>
-    {
-        protected override IEnumerable<StreamSubscriptionSource> Subscriptions =>
-        [
-            new("SomeProvider", StreamId.Create("audit", "key"))
-        ];
-    }
+    private sealed class MixedSubscriptionGrain : TestSubscriberGrain<MixedSubscriptionGrain>;
 
     [RegexImplicitStreamSubscription("chat-.*")]
     private sealed class RegexImplicitGrain : TestSubscriberGrain<RegexImplicitGrain>;

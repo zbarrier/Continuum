@@ -7,7 +7,7 @@ using KurrentDB.Client;
 namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 
 /// <summary>
-///     Verifies that one <see cref="StreamProjectionGrain{TGrain, TState}" /> can consume several streams at once.
+///     Verifies that one <see cref="ProjectionGrain{TGrain, TState}" /> can consume several streams at once.
 /// </summary>
 /// <remarks>
 ///     The base class previously held a single subscription handle, so a second subscription overwrote the first.

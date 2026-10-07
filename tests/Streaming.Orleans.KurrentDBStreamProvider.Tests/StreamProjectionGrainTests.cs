@@ -7,7 +7,7 @@ using KurrentDB.Client;
 namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 
 /// <summary>
-///     Verifies that <see cref="StreamProjectionGrain{TGrain, TState}" /> subscribes on activation and projects the
+///     Verifies that <see cref="ProjectionGrain{TGrain, TState}" /> subscribes on activation and projects the
 ///     events the provider delivers into its persistent state.
 /// </summary>
 [Collection(ClusterCollection.Name)]

@@ -1,4 +1,4 @@
-using Continuum.Streaming.Orleans;
+﻿using Continuum.Streaming.Orleans;
 
 using Microsoft.Extensions.Logging;
 
@@ -16,21 +16,14 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests.Grains;
 ///     single shared handle would show only one of the two streams here.
 /// </remarks>
 public class MultiStreamProjectionGrain
-    : StreamProjectionGrain<MultiStreamProjectionGrain, MultiStreamProjectionState>, IMultiStreamProjectionGrain
+    : ProjectionGrain<MultiStreamProjectionGrain, MultiStreamProjectionState>, IMultiStreamProjectionGrain
 {
-    private readonly IPersistentState<MultiStreamProjectionState> _state;
-
     public MultiStreamProjectionGrain(
-        [PersistentState("MultiStreamProjection", "MemoryStorageProvider")] IPersistentState<MultiStreamProjectionState> state,
+        [PersistentState("MultiStreamProjection", "MemoryStorageProvider")] IPersistentState<MultiStreamProjectionState> storage,
         ILogger<MultiStreamProjectionGrain> logger)
+        : base(storage, logger)
     {
-        _state = state;
-        Logger = logger;
     }
-
-    protected override IPersistentState<MultiStreamProjectionState> State => _state;
-
-    protected override ILogger Logger { get; }
 
     protected override IEnumerable<StreamSubscriptionSource> Subscriptions =>
     [
@@ -42,11 +35,11 @@ public class MultiStreamProjectionGrain
 
     public static string SecondStreamKey(string key) => $"{key}.second";
 
-    public Task<string[]> GetAuthors() => Task.FromResult(_state.State.Authors.ToArray());
+    public Task<string[]> GetAuthors() => Task.FromResult(State.Authors.ToArray());
 }
 
 [GenerateSerializer]
-public class MultiStreamProjectionState : StreamProjectionState<MultiStreamProjectionState>
+public class MultiStreamProjectionState : ProjectionState<MultiStreamProjectionState>
 {
     [Id(0)] public List<string> Authors { get; init; } = new();
 

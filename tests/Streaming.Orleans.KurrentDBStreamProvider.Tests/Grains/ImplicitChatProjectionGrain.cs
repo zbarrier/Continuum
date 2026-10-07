@@ -1,4 +1,4 @@
-using Continuum.Streaming.Orleans;
+﻿using Continuum.Streaming.Orleans;
 
 using Microsoft.Extensions.Logging;
 
@@ -13,27 +13,20 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests.Grains;
 ///     The attribute names the stream namespace, and the runtime activates the grain whose key equals the stream key
 ///     and then supplies the subscription through <c>OnSubscribed</c>. The grain therefore declares no explicit
 ///     subscription: the provider and stream are both chosen by the runtime, so overriding
-///     <see cref="StreamSubscriberGrain{TGrain}.Subscriptions" /> would create a second, duplicate subscription.
+///     <see cref="ProjectionGrain{TGrain, TState}.Subscriptions" /> would create a second, duplicate subscription.
 /// </remarks>
 [ImplicitStreamSubscription(Constants.ImplicitStreamPrefix)]
 public class ImplicitChatProjectionGrain
-    : StreamProjectionGrain<ImplicitChatProjectionGrain, ImplicitChatProjectionState>, IImplicitChatProjectionGrain
+    : ProjectionGrain<ImplicitChatProjectionGrain, ImplicitChatProjectionState>, IImplicitChatProjectionGrain
 {
-    private readonly IPersistentState<ImplicitChatProjectionState> _state;
-
     public ImplicitChatProjectionGrain(
-        [PersistentState("ImplicitChatProjection", "MemoryStorageProvider")] IPersistentState<ImplicitChatProjectionState> state,
+        [PersistentState("ImplicitChatProjection", "MemoryStorageProvider")] IPersistentState<ImplicitChatProjectionState> storage,
         ILogger<ImplicitChatProjectionGrain> logger)
+        : base(storage, logger)
     {
-        _state = state;
-        Logger = logger;
     }
 
-    protected override IPersistentState<ImplicitChatProjectionState> State => _state;
-
-    protected override ILogger Logger { get; }
-
-    public Task<string[]> GetAuthors() => Task.FromResult(_state.State.Authors.ToArray());
+    public Task<string[]> GetAuthors() => Task.FromResult(State.Authors.ToArray());
 }
 
 /// <summary>
@@ -45,7 +38,7 @@ public class ImplicitChatProjectionGrain
 ///     and it would give both grains the same Orleans serializer identity for what are logically separate read models.
 /// </remarks>
 [GenerateSerializer]
-public class ImplicitChatProjectionState : StreamProjectionState<ImplicitChatProjectionState>
+public class ImplicitChatProjectionState : ProjectionState<ImplicitChatProjectionState>
 {
     [Id(0)] public List<string> Authors { get; init; } = new();
 
