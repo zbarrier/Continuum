@@ -65,6 +65,7 @@
     <Project Path="tests/NewId.Tests/Continuum.NewId.Tests.csproj" />
     <Project Path="tests/Persistence.AotSmokeTest/Continuum.Persistence.AotSmokeTest.csproj" />
     <Project Path="tests/Persistence.Orleans.KurrentDB.Tests/Continuum.Persistence.Orleans.KurrentDB.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.Azure.CosmosDB.Tests/Continuum.Streaming.Orleans.Azure.CosmosDB.Tests.csproj" />
     <Project Path="tests/Streaming.Orleans.KurrentDB.Abstractions.Tests/Continuum.Streaming.Orleans.KurrentDB.Abstractions.Tests.csproj" />
     <Project Path="tests/Streaming.Orleans.KurrentDB.Tests/Continuum.Streaming.Orleans.KurrentDB.Tests.csproj" />
     <Project Path="tests/Streaming.Orleans.KurrentDBStreamProvider.Tests/Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests.csproj" />

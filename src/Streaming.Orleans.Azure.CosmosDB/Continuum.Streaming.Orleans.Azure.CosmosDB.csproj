@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Streaming.Orleans\Continuum.Streaming.Orleans.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Continuum.Streaming.Orleans.Azure.CosmosDB.Tests" />
+  </ItemGroup>
+
 </Project>

@@ -138,19 +138,8 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
                 continue;
             }
 
-            object? deserializedEvent;
-            try
+            if (!CosmosDBCatchupEventDeserializer.TryDeserialize(change, type, _jsonSerializer, _logger, out var deserializedEvent))
             {
-                deserializedEvent = change.Data.ToObject(type, _jsonSerializer);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Skipping change {Id} of type {DataType} in stream {StreamName} because it could not be deserialized.", change.Id, change.DataType, change.StreamName);
-                continue;
-            }
-            if (deserializedEvent is null)
-            {
-                _logger.LogWarning("Skipping change {Id} of type {DataType} in stream {StreamName} because it deserialized to null.", change.Id, change.DataType, change.StreamName);
                 continue;
             }
             var streamEvent = ToStreamEvent(context, change, deserializedEvent);
