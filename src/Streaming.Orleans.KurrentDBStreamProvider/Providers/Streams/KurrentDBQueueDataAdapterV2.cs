@@ -28,6 +28,7 @@ public class KurrentDBQueueDataAdapterV2 : IKurrentDBDataAdapter
     private readonly Serializer _serializer;
     private readonly KurrentDBDataAdapterOptions _options;
     private readonly ILogger<KurrentDBQueueDataAdapterV2>? _logger;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _reportedHaltedEventIds = new();
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="KurrentDBQueueDataAdapterV2" /> class.
@@ -96,6 +97,12 @@ public class KurrentDBQueueDataAdapterV2 : IKurrentDBDataAdapter
             {
                 _logger?.LogWarning("{Fault} The event was skipped because {Option} is {Behavior}.", fault, nameof(KurrentDBDataAdapterOptions.UnknownEventTypeBehavior), nameof(KurrentDBUnknownEventTypeBehavior.Skip));
                 return KurrentDBEventMaterialization.Suppressed();
+            }
+            // Orleans retries a faulted delivery repeatedly and only logs its own warning, so the cause is reported
+            // here as an error, once per event, to keep a halted subscription from looking merely slow.
+            if (_reportedHaltedEventIds.TryAdd(kurrentDBMessage.EventId, 0))
+            {
+                _logger?.LogError("{Fault} Delivery is halted because {Option} is {Behavior}.", fault, nameof(KurrentDBDataAdapterOptions.UnknownEventTypeBehavior), nameof(KurrentDBUnknownEventTypeBehavior.Halt));
             }
             return KurrentDBEventMaterialization.Faulted(fault);
         }
