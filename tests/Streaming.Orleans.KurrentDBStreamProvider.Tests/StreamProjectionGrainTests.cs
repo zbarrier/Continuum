@@ -75,7 +75,30 @@ public class StreamProjectionGrainTests
         Assert.Equal(2, await projection.GetAppliedCount());
     }
 
-    private static Task AppendAsync(KurrentDBClient client, string streamName, ChatMessage message)
+    [Fact]
+    public async Task Stream_And_Batch_Delivery_Share_One_Watermark()
+    {
+        var key = Guid.NewGuid().ToString("N");
+        var streamName = $"{Constants.EventSourcedStreamPrefix}-{key}";
+
+        var projection = _fixture.Cluster.Client.GetGrain<IChatProjectionGrain>(key);
+        await projection.GetAppliedCount();
+
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await AppendAsync(client, streamName, new ChatMessage("Ada", "first", DateTimeOffset.UtcNow));
+        await WaitForAsync(projection, expectedCount: 1);
+
+        // Replays the event the Orleans stream already delivered through the batch entry point the non-Orleans
+        // subscriptions use. Both paths must consult the same watermark, so the replay is ignored.
+        var delivered = await projection.GetLastApplied();
+        Assert.NotNull(delivered);
+        await projection.AsReference<IProjectionGrain>().OnNextBatchAsync([delivered]);
+
+        Assert.Equal(new[] { "Ada" }, await projection.GetAuthors());
+        Assert.Equal(1, await projection.GetAppliedCount());
+    }
+
+    private static Task AppendAsync(
     {
         var data = JsonSerializer.SerializeToUtf8Bytes(message, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         var eventData = new EventData(Uuid.NewUuid(), EventTypeName, data);

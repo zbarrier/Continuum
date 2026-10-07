@@ -32,6 +32,8 @@ public class ChatProjectionGrain : ProjectionGrain<ChatProjectionGrain, ChatProj
     public Task<string[]> GetAuthors() => Task.FromResult(State.Authors.ToArray());
 
     public Task<int> GetAppliedCount() => Task.FromResult(State.AppliedCount);
+
+    public Task<IStreamedEvent<object>?> GetLastApplied() => Task.FromResult(State.LastApplied);
 }
 
 [GenerateSerializer]
@@ -40,6 +42,8 @@ public class ChatProjectionState : ProjectionState<ChatProjectionState>
     [Id(0)] public List<string> Authors { get; init; } = new();
 
     [Id(1)] public int AppliedCount { get; set; }
+
+    [Id(2)] public IStreamedEvent<object>? LastApplied { get; set; }
 
     protected override ValueTask<bool> Handle(IStreamedEvent<object> streamedEvent)
     {
@@ -50,6 +54,7 @@ public class ChatProjectionState : ProjectionState<ChatProjectionState>
 
         Authors.Add(message.Author);
         AppliedCount++;
+        LastApplied = streamedEvent;
         return ValueTask.FromResult(true);
     }
 }

@@ -11,4 +11,9 @@ public interface IChatProjectionGrain : IGrainWithStringKey
     ///     The number of events the projection state applied.
     /// </summary>
     Task<int> GetAppliedCount();
+
+    /// <summary>
+    ///     The last event the projection state applied, or <see langword="null"/> if none.
+    /// </summary>
+    Task<IStreamedEvent<object>?> GetLastApplied();
 }
