@@ -1,4 +1,5 @@
-﻿using System.Threading.Channels;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Threading.Channels;
 
 using Continuum.Streaming.Orleans.KurrentDB.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.Extensions;
@@ -193,11 +194,8 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
                 resolvedEvent.Event.EventType, StreamName, SubscriptionName);
             return;
         }
-        var deserializedEvent = _storageSerializer.Deserialize<object>(new BinaryDataWithType(resolvedEvent.Event.Data, eventType!));
-        if (deserializedEvent is null)
+        if (!TryDeserialize(resolvedEvent, eventType!, out var deserializedEvent))
         {
-            _logger.LogError("Failed to deserialize event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'.",
-                eventType, StreamName, SubscriptionName);
             return;
         }
 
@@ -351,17 +349,47 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
                 resolvedEvent.Event.EventType, StreamName, SubscriptionName);
             return;
         }
-        var deserializedEvent = _storageSerializer.Deserialize<object>(new BinaryDataWithType(resolvedEvent.Event.Data, eventType!));
-        if (deserializedEvent is null)
+        if (!TryDeserialize(resolvedEvent, eventType!, out var deserializedEvent))
         {
-            _logger.LogError("Failed to deserialize event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'.",
-                eventType, StreamName, SubscriptionName);
             return;
         }
 
         var streamEvent = resolvedEvent.ToStreamEvent(deserializedEvent);
 
         await _channel.Writer.WriteAsync(streamEvent, cancellationToken);
+    }
+
+    /// <summary>
+    /// Deserializes the event, logging and skipping it when it has no payload, cannot be read or reads as null, so that
+    /// a bad event written by a producer outside our control does not halt the subscription.
+    /// </summary>
+    private bool TryDeserialize(ResolvedEvent resolvedEvent, Type eventType, [NotNullWhen(true)] out object? deserializedEvent)
+    {
+        deserializedEvent = null;
+        var record = resolvedEvent.Event;
+        if (record.Data.IsEmpty)
+        {
+            _logger.LogWarning("Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it has no payload.",
+                record.EventType, record.EventStreamId, SubscriptionName);
+            return false;
+        }
+        try
+        {
+            deserializedEvent = _storageSerializer.Deserialize<object>(new BinaryDataWithType(record.Data, eventType));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it could not be deserialized.",
+                record.EventType, record.EventStreamId, SubscriptionName);
+            return false;
+        }
+        if (deserializedEvent is null)
+        {
+            _logger.LogWarning("Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it deserialized to null.",
+                record.EventType, record.EventStreamId, SubscriptionName);
+            return false;
+        }
+        return true;
     }
 
     private async Task ReceiveFromStreamChannel()

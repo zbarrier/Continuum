@@ -86,7 +86,8 @@ public class KurrentDBQueueDataAdapterV2 : IKurrentDBDataAdapter
     {
         if (kurrentDBMessage.Data.Length == 0)
         {
-            return KurrentDBEventMaterialization.Resolved(null);
+            _logger?.LogWarning("Skipping KurrentDB event of type \"{EventType}\" on stream \"{StreamId}\" because it has no payload.", kurrentDBMessage.EventType, kurrentDBMessage.StreamId);
+            return KurrentDBEventMaterialization.Suppressed();
         }
         if (!_options.TypeMapper.TryGetType(kurrentDBMessage.EventType, out var eventType))
         {
@@ -98,7 +99,22 @@ public class KurrentDBQueueDataAdapterV2 : IKurrentDBDataAdapter
             }
             return KurrentDBEventMaterialization.Faulted(fault);
         }
-        return KurrentDBEventMaterialization.Resolved(_options.GrainStorageSerializer.Deserialize<object>(new BinaryDataWithType(kurrentDBMessage.Data, eventType!)));
+        object? @event;
+        try
+        {
+            @event = _options.GrainStorageSerializer.Deserialize<object>(new BinaryDataWithType(kurrentDBMessage.Data, eventType!));
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Skipping KurrentDB event of type \"{EventType}\" on stream \"{StreamId}\" because it could not be deserialized.", kurrentDBMessage.EventType, kurrentDBMessage.StreamId);
+            return KurrentDBEventMaterialization.Suppressed();
+        }
+        if (@event is null)
+        {
+            _logger?.LogWarning("Skipping KurrentDB event of type \"{EventType}\" on stream \"{StreamId}\" because it deserialized to null.", kurrentDBMessage.EventType, kurrentDBMessage.StreamId);
+            return KurrentDBEventMaterialization.Suppressed();
+        }
+        return KurrentDBEventMaterialization.Resolved(@event);
     }
 
     /// <summary>
