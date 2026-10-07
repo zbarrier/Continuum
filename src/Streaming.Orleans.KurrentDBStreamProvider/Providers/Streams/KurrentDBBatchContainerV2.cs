@@ -132,7 +132,7 @@ public class KurrentDBBatchContainerV2 : IBatchContainer, IKurrentDBCommitPositi
             // advancing the consumer past an event it never received.
             throw new InvalidOperationException(Fault);
         }
-        return [Tuple.Create((T)(object)ToStreamedEvent(Payload), (StreamSequenceToken)new KurrentDBSequenceTokenV2(Token.Position, Token.SequenceNumber, 0))];
+        return [Tuple.Create((T)(object)ToStreamedEvent(Payload ?? throw new InvalidOperationException("A resolved KurrentDB record has no event.")), (StreamSequenceToken)new KurrentDBSequenceTokenV2(Token.Position, Token.SequenceNumber, 0))];
     }
 
     /// <summary>
@@ -141,7 +141,7 @@ public class KurrentDBBatchContainerV2 : IBatchContainer, IKurrentDBCommitPositi
     /// <summary>
     ///     Rebuilds the streamed event envelope for the event this record holds.
     /// </summary>
-    private StreamedEvent<object> ToStreamedEvent(object? @event)
+    private StreamedEvent<object> ToStreamedEvent(object @event)
     {
         return new StreamedEvent<object>(
             NewId.FromSequentialGuid(Guid.Parse(KurrentDBMessage.EventId)),

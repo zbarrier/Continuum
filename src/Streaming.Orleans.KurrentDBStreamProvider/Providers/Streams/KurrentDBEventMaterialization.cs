@@ -21,7 +21,7 @@ public readonly struct KurrentDBEventMaterialization
     }
 
     /// <summary>
-    ///     The materialized event, or <see langword="null" /> when the record carried no payload.
+    ///     The materialized event, or <see langword="null" /> when the record is suppressed or faulted.
     /// </summary>
     public object? Event { get; }
 
@@ -36,10 +36,11 @@ public readonly struct KurrentDBEventMaterialization
     public bool IsSuppressed { get; }
 
     /// <summary>
-    ///     The event was materialized, or the record carried no payload.
+    ///     The event was materialized.
     /// </summary>
-    public static KurrentDBEventMaterialization Resolved(object? @event)
+    public static KurrentDBEventMaterialization Resolved(object @event)
     {
+        ArgumentNullException.ThrowIfNull(@event);
         return new KurrentDBEventMaterialization(@event, null, false);
     }
 
