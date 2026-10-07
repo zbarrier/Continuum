@@ -98,7 +98,7 @@ public class StreamProjectionGrainTests
         Assert.Equal(1, await projection.GetAppliedCount());
     }
 
-    private static Task AppendAsync(
+    private static Task AppendAsync(KurrentDBClient client, string streamName, ChatMessage message)
     {
         var data = JsonSerializer.SerializeToUtf8Bytes(message, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         var eventData = new EventData(Uuid.NewUuid(), EventTypeName, data);
