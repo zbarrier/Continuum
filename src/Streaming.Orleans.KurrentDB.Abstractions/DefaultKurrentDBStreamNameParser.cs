@@ -13,6 +13,7 @@ public sealed class DefaultKurrentDBStreamNameParser : IStreamedNameParser
 {
     private const char CategorySeparator = '-';
 
+    /// <inheritdoc />
     public StreamedName Parse(string streamName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(streamName);

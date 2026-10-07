@@ -1,4 +1,5 @@
-﻿using Continuum.Streaming.Orleans;
+﻿using System.Diagnostics.CodeAnalysis;
+using Continuum.Streaming.Orleans;
 
 using Orleans.Streams;
 
@@ -25,7 +26,7 @@ public interface IKurrentDBQueueCache : IQueueFlowController, IDisposable
     /// <param name="streamId"></param>
     /// <param name="sequenceToken"></param>
     /// <returns></returns>
-    object GetCursor(StreamId streamId, StreamSequenceToken sequenceToken);
+    object GetCursor(StreamId streamId, StreamSequenceToken? sequenceToken);
 
     /// <summary>
     ///     Stop tracking a cursor that is no longer reading, so it no longer holds back purging.
@@ -57,7 +58,7 @@ public interface IKurrentDBQueueCache : IQueueFlowController, IDisposable
     /// <param name="cursorObj"></param>
     /// <param name="container"></param>
     /// <returns></returns>
-    bool TryGetNextMessage(object cursorObj, out IBatchContainer container);
+    bool TryGetNextMessage(object cursorObj, [MaybeNullWhen(false)] out IBatchContainer container);
 
     /// <summary>
     ///     Add cache pressure monitor to the cache's back pressure algorithm

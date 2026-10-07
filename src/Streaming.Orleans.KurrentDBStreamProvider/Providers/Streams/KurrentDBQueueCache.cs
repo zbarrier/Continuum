@@ -1,4 +1,5 @@
-﻿using Continuum.Streaming.Orleans;
+﻿using System.Diagnostics.CodeAnalysis;
+using Continuum.Streaming.Orleans;
 
 using KurrentDB.Client;
 
@@ -38,6 +39,7 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
     /// <param name="dataAdapter">Adapts EventRecord to cached.</param>
     /// <param name="evictionStrategy">Eviction strategy manage purge related events</param>
     /// <param name="checkpointer"></param>
+    /// <param name="cursorTracker">Tracks the cursors reading this cache so purging never passes one.</param>
     /// <param name="logger"></param>
     /// <param name="cacheMonitor"></param>
     /// <param name="cacheMonitorWriteInterval"></param>
@@ -96,7 +98,7 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
             // buffered, and lose them if the silo stopped before they were delivered.
             var lastPurged = lastItemPurged.Value;
             var commitPosition = _dataAdapter.GetCommitPosition(lastPurged);
-            _checkpointer.Update(commitPosition.ToString(), DateTime.UtcNow);
+            _checkpointer.Update(commitPosition.ToString(), DateTime.UtcNow, CancellationToken.None);
             // The receiver owns the $all checkpoint it resumes from, which is not the Orleans queue checkpointer, so
             // it has to be told separately that these events are done with.
             OnCheckpointablePosition?.Invoke(commitPosition);
@@ -155,7 +157,7 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
     /// <param name="streamId"></param>
     /// <param name="sequenceToken"></param>
     /// <returns></returns>
-    public object GetCursor(StreamId streamId, StreamSequenceToken sequenceToken)
+    public object GetCursor(StreamId streamId, StreamSequenceToken? sequenceToken)
     {
         var cursor = _cache.GetCursor(streamId, sequenceToken);
         _cursorTracker.Register(cursor);
@@ -183,7 +185,7 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
     /// <param name="cursorObj"></param>
     /// <param name="container"></param>
     /// <returns></returns>
-    public bool TryGetNextMessage(object cursorObj, out IBatchContainer container)
+    public bool TryGetNextMessage(object cursorObj, [MaybeNullWhen(false)] out IBatchContainer container)
     {
         if (!_cache.TryGetNextMessage(cursorObj, out container))
         {

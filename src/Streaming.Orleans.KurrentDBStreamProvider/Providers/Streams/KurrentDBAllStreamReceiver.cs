@@ -281,7 +281,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
                             }
                             // Resuming a dropped subscription must continue from the last event seen by the pump,
                             // otherwise the buffered but undelivered events would be received twice.
-                            startPosition = FromAll.After(resolvedEvent.OriginalPosition.Value);
+                            startPosition = FromAll.After(resolvedEvent.OriginalPosition.GetValueOrDefault());
                             break;
 
                         case StreamMessage.SubscriptionConfirmation:

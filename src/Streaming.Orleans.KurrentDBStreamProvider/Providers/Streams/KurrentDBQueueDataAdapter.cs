@@ -51,7 +51,6 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// <returns></returns>
     public virtual IBatchContainer GetBatchContainer(ref CachedMessage cachedMessage)
     {
-        ArgumentNullException.ThrowIfNull(cachedMessage, nameof(cachedMessage));
         var kurrentDBMessage = new KurrentDBMessage(cachedMessage);
         return GetBatchContainer(kurrentDBMessage);
     }
@@ -130,9 +129,8 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// <returns></returns>
     public virtual StreamSequenceToken GetSequenceToken(ref CachedMessage cachedMessage)
     {
-        ArgumentNullException.ThrowIfNull(cachedMessage, nameof(cachedMessage));
         var readOffset = 0;
-        var position = SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset);
+        var position = KurrentDBMessage.ReadRequiredString(cachedMessage.Segment, ref readOffset);
         return new KurrentDBSequenceToken(position, cachedMessage.SequenceNumber, cachedMessage.EventIndex);
     }
 
@@ -145,7 +143,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// <param name="sequenceToken">The sequence sequenceToken.</param>
     /// <param name="requestContext">The request context.</param>
     /// <returns>One record per event, appended together as a single transaction.</returns>
-    public virtual EventData[] ToQueueMessage<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken sequenceToken, Dictionary<string, object> requestContext)
+    public virtual EventData[] ToQueueMessage<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken? sequenceToken, Dictionary<string, object>? requestContext)
     {
         ArgumentNullException.ThrowIfNull(events, nameof(events));
         return KurrentDBEventDataFactory.ToEventData(streamId, events, _options);
@@ -190,9 +188,8 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// </summary>
     public virtual string GetPosition(CachedMessage cachedMessage)
     {
-        ArgumentNullException.ThrowIfNull(cachedMessage, nameof(cachedMessage));
         var readOffset = 0;
-        return SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset);
+        return KurrentDBMessage.ReadRequiredString(cachedMessage.Segment, ref readOffset);
     }
 
     /// <summary>
@@ -200,11 +197,10 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// </summary>
     public virtual ulong GetCommitPosition(CachedMessage cachedMessage)
     {
-        ArgumentNullException.ThrowIfNull(cachedMessage, nameof(cachedMessage));
         var readOffset = 0;
         // Skip the stream position, the commit position is written straight after it.
-        SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset);
-        return ulong.Parse(SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset));
+        KurrentDBMessage.ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        return ulong.Parse(KurrentDBMessage.ReadRequiredString(cachedMessage.Segment, ref readOffset));
     }
 
     /// <summary>

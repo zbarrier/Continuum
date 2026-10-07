@@ -29,6 +29,12 @@ public class KurrentDBMessage
     /// <param name="eventId"></param>
     /// <param name="eventType"></param>
     /// <param name="data"></param>
+    /// <param name="streamName">The KurrentDB stream the event was written to.</param>
+    /// <param name="streamVersion">The version of the event within its stream.</param>
+    /// <param name="timestamp">The time the event was recorded.</param>
+    /// <param name="metadata">The event metadata.</param>
+    /// <param name="topic">The topic parsed from the stream name.</param>
+    /// <param name="streamKey">The stream key parsed from the stream name.</param>
     public KurrentDBMessage(StreamId streamId, string position, ulong commitPosition, long sequenceNumber, DateTime enqueueTimeUtc, DateTime dequeueTimeUtc, 
         string eventId, string eventType, ReadOnlyMemory<byte> data,
         string? streamName = null, ulong streamVersion = 0, DateTime timestamp = default,
@@ -59,22 +65,26 @@ public class KurrentDBMessage
     {
         var readOffset = 0;
         StreamId = cachedMessage.StreamId;
-        Position = SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset);
-        CommitPosition = ulong.Parse(SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset));
+        Position = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        CommitPosition = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
         SequenceNumber = cachedMessage.SequenceNumber;
         EnqueueTimeUtc = cachedMessage.EnqueueTimeUtc;
         DequeueTimeUtc = cachedMessage.DequeueTimeUtc;
-        EventId = SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset);
-        EventType = SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset);
-        StreamName = SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset);
-        StreamKey = SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset);
-        Topic = SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset);
-        StreamVersion = ulong.Parse(SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset));
-        Timestamp = new DateTime(long.Parse(SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset)), DateTimeKind.Utc);
+        EventId = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        EventType = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        StreamName = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        StreamKey = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        Topic = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        StreamVersion = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
+        Timestamp = new DateTime(long.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset)), DateTimeKind.Utc);
         // Tracing and transaction values travel inside the metadata document rather than as their own fields.
-        Metadata = MetadataCodec.Read(Encoding.UTF8.GetBytes(SegmentBuilder.ReadNextString(cachedMessage.Segment, ref readOffset)));
+        Metadata = MetadataCodec.Read(Encoding.UTF8.GetBytes(ReadRequiredString(cachedMessage.Segment, ref readOffset)));
         Data = SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset);
     }
+
+    internal static string ReadRequiredString(ArraySegment<byte> segment, ref int readOffset) =>
+        SegmentBuilder.ReadNextString(segment, ref readOffset)
+        ?? throw new InvalidOperationException("Cached KurrentDB message segment contains an unexpected null string.");
 
     /// <summary>
     ///     The stream identifier.

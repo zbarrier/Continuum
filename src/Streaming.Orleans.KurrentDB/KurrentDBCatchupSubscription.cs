@@ -21,13 +21,30 @@ using Continuum.Streaming.Orleans;
 
 namespace Continuum.Streaming.Orleans.KurrentDB;
 
+/// <summary>
+///     Identifies a catch-up subscription for registration.
+/// </summary>
+/// <param name="Name">The subscription name, which is also its options name.</param>
+/// <param name="Type">The subscription type.</param>
 public record KurrentDBCatchupSubscriptionInfo(string Name, Type Type);
 
+/// <summary>
+///     A hosted catch-up subscription that reads a KurrentDB stream and delivers events in batches.
+/// </summary>
+/// <typeparam name="TSubscription">The concrete subscription type.</typeparam>
+/// <typeparam name="TOptions">The subscription options type.</typeparam>
 public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : BackgroundService, IStreamSubscription
     where TSubscription : KurrentDBCatchupSubscription<TSubscription, TOptions>
     where TOptions : KurrentDBCatchupSubscriptionOptions, new()
 {
+    /// <summary>
+    ///     The subscription name, derived from <typeparamref name="TSubscription" /> without a <c>CatchupSubscription</c> suffix.
+    /// </summary>
     public static readonly string Name;
+
+    /// <summary>
+    ///     The subscription type.
+    /// </summary>
     public static readonly Type Type = typeof(TSubscription);
     static KurrentDBCatchupSubscription()
     {
@@ -42,22 +59,37 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
         }
         Name = name;
     }
+    /// <summary>
+    ///     The registration info for this subscription.
+    /// </summary>
     public static KurrentDBCatchupSubscriptionInfo Info => new(Name, Type);
 
     private readonly IServiceProvider _serviceProvider;
 
+    /// <summary>The logger.</summary>
     protected readonly ILogger<TSubscription> _logger;
+    /// <summary>The subscription options.</summary>
     protected readonly TOptions _options;
+    /// <summary>The KurrentDB client the subscription reads from.</summary>
     protected readonly KurrentDBClient _client;
+    /// <summary>The monitor that commits the subscription's checkpoint.</summary>
     protected readonly KurrentDBCheckpointMonitor _checkpointMonitor;
+    /// <summary>The serializer used to deserialize event payloads.</summary>
     protected readonly IGrainStorageSerializer _storageSerializer;
+    /// <summary>The type mapper used to resolve event types.</summary>
     protected readonly ITypeMapper _typeMapper;
 
+    /// <summary>The channel buffering events between the subscription and the batch processor.</summary>
     protected readonly Channel<StreamedEvent<object>> _channel;
 
+    /// <summary>The task processing events from <see cref="_channel" />.</summary>
     protected Task? _receivingTask = null;
 
 
+    /// <summary>
+    ///     Initializes a new instance of the subscription.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider used to resolve options and dependencies.</param>
     public KurrentDBCatchupSubscription(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -82,10 +114,22 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
         });
     }
 
+    /// <summary>
+    ///     The subscription name.
+    /// </summary>
     public string SubscriptionName => Name;
+
+    /// <summary>
+    ///     The stream the subscription reads.
+    /// </summary>
     public abstract StreamName StreamName { get; }
+
+    /// <summary>
+    ///     The server-side filter applied when reading <c>$all</c>, or <see langword="null" /> for none.
+    /// </summary>
     public abstract IEventFilter? FilterOptions { get; }
 
+    /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         if (StreamName.IsAllStream)
@@ -214,7 +258,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
             {
                 lastStreamPosition = StreamSequenceNumber.ToCommitPosition(streamedEvent.SequenceNumber, streamedEvent.StreamName);
 
-                if (streamedEvent.Event is null)
+                if (ReferenceEquals(streamedEvent.Event, StreamEventExtensions.CheckpointMarker))
                 {
                     continue;
                 }
@@ -375,7 +419,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
             {
                 lastStreamPosition = streamEvent.StreamPosition;
 
-                if (streamEvent.Event is null)
+                if (ReferenceEquals(streamEvent.Event, StreamEventExtensions.CheckpointMarker))
                 {
                     continue;
                 }
@@ -411,5 +455,9 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
 
     #endregion
 
+    /// <summary>
+    ///     Processes a batch of events read from the stream.
+    /// </summary>
+    /// <param name="streamEvents">The events, in stream order.</param>
     protected abstract Task OnNextBatchAsync(List<IStreamedEvent<object>> streamEvents);
 }

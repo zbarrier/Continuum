@@ -29,7 +29,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     private readonly IServiceProvider _serviceProvider;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IEnvironmentStatisticsProvider? _environmentStatisticsProvider;
-    private readonly Func<KurrentDBReceiverSettings, string, ILogger, IKurrentDBReceiver>? _receiverFactory;
+    private readonly Func<KurrentDBReceiverSettings, string, ILogger, IKurrentDBReceiver> _receiverFactory;
 
     private IStreamQueueCheckpointerFactory? _checkpointerFactory;
 
@@ -107,7 +107,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     ///     The batch becomes one KurrentDB record per event, appended together so the whole batch commits or none of
     ///     it does. The records carry the transaction metadata that identifies them as one append.
     /// </remarks>
-    public Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
+    public Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken? token, Dictionary<string, object>? requestContext)
     {
         var records = _dataAdapter.ToQueueMessage(streamId, events, token, requestContext);
         if (records.Length == 0)
@@ -168,7 +168,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
         {
             _checkpointerFactory = _serviceProvider.GetRequiredKeyedService<IStreamQueueCheckpointerFactory>(Name);
         }
-        return new KurrentDBQueueAdapterReceiver(receiverSettings, _cacheFactory, _checkpointerFactory.Create, _loggerFactory, _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory), _serviceProvider.GetRequiredService<IOptions<LoadSheddingOptions>>().Value, _environmentStatisticsProvider, _receiverFactory);
+        return new KurrentDBQueueAdapterReceiver(receiverSettings, _cacheFactory, queue => _checkpointerFactory.Create(queue, CancellationToken.None), _loggerFactory, _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory), _serviceProvider.GetRequiredService<IOptions<LoadSheddingOptions>>().Value, _environmentStatisticsProvider, _receiverFactory);
     }
 
     #endregion

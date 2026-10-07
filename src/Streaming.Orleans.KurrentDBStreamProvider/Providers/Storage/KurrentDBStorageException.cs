@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization;
-
-namespace Orleans.Streaming.KurrentDBStorage;
+﻿namespace Orleans.Streaming.KurrentDBStorage;
 
 /// <summary>
 ///     Exception for throwing from KurrentDB stream storage.
@@ -31,12 +29,6 @@ public class KurrentDBStorageException : Exception
     /// <param name="inner">The exception that is the cause of the current exception, or a null reference (Nothing in Visual Basic) if no inner exception is specified.</param>
     public KurrentDBStorageException(string message, Exception inner)
         : base(message, inner)
-    {
-    }
-
-    /// <inheritdoc />
-    protected KurrentDBStorageException(SerializationInfo info, StreamingContext context)
-        : base(info, context)
     {
     }
 }

@@ -297,7 +297,7 @@ public static class KurrentDBEventMetadataCodec
     /// <remarks>
     ///     Numbers and booleans keep their raw JSON text so they round trip. Objects and arrays keep their raw JSON
     ///     too, so nothing is silently dropped, but they are never parsed into anything. Null becomes a null value,
-    ///     which <see cref="StreamedEventMetadata.Create" /> then skips.
+    ///     which <see cref="StreamedEventMetadata.Create(IEnumerable{KeyValuePair{string, string}})" /> then skips.
     /// </remarks>
     private static string? ReadValue(JsonElement value)
     {

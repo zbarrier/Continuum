@@ -13,10 +13,20 @@ using Orleans.Configuration;
 
 namespace Continuum.Orleans.Hosting;
 
+/// <summary>
+///     Registers KurrentDB catch-up subscriptions and checkpoint stores.
+/// </summary>
 public static class KurrentDBStreamingBuilderExtensions
 {
     const string CatchupSubscriptionsConfigKeyPrefix = "Continuum:Orleans:Streaming:KurrentDB:CatchupSubscriptions";
 
+    /// <summary>
+    ///     Registers a catch-up subscription as a hosted service, binding its options from configuration.
+    /// </summary>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="subscriptionInfo">The subscription to register.</param>
+    /// <param name="typeMapKinds">The kinds of mapped types the subscription resolves events with.</param>
+    /// <returns>The host builder.</returns>
     public static IHostApplicationBuilder AddKurrentDBCatchupSubscription(this IHostApplicationBuilder builder,
         KurrentDBCatchupSubscriptionInfo subscriptionInfo,
         TypeMapKinds typeMapKinds = TypeMapKinds.DomainEvent)
@@ -41,6 +51,12 @@ public static class KurrentDBStreamingBuilderExtensions
 
 
 
+    /// <summary>
+    ///     Registers a <see cref="KurrentDBCheckpointStore" /> keyed by a KurrentDB connection name.
+    /// </summary>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="connectionName">The keyed KurrentDB client connection name.</param>
+    /// <returns>The host builder.</returns>
     public static IHostApplicationBuilder AddKurrentDBCheckpointStore(this IHostApplicationBuilder builder, string connectionName)
     {
         builder.Services.AddKeyedSingleton<ICheckpointStore<ulong>>(connectionName, (provider, key) =>

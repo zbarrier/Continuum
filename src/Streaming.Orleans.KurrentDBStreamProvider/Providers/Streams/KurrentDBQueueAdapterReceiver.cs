@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics;
 
 using Continuum.Streaming.Orleans;
 
@@ -102,7 +103,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
             {
                 _flowController.Add(LoadShedQueueFlowController.CreateAsPercentOfLoadSheddingLimit(_loadSheddingOptions, _environmentStatisticsProvider));
             }
-            var position = await _checkpointer.Load();
+            var position = await _checkpointer.Load(CancellationToken.None);
             _receiver = _kurrentDBReceiverFactory(_settings, position, _logger);
             await _receiver.InitAsync();
             watch.Stop();
@@ -205,7 +206,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         {
             // Seed the checkpoint with the commit position of the first event so a restart before the first purge
             // resumes from the start of this batch rather than from the beginning of the log.
-            _checkpointer.Update(messages[0].SequenceNumber.ToString(), DateTime.UtcNow);
+            _checkpointer.Update(messages[0].SequenceNumber.ToString(), DateTime.UtcNow, CancellationToken.None);
         }
         return batches;
     }
@@ -257,7 +258,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
     }
 
     /// <inheritdoc />
-    public bool TryPurgeFromCache(out IList<IBatchContainer>? purgedItems)
+    public bool TryPurgeFromCache([MaybeNullWhen(false)] out IList<IBatchContainer> purgedItems)
     {
         purgedItems = null;
         // if not under pressure, signal the cache to do a time based purge
@@ -270,7 +271,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
     }
 
     /// <inheritdoc />
-    public IQueueCacheCursor GetCacheCursor(StreamId streamId, StreamSequenceToken token)
+    public IQueueCacheCursor GetCacheCursor(StreamId streamId, StreamSequenceToken? token)
     {
         return new Cursor(_cache!, streamId, token);
     }
@@ -327,7 +328,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         private IBatchContainer _current;
         private bool _deliveryFailed;
 
-        public Cursor(IKurrentDBQueueCache cache, StreamId streamId, StreamSequenceToken token)
+        public Cursor(IKurrentDBQueueCache cache, StreamId streamId, StreamSequenceToken? token)
         {
             _cache = cache;
             _cursor = cache.GetCursor(streamId, token);

@@ -80,8 +80,16 @@ public class KurrentDBCheckpointer : IStreamQueueCheckpointer<string>
     ///     Loads the checkpoint.
     /// </summary>
     /// <returns>The checkpoint.</returns>
-    public async Task<string> Load()
+    public Task<string> Load() => Load(CancellationToken.None);
+
+    /// <summary>
+    ///     Loads the checkpoint.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The checkpoint.</returns>
+    public async Task<string> Load(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var checkpointState = await _stateManager.ReadStateAsync<KurrentDBCheckpointState>(_streamName);
         if (checkpointState != null)
         {
@@ -95,8 +103,17 @@ public class KurrentDBCheckpointer : IStreamQueueCheckpointer<string>
     /// </summary>
     /// <param name="position">The position.</param>
     /// <param name="utcNow">The current UTC time.</param>
-    public void Update(string position, DateTime utcNow)
+    public void Update(string position, DateTime utcNow) => Update(position, utcNow, CancellationToken.None);
+
+    /// <summary>
+    ///     Updates the checkpoint.
+    /// </summary>
+    /// <param name="position">The position.</param>
+    /// <param name="utcNow">The current UTC time.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public void Update(string position, DateTime utcNow, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         // if position has not changed, do nothing
         if (string.Compare(_checkPointState.Position, position, StringComparison.Ordinal) == 0)
         {

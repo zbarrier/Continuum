@@ -64,8 +64,17 @@ public class KurrentDBCheckpointerFactory : IStreamQueueCheckpointerFactory
     /// </summary>
     /// <param name="queue">The queue name.</param>
     /// <returns>The stream checkpointer.</returns>
-    public Task<IStreamQueueCheckpointer<string>> Create(string queue)
+    public Task<IStreamQueueCheckpointer<string>> Create(string queue) => Create(queue, CancellationToken.None);
+
+    /// <summary>
+    ///     Creates a stream checkpointer for the specified queue.
+    /// </summary>
+    /// <param name="queue">The queue name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The stream checkpointer.</returns>
+    public Task<IStreamQueueCheckpointer<string>> Create(string queue, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult<IStreamQueueCheckpointer<string>>(KurrentDBCheckpointer.Create(_clusterOptions.ServiceId, _providerName, queue, _options, _serviceProvider, _serializer, _loggerFactory));
     }
 
