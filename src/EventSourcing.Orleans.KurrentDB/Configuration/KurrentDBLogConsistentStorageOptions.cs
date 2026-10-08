@@ -1,5 +1,6 @@
-﻿using Continuum;
+using Continuum;
 using Continuum.Orleans.KurrentDB;
+using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
 
 using KurrentDB.Client;
@@ -115,6 +116,10 @@ public class DefaultKurrentDBLogConsistentStorageOptionsConfigurator : IPostConf
         if (options.GrainStorageSerializer is null)
         {
             options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.ConnectionName);
+        }
+        if (options.GrainStorageSerializer is TypeMappedJsonGrainStorageSerializer typeMappedSerializer)
+        {
+            options.GrainStorageSerializer = typeMappedSerializer.WithRequiredStoredType();
         }
         if (options.StreamNameFormatter is null)
         {

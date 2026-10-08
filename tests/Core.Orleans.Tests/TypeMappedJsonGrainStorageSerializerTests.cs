@@ -102,6 +102,19 @@ public sealed class TypeMappedJsonGrainStorageSerializerTests
     }
 
     [Fact]
+    public void WithRequiredStoredType_returns_strict_serializer()
+    {
+        var serializer = new TypeMappedJsonGrainStorageSerializer(TypeMappedJsonGrainStorageSerializer.DefaultOptions);
+
+        var strict = serializer.WithRequiredStoredType();
+
+        Assert.False(serializer.RequireStoredType);
+        Assert.True(strict.RequireStoredType);
+        Assert.Same(strict, strict.WithRequiredStoredType());
+        Assert.Throws<ArgumentException>(() => strict.Deserialize<StoredEvent>(strict.Serialize(Sample)));
+    }
+
+    [Fact]
     public void Deserialize_null_payload_throws()
     {
         var serializer = new TypeMappedJsonGrainStorageSerializer(TypeMappedJsonGrainStorageSerializer.DefaultOptions);

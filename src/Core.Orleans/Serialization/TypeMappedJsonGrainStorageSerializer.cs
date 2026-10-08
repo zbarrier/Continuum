@@ -32,6 +32,25 @@ public sealed class TypeMappedJsonGrainStorageSerializer : IGrainStorageSerializ
     private readonly JsonSerializerOptions _options;
     private readonly bool _requireStoredType;
 
+    private TypeMappedJsonGrainStorageSerializer(JsonSerializerOptions frozenOptions, bool strict)
+    {
+        _options = frozenOptions;
+        _requireStoredType = strict;
+    }
+
+    /// <summary>
+    /// Whether <see cref="Deserialize{T}"/> requires a <see cref="BinaryDataWithType"/> input.
+    /// </summary>
+    public bool RequireStoredType => _requireStoredType;
+
+    /// <summary>
+    /// Returns a serializer with the same settings that requires a <see cref="BinaryDataWithType"/> input, for
+    /// storage providers that always supply the stored type.
+    /// </summary>
+    /// <returns>This instance if it already requires the stored type; otherwise a new instance that does.</returns>
+    public TypeMappedJsonGrainStorageSerializer WithRequiredStoredType()
+        => _requireStoredType ? this : new(_options, true);
+
     /// <param name="options">The serializer options. They are copied, so the instance passed in is not modified.</param>
     /// <param name="typeInfoResolver">
     /// Optional resolver providing JSON metadata for persisted types. Required when reflection-based serialization is disabled (Native AOT).

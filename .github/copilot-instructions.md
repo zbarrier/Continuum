@@ -13,3 +13,4 @@
 - Orleans [Alias] names in Continuum should not include an "Orleans" segment, since being for Orleans is implied (e.g., "Continuum.KurrentDBStorageException.V1", not "Continuum.Orleans.KurrentDBStorageException.V1").
 - Add a test project only when the library has behavior that genuinely needs testing; Continuum libraries do not each need their own test project.
 - Abstractions projects must not know anything about implementation projects. Tests that need implementation types or internals belong in the implementation's own test project (e.g., Continuum.Streaming.Orleans.KurrentDB.Tests), never in the Abstractions test project; InternalsVisibleTo should only grant access to the implementation's own test project.
+- Continuum event-sourcing storage providers (KurrentDB, CosmosDB) must always use TypeMappedJsonGrainStorageSerializer with requireStoredType: true; the option defaults to false for all other uses (e.g., grain state storage).

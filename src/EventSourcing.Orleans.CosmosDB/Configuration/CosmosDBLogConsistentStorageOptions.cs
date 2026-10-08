@@ -1,7 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 using Continuum;
 using Continuum.EventSourcing.Orleans.CosmosDB;
+using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -126,6 +127,10 @@ public class DefaultCosmosDBLogConsistentStorageOptionsConfigurator : IPostConfi
         if (options.GrainStorageSerializer is null)
         {
             options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.ConnectionName);
+        }
+        if (options.GrainStorageSerializer is TypeMappedJsonGrainStorageSerializer typeMappedSerializer)
+        {
+            options.GrainStorageSerializer = typeMappedSerializer.WithRequiredStoredType();
         }
         if (options.StreamNameFormatter is null)
         {
