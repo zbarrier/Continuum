@@ -25,29 +25,33 @@ public static class TypeMappedJsonGrainStorageSerializerBuilderExtensions
     /// <param name="includeDefaultConverters">Whether to add <see cref="NewIdConverter"/>.</param>
     /// <param name="typeInfoResolver">Optional JSON metadata resolver, such as a <see cref="JsonSerializerContext"/>. Required for Native AOT.</param>
     /// <param name="jsonConverters">Additional converters.</param>
+    /// <param name="requireStoredType">Whether deserialization requires a <see cref="BinaryDataWithType"/> input. Enable for type-mapped event-sourcing storage.</param>
     /// <returns>The host application builder.</returns>
     public static IHostApplicationBuilder AddTypeMappedJsonGrainStorageSerializer(this IHostApplicationBuilder builder,
         string connectionName,
         bool includeDefaultConverters = true,
         IJsonTypeInfoResolver? typeInfoResolver = null,
+        bool requireStoredType = false,
         params JsonConverter[] jsonConverters)
     {
-        _ = builder.Services.AddTypeMappedJsonGrainStorageSerializer(connectionName, includeDefaultConverters, typeInfoResolver, jsonConverters);
+        _ = builder.Services.AddTypeMappedJsonGrainStorageSerializer(connectionName, includeDefaultConverters, typeInfoResolver, requireStoredType, jsonConverters);
 
         return builder;
     }
 
-    /// <inheritdoc cref="AddTypeMappedJsonGrainStorageSerializer(IHostApplicationBuilder, string, bool, IJsonTypeInfoResolver?, JsonConverter[])"/>
+    /// <inheritdoc cref="AddTypeMappedJsonGrainStorageSerializer(IHostApplicationBuilder, string, bool, IJsonTypeInfoResolver?, bool, JsonConverter[])"/>
     /// <param name="services">The service collection.</param>
     /// <param name="connectionName">The service key for the serializer.</param>
     /// <param name="includeDefaultConverters">Whether to add <see cref="NewIdConverter"/>.</param>
     /// <param name="typeInfoResolver">Optional JSON metadata resolver, such as a <see cref="JsonSerializerContext"/>. Required for Native AOT.</param>
+    /// <param name="requireStoredType">Whether deserialization requires a <see cref="BinaryDataWithType"/> input. Enable for type-mapped event-sourcing storage.</param>
     /// <param name="jsonConverters">Additional converters.</param>
     /// <returns>The service collection.</returns>
     public static IServiceCollection AddTypeMappedJsonGrainStorageSerializer(this IServiceCollection services,
         string connectionName,
         bool includeDefaultConverters = true,
         IJsonTypeInfoResolver? typeInfoResolver = null,
+        bool requireStoredType = false,
         params JsonConverter[] jsonConverters)
     {
         services.AddKeyedSingleton<IGrainStorageSerializer>(connectionName, (sp, cn) =>
@@ -61,7 +65,7 @@ public static class TypeMappedJsonGrainStorageSerializerBuilderExtensions
             {
                 options.Converters.Add(converter);
             }
-            return new TypeMappedJsonGrainStorageSerializer(options, typeInfoResolver);
+            return new TypeMappedJsonGrainStorageSerializer(options, typeInfoResolver, requireStoredType);
         });
 
         return services;

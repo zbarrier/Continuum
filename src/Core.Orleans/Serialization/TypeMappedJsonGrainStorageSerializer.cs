@@ -9,8 +9,9 @@ using Orleans.Storage;
 namespace Continuum.Serialization.Orleans;
 
 /// <summary>
-/// System.Text.Json grain storage serializer that deserializes to the runtime type carried by
-/// <see cref="BinaryDataWithType"/>, as required by type-mapped event-sourcing storage.
+/// System.Text.Json grain storage serializer. Deserializes to the runtime type carried by
+/// <see cref="BinaryDataWithType"/> when the storage provider supplies one, as type-mapped event-sourcing storage does,
+/// and otherwise to the type requested by the provider, as grain state storage such as memory storage does.
 /// </summary>
 /// <remarks>
 /// For trimming and Native AOT, supply an <see cref="IJsonTypeInfoResolver"/> (typically a source-generated
@@ -29,15 +30,22 @@ public sealed class TypeMappedJsonGrainStorageSerializer : IGrainStorageSerializ
     };
 
     private readonly JsonSerializerOptions _options;
+    private readonly bool _requireStoredType;
 
     /// <param name="options">The serializer options. They are copied, so the instance passed in is not modified.</param>
     /// <param name="typeInfoResolver">
     /// Optional resolver providing JSON metadata for persisted types. Required when reflection-based serialization is disabled (Native AOT).
     /// </param>
-    public TypeMappedJsonGrainStorageSerializer(JsonSerializerOptions options, IJsonTypeInfoResolver? typeInfoResolver = null)
+    /// <param name="requireStoredType">
+    /// When true, <see cref="Deserialize{T}"/> requires a <see cref="BinaryDataWithType"/> input and throws otherwise, as
+    /// type-mapped event-sourcing storage expects. When false, plain <see cref="BinaryData"/> is deserialized to the requested type.
+    /// </param>
+    public TypeMappedJsonGrainStorageSerializer(JsonSerializerOptions options, IJsonTypeInfoResolver? typeInfoResolver = null,
+        bool requireStoredType = false)
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        _requireStoredType = requireStoredType;
         _options = new JsonSerializerOptions(options)
         {
             TypeInfoResolver = typeInfoResolver ?? options.TypeInfoResolver ?? CreateReflectionResolver()
@@ -60,20 +68,36 @@ public sealed class TypeMappedJsonGrainStorageSerializer : IGrainStorageSerializ
     }
 
     /// <summary>
-    /// Deserializes the specified input payload. The input must be of type <see cref="BinaryDataWithType" />.
+    /// Deserializes the specified input payload.
     /// </summary>
     /// <typeparam name="T">The expected type of the deserialized object.</typeparam>
-    /// <param name="input">The input to be deserialized. It should be of type <see cref="BinaryDataWithType" />.</param>
+    /// <param name="input">
+    /// The input to be deserialized. When it is a <see cref="BinaryDataWithType" />, its carried type is used;
+    /// otherwise <typeparamref name="T"/> is used.
+    /// </param>
     /// <returns>The deserialized object.</returns>
-    /// <exception cref="ArgumentException"><paramref name="input"/> is not a <see cref="BinaryDataWithType"/> or deserializes to null.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="input"/> deserializes to null, or stored types are required and <paramref name="input"/> is not a <see cref="BinaryDataWithType"/>.
+    /// </exception>
     public T Deserialize<T>(BinaryData input)
     {
-        if (input is not BinaryDataWithType dataWithType)
+        ArgumentNullException.ThrowIfNull(input);
+
+        Type type;
+        if (input is BinaryDataWithType dataWithType)
+        {
+            type = dataWithType.Type;
+        }
+        else if (_requireStoredType)
         {
             throw new ArgumentException($"Input type must be of type '{nameof(BinaryDataWithType)}'.", nameof(input));
         }
+        else
+        {
+            type = typeof(T);
+        }
 
-        var obj = JsonSerializer.Deserialize(input.ToMemory().Span, _options.GetTypeInfo(dataWithType.Type))
+        var obj = JsonSerializer.Deserialize(input.ToMemory().Span, _options.GetTypeInfo(type))
             ?? throw new ArgumentException("Deserialized object is null.", nameof(input));
         return (T)obj;
     }

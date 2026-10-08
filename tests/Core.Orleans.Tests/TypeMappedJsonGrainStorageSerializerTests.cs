@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Continuum.Hosting.Orleans;
@@ -83,9 +83,20 @@ public sealed class TypeMappedJsonGrainStorageSerializerTests
     }
 
     [Fact]
-    public void Deserialize_requires_BinaryDataWithType()
+    public void Deserialize_plain_BinaryData_uses_requested_type()
     {
         var serializer = new TypeMappedJsonGrainStorageSerializer(TypeMappedJsonGrainStorageSerializer.DefaultOptions);
+
+        var restored = serializer.Deserialize<StoredEvent>(serializer.Serialize(Sample));
+
+        Assert.Equal(Sample.Id, restored.Id);
+        Assert.Equal(Sample.Name, restored.Name);
+    }
+
+    [Fact]
+    public void Deserialize_requires_BinaryDataWithType_when_stored_type_required()
+    {
+        var serializer = new TypeMappedJsonGrainStorageSerializer(TypeMappedJsonGrainStorageSerializer.DefaultOptions, requireStoredType: true);
 
         Assert.Throws<ArgumentException>(() => serializer.Deserialize<StoredEvent>(serializer.Serialize(Sample)));
     }

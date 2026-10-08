@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 
 using Orleans.Serialization;
 using Orleans.Storage;
@@ -37,7 +37,7 @@ public class StreamedEventNewtonsoftStorageTests
     {
         var restored = RoundTrip(new Holder { Event = Event(null) }).Event!;
 
-        Assert.Equal(0, restored.Metadata.Count);
+        Assert.Empty(restored.Metadata);
         Assert.Equal("payload", ((Payload)restored.Event).Text);
     }
 
