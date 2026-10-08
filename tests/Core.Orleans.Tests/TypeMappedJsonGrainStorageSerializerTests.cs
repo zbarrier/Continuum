@@ -121,4 +121,22 @@ public sealed class TypeMappedJsonGrainStorageSerializerTests
         Assert.IsType<TypeMappedJsonGrainStorageSerializer>(serializer);
         AssertEqual(Sample, RoundTrip(serializer, Sample));
     }
+
+    [Fact]
+    public void Extension_creates_converters_from_service_provider()
+    {
+        IServiceProvider? received = null;
+        var provider = new ServiceCollection()
+            .AddTypeMappedJsonGrainStorageSerializer("store", sp =>
+            {
+                received = sp;
+                return [];
+            }, typeInfoResolver: TestJsonContext.Default)
+            .BuildServiceProvider();
+
+        var serializer = provider.GetRequiredKeyedService<IGrainStorageSerializer>("store");
+
+        Assert.NotNull(received);
+        AssertEqual(Sample, RoundTrip(serializer, Sample));
+    }
 }
