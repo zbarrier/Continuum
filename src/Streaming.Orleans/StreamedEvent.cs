@@ -23,14 +23,14 @@ public sealed class StreamedEvent<T> : IStreamedEvent<T> where T : class
     /// <param name="sequenceNumber">The sequence number of the event within the topic partition.</param>
     /// <param name="subSequenceNumber">The order of the event among events sharing <paramref name="sequenceNumber"/>.</param>
     /// <param name="timestamp">The time the event was recorded.</param>
-    /// <param name="evt">The event payload.</param>
+    /// <param name="event">The event payload.</param>
     /// <param name="metadata">The event metadata, or <see langword="null"/> for none.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="evt"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="event"/> is <see langword="null"/>.</exception>
     public StreamedEvent(NewId eventId, string eventType, string streamName, string streamKey, string topic, string partitionId,
         ulong streamVersion, ulong streamPosition, BigInteger sequenceNumber, ulong subSequenceNumber, DateTime timestamp,
-        T evt, IStreamedEventMetadata? metadata = null)
+        T @event, IStreamedEventMetadata? metadata = null)
     {
-        ArgumentNullException.ThrowIfNull(evt);
+        ArgumentNullException.ThrowIfNull(@event);
 
         EventId = eventId;
         EventType = eventType;
@@ -43,7 +43,7 @@ public sealed class StreamedEvent<T> : IStreamedEvent<T> where T : class
         SequenceNumber = sequenceNumber;
         SubSequenceNumber = subSequenceNumber;
         Timestamp = timestamp;
-        Event = evt;
+        Event = @event;
         Metadata = metadata ?? StreamedEventMetadata.Empty;
     }
 
@@ -96,6 +96,7 @@ public sealed class StreamedEvent<T> : IStreamedEvent<T> where T : class
     public T Event { get; init; }
 
     /// <inheritdoc />
+    [Newtonsoft.Json.JsonConverter(typeof(StreamedEventMetadataNewtonsoftConverter))]
     [Id(12)]
     public IStreamedEventMetadata Metadata { get; init; } = StreamedEventMetadata.Empty;
 }

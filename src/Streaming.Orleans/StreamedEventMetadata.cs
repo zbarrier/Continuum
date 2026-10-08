@@ -7,6 +7,7 @@ namespace Continuum.Streaming.Orleans;
 
 /// <inheritdoc cref="IStreamedEventMetadata" />
 [Alias("Continuum.Streaming.StreamedEventMetadata.V1"), GenerateSerializer, Immutable]
+[Newtonsoft.Json.JsonConverter(typeof(StreamedEventMetadataNewtonsoftConverter))]
 public sealed class StreamedEventMetadata : IStreamedEventMetadata
 {
     /// <summary>

@@ -171,7 +171,7 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
             sequenceNumber: eventItem.LogicalSequenceNumber,
             subSequenceNumber: eventItem.SubSequenceNumber,
             timestamp: timestamp,
-            evt: deserializedEvent);
+            @event: deserializedEvent);
 
         return streamEvent;
     }

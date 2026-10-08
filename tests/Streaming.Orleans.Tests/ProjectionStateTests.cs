@@ -295,7 +295,7 @@ public class ProjectionStateTests
             sequenceNumber: new BigInteger(sequenceNumber),
             subSequenceNumber: subSequenceNumber,
             timestamp: DateTime.UtcNow,
-            evt: new object());
+            @event: new object());
     }
 
     private sealed class CountingProjectionState : ProjectionState<CountingProjectionState>

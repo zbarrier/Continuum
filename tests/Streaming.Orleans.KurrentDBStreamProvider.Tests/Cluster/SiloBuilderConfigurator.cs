@@ -13,6 +13,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Orleans.Configuration;
+using Orleans.Serialization;
+using Orleans.Storage;
 using Orleans.TestingHost;
 
 namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
@@ -21,6 +23,11 @@ public class TestSiloConfigurations : ISiloConfigurator
 {
     public void Configure(ISiloBuilder sb)
     {
+        // Orleans' binary serializer round-trips the [GenerateSerializer] state types exactly, where the default
+        // Newtonsoft serializer depends on every persisted type being Newtonsoft friendly.
+        sb.Services.AddOptions<MemoryGrainStorageOptions>("MemoryStorageProvider")
+          .PostConfigure<Serializer>((options, serializer) => options.GrainStorageSerializer = new OrleansGrainStorageSerializer(serializer));
+
         sb.AddMemoryGrainStorage("MemoryStorageProvider")
           .AddKurrentDBStreams(Constants.StreamProviderName, options =>
           {
