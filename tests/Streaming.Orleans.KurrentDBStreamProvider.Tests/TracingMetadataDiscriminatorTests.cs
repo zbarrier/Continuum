@@ -159,7 +159,7 @@ public class TracingMetadataDiscriminatorTests
             Assert.NotNull(activity);
             var data = JsonSerializer.SerializeToUtf8Bytes(message, new JsonSerializerOptions(JsonSerializerDefaults.Web));
             var eventData = new EventData(Uuid.NewUuid(), EventTypeName, data, callerMetadata, "application/json");
-            await client.AppendToStreamAsync(streamName, StreamState.Any, new[] { eventData });
+            await client.AppendToStreamAsync(streamName, StreamState.Any, new[] { eventData }, cancellationToken: TestContext.Current.CancellationToken);
         }
 
         // Assert

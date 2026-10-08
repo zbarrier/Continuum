@@ -52,15 +52,15 @@ public class AllStreamTransactionContiguityTests
         // Arrange
         await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
         var probeId = $"contiguity{Guid.NewGuid():N}";
-        var startPosition = await GetCurrentEndPositionAsync(client).ConfigureAwait(false);
+        var startPosition = await GetCurrentEndPositionAsync(client);
 
         // Act
         for (var round = 0; round < Rounds; round++)
         {
-            await AppendConcurrentlyAsync(client, probeId, round).ConfigureAwait(false);
+            await AppendConcurrentlyAsync(client, probeId, round);
         }
 
-        var log = await ReadProbeEventsAsync(client, probeId, startPosition).ConfigureAwait(false);
+        var log = await ReadProbeEventsAsync(client, probeId, startPosition);
 
         // Assert
         Assert.Equal(Rounds * WriterCount * EventsPerAppend, log.Count);
@@ -121,15 +121,15 @@ public class AllStreamTransactionContiguityTests
         // Arrange
         await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
         var probeId = $"multicontiguity{Guid.NewGuid():N}";
-        var startPosition = await GetCurrentEndPositionAsync(client).ConfigureAwait(false);
+        var startPosition = await GetCurrentEndPositionAsync(client);
 
         // Act
         for (var round = 0; round < Rounds; round++)
         {
-            await MultiStreamAppendConcurrentlyAsync(client, probeId, round).ConfigureAwait(false);
+            await MultiStreamAppendConcurrentlyAsync(client, probeId, round);
         }
 
-        var log = await ReadProbeEventsAsync(client, probeId, startPosition).ConfigureAwait(false);
+        var log = await ReadProbeEventsAsync(client, probeId, startPosition);
 
         // Assert
         Assert.Equal(Rounds * WriterCount * StreamsPerMultiAppend * EventsPerAppend, log.Count);

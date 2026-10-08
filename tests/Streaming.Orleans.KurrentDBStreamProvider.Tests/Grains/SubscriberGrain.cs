@@ -43,10 +43,10 @@ public class SubscriberGrain : Grain, ISubscriberGrain
         }
     }
 
-    protected async Task HandleNextAsync(IStreamedEvent<object> streamedEvent, StreamSequenceToken seq)
+    protected async Task HandleNextAsync(IStreamedEvent<object> streamedEvent, StreamSequenceToken? seq)
     {
         var message = streamedEvent.Event as ChatMessage;
-        var formattedMessage = $"#{seq.SequenceNumber}.{seq.EventIndex} {message?.Author} said: [{message?.Text}] at {message?.Created:t}";
+        var formattedMessage = $"#{seq?.SequenceNumber}.{seq?.EventIndex} {message?.Author} said: [{message?.Text}] at {message?.Created:t}";
         _logger.LogInformation(formattedMessage);
         //_testContext.WriteLine(formattedMessage);
     }

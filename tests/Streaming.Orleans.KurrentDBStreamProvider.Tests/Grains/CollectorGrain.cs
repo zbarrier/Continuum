@@ -30,7 +30,7 @@ public class CollectorGrain : Grain, ICollectorGrain
         return Task.FromResult(_received.ToArray());
     }
 
-    private Task HandleNextAsync(IStreamedEvent<object> streamedEvent, StreamSequenceToken token)
+    private Task HandleNextAsync(IStreamedEvent<object> streamedEvent, StreamSequenceToken? token)
     {
         // The provider delivers the envelope; these tests only assert on the domain event inside it.
         if (streamedEvent.Event is ChatMessage message)
