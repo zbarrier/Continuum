@@ -1,44 +1,56 @@
-﻿using Azure;
+using System.Globalization;
+
 using Azure.Data.Tables;
 
 namespace Continuum.Streaming.Orleans.Azure.Storage;
 
-public sealed class AzureTableCheckpointStore : ICheckpointStore<ulong>
+/// <summary>
+/// <see cref="ICheckpointStore{TStreamPosition}"/> that persists subscription checkpoints in an Azure Storage table.
+/// </summary>
+/// <remarks>
+/// Checkpoints are stored in the <c>Checkpoints</c> table with the subscription name as the partition key and the
+/// subscription partition ID as the row key. Azure Tables has no unsigned or arbitrary-precision integer type, so the
+/// position is stored as an invariant-culture string, which supports any formattable and parsable position type
+/// (e.g. <see cref="ulong"/> for KurrentDB or <see cref="System.Numerics.BigInteger"/> for Kinesis).
+/// </remarks>
+/// <typeparam name="TPosition">The provider-specific stream position type.</typeparam>
+public sealed class AzureTableCheckpointStore<TPosition> : ICheckpointStore<TPosition>
+    where TPosition : IComparable<TPosition>, ISpanFormattable, IParsable<TPosition>
 {
     private const string CheckpointsTableName = "Checkpoints";
+    private const string PositionPropertyName = "Position";
 
     private readonly TableClient _client;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureTableCheckpointStore{TPosition}"/> class, creating the
+    /// checkpoints table if it does not exist.
+    /// </summary>
+    /// <param name="serviceClient">The table service client for the storage account that holds the checkpoints.</param>
     public AzureTableCheckpointStore(TableServiceClient serviceClient)
     {
+        ArgumentNullException.ThrowIfNull(serviceClient);
+
         _client = serviceClient.GetTableClient(CheckpointsTableName);
         _client.CreateIfNotExists();
     }
 
-    public async Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<TPosition> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
     {
-        var response = await _client.GetEntityIfExistsAsync<Checkpoint>(subscriptionName, partitionId, null, cancellationToken).ConfigureAwait(false);
-        return response.HasValue ? response.Value!.Position : default;
+        var response = await _client.GetEntityIfExistsAsync<TableEntity>(subscriptionName, partitionId, [PositionPropertyName], cancellationToken).ConfigureAwait(false);
+        return response.HasValue && response.Value!.GetString(PositionPropertyName) is { } position
+            ? TPosition.Parse(position, CultureInfo.InvariantCulture)
+            : default!;
     }
 
-    public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong position, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public Task StoreCheckpointAsync(string subscriptionName, string partitionId, TPosition streamPosition, CancellationToken cancellationToken = default)
     {
-        return _client.UpsertEntityAsync(new Checkpoint
+        var entity = new TableEntity(subscriptionName, partitionId)
         {
-            PartitionKey = subscriptionName,
-            RowKey = partitionId,
-            Position = position
-        }, TableUpdateMode.Replace, cancellationToken);
+            [PositionPropertyName] = streamPosition.ToString(null, CultureInfo.InvariantCulture),
+        };
+        return _client.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken);
     }
-
-    private sealed record Checkpoint : ITableEntity
-    {
-        public string PartitionKey { get; set; } = default!;
-        public string RowKey { get; set; } = default!;
-
-        public ulong Position { get; init; } = 0;
-
-        public ETag ETag { get; set; } = default!;
-        public DateTimeOffset? Timestamp { get; set; } = default!;
-    };
 }
