@@ -14,3 +14,9 @@
 - Add a test project only when the library has behavior that genuinely needs testing; Continuum libraries do not each need their own test project.
 - Abstractions projects must not know anything about implementation projects. Tests that need implementation types or internals belong in the implementation's own test project (e.g., Continuum.Streaming.Orleans.KurrentDB.Tests), never in the Abstractions test project; InternalsVisibleTo should only grant access to the implementation's own test project.
 - Continuum event-sourcing storage providers (KurrentDB, CosmosDB) must always use TypeMappedJsonGrainStorageSerializer with requireStoredType: true; the option defaults to false for all other uses (e.g., grain state storage).
+
+## Multi-Tenancy Design
+- Continuum multi-tenancy design (planned, not implemented): use Orleans.Multitenant. Grain keys are "{TenantId}|{Key}". Stream names are "{GrainType}-{TenantId}|{Key}" (non-tenant: "{GrainType}-{Key}"), i.e. GrainType + "-" + Orleans grain key. GrainTypes cannot contain '-' or '|'; keys may contain '-' (GUIDs) but never '|'; tenant IDs must be non-empty and contain no '|'. A '|' after the category means tenant-qualified, so one parser handles both.
+- Subscriptions stay tenant-unaware (KurrentDB $ce-{GrainType} spans tenants); Orleans.Multitenant filters enforce tenant isolation.
+- Per-tenant storage providers set ConnectionName via configureTenantOptions so tenants sharing a database share one keyed KurrentDBClient; dedicated tenants use their own connection name.
+- Cross-tenant/cross-source reports consume integration events from EventHub/Kafka/Kinesis, never direct from multiple KurrentDB databases.

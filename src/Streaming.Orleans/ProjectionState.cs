@@ -8,7 +8,7 @@ namespace Continuum.Streaming.Orleans;
 public interface IProjectionState
 {
     /// <summary>
-    /// The highest sequence applied so far, per topic, then per stream key within that topic.
+    /// The highest sequence applied so far, per topic, then per partition, then per stream key within that partition.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -24,13 +24,14 @@ public interface IProjectionState
     ///     which stream is being read.
     /// </para>
     /// <para>
-    ///     The partition is deliberately not part of the key. A topic and key already name a single stream, and a
-    ///     sequence is ordered within that stream; adding the partition would only split one stream's watermark
-    ///     across entries if a provider ever reported the same stream under a different partition, which would
-    ///     reintroduce the double-apply this guards against.
+    ///     The partition is part of the key because brokers only order sequence numbers within a partition. If a
+    ///     topic is repartitioned, a stream key can move to a partition whose sequence numbers are lower than those
+    ///     already applied from its previous partition; a watermark shared across partitions would then discard the
+    ///     new partition's events. Each event is delivered from exactly one partition, so a separate watermark per
+    ///     partition does not cause events to be applied twice.
     /// </para>
     /// </remarks>
-    IDictionary<string, IDictionary<string, StreamSequence>> LastSequenceByTopicThenStreamKey { get; }
+    IDictionary<string, IDictionary<string, IDictionary<string, StreamSequence>>> LastSequenceByTopicThenPartitionThenStreamKey { get; }
 
     /// <summary>
     /// The streams subscribed to at runtime, which are resumed when the grain reactivates.
@@ -91,8 +92,8 @@ public abstract class ProjectionState<TState> : IProjectionState
 {
     /// <inheritdoc/>
     [Id(0)]
-    public IDictionary<string, IDictionary<string, StreamSequence>> LastSequenceByTopicThenStreamKey { get; }
-        = new Dictionary<string, IDictionary<string, StreamSequence>>();
+    public IDictionary<string, IDictionary<string, IDictionary<string, StreamSequence>>> LastSequenceByTopicThenPartitionThenStreamKey { get; }
+        = new Dictionary<string, IDictionary<string, IDictionary<string, StreamSequence>>>();
 
     [Id(1)]
     private readonly List<StreamSubscriptionSource> _subscriptions = [];
@@ -132,9 +133,14 @@ public abstract class ProjectionState<TState> : IProjectionState
     {
         ArgumentNullException.ThrowIfNull(streamedEvent);
 
-        if (!LastSequenceByTopicThenStreamKey.TryGetValue(streamedEvent.Topic, out var lastSequenceByStreamKey))
+        if (!LastSequenceByTopicThenPartitionThenStreamKey.TryGetValue(streamedEvent.Topic, out var lastSequenceByPartition))
         {
-            LastSequenceByTopicThenStreamKey.Add(streamedEvent.Topic, lastSequenceByStreamKey = new Dictionary<string, StreamSequence>());
+            LastSequenceByTopicThenPartitionThenStreamKey.Add(streamedEvent.Topic, lastSequenceByPartition = new Dictionary<string, IDictionary<string, StreamSequence>>());
+        }
+
+        if (!lastSequenceByPartition.TryGetValue(streamedEvent.PartitionId, out var lastSequenceByStreamKey))
+        {
+            lastSequenceByPartition.Add(streamedEvent.PartitionId, lastSequenceByStreamKey = new Dictionary<string, StreamSequence>());
         }
 
         var currentSequence = new StreamSequence(streamedEvent.SequenceNumber, streamedEvent.SubSequenceNumber);

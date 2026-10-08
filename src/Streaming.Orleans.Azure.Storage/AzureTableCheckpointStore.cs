@@ -6,7 +6,6 @@ namespace Continuum.Streaming.Orleans.Azure.Storage;
 public sealed class AzureTableCheckpointStore : ICheckpointStore<ulong>
 {
     private const string CheckpointsTableName = "Checkpoints";
-    private const string CheckpointRowKey = "0";
 
     private readonly TableClient _client;
 
@@ -16,18 +15,18 @@ public sealed class AzureTableCheckpointStore : ICheckpointStore<ulong>
         _client.CreateIfNotExists();
     }
 
-    public async Task<ulong> GetLastCheckpointAsync(string subscriptionName, CancellationToken cancellationToken = default)
+    public async Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
     {
-        var response = await _client.GetEntityIfExistsAsync<Checkpoint>(subscriptionName, CheckpointRowKey, null, cancellationToken).ConfigureAwait(false);
+        var response = await _client.GetEntityIfExistsAsync<Checkpoint>(subscriptionName, partitionId, null, cancellationToken).ConfigureAwait(false);
         return response.HasValue ? response.Value!.Position : default;
     }
 
-    public Task StoreCheckpointAsync(string subscriptionName, ulong position, CancellationToken cancellationToken = default)
+    public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong position, CancellationToken cancellationToken = default)
     {
         return _client.UpsertEntityAsync(new Checkpoint
         {
             PartitionKey = subscriptionName,
-            RowKey = CheckpointRowKey,
+            RowKey = partitionId,
             Position = position
         }, TableUpdateMode.Replace, cancellationToken);
     }

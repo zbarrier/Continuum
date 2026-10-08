@@ -84,18 +84,30 @@ public class ProjectionStateTests
     }
 
     [Fact]
-    public async Task Ignores_The_Partition_When_Tracking_A_Stream()
+    public async Task Tracks_Partitions_Independently_Within_A_Stream()
     {
         var state = new CountingProjectionState();
 
-        // A topic and key already name one stream, and a sequence is ordered within it. If the same stream were ever
-        // reported under a different partition, keying by partition would split its watermark and let an event that
-        // was already applied be applied a second time.
+        // After a repartition, a stream key can move to a partition whose sequence numbers are lower than those
+        // already applied from its previous partition. A shared watermark would discard the new partition's events.
         await state.WhenAsync(Event(sequenceNumber: 10, partitionId: "shard-0"));
         var hasChanges = await state.WhenAsync(Event(sequenceNumber: 4, partitionId: "shard-1"));
 
+        Assert.True(hasChanges);
+        Assert.Equal(2, state.Applied);
+    }
+
+    [Fact]
+    public async Task Does_Not_Reapply_An_Event_Within_The_Same_Partition()
+    {
+        var state = new CountingProjectionState();
+
+        await state.WhenAsync(Event(sequenceNumber: 10, partitionId: "shard-0"));
+        await state.WhenAsync(Event(sequenceNumber: 4, partitionId: "shard-1"));
+        var hasChanges = await state.WhenAsync(Event(sequenceNumber: 10, partitionId: "shard-0"));
+
         Assert.False(hasChanges);
-        Assert.Equal(1, state.Applied);
+        Assert.Equal(2, state.Applied);
     }
 
     [Fact]
@@ -119,7 +131,7 @@ public class ProjectionStateTests
 
         // An ignored event is still consumed, so it must not be reconsidered on redelivery.
         Assert.False(hasChanges);
-        var lastSequence = state.LastSequenceByTopicThenStreamKey[Topic][StreamKey];
+        var lastSequence = state.LastSequenceByTopicThenPartitionThenStreamKey[Topic]["0"][StreamKey];
         Assert.Equal(new BigInteger(1), lastSequence.SequenceNumber);
     }
 

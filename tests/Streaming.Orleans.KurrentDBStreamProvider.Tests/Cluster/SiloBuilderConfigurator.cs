@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 using Continuum.Hosting;
 using Continuum.Hosting.Orleans;
@@ -27,6 +27,9 @@ public class TestSiloConfigurations : ISiloConfigurator
         // Newtonsoft serializer depends on every persisted type being Newtonsoft friendly.
         sb.Services.AddOptions<MemoryGrainStorageOptions>("MemoryStorageProvider")
           .PostConfigure<Serializer>((options, serializer) => options.GrainStorageSerializer = new OrleansGrainStorageSerializer(serializer));
+
+        sb.AddMemoryGrainStorage(SubscriptionCheckpointGrain.StorageName);
+        sb.Services.AddSubscriptionCheckpointStore<ulong>("checkpointTests");
 
         sb.AddMemoryGrainStorage("MemoryStorageProvider")
           .AddKurrentDBStreams(Constants.StreamProviderName, options =>

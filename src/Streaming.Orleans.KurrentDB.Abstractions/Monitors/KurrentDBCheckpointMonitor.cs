@@ -1,9 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 
 using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.Monitors;
 
@@ -94,7 +95,7 @@ public sealed class KurrentDBCheckpointMonitor
         // ICheckpointStore<ulong> cannot express 'no checkpoint', it returns the default position instead.
         // Map that back to null so callers subscribe from the start rather than from just after position 0,
         // which would silently skip the first event of the stream.
-        var storedPosition = await _checkpointStore.GetLastCheckpointAsync(_subscriptionName, cancellationToken);
+        var storedPosition = await _checkpointStore.GetLastCheckpointAsync(_subscriptionName, StreamEventExtensions.DefaultPartitionId, cancellationToken);
         _currentPosition = storedPosition == default ? null : storedPosition;
         return _currentPosition;
     }
@@ -178,7 +179,7 @@ public sealed class KurrentDBCheckpointMonitor
             _logger.LogDebug("Subscription '{SubscriptionName}' for stream '{StreamName}' committing checkpoint at position '{CommitPosition}'.",
                 _subscriptionName, _streamName, _currentPosition);
         }
-        return _checkpointStore.StoreCheckpointAsync(_subscriptionName, _currentPosition!.Value, cancellationToken);
+        return _checkpointStore.StoreCheckpointAsync(_subscriptionName, StreamEventExtensions.DefaultPartitionId, _currentPosition!.Value, cancellationToken);
     }
 
     private void Reset()
