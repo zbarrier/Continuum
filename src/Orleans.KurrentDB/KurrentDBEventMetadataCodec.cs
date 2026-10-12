@@ -1,6 +1,10 @@
-﻿using System.Text.Json;
+using Continuum.Events;
+using Continuum.Orleans.Events;
+using System.Buffers;
+using System.Globalization;
+using System.Text.Json;
 
-namespace Continuum.Streaming.Orleans.KurrentDB;
+namespace Continuum.Orleans.KurrentDB;
 
 /// <summary>
 ///     Reads and writes the JSON document KurrentDB stores in an event's metadata slot.
@@ -16,7 +20,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB;
 ///         Reading lifts the reserved tracing entries onto their own values and passes everything else through as
 ///         metadata. Values are surfaced as text: JSON is a structured format, but this contract deliberately does not
 ///         interpret structure, because nothing here knows what type a nested value was meant to be. Callers that need
-///         structure should put it in the event payload, where the type mapper and serializer resolve it properly.
+///         structure should put it in the event payload, where the type mapper and serde resolve it properly.
 ///     </para>
 /// </remarks>
 public static class KurrentDBEventMetadataCodec
@@ -67,17 +71,10 @@ public static class KurrentDBEventMetadataCodec
     /// </summary>
     public const string TransactionPartitionIndexName = "transactionPartitionIndex";
 
-    /// <summary>
-    ///     Identifies an event's place within the transaction that produced it.
-    /// </summary>
-    /// <param name="TransactionId">The producer assigned identifier shared by every event of the append.</param>
-    /// <param name="TransactionSize">The number of events in the append, across every stream it wrote to.</param>
-    /// <param name="TransactionPartitionSize">
-    ///     The number of the append's events belonging to this event's stream. A consumer of one stream can only ever
-    ///     receive this many, so it is the count such a consumer would group against.
-    /// </param>
-    /// <param name="TransactionPartitionIndex">The zero based ordinal of this event within that per stream group.</param>
-    public readonly record struct TransactionInfo(NewId TransactionId, int TransactionSize, int TransactionPartitionSize, int TransactionPartitionIndex);
+    // Utf8JsonWriter writes straight into an IBufferWriter, avoiding the intermediate copy a MemoryStream needs.
+    // A transaction-only document is about 141 bytes and one carrying tracing about 218, so 256 covers both with
+    // room for a few extra entries before the buffer has to grow.
+    private const int InitialBufferSize = 256;
 
     /// <summary>
     ///     Reads an event's metadata document.
@@ -92,11 +89,11 @@ public static class KurrentDBEventMetadataCodec
     ///     normally sees every event on the log, including events written by applications that use the slot for
     ///     something else entirely, and one unreadable document must not stall the queue.
     /// </remarks>
-    public static IStreamedEventMetadata Read(ReadOnlySpan<byte> metadata)
+    public static EventMetadata Read(ReadOnlySpan<byte> metadata)
     {
         if (metadata.IsEmpty)
         {
-            return StreamedEventMetadata.Empty;
+            return EventMetadata.Empty;
         }
         try
         {
@@ -104,7 +101,7 @@ public static class KurrentDBEventMetadataCodec
             using var document = JsonDocument.ParseValue(ref reader);
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
-                return StreamedEventMetadata.Empty;
+                return EventMetadata.Empty;
             }
             string? traceId = null;
             string? spanId = null;
@@ -151,12 +148,11 @@ public static class KurrentDBEventMetadataCodec
                 (values ??= []).Add(new KeyValuePair<string, string?>(property.Name, ReadValue(property.Value)));
             }
             var transaction = ReadTransaction(transactionId, transactionSize, partitionSize, partitionIndex);
-            return StreamedEventMetadata.Create(values, traceId, spanId, transaction?.TransactionId,
-                transaction?.TransactionSize, transaction?.TransactionPartitionSize, transaction?.TransactionPartitionIndex);
+            return EventMetadata.Create(values, traceId, spanId, transaction);
         }
         catch (JsonException)
         {
-            return StreamedEventMetadata.Empty;
+            return EventMetadata.Empty;
         }
     }
 
@@ -176,17 +172,17 @@ public static class KurrentDBEventMetadataCodec
             return null;
         }
         var id = NewId.FromSequentialGuid(guid);
-        if (!int.TryParse(transactionSize, out var size) || !int.TryParse(partitionSize, out var partition) || !int.TryParse(partitionIndex, out var index))
+        if (!TryParseCount(transactionSize, out var size) || !TryParseCount(partitionSize, out var partition) || !TryParseCount(partitionIndex, out var index))
         {
             return null;
         }
         // A group that does not describe a consistent shape cannot be assembled, so it is safer to ignore it.
-        if (size < 1 || partition < 1 || partition > size || index < 0 || index >= partition)
-        {
-            return null;
-        }
-        return new TransactionInfo(id, size, partition, index);
+        var transaction = new TransactionInfo(id, size, partition, index);
+        return transaction.IsValid ? transaction : null;
     }
+
+    private static bool TryParseCount(string? value, out int result)
+        => int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out result);
 
     /// <summary>
     ///     Writes a metadata document for an event being appended, or <see langword="null" /> when there is nothing to write.
@@ -200,39 +196,30 @@ public static class KurrentDBEventMetadataCodec
     ///     Tracing is deliberately not written here. The client injects it during the append, merging it into this
     ///     document, and it is the only component that knows the activity actually in effect at that moment.
     /// </remarks>
-    public static byte[]? Write(IStreamedEventMetadata? metadata, TransactionInfo? transaction = null)
+    /// <exception cref="ArgumentException"><paramref name="transaction"/> does not describe a consistent group.</exception>
+    public static byte[]? Write(IEventMetadata? metadata, TransactionInfo? transaction = null)
     {
+        transaction?.EnsureValid(nameof(transaction));
         var hasMetadata = metadata is not null && metadata.Count > 0;
         if (!hasMetadata && transaction is null)
         {
             return null;
         }
-        using var buffer = new MemoryStream();
+        var buffer = new ArrayBufferWriter<byte>(InitialBufferSize);
         using (var writer = new Utf8JsonWriter(buffer))
         {
             writer.WriteStartObject();
             if (hasMetadata)
             {
-                foreach (var (name, value) in metadata!)
-                {
-                    if (IStreamedEventMetadata.IsReservedName(name))
-                    {
-                        continue;
-                    }
-                    writer.WriteString(name, value);
-                }
+                WriteEntries(writer, metadata!);
             }
             if (transaction is { } info)
             {
-                // Written as strings so the sizes read back the same way every other metadata value does.
-                writer.WriteString(TransactionIdName, info.TransactionId.ToSequentialGuid().ToString());
-                writer.WriteString(TransactionSizeName, info.TransactionSize.ToString());
-                writer.WriteString(TransactionPartitionSizeName, info.TransactionPartitionSize.ToString());
-                writer.WriteString(TransactionPartitionIndexName, info.TransactionPartitionIndex.ToString());
+                WriteTransaction(writer, info);
             }
             writer.WriteEndObject();
         }
-        return buffer.ToArray();
+        return buffer.WrittenSpan.ToArray();
     }
 
     /// <summary>
@@ -243,34 +230,33 @@ public static class KurrentDBEventMetadataCodec
     /// <remarks>
     ///     This is for storing metadata that was already read back from the log, such as when caching an event, where
     ///     the tracing context belongs to the original append and must survive. It is the opposite of
-    ///     <see cref="Write(IStreamedEventMetadata, TransactionInfo?)" />, which omits tracing because the client
+    ///     <see cref="Write(IEventMetadata?, TransactionInfo?)" />, which omits tracing because the client
     ///     injects the live activity's context during an append.
     /// </remarks>
-    public static byte[]? WriteAll(IStreamedEventMetadata? metadata)
+    public static byte[]? WriteAll(IEventMetadata? metadata)
     {
         if (metadata is null)
         {
             return null;
         }
-        var transaction = metadata.TransactionId is { } id
-            ? new TransactionInfo(id, metadata.TransactionSize ?? 1, metadata.TransactionPartitionSize ?? 1, metadata.TransactionPartitionIndex ?? 0)
-            : (TransactionInfo?)null;
+        // EventMetadata.Create only accepts a complete, valid TransactionInfo, but another IEventMetadata may not, so
+        // a partial or inconsistent grouping is rejected rather than written.
+        TransactionInfo? transaction = metadata.TransactionId is { } id &&
+            metadata.TransactionSize is { } size &&
+            metadata.TransactionPartitionSize is { } partitionSize &&
+            metadata.TransactionPartitionIndex is { } partitionIndex
+                ? new TransactionInfo(id, size, partitionSize, partitionIndex)
+                : null;
+        transaction?.EnsureValid(nameof(metadata));
         if (metadata.Count == 0 && transaction is null && metadata.TraceId is null && metadata.SpanId is null)
         {
             return null;
         }
-        using var buffer = new MemoryStream();
+        var buffer = new ArrayBufferWriter<byte>(InitialBufferSize);
         using (var writer = new Utf8JsonWriter(buffer))
         {
             writer.WriteStartObject();
-            foreach (var (name, value) in metadata)
-            {
-                if (IStreamedEventMetadata.IsReservedName(name))
-                {
-                    continue;
-                }
-                writer.WriteString(name, value);
-            }
+            WriteEntries(writer, metadata);
             if (metadata.TraceId is { } traceId)
             {
                 writer.WriteString(TraceIdName, traceId);
@@ -281,14 +267,33 @@ public static class KurrentDBEventMetadataCodec
             }
             if (transaction is { } info)
             {
-                writer.WriteString(TransactionIdName, info.TransactionId.ToSequentialGuid().ToString());
-                writer.WriteString(TransactionSizeName, info.TransactionSize.ToString());
-                writer.WriteString(TransactionPartitionSizeName, info.TransactionPartitionSize.ToString());
-                writer.WriteString(TransactionPartitionIndexName, info.TransactionPartitionIndex.ToString());
+                WriteTransaction(writer, info);
             }
             writer.WriteEndObject();
         }
-        return buffer.ToArray();
+        return buffer.WrittenSpan.ToArray();
+    }
+
+    private static void WriteEntries(Utf8JsonWriter writer, IEventMetadata metadata)
+    {
+        foreach (var (name, value) in metadata)
+        {
+            if (IEventMetadata.IsReservedName(name))
+            {
+                continue;
+            }
+            writer.WriteString(name, value);
+        }
+    }
+
+    private static void WriteTransaction(Utf8JsonWriter writer, TransactionInfo info)
+    {
+        // Written as strings so the sizes read back the same way every other metadata value does. Invariant culture
+        // keeps the text identical on every silo regardless of its locale.
+        writer.WriteString(TransactionIdName, info.TransactionId.ToSequentialGuid().ToString("D", CultureInfo.InvariantCulture));
+        writer.WriteString(TransactionSizeName, info.TransactionSize.ToString(CultureInfo.InvariantCulture));
+        writer.WriteString(TransactionPartitionSizeName, info.TransactionPartitionSize.ToString(CultureInfo.InvariantCulture));
+        writer.WriteString(TransactionPartitionIndexName, info.TransactionPartitionIndex.ToString(CultureInfo.InvariantCulture));
     }
 
     /// <summary>
@@ -297,7 +302,7 @@ public static class KurrentDBEventMetadataCodec
     /// <remarks>
     ///     Numbers and booleans keep their raw JSON text so they round trip. Objects and arrays keep their raw JSON
     ///     too, so nothing is silently dropped, but they are never parsed into anything. Null becomes a null value,
-    ///     which <see cref="StreamedEventMetadata.Create(IEnumerable{KeyValuePair{string, string}})" /> then skips.
+    ///     which <see cref="EventMetadata.Create(IEnumerable{KeyValuePair{string, string}})" /> then skips.
     /// </remarks>
     private static string? ReadValue(JsonElement value)
     {

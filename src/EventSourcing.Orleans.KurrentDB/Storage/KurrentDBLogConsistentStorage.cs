@@ -1,6 +1,6 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
-using Continuum.EventSourcing.Orleans.KurrentDB.Abstractions;
+using Continuum.Events;
 using Continuum.Orleans.KurrentDB;
 using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;

@@ -1,4 +1,7 @@
-﻿using Continuum;
+using Continuum.Events;
+using Continuum.Orleans.Events;
+using Continuum.Orleans.KurrentDB;
+using Continuum;
 using Continuum.Streaming.Orleans;
 using Continuum.Streaming.Orleans.KurrentDB;
 
@@ -61,7 +64,7 @@ internal static class KurrentDBEventDataFactory
         for (var index = 0; index < batch.Count; index++)
         {
             records[index] = ToEventData(batch[index], streamIdText, options,
-                new KurrentDBEventMetadataCodec.TransactionInfo(transactionId, batch.Count, batch.Count, index));
+                new TransactionInfo(transactionId, batch.Count, batch.Count, index));
         }
         return records;
     }
@@ -69,13 +72,13 @@ internal static class KurrentDBEventDataFactory
     /// <summary>
     ///     Converts a single event into the record it is appended as.
     /// </summary>
-    private static EventData ToEventData<T>(T @event, string streamId, KurrentDBDataAdapterOptions options, KurrentDBEventMetadataCodec.TransactionInfo transaction)
+    private static EventData ToEventData<T>(T @event, string streamId, KurrentDBDataAdapterOptions options, TransactionInfo transaction)
     {
         // The mapped name rather than the CLR type name, so events can be renamed without breaking readers, and so
         // the reading side resolves the type the same way for both producers.
         var eventType = @event is null ? options.TypeMapper.GetTypeName<T>() : options.TypeMapper.GetTypeName(@event.GetType());
         var metadata = KurrentDBEventMetadataCodec.Write(
-            StreamedEventMetadata.Create([new KeyValuePair<string, string?>(KurrentDBEventMetadataCodec.OrleansStreamIdName, streamId)]),
+            EventMetadata.Create([new KeyValuePair<string, string?>(KurrentDBEventMetadataCodec.OrleansStreamIdName, streamId)]),
             transaction);
         var data = @event is null ? ReadOnlyMemory<byte>.Empty : options.GrainStorageSerializer.Serialize(@event).ToMemory();
         return new EventData(Uuid.NewUuid(), eventType, data, metadata, options.ContentType);

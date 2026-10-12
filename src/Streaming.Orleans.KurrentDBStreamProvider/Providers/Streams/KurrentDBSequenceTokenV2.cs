@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Newtonsoft.Json;
+using System.Globalization;
 using Orleans.Providers.Streams.Common;
 
 namespace Orleans.Providers.Streams.KurrentDB;
@@ -43,7 +42,6 @@ public class KurrentDBSequenceTokenV2 : EventSequenceToken, IKurrentDBLocation
     /// <summary>
     ///     Referring to a potential logical record position in the KurrentDB transaction file.
     /// </summary>
-    [JsonProperty]
     [Id(0)]
     public string Position { get; }
 

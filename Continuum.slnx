@@ -20,7 +20,6 @@
     <Project Path="src/Domain.Orleans/Continuum.Domain.Orleans.csproj" />
     <Project Path="src/Domain/Continuum.Domain.csproj" />
     <Project Path="src/EventSourcing.Orleans.CosmosDB/Continuum.EventSourcing.Orleans.CosmosDB.csproj" />
-    <Project Path="src/EventSourcing.Orleans.KurrentDB.Abstractions/Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.csproj" Id="5038290f-20d6-4874-be2b-344f2ec60498" />
     <Project Path="src/EventSourcing.Orleans.KurrentDB.Analyzers/Continuum.EventSourcing.Orleans.KurrentDB.Analyzers.csproj" />
     <Project Path="src/EventSourcing.Orleans.KurrentDB/Continuum.EventSourcing.Orleans.KurrentDB.csproj" />
     <Project Path="src/EventSourcing.Orleans/Continuum.EventSourcing.Orleans.csproj" />
@@ -57,13 +56,13 @@
     <Project Path="tests/Domain.Tests/Continuum.Domain.Tests.csproj" />
     <Project Path="tests/EventSourcing.AotSmokeTest/Continuum.EventSourcing.AotSmokeTest.csproj" />
     <Project Path="tests/EventSourcing.Orleans.CosmosDB.Tests/Continuum.EventSourcing.Orleans.CosmosDB.Tests.csproj" />
-    <Project Path="tests/EventSourcing.Orleans.KurrentDB.Abstractions.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.Tests.csproj" />
     <Project Path="tests/EventSourcing.Orleans.KurrentDB.Analyzers.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Analyzers.Tests.csproj" />
     <Project Path="tests/EventSourcing.Orleans.KurrentDB.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Tests.csproj" />
     <Project Path="tests/NewId.Benchmarks/Continuum.NewId.Benchmarks.csproj" />
     <Project Path="tests/NewId.Orleans.Tests/Continuum.NewId.Orleans.Tests.csproj" />
     <Project Path="tests/NewId.Tests/Continuum.NewId.Tests.csproj" />
     <Project Path="tests/Persistence.AotSmokeTest/Continuum.Persistence.AotSmokeTest.csproj" />
+    <Project Path="tests/Orleans.KurrentDB.Tests/Continuum.Orleans.KurrentDB.Tests.csproj" />
     <Project Path="tests/Persistence.Orleans.KurrentDB.Tests/Continuum.Persistence.Orleans.KurrentDB.Tests.csproj" />
     <Project Path="tests/Streaming.Orleans.Azure.CosmosDB.Tests/Continuum.Streaming.Orleans.Azure.CosmosDB.Tests.csproj" />
     <Project Path="tests/Streaming.Orleans.Azure.Storage.Tests/Continuum.Streaming.Orleans.Azure.Storage.Tests.csproj" />

@@ -1,4 +1,3 @@
-using Continuum.EventSourcing.Orleans.KurrentDB.Abstractions;
 using Continuum.EventSourcing.Orleans.KurrentDB.Tests.Events;
 using Continuum.Orleans.KurrentDB;
 

@@ -1,4 +1,6 @@
-﻿using System.Numerics;
+using Continuum.Events;
+using Continuum.Orleans.Events;
+using System.Numerics;
 
 namespace Continuum.Streaming.Orleans;
 
@@ -28,7 +30,7 @@ public sealed class StreamedEvent<T> : IStreamedEvent<T> where T : class
     /// <exception cref="ArgumentNullException"><paramref name="event"/> is <see langword="null"/>.</exception>
     public StreamedEvent(NewId eventId, string eventType, string streamName, string streamKey, string topic, string partitionId,
         ulong streamVersion, ulong streamPosition, BigInteger sequenceNumber, ulong subSequenceNumber, DateTime timestamp,
-        T @event, IStreamedEventMetadata? metadata = null)
+        T @event, IEventMetadata? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(@event);
 
@@ -44,7 +46,7 @@ public sealed class StreamedEvent<T> : IStreamedEvent<T> where T : class
         SubSequenceNumber = subSequenceNumber;
         Timestamp = timestamp;
         Event = @event;
-        Metadata = metadata ?? StreamedEventMetadata.Empty;
+        Metadata = metadata ?? EventMetadata.Empty;
     }
 
     /// <inheritdoc />
@@ -96,7 +98,6 @@ public sealed class StreamedEvent<T> : IStreamedEvent<T> where T : class
     public T Event { get; init; }
 
     /// <inheritdoc />
-    [Newtonsoft.Json.JsonConverter(typeof(StreamedEventMetadataNewtonsoftConverter))]
     [Id(12)]
-    public IStreamedEventMetadata Metadata { get; init; } = StreamedEventMetadata.Empty;
+    public IEventMetadata Metadata { get; init; } = EventMetadata.Empty;
 }

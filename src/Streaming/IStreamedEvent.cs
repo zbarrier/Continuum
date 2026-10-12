@@ -1,3 +1,4 @@
+using Continuum.Events;
 using System.Numerics;
 
 namespace Continuum.Streaming;
@@ -106,11 +107,11 @@ public interface IStreamedEvent<out T> where T : class
     /// <para>
     ///     Values are strings because metadata exists to be read without deserializing the event; structured data
     ///     belongs in <see cref="Event"/>. Well known entries such as tracing and transaction data are lifted onto
-    ///     typed properties of <see cref="IStreamedEventMetadata"/> rather than left as raw entries.
+    ///     typed properties of <see cref="IEventMetadata"/> rather than left as raw entries.
     /// </para>
     /// <para>Empty rather than <see langword="null"/> when the event carried no metadata.</para>
     /// </summary>
-    IStreamedEventMetadata Metadata { get; }
+    IEventMetadata Metadata { get; }
 
     /// <summary>
     /// Deserialized event.

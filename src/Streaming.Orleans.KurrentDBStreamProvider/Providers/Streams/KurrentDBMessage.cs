@@ -1,4 +1,7 @@
-﻿using System.Text;
+using Continuum.Events;
+using Continuum.Orleans.Events;
+using Continuum.Orleans.KurrentDB;
+using System.Text;
 
 using Continuum.Streaming;
 using Continuum.Streaming.Orleans;
@@ -6,7 +9,7 @@ using Continuum.Streaming.Orleans.KurrentDB;
 
 using Orleans.Providers.Streams.Common;
 
-using MetadataCodec = Continuum.Streaming.Orleans.KurrentDB.KurrentDBEventMetadataCodec;
+using MetadataCodec = Continuum.Orleans.KurrentDB.KurrentDBEventMetadataCodec;
 
 namespace Orleans.Providers.Streams.KurrentDB;
 
@@ -38,7 +41,7 @@ public class KurrentDBMessage
     public KurrentDBMessage(StreamId streamId, string position, ulong commitPosition, long sequenceNumber, DateTime enqueueTimeUtc, DateTime dequeueTimeUtc, 
         string eventId, string eventType, ReadOnlyMemory<byte> data,
         string? streamName = null, ulong streamVersion = 0, DateTime timestamp = default,
-        IStreamedEventMetadata? metadata = null, string? topic = null, string? streamKey = null)
+        IEventMetadata? metadata = null, string? topic = null, string? streamKey = null)
     {
         StreamId = streamId;
         Position = position;
@@ -54,7 +57,7 @@ public class KurrentDBMessage
         Topic = topic ?? string.Empty;
         StreamVersion = streamVersion;
         Timestamp = timestamp;
-        Metadata = metadata ?? StreamedEventMetadata.Empty;
+        Metadata = metadata ?? EventMetadata.Empty;
     }
 
     /// <summary>
@@ -174,5 +177,5 @@ public class KurrentDBMessage
     ///     The producer supplied metadata the event carried, with well known entries already lifted out.
     /// </summary>
     [Id(15)]
-    public IStreamedEventMetadata Metadata { get; set; } = StreamedEventMetadata.Empty;
+    public IEventMetadata Metadata { get; set; } = EventMetadata.Empty;
 }

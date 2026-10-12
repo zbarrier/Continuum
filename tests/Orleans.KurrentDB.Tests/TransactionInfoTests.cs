@@ -1,4 +1,4 @@
-﻿namespace Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.Tests;
+namespace Continuum.Orleans.KurrentDB.Tests;
 
 public class TransactionInfoTests
 {

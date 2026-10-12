@@ -5,7 +5,7 @@
 	<ImplicitUsings>enable</ImplicitUsings>
 	<Nullable>enable</Nullable>
 	<IsPackable>false</IsPackable>
-	<RootNamespace>Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.Tests</RootNamespace>
+	<RootNamespace>Continuum.Orleans.KurrentDB.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,10 +22,12 @@
   </ItemGroup>
 
   <ItemGroup>
-	<ProjectReference Include="..\..\src\EventSourcing.Orleans.KurrentDB.Abstractions\Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.csproj" />
+	<ProjectReference Include="..\..\src\Orleans.KurrentDB\Continuum.Orleans.KurrentDB.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+	<Using Include="Continuum.Events" />
+	<Using Include="Continuum.Orleans.Events" />
 	<Using Include="Xunit" />
   </ItemGroup>
 

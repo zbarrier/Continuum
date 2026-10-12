@@ -1,7 +1,7 @@
-﻿namespace Continuum.Streaming;
+namespace Continuum.Events;
 
 /// <summary>
-///     Producer supplied metadata describing a streamed event, keyed by name.
+///     Producer supplied metadata describing an event, keyed by name.
 /// </summary>
 /// <remarks>
 ///     <para>
@@ -16,7 +16,7 @@
 ///         cannot collide with them.
 ///     </para>
 /// </remarks>
-public interface IStreamedEventMetadata : IReadOnlyDictionary<string, string>
+public interface IEventMetadata : IReadOnlyDictionary<string, string>
 {
     /// <summary>
     ///     The prefix transports reserve for metadata they own.

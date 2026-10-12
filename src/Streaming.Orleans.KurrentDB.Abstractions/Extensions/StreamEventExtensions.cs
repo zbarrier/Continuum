@@ -1,3 +1,4 @@
+using Continuum.Orleans.KurrentDB;
 using KurrentDB.Client;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.Extensions;

@@ -1,5 +1,6 @@
 using Continuum.EventSourcing.Orleans;
-using Continuum.EventSourcing.Orleans.KurrentDB.Abstractions;
+using Continuum.Orleans.Events;
+using Continuum.Orleans.KurrentDB;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -22,7 +23,7 @@ void Check(string name, bool condition)
 }
 
 // KurrentDB metadata codec round-trip (System.Text.Json reader/writer).
-var metadata = KurrentDBEventMetadata.Create([new KeyValuePair<string, string?>("tenant", "acme")]);
+var metadata = EventMetadata.Create([new KeyValuePair<string, string?>("tenant", "acme")]);
 var bytes = KurrentDBEventMetadataCodec.Write(metadata);
 var read = bytes is null ? null : KurrentDBEventMetadataCodec.Read(bytes);
 Check("KurrentDB metadata round-trip", read is not null && read.TryGetValue("tenant", out var tenant) && tenant == "acme");

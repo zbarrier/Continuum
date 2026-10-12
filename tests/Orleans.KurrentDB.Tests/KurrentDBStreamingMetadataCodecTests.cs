@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.Abstractions.Tests;
+namespace Continuum.Orleans.KurrentDB.Tests;
 
 /// <summary>
 ///     Verifies how <see cref="KurrentDBEventMetadataCodec" /> reads the JSON document KurrentDB stores in an event's
@@ -13,7 +13,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.Abstractions.Tests;
 ///     an empty result instead of throwing, because a silo reading $all sees every event on the log, including events
 ///     written by applications that use the slot for something else entirely.
 /// </remarks>
-public class KurrentDBEventMetadataCodecTests
+public class KurrentDBStreamingMetadataCodecTests
 {
     /// <summary>
     ///     An event with no metadata at all, which is what a producer that supplies none writes when no Activity is recording.
@@ -132,7 +132,7 @@ public class KurrentDBEventMetadataCodecTests
     public void Write_Returns_Null_When_There_Is_No_Metadata()
     {
         Assert.Null(KurrentDBEventMetadataCodec.Write(null));
-        Assert.Null(KurrentDBEventMetadataCodec.Write(StreamedEventMetadata.Empty));
+        Assert.Null(KurrentDBEventMetadataCodec.Write(EventMetadata.Empty));
     }
 
     /// <summary>
@@ -143,7 +143,7 @@ public class KurrentDBEventMetadataCodecTests
     public void Write_Round_Trips_Producer_Metadata_Without_Tracing()
     {
         // Arrange
-        var metadata = StreamedEventMetadata.Create(
+        var metadata = EventMetadata.Create(
         [
             new KeyValuePair<string, string?>("correlationId", "abc-123"),
             new KeyValuePair<string, string?>("tenant", "contoso"),

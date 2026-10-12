@@ -1,4 +1,4 @@
-namespace Continuum.EventSourcing.Orleans.KurrentDB.Abstractions;
+namespace Continuum.Events;
 
 /// <summary>
 ///     Identifies an event's place within the transaction (append) that produced it.

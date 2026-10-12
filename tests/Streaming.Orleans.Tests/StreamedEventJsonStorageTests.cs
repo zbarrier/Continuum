@@ -1,3 +1,5 @@
+using Continuum.Events;
+using Continuum.Orleans.Events;
 using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
 
@@ -15,8 +17,8 @@ public class StreamedEventJsonStorageTests
     public void Round_Trips_Event_Payload_And_Metadata()
     {
         var transactionId = NewId.Next();
-        var metadata = StreamedEventMetadata.Create(
-            [new("tenant", "acme")], "trace-1", "span-1", transactionId, 3, 2, 1);
+        var metadata = EventMetadata.Create(
+            [new("tenant", "acme")], "trace-1", "span-1", new TransactionInfo(transactionId, 3, 2, 1));
         var original = Event(metadata);
 
         var restored = RoundTrip(new Holder { Event = original }).Event!;
@@ -43,7 +45,7 @@ public class StreamedEventJsonStorageTests
 
     private static Holder RoundTrip(Holder holder) => Serializer.Deserialize<Holder>(Serializer.Serialize(holder));
 
-    private static StreamedEvent<object> Event(StreamedEventMetadata? metadata) =>
+    private static StreamedEvent<object> Event(EventMetadata? metadata) =>
         new(NewId.Next(), "Tests.Payload", "counted-1", "1", "counted", "0", 0, 0, 1, 0, DateTime.UtcNow, new Payload("payload"), metadata);
 
     private static TypeMappedJsonGrainStorageSerializer CreateSerializer()

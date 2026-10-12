@@ -1,7 +1,7 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 
-namespace Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.Tests;
+namespace Continuum.Orleans.KurrentDB.Tests;
 
 public class KurrentDBEventMetadataCodecTests
 {
@@ -21,7 +21,7 @@ public class KurrentDBEventMetadataCodecTests
     [InlineData("{\"unterminated\":")]
     public void Read_Returns_Empty_For_Unusable_Documents(string json)
     {
-        Assert.Same(KurrentDBEventMetadata.Empty, KurrentDBEventMetadataCodec.Read(Utf8(json)));
+        Assert.Same(EventMetadata.Empty, KurrentDBEventMetadataCodec.Read(Utf8(json)));
     }
 
     [Fact]
@@ -88,9 +88,9 @@ public class KurrentDBEventMetadataCodecTests
     public void Write_Returns_Null_When_There_Is_Nothing_To_Write()
     {
         Assert.Null(KurrentDBEventMetadataCodec.Write(null));
-        Assert.Null(KurrentDBEventMetadataCodec.Write(KurrentDBEventMetadata.Empty));
+        Assert.Null(KurrentDBEventMetadataCodec.Write(EventMetadata.Empty));
         Assert.Null(KurrentDBEventMetadataCodec.WriteAll(null));
-        Assert.Null(KurrentDBEventMetadataCodec.WriteAll(KurrentDBEventMetadata.Empty));
+        Assert.Null(KurrentDBEventMetadataCodec.WriteAll(EventMetadata.Empty));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class KurrentDBEventMetadataCodecTests
     [Fact]
     public void Write_Omits_Tracing()
     {
-        var metadata = KurrentDBEventMetadata.Create([new("name", "value")], "trace", "span", null);
+        var metadata = EventMetadata.Create([new("name", "value")], "trace", "span", null);
 
         var entry = Assert.Single(Parse(KurrentDBEventMetadataCodec.Write(metadata)));
         Assert.Equal("name", entry.Key);
@@ -127,7 +127,7 @@ public class KurrentDBEventMetadataCodecTests
     public void Write_Then_Read_Round_Trips_Entries_And_Transaction()
     {
         var transaction = new TransactionInfo(NewId.Next(), 3, 2, 1);
-        var metadata = KurrentDBEventMetadata.Create([new("a", "1"), new("b", "two")]);
+        var metadata = EventMetadata.Create([new("a", "1"), new("b", "two")]);
 
         var read = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.Write(metadata, transaction));
 
@@ -142,7 +142,7 @@ public class KurrentDBEventMetadataCodecTests
     {
         var entries = Enumerable.Range(0, 50).Select(i => new KeyValuePair<string, string?>($"key{i}", new string('x', 40)));
 
-        var read = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.Write(KurrentDBEventMetadata.Create(entries)));
+        var read = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.Write(EventMetadata.Create(entries)));
 
         Assert.Equal(50, read.Count);
     }
@@ -151,7 +151,7 @@ public class KurrentDBEventMetadataCodecTests
     public void WriteAll_Round_Trips_Tracing_And_Transaction()
     {
         var transaction = new TransactionInfo(NewId.Next(), 3, 2, 1);
-        var metadata = KurrentDBEventMetadata.Create([new("name", "value")], "trace", "span", transaction);
+        var metadata = EventMetadata.Create([new("name", "value")], "trace", "span", transaction);
 
         var read = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.WriteAll(metadata));
 

@@ -1,3 +1,5 @@
+using Continuum.Events;
+using Continuum.Orleans.Events;
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
@@ -13,7 +15,7 @@ namespace Continuum.Streaming.Orleans;
 /// <remarks>
 /// The payload is written with its runtime type and restored through <see cref="ITypeMapper"/> using
 /// <see cref="IStreamedEvent{T}.EventType"/>, so the payload type must be mapped (for example with a domain event type
-/// attribute). Metadata is written inline and restored as a <see cref="StreamedEventMetadata"/>.
+/// attribute). Metadata is written inline and restored as a <see cref="EventMetadata"/>.
 /// </remarks>
 /// <param name="typeMapper">The type mapper used to resolve payload types from event types.</param>
 public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonConverter<IStreamedEvent<object>>
@@ -23,29 +25,118 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
     /// <inheritdoc/>
     public override IStreamedEvent<object>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        using var document = JsonDocument.ParseValue(ref reader);
-        var root = document.RootElement;
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw new JsonException("Expected the start of a streamed event object.");
+        }
 
-        var eventType = root.GetProperty("eventType").GetString()!;
-        var payloadType = _typeMapper.GetType(eventType);
-        var payload = root.GetProperty("event").Deserialize(options.GetTypeInfo(payloadType))
-            ?? throw new JsonException($"Streamed event '{eventType}' has a null payload.");
+        Guid? eventId = null;
+        string? eventType = null;
+        string? streamName = null;
+        string? streamKey = null;
+        string? topic = null;
+        string? partitionId = null;
+        ulong? streamVersion = null;
+        ulong? streamPosition = null;
+        BigInteger? sequenceNumber = null;
+        ulong? subSequenceNumber = null;
+        DateTime? timestamp = null;
+        object? payload = null;
+        var hasPayload = false;
+        JsonElement? deferredPayload = null;
+        EventMetadata? metadata = null;
+
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var name = reader.GetString();
+            reader.Read();
+            switch (name)
+            {
+                case "eventId":
+                    eventId = reader.GetGuid();
+                    break;
+                case "eventType":
+                    eventType = reader.GetString();
+                    break;
+                case "streamName":
+                    streamName = reader.GetString();
+                    break;
+                case "streamKey":
+                    streamKey = reader.GetString();
+                    break;
+                case "topic":
+                    topic = reader.GetString();
+                    break;
+                case "partitionId":
+                    partitionId = reader.GetString();
+                    break;
+                case "streamVersion":
+                    streamVersion = reader.GetUInt64();
+                    break;
+                case "streamPosition":
+                    streamPosition = reader.GetUInt64();
+                    break;
+                case "sequenceNumber":
+                    sequenceNumber = BigInteger.Parse(Required(reader.GetString(), name), CultureInfo.InvariantCulture);
+                    break;
+                case "subSequenceNumber":
+                    subSequenceNumber = reader.GetUInt64();
+                    break;
+                case "timestamp":
+                    timestamp = reader.GetDateTime();
+                    break;
+                case "event":
+                    hasPayload = true;
+                    if (eventType is null)
+                    {
+                        // The payload type is only known from eventType; buffer just the payload if it came first.
+                        deferredPayload = JsonElement.ParseValue(ref reader);
+                    }
+                    else
+                    {
+                        payload = JsonSerializer.Deserialize(ref reader, options.GetTypeInfo(_typeMapper.GetType(eventType)));
+                    }
+                    break;
+                case "metadata":
+                    metadata = EventMetadataJsonConverter.ReadMetadata(ref reader);
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        var resolvedEventType = Required(eventType, "eventType");
+        if (!hasPayload)
+        {
+            throw new JsonException("Streamed event is missing required property 'event'.");
+        }
+        if (deferredPayload is { } element)
+        {
+            payload = element.Deserialize(options.GetTypeInfo(_typeMapper.GetType(resolvedEventType)));
+        }
 
         return new StreamedEvent<object>(
-            NewId.FromSequentialGuid(root.GetProperty("eventId").GetGuid()),
-            eventType,
-            root.GetProperty("streamName").GetString()!,
-            root.GetProperty("streamKey").GetString()!,
-            root.GetProperty("topic").GetString()!,
-            root.GetProperty("partitionId").GetString()!,
-            root.GetProperty("streamVersion").GetUInt64(),
-            root.GetProperty("streamPosition").GetUInt64(),
-            BigInteger.Parse(root.GetProperty("sequenceNumber").GetString()!, CultureInfo.InvariantCulture),
-            root.GetProperty("subSequenceNumber").GetUInt64(),
-            root.GetProperty("timestamp").GetDateTime(),
-            payload,
-            ReadMetadata(root.GetProperty("metadata")));
+            NewId.FromSequentialGuid(Required(eventId, "eventId")),
+            resolvedEventType,
+            Required(streamName, "streamName"),
+            Required(streamKey, "streamKey"),
+            Required(topic, "topic"),
+            Required(partitionId, "partitionId"),
+            Required(streamVersion, "streamVersion"),
+            Required(streamPosition, "streamPosition"),
+            Required(sequenceNumber, "sequenceNumber"),
+            Required(subSequenceNumber, "subSequenceNumber"),
+            Required(timestamp, "timestamp"),
+            payload ?? throw new JsonException($"Streamed event '{resolvedEventType}' has a null payload."),
+            metadata ?? throw new JsonException("Streamed event is missing required property 'metadata'."));
     }
+
+    private static T Required<T>(T? value, string name) where T : class =>
+        value ?? throw new JsonException($"Streamed event is missing required property '{name}'.");
+
+    private static T Required<T>(T? value, string name) where T : struct =>
+        value ?? throw new JsonException($"Streamed event is missing required property '{name}'.");
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, IStreamedEvent<object> value, JsonSerializerOptions options)
@@ -65,65 +156,7 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
         writer.WritePropertyName("event");
         JsonSerializer.Serialize(writer, value.Event, options.GetTypeInfo(value.Event.GetType()));
         writer.WritePropertyName("metadata");
-        WriteMetadata(writer, value.Metadata);
+        EventMetadataJsonConverter.WriteMetadata(writer, value.Metadata);
         writer.WriteEndObject();
-    }
-
-    private static void WriteMetadata(Utf8JsonWriter writer, IStreamedEventMetadata metadata)
-    {
-        writer.WriteStartObject();
-        writer.WriteStartObject("values");
-        foreach (var (key, entry) in metadata)
-        {
-            writer.WriteString(key, entry);
-        }
-        writer.WriteEndObject();
-        WriteIfNotNull(writer, "traceId", metadata.TraceId);
-        WriteIfNotNull(writer, "spanId", metadata.SpanId);
-        if (metadata.TransactionId is { } transactionId)
-        {
-            writer.WriteString("transactionId", transactionId.ToSequentialGuid());
-        }
-        WriteIfNotNull(writer, "transactionSize", metadata.TransactionSize);
-        WriteIfNotNull(writer, "transactionPartitionSize", metadata.TransactionPartitionSize);
-        WriteIfNotNull(writer, "transactionPartitionIndex", metadata.TransactionPartitionIndex);
-        writer.WriteEndObject();
-    }
-
-    private static StreamedEventMetadata ReadMetadata(JsonElement element)
-    {
-        var values = new List<KeyValuePair<string, string?>>();
-        if (element.TryGetProperty("values", out var valuesElement))
-        {
-            foreach (var property in valuesElement.EnumerateObject())
-            {
-                values.Add(new(property.Name, property.Value.GetString()));
-            }
-        }
-
-        return StreamedEventMetadata.Create(
-            values,
-            element.TryGetProperty("traceId", out var traceId) ? traceId.GetString() : null,
-            element.TryGetProperty("spanId", out var spanId) ? spanId.GetString() : null,
-            element.TryGetProperty("transactionId", out var transactionId) ? NewId.FromSequentialGuid(transactionId.GetGuid()) : null,
-            element.TryGetProperty("transactionSize", out var size) ? size.GetInt32() : null,
-            element.TryGetProperty("transactionPartitionSize", out var partitionSize) ? partitionSize.GetInt32() : null,
-            element.TryGetProperty("transactionPartitionIndex", out var partitionIndex) ? partitionIndex.GetInt32() : null);
-    }
-
-    private static void WriteIfNotNull(Utf8JsonWriter writer, string name, string? value)
-    {
-        if (value is not null)
-        {
-            writer.WriteString(name, value);
-        }
-    }
-
-    private static void WriteIfNotNull(Utf8JsonWriter writer, string name, int? value)
-    {
-        if (value is { } number)
-        {
-            writer.WriteNumber(name, number);
-        }
     }
 }

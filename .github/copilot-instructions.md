@@ -11,6 +11,7 @@
 - Continuum type map attributes are used almost only in application code that consumes the framework via NuGet, not in other Continuum projects.
 - Use the Orleans [Alias] naming convention in Continuum: "Continuum.<Area>.<TypeName>.V<n>" (e.g., Continuum.KurrentDBStorageException.V1). Omit namespace segments already implied by the type name or by Orleans itself. Abstract types do not get an [Alias].
 - Orleans [Alias] names in Continuum should not include an "Orleans" segment, since being for Orleans is implied (e.g., "Continuum.KurrentDBStorageException.V1", not "Continuum.Orleans.KurrentDBStorageException.V1").
+- Continuum namespaces put the "Orleans" segment right after "Continuum" (e.g., Continuum.Orleans.Events, not Continuum.Events.Orleans), matching project naming like Continuum.Orleans.KurrentDB.
 - Add a test project only when the library has behavior that genuinely needs testing; Continuum libraries do not each need their own test project.
 - Abstractions projects must not know anything about implementation projects. Tests that need implementation types or internals belong in the implementation's own test project (e.g., Continuum.Streaming.Orleans.KurrentDB.Tests), never in the Abstractions test project; InternalsVisibleTo should only grant access to the implementation's own test project.
 - Continuum event-sourcing storage providers (KurrentDB, CosmosDB) must always use TypeMappedJsonGrainStorageSerializer with requireStoredType: true; the option defaults to false for all other uses (e.g., grain state storage).

@@ -1,3 +1,4 @@
+using Continuum.Orleans.KurrentDB;
 using Continuum;
 using Continuum.Streaming;
 using Continuum.Streaming.Orleans;

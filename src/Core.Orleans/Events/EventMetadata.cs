@@ -1,23 +1,50 @@
-namespace Continuum.EventSourcing.Orleans.KurrentDB.Abstractions;
+using Continuum.Events;
+using System.Collections;
+using System.Diagnostics.CodeAnalysis;
+
+namespace Continuum.Orleans.Events;
 
 /// <inheritdoc cref="IEventMetadata" />
-[Alias("Continuum.EventSourcing.KurrentDBEventMetadata.V1"), GenerateSerializer, Immutable]
-public sealed class KurrentDBEventMetadata : EventMetadata
+[Alias("Continuum.EventMetadata.V1"), GenerateSerializer, Immutable]
+[System.Text.Json.Serialization.JsonConverter(typeof(EventMetadataJsonConverter))]
+public sealed class EventMetadata : IEventMetadata
 {
-    /// <summary>
-    ///     The prefix KurrentDB reserves for its own metadata names, such as "$traceId" and "$spanId".
-    /// </summary>
-    public const string ReservedPrefix = "$";
-
     /// <summary>
     ///     Metadata containing no entries.
     /// </summary>
-    public static readonly KurrentDBEventMetadata Empty = new(new Dictionary<string, string>(0, StringComparer.Ordinal));
+    public static readonly EventMetadata Empty = new(new Dictionary<string, string>(0, StringComparer.Ordinal));
 
-    private KurrentDBEventMetadata(Dictionary<string, string> values)
-        : base(values)
+    [Id(0)]
+    private readonly Dictionary<string, string> _values;
+
+    private EventMetadata(Dictionary<string, string> values)
     {
+        _values = values;
     }
+
+    /// <inheritdoc />
+    [Id(1)]
+    public string? TraceId { get; private init; }
+
+    /// <inheritdoc />
+    [Id(2)]
+    public string? SpanId { get; private init; }
+
+    /// <inheritdoc />
+    [Id(3)]
+    public NewId? TransactionId { get; private init; }
+
+    /// <inheritdoc />
+    [Id(4)]
+    public int? TransactionSize { get; private init; }
+
+    /// <inheritdoc />
+    [Id(5)]
+    public int? TransactionPartitionSize { get; private init; }
+
+    /// <inheritdoc />
+    [Id(6)]
+    public int? TransactionPartitionIndex { get; private init; }
 
     /// <summary>
     ///     Creates metadata from the supplied entries, ignoring any whose name is reserved by a transport.
@@ -27,7 +54,7 @@ public sealed class KurrentDBEventMetadata : EventMetadata
     ///     Reserved names are dropped rather than rejected, because this is also the path a transport uses when it
     ///     hands back a metadata document that mixes its own entries with the producer's.
     /// </remarks>
-    public static KurrentDBEventMetadata Create(IEnumerable<KeyValuePair<string, string?>>? values)
+    public static EventMetadata Create(IEnumerable<KeyValuePair<string, string?>>? values)
     {
         return Create(values, null, null, null);
     }
@@ -48,7 +75,7 @@ public sealed class KurrentDBEventMetadata : EventMetadata
     ///     and a consumer reading them should not have to parse strings back into the shapes they already had.
     /// </remarks>
     /// <exception cref="ArgumentException"><paramref name="transaction"/> does not describe a consistent group.</exception>
-    public static KurrentDBEventMetadata Create(IEnumerable<KeyValuePair<string, string?>>? values, string? traceId, string? spanId,
+    public static EventMetadata Create(IEnumerable<KeyValuePair<string, string?>>? values, string? traceId, string? spanId,
         TransactionInfo? transaction)
     {
         transaction?.EnsureValid(nameof(transaction));
@@ -57,7 +84,7 @@ public sealed class KurrentDBEventMetadata : EventMetadata
         {
             foreach (var (key, value) in values)
             {
-                if (string.IsNullOrEmpty(key) || value is null || IsReservedName(key))
+                if (string.IsNullOrEmpty(key) || value is null || IEventMetadata.IsReservedName(key))
                 {
                     continue;
                 }
@@ -69,7 +96,7 @@ public sealed class KurrentDBEventMetadata : EventMetadata
         {
             return Empty;
         }
-        return new KurrentDBEventMetadata(copy)
+        return new EventMetadata(copy)
         {
             TraceId = traceId,
             SpanId = spanId,
@@ -81,12 +108,39 @@ public sealed class KurrentDBEventMetadata : EventMetadata
     }
 
     /// <summary>
-    ///     Returns <see langword="true" /> when the name is reserved by a transport, and so should not be used in the metadata bag.
+    ///     Gets the transaction the event was appended in, or <see langword="null" /> when it carries none.
     /// </summary>
-    /// <param name="name">The name to check.</param>
-    /// <returns><see langword="true" /> if the name is reserved; otherwise, <see langword="false" />.</returns>
-    public static bool IsReservedName(string name)
-    {
-        return !string.IsNullOrEmpty(name) && name.StartsWith(ReservedPrefix, StringComparison.Ordinal);
-    }
+    public TransactionInfo? Transaction => TransactionId is { } id
+        ? new TransactionInfo(id, TransactionSize!.Value, TransactionPartitionSize!.Value, TransactionPartitionIndex!.Value)
+        : null;
+
+    /// <inheritdoc />
+    public string? GetValueOrDefault(string name) => _values.GetValueOrDefault(name);
+
+    #region IReadOnlyDictionary Implementation
+
+    /// <inheritdoc />
+    public string this[string key] => _values[key];
+
+    /// <inheritdoc />
+    public IEnumerable<string> Keys => _values.Keys;
+
+    /// <inheritdoc />
+    public IEnumerable<string> Values => _values.Values;
+
+    /// <inheritdoc />
+    public int Count => _values.Count;
+
+    /// <inheritdoc />
+    public bool ContainsKey(string key) => _values.ContainsKey(key);
+
+    /// <inheritdoc />
+    public bool TryGetValue(string key, [MaybeNullWhen(false)] out string value) => _values.TryGetValue(key, out value);
+
+    /// <inheritdoc />
+    public IEnumerator<KeyValuePair<string, string>> GetEnumerator() => _values.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    #endregion
 }

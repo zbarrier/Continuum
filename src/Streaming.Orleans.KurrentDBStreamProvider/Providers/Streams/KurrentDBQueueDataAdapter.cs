@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 using Continuum.Streaming.Orleans;
 
@@ -11,7 +11,7 @@ using Orleans.Providers.Streams.Common;
 using Orleans.Serialization;
 using Orleans.Streams;
 
-using MetadataCodec = global::Continuum.Streaming.Orleans.KurrentDB.KurrentDBEventMetadataCodec;
+using MetadataCodec = global::Continuum.Orleans.KurrentDB.KurrentDBEventMetadataCodec;
 using StreamPosition = Orleans.Streams.StreamPosition;
 
 using Continuum.Serialization.Orleans;

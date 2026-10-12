@@ -1,11 +1,10 @@
-﻿using Continuum;
+using Continuum;
 using Continuum.Streaming;
 using Continuum.Streaming.Orleans;
 using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 using KurrentDB.Client;
 
-using Newtonsoft.Json;
 
 using Orleans.Configuration;
 using Orleans.Runtime;
@@ -45,7 +44,6 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
         Token = new KurrentDBSequenceToken(kurrentDBMessage.Position, kurrentDBMessage.SequenceNumber, 0);
     }
 
-    [JsonProperty]
     [Id(0)]
     private KurrentDBMessage KurrentDBMessage { get; } = null!;
 
@@ -57,21 +55,18 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     ///     container can be serialized and rebuilt through its activator when it crosses a call boundary, and the
     ///     adapter's options are registered per provider name, so they cannot be recovered at that point.
     /// </remarks>
-    [JsonProperty]
     [Id(2)]
     private object? Payload { get; }
 
     /// <summary>
     ///     Why the event could not be materialized, raised when this batch is delivered.
     /// </summary>
-    [JsonProperty]
     [Id(3)]
     private string? Fault { get; }
 
     /// <summary>
     ///     Whether an unresolvable event should be delivered as an empty batch instead of raising <see cref="Fault" />.
     /// </summary>
-    [JsonProperty]
     [Id(4)]
     private bool IsSuppressed { get; }
 
@@ -83,7 +78,6 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     /// <summary>
     ///     Ges the stream sequence token for the start of this batch.
     /// </summary>
-    [JsonProperty]
     [Id(1)]
     private KurrentDBSequenceToken Token { get; set; } = new();
 
