@@ -11,10 +11,12 @@ using Orleans.Configuration;
 
 namespace Continuum.Orleans.Hosting;
 
+/// <summary>Registers Cosmos DB catch-up subscriptions.</summary>
 public static class CosmosDBStreamingBuilderExtensions
 {
     const string CatchupSubscriptionsConfigKeyPrefix = "Continuum:Orleans:Streaming:CosmosDB:CatchupSubscriptions";
 
+    /// <summary>Registers a catch-up subscription, binding its options from configuration.</summary>
     public static IHostApplicationBuilder AddCosmosDBCatchupSubscription(this IHostApplicationBuilder builder,
         CosmosDBCatchupSubscriptionInfo subscriptionInfo,
         TypeMapKinds typeMapKinds = TypeMapKinds.DomainEvent | TypeMapKinds.Metadata)
@@ -25,7 +27,6 @@ public static class CosmosDBStreamingBuilderExtensions
             {
                 options.TypeMapKinds = typeMapKinds;
             })
-            .ValidateDataAnnotations()
             .ValidateOnStart();
 
         builder.Services.AddTransient<IConfigurationValidator>(sp => new CosmosDBCatchupSubscriptionOptionsValidator(sp.GetRequiredService<IOptionsMonitor<CosmosDBCatchupSubscriptionOptions>>().Get(subscriptionInfo.Name), subscriptionInfo));

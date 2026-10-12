@@ -1,62 +1,96 @@
-﻿using System.Runtime.Serialization;
-
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Continuum.Streaming.Orleans.Azure.CosmosDB;
 
+/// <summary>
+///     The kind of item stored in a stream partition.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<EventItemType>))]
 public enum EventItemType
 {
-    [EnumMember(Value = "hdr")]
+    /// <summary>The stream header holding the current version.</summary>
+    [JsonStringEnumMemberName("hdr")]
     Header = 1,
-    [EnumMember(Value = "ss")]
+
+    /// <summary>A snapshot item.</summary>
+    [JsonStringEnumMemberName("ss")]
     Snapshot = 2,
-    [EnumMember(Value = "evt")]
+
+    /// <summary>An event item.</summary>
+    [JsonStringEnumMemberName("evt")]
     Event = 3,
 }
 
+/// <summary>
+///     An item received from the Cosmos DB change feed of a container written by the Cosmos DB log-consistency provider.
+/// </summary>
 public sealed class ChangeFeedEventItem
 {
-    [JsonProperty("id")]
-    public string Id { get; set; }
+    /// <summary>The item id, unique within the stream partition.</summary>
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
 
-    [JsonProperty("type")]
-    [JsonConverter(typeof(StringEnumConverter))]
-    public EventItemType Type { get; set; }
+    /// <summary>The item kind.</summary>
+    [JsonPropertyName("type")]
+    public EventItemType Type { get; init; }
 
-    [JsonProperty("streamName")]
-    public string StreamName { get; set; }
+    /// <summary>The stream name, which is also the partition key.</summary>
+    [JsonPropertyName("streamName")]
+    public required string StreamName { get; init; }
 
-    [JsonProperty("ver")]
-    public ulong Version { get; set; }
+    /// <summary>For events, the version the event produces. For the header, the current stream version.</summary>
+    [JsonPropertyName("ver")]
+    public ulong Version { get; init; }
 
-    [JsonProperty("dataType")]
-    public string DataType { get; set; }
-    [JsonProperty("data")]
-    public JToken Data { get; set; }
+    /// <summary>The mapped type name of <see cref="Data"/>.</summary>
+    [JsonPropertyName("dataType")]
+    public string DataType { get; init; } = string.Empty;
 
-    [JsonProperty("meta")]
-    public Dictionary<string, string> Metadata { get; set; }
+    /// <summary>The serialized payload.</summary>
+    [JsonPropertyName("data")]
+    public JsonElement Data { get; init; }
 
-    [JsonProperty("del")]
-    public bool Deleted { get; set; }
+    /// <summary>Item metadata.</summary>
+    [JsonPropertyName("meta")]
+    public Dictionary<string, string>? Metadata { get; init; }
 
-    [JsonProperty("_etag")]
-    public string ETag { get; set; }
+    /// <summary>Whether the stream is deleted (header only).</summary>
+    [JsonPropertyName("del")]
+    public bool Deleted { get; init; }
 
-    [JsonProperty("_ts")]
-    public long Timestamp { get; set; }
+    /// <summary>The position of the event within the append that wrote it.</summary>
+    [JsonPropertyName("subSeq")]
+    public ulong SubSequenceNumber { get; init; }
 
-    //[JsonProperty("crts")]
-    //public long ConflictResolvedTimestamp { get; set; }
+    /// <summary>The Cosmos DB ETag.</summary>
+    [JsonPropertyName("_etag")]
+    public string? ETag { get; init; }
 
-    [JsonProperty(PropertyName = "ttl", NullValueHandling = NullValueHandling.Ignore)]
-    public int? TimeToLive { get; set; }
+    /// <summary>The Cosmos DB last-modified timestamp, in Unix seconds.</summary>
+    [JsonPropertyName("_ts")]
+    public long Timestamp { get; init; }
 
-    [JsonProperty("_lsn")]
-    public long LogicalSequenceNumber { get; set; }
+    /// <summary>The item time-to-live in seconds, if set.</summary>
+    [JsonPropertyName("ttl")]
+    public int? TimeToLive { get; init; }
 
-    [JsonProperty("subSeq")]
-    public ulong SubSequenceNumber { get; set; }
+    /// <summary>The Cosmos DB logical sequence number of the change.</summary>
+    [JsonPropertyName("_lsn")]
+    public long LogicalSequenceNumber { get; init; }
+}
+
+/// <summary>
+///     The envelope of a Cosmos DB change feed stream response.
+/// </summary>
+internal sealed class ChangeFeedResponse
+{
+    [JsonPropertyName("Documents")]
+    public List<ChangeFeedEventItem> Documents { get; set; } = new();
+}
+
+[JsonSerializable(typeof(JsonElement))]
+[JsonSerializable(typeof(ChangeFeedResponse))]
+internal sealed partial class ChangeFeedJsonContext : JsonSerializerContext
+{
 }

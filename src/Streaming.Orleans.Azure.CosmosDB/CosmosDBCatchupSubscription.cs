@@ -1,4 +1,6 @@
-﻿using System.Numerics;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
+using System.Text.Json;
 
 using Continuum.Streaming.Orleans.Azure.CosmosDB.Configuration;
 using Continuum.TypeMapping;
@@ -8,17 +10,21 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-using Newtonsoft.Json;
+using Orleans.Storage;
 
 namespace Continuum.Streaming.Orleans.Azure.CosmosDB;
 
-public record CosmosDBCatchupSubscriptionInfo(string Name, Type Type);
+/// <summary>Identifies a catch-up subscription by name and implementing type.</summary>
+public record CosmosDBCatchupSubscriptionInfo(string Name, [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type Type);
 
+/// <summary>A subscription that reads the Cosmos DB change feed of a container written by the Cosmos DB log-consistency provider.</summary>
 public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHostedStreamSubscription
     where TSubscription : CosmosDBCatchupSubscription<TSubscription, TOptions>
     where TOptions : CosmosDBCatchupSubscriptionOptions, new()
 {
+    /// <summary>The subscription name, derived from the type name without the Catchup/Subscription suffixes.</summary>
     public static readonly string Name;
+    /// <summary>The implementing subscription type.</summary>
     public static readonly Type Type = typeof(TSubscription);
     static CosmosDBCatchupSubscription()
     {
@@ -33,32 +39,42 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
         }
         Name = name;
     }
+    /// <summary>The name and type used to register this subscription.</summary>
     public static CosmosDBCatchupSubscriptionInfo Info => new(Name, Type);
 
     private readonly IServiceProvider _serviceProvider;
 
+    /// <summary>The subscription logger.</summary>
     protected readonly ILogger<TSubscription> _logger;
+    /// <summary>The subscription options.</summary>
     protected readonly TOptions _options;
-    protected readonly JsonSerializer _jsonSerializer;
+    /// <summary>Deserializes event payloads.</summary>
+    protected readonly IGrainStorageSerializer _grainStorageSerializer;
+    /// <summary>Parses stream names into topic and key.</summary>
     protected readonly IStreamedNameParser _streamNameParser;
+    /// <summary>Resolves event types from mapped type names.</summary>
     protected readonly ITypeMapper _typeMapper;
+    /// <summary>The Cosmos DB client for the configured connection.</summary>
     protected readonly CosmosClient _cosmosClient;
 
     private ChangeFeedProcessor? _changeFeedProcessor = null;
 
+    /// <summary>Creates the subscription, resolving its options and dependencies from the service provider.</summary>
     public CosmosDBCatchupSubscription(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<TSubscription>>();
         _options = serviceProvider.GetRequiredService<IOptionsMonitor<TOptions>>().Get(Name);
-        _jsonSerializer = _options.JsonSerializer;
+        _grainStorageSerializer = _options.GrainStorageSerializer;
         _streamNameParser = _options.StreamNameParser;
         _typeMapper = _options.TypeMapper;
         _cosmosClient = serviceProvider.GetRequiredKeyedService<CosmosClient>(_options.ConnectionName);
     }
 
+    /// <inheritdoc/>
     public string SubscriptionName => Name;
 
+    /// <summary>Starts the change feed processor unless the subscription is disabled.</summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         if (!_options.Enabled)
@@ -73,7 +89,7 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
         Container monitoredContainer = _cosmosClient.GetContainer(_options.DatabaseName, _options.MonitoredContainerName);
 
         ChangeFeedProcessorBuilder builder = monitoredContainer
-            .GetChangeFeedProcessorBuilder<ChangeFeedEventItem>(SubscriptionName, HandleChangesAsync)
+            .GetChangeFeedProcessorBuilder(SubscriptionName, HandleChangeStreamAsync)
             .WithErrorNotification(OnErrorAsync)
             .WithInstanceName(_options.InstanceName)
             .WithLeaseContainer(leaseContainer);
@@ -102,6 +118,7 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
         _logger.LogWarning("Subscription {SubscriptionName} for instance {InstanceName} has started.", SubscriptionName, _options.InstanceName);
     }
 
+    /// <summary>Stops the change feed processor.</summary>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogWarning("Subscription {SubscriptionName} for instance {InstanceName} is stopping.", SubscriptionName, _options.InstanceName);
@@ -114,6 +131,13 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
         _logger.LogWarning("Subscription {SubscriptionName} for instance {InstanceName} has stopped.", SubscriptionName, _options.InstanceName);
     }
 
+    private async Task HandleChangeStreamAsync(ChangeFeedProcessorContext context, Stream changes, CancellationToken cancellationToken)
+    {
+        var response = await JsonSerializer.DeserializeAsync(changes, ChangeFeedJsonContext.Default.ChangeFeedResponse, cancellationToken).ConfigureAwait(false);
+        await HandleChangesAsync(context, response?.Documents ?? [], cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Converts a batch of changes to streamed events, skipping deleted, header, unknown and unreadable items.</summary>
     protected virtual async Task HandleChangesAsync(ChangeFeedProcessorContext context, 
         IReadOnlyCollection<ChangeFeedEventItem> changes, 
         CancellationToken cancellationToken)
@@ -138,7 +162,7 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
                 continue;
             }
 
-            if (!CosmosDBCatchupEventDeserializer.TryDeserialize(change, type, _jsonSerializer, _logger, out var deserializedEvent))
+            if (!CosmosDBCatchupEventDeserializer.TryDeserialize(change, type, _grainStorageSerializer, _logger, out var deserializedEvent))
             {
                 continue;
             }
@@ -154,6 +178,7 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
         }
     }
 
+    /// <summary>Creates the streamed event for a deserialized change.</summary>
     protected virtual IStreamedEvent<object> ToStreamEvent(ChangeFeedProcessorContext context, ChangeFeedEventItem eventItem, object deserializedEvent)
     {
         string streamKey = _streamNameParser.GetStreamKey(eventItem.StreamName);
@@ -176,10 +201,12 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
         return streamEvent;
     }
 
+    /// <summary>Handles the streamed events of a batch.</summary>
     protected abstract Task HandleStreamEventsAsync(ChangeFeedProcessorContext context,
         List<IStreamedEvent<object>> streamEvents,
         CancellationToken cancellationToken);
 
+    /// <summary>Logs a change feed processor error.</summary>
     protected virtual Task OnErrorAsync(string leaseToken, Exception exception)
     {
         if (exception is ChangeFeedProcessorUserException userException)

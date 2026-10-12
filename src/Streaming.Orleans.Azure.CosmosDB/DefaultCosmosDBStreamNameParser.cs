@@ -12,6 +12,7 @@ public sealed class DefaultCosmosDBStreamNameParser : IStreamedNameParser
 {
     private const char Separator = '/';
 
+    /// <summary>Splits the stream name at its last separator into topic and key.</summary>
     public StreamedName Parse(string streamName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(streamName);

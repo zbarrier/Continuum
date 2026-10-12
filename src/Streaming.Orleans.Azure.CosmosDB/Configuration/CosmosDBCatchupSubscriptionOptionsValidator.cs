@@ -51,9 +51,17 @@ public class CosmosDBCatchupSubscriptionOptionsValidator : IConfigurationValidat
         {
             throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.StartingPositionDateTime)} is required when {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.StartingPositionType)} equals {StartingPositionType.FromDateTime}.");
         }
-        if (_options.JsonSerializer is null)
+        if (_options.PollingIntervalInMilliseconds is < 100 or > 60_000)
         {
-            throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.JsonSerializer)} is required.");
+            throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.PollingIntervalInMilliseconds)} must be between 100 and 60,000.");
+        }
+        if (_options.MaxItemsPerPoll is < 1 or > 10_000)
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.MaxItemsPerPoll)} must be between 1 and 10,000.");
+        }
+        if (_options.GrainStorageSerializer is null)
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.GrainStorageSerializer)} is required.");
         }
         if (_options.StreamNameParser is null)
         {
