@@ -24,7 +24,7 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 [Collection(ClusterCollection.Name)]
 public class AllStreamReceiverTests
 {
-    private const string ConnectionString = "kurrentdb://localhost:2113?tls=false";
+    private readonly string _connectionString;
     private const string EventType = "all-stream-test-event";
 
     private readonly ITestOutputHelper _output;
@@ -33,6 +33,7 @@ public class AllStreamReceiverTests
     {
         // The fixture is depended upon so the KurrentDB container is started, even though the cluster is not used.
         ArgumentNullException.ThrowIfNull(fixture);
+        _connectionString = fixture.ConnectionString;
         _output = output;
     }
 
@@ -40,7 +41,7 @@ public class AllStreamReceiverTests
     public async Task Resumes_After_Checkpoint_Without_Replaying_Delivered_Events()
     {
         // Arrange
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         var streamName = $"allstream-resume-{Guid.NewGuid():N}";
         var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
 
@@ -68,7 +69,7 @@ public class AllStreamReceiverTests
         // Arrange: link events are appended explicitly rather than relying on the $by_category projection, which runs
         // asynchronously and writes to a system stream. A link sits at a different position in $all than the event it
         // points at, which is the divergence this test needs.
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         var suffix = Guid.NewGuid().ToString("N");
         var originStream = $"allstream-link-origin-{suffix}";
         var linkStream = $"allstream-link-{suffix}";

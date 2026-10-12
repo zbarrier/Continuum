@@ -19,7 +19,7 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 [Collection(ClusterCollection.Name)]
 public class EventSourcedEventDeliveryTests
 {
-    private const string ConnectionString = "kurrentdb://localhost:2113?tls=false";
+    private readonly string _connectionString;
 
     // The name the ChatMessage type is registered under by its DomainEventTypeMap attribute. The provider resolves
     // the CLR type from this rather than from a CLR type name, so events survive class renames.
@@ -31,6 +31,7 @@ public class EventSourcedEventDeliveryTests
     public EventSourcedEventDeliveryTests(ClusterFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
+        _connectionString = fixture.ConnectionString;
         _output = output;
     }
 
@@ -49,7 +50,7 @@ public class EventSourcedEventDeliveryTests
         var sent = new ChatMessage("EventSourcing", "written without the stream provider", DateTimeOffset.UtcNow);
 
         // Act
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, streamName, sent);
 
         var received = await WaitForAsync(collector, expectedCount: 1);

@@ -18,7 +18,7 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 [Collection(ClusterCollection.Name)]
 public class ImplicitStreamProjectionGrainTests
 {
-    private const string ConnectionString = "kurrentdb://localhost:2113?tls=false";
+    private readonly string _connectionString;
     private const string EventTypeName = "Tests.ChatMessage";
 
     private readonly ClusterFixture _fixture;
@@ -27,6 +27,7 @@ public class ImplicitStreamProjectionGrainTests
     public ImplicitStreamProjectionGrainTests(ClusterFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
+        _connectionString = fixture.ConnectionString;
         _output = output;
     }
 
@@ -38,7 +39,7 @@ public class ImplicitStreamProjectionGrainTests
 
         // Deliberately no call on the grain before appending. Under an implicit subscription the arrival of the
         // event is what activates it.
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, streamName, new ChatMessage("Ada", "first", DateTimeOffset.UtcNow));
         await AppendAsync(client, streamName, new ChatMessage("Grace", "second", DateTimeOffset.UtcNow));
 
@@ -54,7 +55,7 @@ public class ImplicitStreamProjectionGrainTests
         var firstKey = Guid.NewGuid().ToString("N");
         var secondKey = Guid.NewGuid().ToString("N");
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, $"{Constants.ImplicitStreamPrefix}-{firstKey}", new ChatMessage("Ada", "first", DateTimeOffset.UtcNow));
         await AppendAsync(client, $"{Constants.ImplicitStreamPrefix}-{secondKey}", new ChatMessage("Grace", "second", DateTimeOffset.UtcNow));
 

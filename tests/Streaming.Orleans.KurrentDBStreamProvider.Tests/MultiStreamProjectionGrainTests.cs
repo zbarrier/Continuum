@@ -16,7 +16,7 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 [Collection(ClusterCollection.Name)]
 public class MultiStreamProjectionGrainTests
 {
-    private const string ConnectionString = "kurrentdb://localhost:2113?tls=false";
+    private readonly string _connectionString;
     private const string EventTypeName = "Tests.ChatMessage";
 
     private readonly ClusterFixture _fixture;
@@ -25,6 +25,7 @@ public class MultiStreamProjectionGrainTests
     public MultiStreamProjectionGrainTests(ClusterFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
+        _connectionString = fixture.ConnectionString;
         _output = output;
     }
 
@@ -37,7 +38,7 @@ public class MultiStreamProjectionGrainTests
         var projection = _fixture.Cluster.Client.GetGrain<IMultiStreamProjectionGrain>(key);
         await projection.GetAuthors();
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, StreamNameFor(MultiStreamProjectionGrain.FirstStreamKey(key)), new ChatMessage("Ada", "first", DateTimeOffset.UtcNow));
         await AppendAsync(client, StreamNameFor(MultiStreamProjectionGrain.SecondStreamKey(key)), new ChatMessage("Grace", "second", DateTimeOffset.UtcNow));
 
@@ -55,7 +56,7 @@ public class MultiStreamProjectionGrainTests
         var projection = _fixture.Cluster.Client.GetGrain<IMultiStreamProjectionGrain>(key);
         await projection.GetAuthors();
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, StreamNameFor(MultiStreamProjectionGrain.FirstStreamKey(key)), new ChatMessage("Ada", "first", DateTimeOffset.UtcNow));
         await WaitForAsync(projection, expectedCount: 1);
 

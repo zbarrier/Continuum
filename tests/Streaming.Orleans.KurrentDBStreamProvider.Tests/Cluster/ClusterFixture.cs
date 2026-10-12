@@ -1,51 +1,68 @@
-﻿using System.Net;
+using System.Net;
 
 using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 
 using Orleans.TestingHost;
 
 namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 
-public class ClusterFixture : IDisposable
+public sealed class ClusterFixture : IAsyncLifetime
 {
-    DotNet.Testcontainers.Containers.IContainer? _container;
+    public const string ConnectionStringKey = "KurrentDBConnectionString";
 
-    public ClusterFixture()
+    private const int KurrentDBPort = 2113;
+
+    // The container is removed on dispose so every run starts against an empty log. Reusing a container left the log
+    // in place between runs, and because the $all provider reads from the beginning, each run replayed everything
+    // earlier runs had written until delivery outgrew the tests' timeouts.
+    // Pinned so a new KurrentDB release cannot change test behavior unnoticed.
+    // A random host port lets parallel runs and leftover containers coexist.
+    private readonly IContainer _container = new ContainerBuilder("docker.kurrent.io/kurrent-latest/kurrentdb:25.1")
+        .WithAutoRemove(true)
+        .WithCleanUp(true)
+        .WithPortBinding(KurrentDBPort, true)
+        .WithEnvironment("KURRENTDB_INSECURE", "true")
+        .WithEnvironment("KURRENTDB_ENABLE_ATOM_PUB_OVER_HTTP", "true")
+        .WithEnvironment("KURRENTDB_RUN_PROJECTIONS", "All")
+        .WithEnvironment("KURRENTDB_START_STANDARD_PROJECTIONS", "true")
+        .WithWaitStrategy(Wait.ForUnixContainer()
+            .UntilHttpRequestIsSucceeded(r => r
+                .ForPort(KurrentDBPort)
+                .ForPath("/health/live")
+                .ForStatusCode(HttpStatusCode.NoContent)
+                .ForStatusCode(HttpStatusCode.OK)))
+        .Build();
+
+    private TestCluster? _cluster;
+    private string? _connectionString;
+
+    public TestCluster Cluster => _cluster ?? throw new InvalidOperationException("The cluster has not been deployed.");
+
+    public string ConnectionString => _connectionString ?? throw new InvalidOperationException("The KurrentDB container has not been started.");
+
+    public async ValueTask InitializeAsync()
     {
-        // The container is named per run and removed on dispose so every run starts against an empty log. A fixed
-        // name left the log in place between runs, and because the $all provider reads from the beginning, each run
-        // replayed everything earlier runs had written until delivery outgrew the tests' timeouts.
-        _container = new ContainerBuilder("docker.kurrent.io/kurrent-latest/kurrentdb:latest")
-            .WithName($"kurrentdb-orleans-eventsourcing-test-{Guid.NewGuid():N}")
-            .WithAutoRemove(true)
-            .WithCleanUp(true)
-            .WithPortBinding(2113, 2113)
-            .WithEnvironment("KURRENTDB_INSECURE", "true")
-            .WithEnvironment("KURRENTDB_ENABLE_ATOM_PUB_OVER_HTTP", "true")
-            .WithEnvironment("KURRENTDB_RUN_PROJECTIONS", "All")
-            .WithEnvironment("KURRENTDB_START_STANDARD_PROJECTIONS", "true")
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilHttpRequestIsSucceeded(r => r
-                    .ForPort(2113)
-                    .ForPath("/health/live")
-                    .ForStatusCode(HttpStatusCode.NoContent)
-                    .ForStatusCode(HttpStatusCode.OK)))
-            .Build();
+        await _container.StartAsync();
 
-        _container.StartAsync().GetAwaiter().GetResult();
+        _connectionString = FormattableString.Invariant(
+            $"kurrentdb://{_container.Hostname}:{_container.GetMappedPublicPort(KurrentDBPort)}?tls=false");
 
         var builder = new TestClusterBuilder();
+        builder.Properties[ConnectionStringKey] = _connectionString;
         builder.AddSiloBuilderConfigurator<TestSiloConfigurations>();
-        Cluster = builder.Build();
-        Cluster.Deploy();
+        _cluster = builder.Build();
+        await _cluster.DeployAsync();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        Cluster.StopAllSilos();
+        if (_cluster is not null)
+        {
+            await _cluster.StopAllSilosAsync();
+            await _cluster.DisposeAsync();
+        }
 
-        _container?.DisposeAsync().GetAwaiter().GetResult();
+        await _container.DisposeAsync();
     }
-
-    public TestCluster Cluster { get; private set; }
 }

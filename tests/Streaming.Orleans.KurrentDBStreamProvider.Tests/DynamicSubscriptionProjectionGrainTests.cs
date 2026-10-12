@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 using Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests.Grains;
 
@@ -13,7 +13,7 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 [Collection(ClusterCollection.Name)]
 public class DynamicSubscriptionProjectionGrainTests
 {
-    private const string ConnectionString = "kurrentdb://localhost:2113?tls=false";
+    private readonly string _connectionString;
     private const string EventTypeName = "Tests.ChatMessage";
 
     private readonly ClusterFixture _fixture;
@@ -22,6 +22,7 @@ public class DynamicSubscriptionProjectionGrainTests
     public DynamicSubscriptionProjectionGrainTests(ClusterFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
+        _connectionString = fixture.ConnectionString;
         _output = output;
     }
 
@@ -35,7 +36,7 @@ public class DynamicSubscriptionProjectionGrainTests
         var projection = _fixture.Cluster.Client.GetGrain<IDynamicSubscriptionProjectionGrain>(key);
         await projection.Follow(followed);
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, ignored, "Grace");
         await AppendAsync(client, followed, "Ada");
 
@@ -54,7 +55,7 @@ public class DynamicSubscriptionProjectionGrainTests
         await projection.Follow(followed);
         await projection.Follow(followed);
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, followed, "Ada");
 
         await WaitForAsync(projection, expectedCount: 1);
@@ -74,7 +75,7 @@ public class DynamicSubscriptionProjectionGrainTests
         await projection.Follow(first);
         await projection.Follow(second);
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, first, "Ada");
         await WaitForAsync(projection, expectedCount: 1);
 
@@ -100,7 +101,7 @@ public class DynamicSubscriptionProjectionGrainTests
         var projection = _fixture.Cluster.Client.GetGrain<IDynamicSubscriptionProjectionGrain>(key);
         await projection.Follow(followed);
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, followed, "Ada");
         await WaitForAsync(projection, expectedCount: 1);
 

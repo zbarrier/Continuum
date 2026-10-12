@@ -13,7 +13,7 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 [Collection(ClusterCollection.Name)]
 public class StreamProjectionGrainTests
 {
-    private const string ConnectionString = "kurrentdb://localhost:2113?tls=false";
+    private readonly string _connectionString;
     private const string EventTypeName = "Tests.ChatMessage";
 
     private readonly ClusterFixture _fixture;
@@ -22,6 +22,7 @@ public class StreamProjectionGrainTests
     public StreamProjectionGrainTests(ClusterFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
+        _connectionString = fixture.ConnectionString;
         _output = output;
     }
 
@@ -39,7 +40,7 @@ public class StreamProjectionGrainTests
         // appended before anything was listening.
         await projection.GetAppliedCount();
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, streamName, new ChatMessage("Ada", "first", DateTimeOffset.UtcNow));
         await AppendAsync(client, streamName, new ChatMessage("Grace", "second", DateTimeOffset.UtcNow));
 
@@ -58,7 +59,7 @@ public class StreamProjectionGrainTests
         var projection = _fixture.Cluster.Client.GetGrain<IChatProjectionGrain>(key);
         await projection.GetAppliedCount();
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, streamName, new ChatMessage("Ada", "first", DateTimeOffset.UtcNow));
         await WaitForAsync(projection, expectedCount: 1);
 
@@ -84,7 +85,7 @@ public class StreamProjectionGrainTests
         var projection = _fixture.Cluster.Client.GetGrain<IChatProjectionGrain>(key);
         await projection.GetAppliedCount();
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         await AppendAsync(client, streamName, new ChatMessage("Ada", "first", DateTimeOffset.UtcNow));
         await WaitForAsync(projection, expectedCount: 1);
 

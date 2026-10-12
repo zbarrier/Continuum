@@ -22,7 +22,7 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 [Collection(ClusterCollection.Name)]
 public class TracingMetadataDiscriminatorTests
 {
-    private const string ConnectionString = "kurrentdb://localhost:2113?tls=false";
+    private readonly string _connectionString;
 
     // The name the ChatMessage type is registered under by its DomainEventTypeMap attribute.
     private const string EventTypeName = "Tests.ChatMessage";
@@ -33,6 +33,7 @@ public class TracingMetadataDiscriminatorTests
     public TracingMetadataDiscriminatorTests(ClusterFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
+        _connectionString = fixture.ConnectionString;
         _output = output;
     }
 
@@ -47,7 +48,7 @@ public class TracingMetadataDiscriminatorTests
         var streamName = $"{Constants.EventSourcedStreamPrefix}-{key:N}";
         var message = new ChatMessage("EventSourcing", "written with an ambient activity", DateTimeOffset.UtcNow);
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
 
         // Act: append the way the event sourcing storage does, passing null metadata, but inside an Activity.
         using (var listener = StartRecordingListener())
@@ -79,7 +80,7 @@ public class TracingMetadataDiscriminatorTests
         var streamName = $"{Constants.EventSourcedStreamPrefix}-{key:N}";
         var message = new ChatMessage("EventSourcing", "written without an ambient activity", DateTimeOffset.UtcNow);
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
 
         // Act: no ActivitySource listener, so Activity.Current stays null and there is nothing to inject.
         Assert.Null(Activity.Current);
@@ -114,7 +115,7 @@ public class TracingMetadataDiscriminatorTests
         var sent = new ChatMessage("EventSourcing", "delivered despite tracing metadata", DateTimeOffset.UtcNow);
 
         // Act
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         using (var listener = StartRecordingListener())
         using (var source = new ActivitySource(nameof(TracingMetadataDiscriminatorTests)))
         using (var activity = source.StartActivity("append", ActivityKind.Producer))
@@ -149,7 +150,7 @@ public class TracingMetadataDiscriminatorTests
         var callerMetadata = Encoding.UTF8.GetBytes(streamId.ToString());
         var message = new ChatMessage("StreamProvider", "written with caller metadata", DateTimeOffset.UtcNow);
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
 
         // Act
         using (var listener = StartRecordingListener())
@@ -183,7 +184,7 @@ public class TracingMetadataDiscriminatorTests
         var streamName = $"{Constants.EventSourcedStreamPrefix}-{key:N}";
         var message = new ChatMessage("EventSourcing", "shape probe", DateTimeOffset.UtcNow);
 
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
 
         string expectedTraceId;
         string expectedSpanId;

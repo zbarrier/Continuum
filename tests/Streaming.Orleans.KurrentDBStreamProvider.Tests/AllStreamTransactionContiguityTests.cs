@@ -22,7 +22,7 @@ namespace Continuum.Streaming.Orleans.KurrentDBStreamProvider.Tests;
 [Collection(ClusterCollection.Name)]
 public class AllStreamTransactionContiguityTests
 {
-    private const string ConnectionString = "kurrentdb://localhost:2113?tls=false";
+    private readonly string _connectionString;
     private const string EventType = "contiguity-probe-event";
 
     /// <summary>The number of writers appending at the same time, mirroring several grains committing at once.</summary>
@@ -43,6 +43,7 @@ public class AllStreamTransactionContiguityTests
     {
         // The fixture is depended upon so the KurrentDB container is started, even though the cluster is not used.
         ArgumentNullException.ThrowIfNull(fixture);
+        _connectionString = fixture.ConnectionString;
         _output = output;
     }
 
@@ -50,7 +51,7 @@ public class AllStreamTransactionContiguityTests
     public async Task Reports_Whether_A_Single_Append_Stays_Contiguous_In_The_All_Stream()
     {
         // Arrange
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         var probeId = $"contiguity{Guid.NewGuid():N}";
         var startPosition = await GetCurrentEndPositionAsync(client);
 
@@ -119,7 +120,7 @@ public class AllStreamTransactionContiguityTests
     public async Task Reports_Whether_A_Multi_Stream_Append_Stays_Contiguous_In_The_All_Stream()
     {
         // Arrange
-        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(ConnectionString));
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         var probeId = $"multicontiguity{Guid.NewGuid():N}";
         var startPosition = await GetCurrentEndPositionAsync(client);
 
