@@ -37,7 +37,6 @@ public static class KurrentDBStreamingBuilderExtensions
             {
                 options.TypeMapKinds = typeMapKinds;
             })
-            .ValidateDataAnnotations()
             .ValidateOnStart();
 
         builder.Services.AddTransient<IConfigurationValidator>(sp => new KurrentDBCatchupSubscriptionOptionsValidator(sp.GetRequiredService<IOptionsMonitor<KurrentDBCatchupSubscriptionOptions>>().Get(subscriptionInfo.Name), subscriptionInfo));

@@ -26,7 +26,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB;
 /// </summary>
 /// <param name="Name">The subscription name, which is also its options name.</param>
 /// <param name="Type">The subscription type.</param>
-public record KurrentDBCatchupSubscriptionInfo(string Name, Type Type);
+public record KurrentDBCatchupSubscriptionInfo(string Name, [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type Type);
 
 /// <summary>
 ///     A hosted catch-up subscription that reads a KurrentDB stream and delivers events in batches.

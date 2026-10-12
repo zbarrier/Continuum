@@ -1,4 +1,5 @@
 ﻿using Continuum.Serialization.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB.Monitors;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.Configuration;
 
@@ -33,9 +34,29 @@ public class KurrentDBCatchupSubscriptionOptionsValidator : IConfigurationValida
         {
             throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCatchupSubscriptionOptions)}.{nameof(_options.BufferOptions)} is required.");
         }
+        if (_options.BufferOptions.MaxEventsPerProcessLoop is < 1 or > 100_000)
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBChannelBufferOptions)}.{nameof(KurrentDBChannelBufferOptions.MaxEventsPerProcessLoop)} must be between 1 and 100,000.");
+        }
+        if (_options.BufferOptions.MaxUnprocessedEventsBeforeStop is < 1 or > 1_000_000)
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBChannelBufferOptions)}.{nameof(KurrentDBChannelBufferOptions.MaxUnprocessedEventsBeforeStop)} must be between 1 and 1,000,000.");
+        }
         if (_options.CheckpointMonitorOptions is null)
         {
             throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCatchupSubscriptionOptions)}.{nameof(_options.CheckpointMonitorOptions)} is required.");
+        }
+        if (_options.CheckpointMonitorOptions.KurrentDBCheckpointInterval is < 1 or > 1_000_000)
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCheckpointMonitorOptions)}.{nameof(KurrentDBCheckpointMonitorOptions.KurrentDBCheckpointInterval)} must be between 1 and 1,000,000.");
+        }
+        if (_options.CheckpointMonitorOptions.MaxEventsBeforeCommit is < 1 or > 1_000_000)
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCheckpointMonitorOptions)}.{nameof(KurrentDBCheckpointMonitorOptions.MaxEventsBeforeCommit)} must be between 1 and 1,000,000.");
+        }
+        if (_options.CheckpointMonitorOptions.MaxTimeBeforeCommit < TimeSpan.FromSeconds(1) || _options.CheckpointMonitorOptions.MaxTimeBeforeCommit > TimeSpan.FromDays(1))
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCheckpointMonitorOptions)}.{nameof(KurrentDBCheckpointMonitorOptions.MaxTimeBeforeCommit)} must be between 00:00:01 and 1.00:00:00.");
         }
         if (_options.Credentials is null)
         {

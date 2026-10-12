@@ -4,6 +4,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    <!-- CheckpointStore, GrainStorageSerializer and TypeMapper are interfaces that cannot come from configuration. They are set in code or
+         resolved by DefaultKurrentDBChannelCatchupSubscriptionOptionsConfigurator, so the binder skipping them is intended. -->
+    <NoWarn>$(NoWarn);SYSLIB1100;SYSLIB1101</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
