@@ -138,7 +138,7 @@ public class KurrentDBBatchContainerV2 : IBatchContainer, IKurrentDBCommitPositi
     private StreamedEvent<object> ToStreamedEvent(object @event)
     {
         return new StreamedEvent<object>(
-            NewId.FromSequentialGuid(Guid.Parse(KurrentDBMessage.EventId)),
+            Guid.Parse(KurrentDBMessage.EventId),
             KurrentDBMessage.EventType,
             KurrentDBMessage.StreamName,
             KurrentDBMessage.StreamKey,

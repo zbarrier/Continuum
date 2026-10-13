@@ -58,7 +58,7 @@ internal static class KurrentDBEventDataFactory
         }
         // A batch is produced to a single Orleans stream, so every record belongs to that one stream and the
         // transaction size and the per stream count are the same, exactly as they are for a grain's own append.
-        var transactionId = NewId.Next();
+        var transactionId = Guid.CreateVersion7();
         var streamIdText = streamId.ToString();
         var records = new EventData[batch.Count];
         for (var index = 0; index < batch.Count; index++)
@@ -81,6 +81,6 @@ internal static class KurrentDBEventDataFactory
             EventMetadata.Create([new KeyValuePair<string, string?>(KurrentDBEventMetadataCodec.OrleansStreamIdName, streamId)]),
             transaction);
         var data = @event is null ? ReadOnlyMemory<byte>.Empty : options.GrainStorageSerializer.Serialize(@event).ToMemory();
-        return new EventData(Uuid.NewUuid(), eventType, data, metadata, options.ContentType);
+        return new EventData(Uuid.FromGuid(Guid.CreateVersion7()), eventType, data, metadata, options.ContentType);
     }
 }

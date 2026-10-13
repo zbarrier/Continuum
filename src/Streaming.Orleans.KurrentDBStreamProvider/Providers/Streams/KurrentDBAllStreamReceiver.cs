@@ -194,9 +194,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
                     break;
                 }
                 streamedEvents.Add(streamedEvent);
-                // ToSequentialGuid is the inverse of the FromSequentialGuid used to build the carrier; ToGuid uses a
-                // different byte order and would never match the key the pump added.
-                _hashSet.TryRemove(Uuid.FromGuid(streamedEvent.EventId.ToSequentialGuid()), out _);
+                _hashSet.TryRemove(Uuid.FromGuid(streamedEvent.EventId), out _);
             }
             return streamedEvents;
         }

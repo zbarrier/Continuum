@@ -44,7 +44,7 @@ public class EventMetadataTests
     [Fact]
     public void Create_Keeps_A_Valid_Transaction_Without_Entries()
     {
-        var transaction = new TransactionInfo(NewId.Next(), 3, 2, 1);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), 3, 2, 1);
         var metadata = EventMetadata.Create(null, null, null, transaction);
 
         Assert.Equal(transaction.TransactionId, metadata.TransactionId);
@@ -57,7 +57,7 @@ public class EventMetadataTests
     [Fact]
     public void Create_Rejects_An_Inconsistent_Transaction()
     {
-        var exception = Assert.Throws<ArgumentException>(() => EventMetadata.Create(null, null, null, new TransactionInfo(NewId.Next(), 1, 1, 1)));
+        var exception = Assert.Throws<ArgumentException>(() => EventMetadata.Create(null, null, null, new TransactionInfo(Guid.CreateVersion7(), 1, 1, 1)));
         Assert.Equal("transaction", exception.ParamName);
     }
 

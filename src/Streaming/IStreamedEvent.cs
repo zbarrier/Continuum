@@ -12,7 +12,7 @@ public interface IStreamedEvent<out T> where T : class
     /// <summary>
     /// Unique sequential identifier for the event.
     /// </summary>
-    NewId EventId { get; }
+    Guid EventId { get; }
 
     /// <summary>
     /// The type of the event data.

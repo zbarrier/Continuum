@@ -1,4 +1,4 @@
-﻿using Continuum;
+using Continuum;
 using Continuum.Orleans.KurrentDB;
 using Continuum.TypeMapping;
 
@@ -82,7 +82,7 @@ public class KurrentDBGrainStorageOptions : IStorageProviderSerializerOptions
     /// <summary>
     ///     Generates the ID of each state event appended to KurrentDB. Defaults to sequential GUIDs.
     /// </summary>
-    public Func<Guid> EventIdGenerator { get; set; } = NewId.NextSequentialGuid;
+    public Func<Guid> EventIdGenerator { get; set; } = Guid.CreateVersion7;
 
     /// <summary>
     ///    The type of EventData to store in the KurrentDB. 
@@ -132,7 +132,7 @@ public class DefaultKurrentDBGrainStorageOptionsConfigurator : IPostConfigureOpt
         }
         if (options.EventIdGenerator is null)
         {
-            options.EventIdGenerator = NewId.NextSequentialGuid;
+            options.EventIdGenerator = Guid.CreateVersion7;
         }
         if (options.TypeMapper is null)
         {

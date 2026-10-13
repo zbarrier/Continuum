@@ -28,7 +28,7 @@ public sealed class StreamedEvent<T> : IStreamedEvent<T> where T : class
     /// <param name="event">The event payload.</param>
     /// <param name="metadata">The event metadata, or <see langword="null"/> for none.</param>
     /// <exception cref="ArgumentNullException"><paramref name="event"/> is <see langword="null"/>.</exception>
-    public StreamedEvent(NewId eventId, string eventType, string streamName, string streamKey, string topic, string partitionId,
+    public StreamedEvent(Guid eventId, string eventType, string streamName, string streamKey, string topic, string partitionId,
         ulong streamVersion, ulong streamPosition, BigInteger sequenceNumber, ulong subSequenceNumber, DateTime timestamp,
         T @event, IEventMetadata? metadata = null)
     {
@@ -51,7 +51,7 @@ public sealed class StreamedEvent<T> : IStreamedEvent<T> where T : class
 
     /// <inheritdoc />
     [Id(0)]
-    public NewId EventId { get; init; }
+    public Guid EventId { get; init; }
 
     /// <inheritdoc />
     [Id(1)]

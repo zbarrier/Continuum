@@ -73,7 +73,7 @@ public class CosmosDBLogConsistentStorageOptions
     /// <summary>
     ///     Generates the id of each appended event item.
     /// </summary>
-    public Func<NewId> EventIdGenerator { get; set; } = NewId.Next;
+    public Func<Guid> EventIdGenerator { get; set; } = Guid.CreateVersion7;
 
     /// <summary>
     ///    The type map used to name stored events. Defaults to domain events and metadata.
@@ -138,7 +138,7 @@ public class DefaultCosmosDBLogConsistentStorageOptionsConfigurator : IPostConfi
         }
         if (options.EventIdGenerator is null)
         {
-            options.EventIdGenerator = NewId.Next;
+            options.EventIdGenerator = Guid.CreateVersion7;
         }
         if (options.TypeMapper is null)
         {

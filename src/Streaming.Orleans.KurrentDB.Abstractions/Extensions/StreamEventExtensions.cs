@@ -40,7 +40,7 @@ public static class StreamEventExtensions
     public static StreamedEvent<object> ToAllStreamCheckpointEvent(this Position position)
     {
         var streamEvent = new StreamedEvent<object>(
-            NewId.Next(),
+            Guid.CreateVersion7(),
             "AllStreamCheckpointEventType",
             string.Empty,
             "",
@@ -69,7 +69,7 @@ public static class StreamEventExtensions
         var parsed = NameParser.Parse(resolvedEvent.Event.EventStreamId);
         var metadata = KurrentDBEventMetadataCodec.Read(resolvedEvent.Event.Metadata.Span);
         var streamEvent = new StreamedEvent<object>(
-            NewId.FromSequentialGuid(resolvedEvent.Event.EventId.ToGuid()),
+            resolvedEvent.Event.EventId.ToGuid(),
             resolvedEvent.Event.EventType,
             resolvedEvent.Event.EventStreamId,
             parsed.StreamKey,
@@ -96,7 +96,7 @@ public static class StreamEventExtensions
     public static StreamedEvent<object> ToStreamCheckpointEvent(this StreamPosition position)
     {
         var streamEvent = new StreamedEvent<object>(
-            NewId.Next(),
+            Guid.CreateVersion7(),
             "StreamCheckpointEventType",
             string.Empty,
             string.Empty,
@@ -122,7 +122,7 @@ public static class StreamEventExtensions
         var parsed = NameParser.Parse(resolvedEvent.Event.EventStreamId);
         var metadata = KurrentDBEventMetadataCodec.Read(resolvedEvent.Event.Metadata.Span);
         var streamEvent = new StreamedEvent<object>(
-            NewId.FromSequentialGuid(resolvedEvent.Event.EventId.ToGuid()),
+            resolvedEvent.Event.EventId.ToGuid(),
             resolvedEvent.Event.EventType,
             resolvedEvent.Event.EventStreamId,
             parsed.StreamKey,

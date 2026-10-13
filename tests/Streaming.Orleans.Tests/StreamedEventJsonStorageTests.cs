@@ -16,7 +16,7 @@ public class StreamedEventJsonStorageTests
     [Fact]
     public void Round_Trips_Event_Payload_And_Metadata()
     {
-        var transactionId = NewId.Next();
+        var transactionId = Guid.CreateVersion7();
         var metadata = EventMetadata.Create(
             [new("tenant", "acme")], "trace-1", "span-1", new TransactionInfo(transactionId, 3, 2, 1));
         var original = Event(metadata);
@@ -46,7 +46,7 @@ public class StreamedEventJsonStorageTests
     private static Holder RoundTrip(Holder holder) => Serializer.Deserialize<Holder>(Serializer.Serialize(holder));
 
     private static StreamedEvent<object> Event(EventMetadata? metadata) =>
-        new(NewId.Next(), "Tests.Payload", "counted-1", "1", "counted", "0", 0, 0, 1, 0, DateTime.UtcNow, new Payload("payload"), metadata);
+        new(Guid.CreateVersion7(), "Tests.Payload", "counted-1", "1", "counted", "0", 0, 0, 1, 0, DateTime.UtcNow, new Payload("payload"), metadata);
 
     private static TypeMappedJsonGrainStorageSerializer CreateSerializer()
     {

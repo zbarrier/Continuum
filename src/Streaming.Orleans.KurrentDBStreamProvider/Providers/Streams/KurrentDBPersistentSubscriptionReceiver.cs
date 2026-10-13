@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 using Continuum;
@@ -191,9 +191,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
                     break;
                 }
                 streamedEvents.Add(streamedEvent);
-                // ToSequentialGuid is the inverse of the FromSequentialGuid used to build the carrier; ToGuid uses a
-                // different byte order and would not recover the original event id.
-                var eventId = Uuid.FromGuid(streamedEvent.EventId.ToSequentialGuid());
+                var eventId = Uuid.FromGuid(streamedEvent.EventId);
                 eventIds.Add(eventId);
                 _hashSet.TryRemove(eventId, out _);
             }

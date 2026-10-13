@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 
@@ -30,7 +30,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     private readonly CosmosDBLogConsistentStorageOptions _storageOptions;
     private readonly IGrainStorageSerializer _storageSerializer;
     private readonly Func<string, string, GrainId, string> _streamNameFormatter;
-    private readonly Func<NewId> _eventIdGenerator;
+    private readonly Func<Guid> _eventIdGenerator;
     private readonly ITypeMapper _typeMapper;
 
     private readonly CosmosClient _client;
@@ -387,7 +387,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
             }
             var eventDataEntry = new EventItem
             {
-                Id = _eventIdGenerator().ToSequentialGuid().ToString(),
+                Id = _eventIdGenerator().ToString(),
                 Type = EventItemType.Event,
                 StreamName = streamName,
                 Version = ++currentVersion,

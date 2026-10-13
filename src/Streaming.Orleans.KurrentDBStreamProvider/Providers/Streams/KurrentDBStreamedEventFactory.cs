@@ -70,7 +70,7 @@ internal static class KurrentDBStreamedEventFactory
         }
 
         return new StreamedEvent<KurrentDBRawEvent>(
-            NewId.FromSequentialGuid(record.EventId.ToGuid()),
+            record.EventId.ToGuid(),
             record.EventType,
             record.EventStreamId,
             streamKey,

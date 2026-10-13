@@ -32,7 +32,7 @@ public sealed class EventMetadata : IEventMetadata
 
     /// <inheritdoc />
     [Id(3)]
-    public NewId? TransactionId { get; private init; }
+    public Guid? TransactionId { get; private init; }
 
     /// <inheritdoc />
     [Id(4)]

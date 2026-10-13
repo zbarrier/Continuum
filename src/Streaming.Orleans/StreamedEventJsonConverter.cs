@@ -117,7 +117,7 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
         }
 
         return new StreamedEvent<object>(
-            NewId.FromSequentialGuid(Required(eventId, "eventId")),
+            Required(eventId, "eventId"),
             resolvedEventType,
             Required(streamName, "streamName"),
             Required(streamKey, "streamKey"),
@@ -142,7 +142,7 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
     public override void Write(Utf8JsonWriter writer, IStreamedEvent<object> value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        writer.WriteString("eventId", value.EventId.ToSequentialGuid());
+        writer.WriteString("eventId", value.EventId);
         writer.WriteString("eventType", value.EventType);
         writer.WriteString("streamName", value.StreamName);
         writer.WriteString("streamKey", value.StreamKey);

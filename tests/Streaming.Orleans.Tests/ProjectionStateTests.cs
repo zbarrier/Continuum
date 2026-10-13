@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 using Orleans.Runtime;
 
@@ -296,7 +296,7 @@ public class ProjectionStateTests
         string streamKey = StreamKey)
     {
         return new StreamedEvent<object>(
-            NewId.Next(),
+            Guid.CreateVersion7(),
             "Tests.Counted",
             streamName: streamName,
             streamKey: streamKey,

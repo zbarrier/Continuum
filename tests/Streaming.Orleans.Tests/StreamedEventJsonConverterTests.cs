@@ -42,7 +42,7 @@ public class StreamedEventJsonConverterTests
     public void Throws_When_Required_Property_Is_Missing(string missing)
     {
         var original = new StreamedEvent<object>(
-            NewId.Next(), "Tests.Payload", "counted-1", "1", "counted", "0", 0, 0, 1, 0, DateTime.UtcNow, new Payload("payload"));
+            Guid.CreateVersion7(), "Tests.Payload", "counted-1", "1", "counted", "0", 0, 0, 1, 0, DateTime.UtcNow, new Payload("payload"));
         var node = JsonNode.Parse(JsonSerializer.Serialize<IStreamedEvent<object>>(original, Options))!.AsObject();
         node.Remove(missing);
 

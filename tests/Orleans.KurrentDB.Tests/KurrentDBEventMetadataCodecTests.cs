@@ -50,8 +50,8 @@ public class KurrentDBEventMetadataCodecTests
     [Fact]
     public void Read_Lifts_A_Complete_Transaction()
     {
-        var id = NewId.Next();
-        var metadata = KurrentDBEventMetadataCodec.Read(Utf8(Transaction(id.ToSequentialGuid(), "3", "2", "1")));
+        var id = Guid.CreateVersion7();
+        var metadata = KurrentDBEventMetadataCodec.Read(Utf8(Transaction(id, "3", "2", "1")));
 
         Assert.Equal(id, metadata.TransactionId);
         Assert.Equal(3, metadata.TransactionSize);
@@ -96,7 +96,7 @@ public class KurrentDBEventMetadataCodecTests
     [Fact]
     public void Write_Rejects_An_Inconsistent_Transaction()
     {
-        var exception = Assert.Throws<ArgumentException>(() => KurrentDBEventMetadataCodec.Write(null, new TransactionInfo(NewId.Next(), 1, 2, 0)));
+        var exception = Assert.Throws<ArgumentException>(() => KurrentDBEventMetadataCodec.Write(null, new TransactionInfo(Guid.CreateVersion7(), 1, 2, 0)));
         Assert.Equal("transaction", exception.ParamName);
     }
 
@@ -113,11 +113,11 @@ public class KurrentDBEventMetadataCodecTests
     [Fact]
     public void Write_Records_The_Transaction_As_Invariant_Strings()
     {
-        var transaction = new TransactionInfo(NewId.Next(), 12, 10, 9);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), 12, 10, 9);
 
         var document = Parse(KurrentDBEventMetadataCodec.Write(null, transaction));
 
-        Assert.Equal(transaction.TransactionId.ToSequentialGuid().ToString("D"), document[KurrentDBEventMetadataCodec.TransactionIdName].GetString());
+        Assert.Equal(transaction.TransactionId.ToString("D"), document[KurrentDBEventMetadataCodec.TransactionIdName].GetString());
         Assert.Equal("12", document[KurrentDBEventMetadataCodec.TransactionSizeName].GetString());
         Assert.Equal("10", document[KurrentDBEventMetadataCodec.TransactionPartitionSizeName].GetString());
         Assert.Equal("9", document[KurrentDBEventMetadataCodec.TransactionPartitionIndexName].GetString());
@@ -126,7 +126,7 @@ public class KurrentDBEventMetadataCodecTests
     [Fact]
     public void Write_Then_Read_Round_Trips_Entries_And_Transaction()
     {
-        var transaction = new TransactionInfo(NewId.Next(), 3, 2, 1);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), 3, 2, 1);
         var metadata = EventMetadata.Create([new("a", "1"), new("b", "two")]);
 
         var read = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.Write(metadata, transaction));
@@ -150,7 +150,7 @@ public class KurrentDBEventMetadataCodecTests
     [Fact]
     public void WriteAll_Round_Trips_Tracing_And_Transaction()
     {
-        var transaction = new TransactionInfo(NewId.Next(), 3, 2, 1);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), 3, 2, 1);
         var metadata = EventMetadata.Create([new("name", "value")], "trace", "span", transaction);
 
         var read = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.WriteAll(metadata));

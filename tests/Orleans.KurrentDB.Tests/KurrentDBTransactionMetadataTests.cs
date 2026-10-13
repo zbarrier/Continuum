@@ -21,7 +21,7 @@ public class KurrentDBTransactionMetadataTests
     public void Write_Round_Trips_A_Transaction()
     {
         // Arrange
-        var transactionId = NewId.Next();
+        var transactionId = Guid.CreateVersion7();
         var transaction = new TransactionInfo(transactionId, 3, 3, 1);
 
         // Act
@@ -44,7 +44,7 @@ public class KurrentDBTransactionMetadataTests
     public void Write_Emits_A_Document_For_A_Transaction_Without_Producer_Metadata()
     {
         // Arrange
-        var transaction = new TransactionInfo(NewId.Next(), 1, 1, 0);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), 1, 1, 0);
 
         // Act
         var written = KurrentDBEventMetadataCodec.Write(null, transaction);
@@ -76,7 +76,7 @@ public class KurrentDBTransactionMetadataTests
     {
         // Arrange
         var metadata = EventMetadata.Create([new KeyValuePair<string, string?>("tenant", "acme")]);
-        var transaction = new TransactionInfo(NewId.Next(), 2, 2, 0);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), 2, 2, 0);
 
         // Act
         var result = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.Write(metadata, transaction));
@@ -97,7 +97,7 @@ public class KurrentDBTransactionMetadataTests
     public void Read_Lifts_The_Transaction_Out_Of_The_Metadata_Bag()
     {
         // Arrange
-        var transaction = new TransactionInfo(NewId.Next(), 2, 2, 1);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), 2, 2, 1);
 
         // Act
         var result = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.Write(null, transaction));
@@ -174,7 +174,7 @@ public class KurrentDBTransactionMetadataTests
     public void Read_Preserves_Both_Counts_For_A_Cross_Stream_Transaction()
     {
         // Arrange
-        var transaction = new TransactionInfo(NewId.Next(), 5, 2, 1);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), 5, 2, 1);
 
         // Act
         var result = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.Write(null, transaction));

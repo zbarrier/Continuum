@@ -15,7 +15,7 @@ namespace Continuum.Events;
 ///     receive this many, so it is the count such a consumer would group against.
 /// </param>
 /// <param name="TransactionPartitionIndex">The zero based ordinal of this event within that per stream group.</param>
-public readonly record struct TransactionInfo(NewId TransactionId, int TransactionSize, int TransactionPartitionSize, int TransactionPartitionIndex)
+public readonly record struct TransactionInfo(Guid TransactionId, int TransactionSize, int TransactionPartitionSize, int TransactionPartitionIndex)
 {
     /// <summary>
     ///     Gets whether the counts describe a group that can be assembled: at least one event, a partition no larger

@@ -63,7 +63,7 @@ public interface IEventMetadata : IReadOnlyDictionary<string, string>
     ///     written by a foreign producer.
     /// </para>
     /// </summary>
-    NewId? TransactionId { get; }
+    Guid? TransactionId { get; }
 
     /// <summary>
     ///     The total number of events in the transaction, across every stream it wrote to.

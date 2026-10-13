@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Text.Json;
 
@@ -185,7 +185,7 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
         DateTime timestamp = DateTimeOffset.FromUnixTimeSeconds(eventItem.Timestamp).UtcDateTime;
 
         var streamEvent = new StreamedEvent<object>(
-            eventId: NewId.FromSequentialGuid(Guid.Parse(eventItem.Id)),
+            eventId: Guid.Parse(eventItem.Id),
             eventType: eventItem.DataType,
             streamName: eventItem.StreamName,
             streamKey: streamKey,

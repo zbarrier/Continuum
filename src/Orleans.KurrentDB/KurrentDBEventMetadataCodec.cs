@@ -167,11 +167,10 @@ public static class KurrentDBEventMetadataCodec
     /// </remarks>
     private static TransactionInfo? ReadTransaction(string? transactionId, string? transactionSize, string? partitionSize, string? partitionIndex)
     {
-        if (transactionId is null || !Guid.TryParse(transactionId, out var guid))
+        if (transactionId is null || !Guid.TryParse(transactionId, out var id))
         {
             return null;
         }
-        var id = NewId.FromSequentialGuid(guid);
         if (!TryParseCount(transactionSize, out var size) || !TryParseCount(partitionSize, out var partition) || !TryParseCount(partitionIndex, out var index))
         {
             return null;
@@ -290,7 +289,7 @@ public static class KurrentDBEventMetadataCodec
     {
         // Written as strings so the sizes read back the same way every other metadata value does. Invariant culture
         // keeps the text identical on every silo regardless of its locale.
-        writer.WriteString(TransactionIdName, info.TransactionId.ToSequentialGuid().ToString("D", CultureInfo.InvariantCulture));
+        writer.WriteString(TransactionIdName, info.TransactionId.ToString("D", CultureInfo.InvariantCulture));
         writer.WriteString(TransactionSizeName, info.TransactionSize.ToString(CultureInfo.InvariantCulture));
         writer.WriteString(TransactionPartitionSizeName, info.TransactionPartitionSize.ToString(CultureInfo.InvariantCulture));
         writer.WriteString(TransactionPartitionIndexName, info.TransactionPartitionIndex.ToString(CultureInfo.InvariantCulture));

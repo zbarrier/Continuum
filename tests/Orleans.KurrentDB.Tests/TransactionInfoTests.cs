@@ -8,7 +8,7 @@ public class TransactionInfoTests
     [InlineData(5, 2, 1)]
     public void Valid_Shapes_Are_Accepted(int size, int partitionSize, int partitionIndex)
     {
-        var transaction = new TransactionInfo(NewId.Next(), size, partitionSize, partitionIndex);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), size, partitionSize, partitionIndex);
 
         Assert.True(transaction.IsValid);
         transaction.EnsureValid();
@@ -22,7 +22,7 @@ public class TransactionInfoTests
     [InlineData(2, 2, 2)]
     public void Invalid_Shapes_Are_Rejected(int size, int partitionSize, int partitionIndex)
     {
-        var transaction = new TransactionInfo(NewId.Next(), size, partitionSize, partitionIndex);
+        var transaction = new TransactionInfo(Guid.CreateVersion7(), size, partitionSize, partitionIndex);
 
         Assert.False(transaction.IsValid);
         var exception = Assert.Throws<ArgumentException>(() => transaction.EnsureValid("value"));

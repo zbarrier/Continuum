@@ -219,7 +219,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
             // them, so a subscriber cannot recover the grouping later. Recording it here is what lets a projection
             // apply the whole append at once instead of briefly serving a half applied state. A grain writes to its
             // own stream, so all of these entries belong to one stream and the two counts are the same.
-            var transactionId = NewId.Next();
+            var transactionId = Guid.CreateVersion7();
             var serializedEntries = new EventData[entries.Count];
             for (var index = 0; index < serializedEntries.Length; index++)
             {

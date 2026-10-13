@@ -93,7 +93,7 @@ public sealed class EventMetadataJsonConverter : JsonConverter<EventMetadata>
         if (transactionId is { } id && transactionSize is { } size && transactionPartitionSize is { } partitionSize &&
             transactionPartitionIndex is { } partitionIndex)
         {
-            var candidate = new TransactionInfo(NewId.FromSequentialGuid(id), size, partitionSize, partitionIndex);
+            var candidate = new TransactionInfo(id, size, partitionSize, partitionIndex);
             if (!candidate.IsValid)
             {
                 throw new JsonException(
@@ -138,7 +138,7 @@ public sealed class EventMetadataJsonConverter : JsonConverter<EventMetadata>
         }
         if (metadata.TransactionId is { } transactionId)
         {
-            writer.WriteString(TransactionIdName, transactionId.ToSequentialGuid());
+            writer.WriteString(TransactionIdName, transactionId);
         }
         WriteIfNotNull(writer, TransactionSizeName, metadata.TransactionSize);
         WriteIfNotNull(writer, TransactionPartitionSizeName, metadata.TransactionPartitionSize);
