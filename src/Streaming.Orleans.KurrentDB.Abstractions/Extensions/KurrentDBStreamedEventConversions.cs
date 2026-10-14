@@ -7,7 +7,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.Extensions;
 /// <summary>
 ///     Converts KurrentDB events and positions to <see cref="StreamedEvent{T}" /> instances.
 /// </summary>
-public static class StreamEventExtensions
+public static class KurrentDBStreamedEventConversions
 {
     /// <summary>
     ///     The topic of checkpoint events read from the <c>$all</c> stream.

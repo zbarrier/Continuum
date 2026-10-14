@@ -258,7 +258,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
             {
                 lastStreamPosition = streamedEvent.Cursor.ToKurrentDBPosition(streamedEvent.StreamName.Value);
 
-                if (ReferenceEquals(streamedEvent.Event, StreamEventExtensions.CheckpointMarker))
+                if (ReferenceEquals(streamedEvent.Event, KurrentDBStreamedEventConversions.CheckpointMarker))
                 {
                     continue;
                 }
@@ -419,7 +419,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
             {
                 lastStreamPosition = streamEvent.Cursor.ToKurrentDBPosition(streamEvent.StreamName.Value);
 
-                if (ReferenceEquals(streamEvent.Event, StreamEventExtensions.CheckpointMarker))
+                if (ReferenceEquals(streamEvent.Event, KurrentDBStreamedEventConversions.CheckpointMarker))
                 {
                     continue;
                 }

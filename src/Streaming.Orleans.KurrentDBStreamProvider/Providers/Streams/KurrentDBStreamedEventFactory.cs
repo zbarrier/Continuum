@@ -78,7 +78,7 @@ internal static class KurrentDBStreamedEventFactory
             record.EventType,
             streamName,
             record.EventNumber,
-            StreamEventExtensions.ToCursor(streamName, commitPosition),
+            KurrentDBStreamedEventConversions.ToCursor(streamName, commitPosition),
             record.Created,
             payload,
             metadata);
