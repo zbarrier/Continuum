@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-using Continuum.Streaming;
+using Continuum.Streams;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,22 +8,22 @@ using Microsoft.Extensions.Hosting;
 namespace Continuum.Hosting;
 
 /// <summary>
-/// Registers keyed <see cref="IStreamedNameParser" /> implementations.
+/// Registers keyed <see cref="IStreamNameParser" /> implementations.
 /// </summary>
-public static class StreamedNameParserBuilderExtensions
+public static class StreamNameParserBuilderExtensions
 {
     /// <summary>
-    ///     Registers a keyed <see cref="IStreamedNameParser" /> for the supplied connection name.
+    ///     Registers a keyed <see cref="IStreamNameParser" /> for the supplied connection name.
     /// </summary>
-    public static IHostApplicationBuilder AddStreamedNameParser<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TParser>(this IHostApplicationBuilder builder, string connectionName)
-        where TParser : class, IStreamedNameParser
+    public static IHostApplicationBuilder AddStreamNameParser<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TParser>(this IHostApplicationBuilder builder, string connectionName)
+        where TParser : class, IStreamNameParser
     {
-        _ = builder.Services.AddStreamedNameParser<TParser>(connectionName);
+        _ = builder.Services.AddStreamNameParser<TParser>(connectionName);
         return builder;
     }
 
     /// <summary>
-    ///     Registers a keyed <see cref="IStreamedNameParser" /> for the supplied connection name.
+    ///     Registers a keyed <see cref="IStreamNameParser" /> for the supplied connection name.
     /// </summary>
     /// <remarks>
     ///     <para>
@@ -38,17 +38,17 @@ public static class StreamedNameParserBuilderExtensions
     ///         configurator.
     ///     </para>
     /// </remarks>
-    public static IServiceCollection AddStreamedNameParser<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TParser>(this IServiceCollection services, string connectionName)
-        where TParser : class, IStreamedNameParser
+    public static IServiceCollection AddStreamNameParser<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TParser>(this IServiceCollection services, string connectionName)
+        where TParser : class, IStreamNameParser
     {
-        services.AddKeyedSingleton<IStreamedNameParser, TParser>(connectionName);
+        services.AddKeyedSingleton<IStreamNameParser, TParser>(connectionName);
         return services;
     }
 
     /// <summary>
-    ///     Registers an already constructed keyed <see cref="IStreamedNameParser" /> for the supplied connection name.
+    ///     Registers an already constructed keyed <see cref="IStreamNameParser" /> for the supplied connection name.
     /// </summary>
-    public static IServiceCollection AddStreamedNameParser(this IServiceCollection services, string connectionName, IStreamedNameParser parser)
+    public static IServiceCollection AddStreamNameParser(this IServiceCollection services, string connectionName, IStreamNameParser parser)
     {
         ArgumentNullException.ThrowIfNull(parser);
         services.AddKeyedSingleton(connectionName, parser);

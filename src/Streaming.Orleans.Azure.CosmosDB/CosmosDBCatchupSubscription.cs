@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Orleans.Storage;
+using Continuum.Streams;
 
 namespace Continuum.Streaming.Orleans.Azure.CosmosDB;
 
@@ -51,7 +52,7 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
     /// <summary>Deserializes event payloads.</summary>
     protected readonly IGrainStorageSerializer _grainStorageSerializer;
     /// <summary>Parses stream names into topic and key.</summary>
-    protected readonly IStreamedNameParser _streamNameParser;
+    protected readonly IStreamNameParser _streamNameParser;
     /// <summary>Resolves event types from mapped type names.</summary>
     protected readonly ITypeMapper _typeMapper;
     /// <summary>The Cosmos DB client for the configured connection.</summary>
@@ -181,20 +182,14 @@ public abstract class CosmosDBCatchupSubscription<TSubscription, TOptions> : IHo
     /// <summary>Creates the streamed event for a deserialized change.</summary>
     protected virtual IStreamedEvent<object> ToStreamEvent(ChangeFeedProcessorContext context, ChangeFeedEventItem eventItem, object deserializedEvent)
     {
-        string streamKey = _streamNameParser.GetStreamKey(eventItem.StreamName);
         DateTime timestamp = DateTimeOffset.FromUnixTimeSeconds(eventItem.Timestamp).UtcDateTime;
 
         var streamEvent = new StreamedEvent<object>(
             eventId: Guid.Parse(eventItem.Id),
             eventType: eventItem.DataType,
-            streamName: eventItem.StreamName,
-            streamKey: streamKey,
-            topic: _options.MonitoredContainerName,
-            partitionId: context.LeaseToken,
+            streamName: _streamNameParser.Parse(eventItem.StreamName),
             streamVersion: eventItem.Version,
-            streamPosition: eventItem.Version,
-            sequenceNumber: eventItem.LogicalSequenceNumber,
-            subSequenceNumber: eventItem.SubSequenceNumber,
+            cursor: new StreamedEventCursor(_options.MonitoredContainerName, context.LeaseToken, eventItem.LogicalSequenceNumber, eventItem.SubSequenceNumber),
             timestamp: timestamp,
             @event: deserializedEvent);
 

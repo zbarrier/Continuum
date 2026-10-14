@@ -108,9 +108,9 @@ public sealed class KurrentDBCheckpointMonitor
     /// <returns><see langword="true" /> if the checkpoint was committed.</returns>
     public ValueTask<bool> TryCheckpointAsync(IStreamedEvent<object> streamedEvent, CancellationToken cancellationToken = default)
     {
-        ulong position = _streamName.IsAllStream
-            ? StreamSequenceNumber.ToCommitPosition(streamedEvent.SequenceNumber, streamedEvent.StreamName)
-            : streamedEvent.StreamPosition;
+        // Both subscription kinds put their resume position in the cursor: the $all commit position, or the event
+        // number within the subscribed stream.
+        ulong position = streamedEvent.Cursor.ToKurrentDBPosition(streamedEvent.StreamName.Value);
 
         return TryCheckpointAsync(position, cancellationToken);
     }

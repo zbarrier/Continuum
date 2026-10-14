@@ -1,4 +1,4 @@
-﻿using Continuum;
+using Continuum;
 using Continuum.Streaming;
 using Continuum.TypeMapping;
 

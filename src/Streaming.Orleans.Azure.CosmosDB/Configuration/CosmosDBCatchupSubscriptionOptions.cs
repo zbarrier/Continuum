@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 using Continuum.TypeMapping;
 
@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using Orleans.Storage;
+using Continuum.Streams;
 
 namespace Continuum.Streaming.Orleans.Azure.CosmosDB.Configuration;
 
@@ -72,7 +73,7 @@ public class CosmosDBCatchupSubscriptionOptions
 
     /// <summary>Parses stream names; resolved by connection name or defaulted when not set.</summary>
     [Required]
-    public IStreamedNameParser StreamNameParser { get; set; } = default!;
+    public IStreamNameParser StreamNameParser { get; set; } = default!;
 
     /// <summary>The kinds of mapped types used to resolve event types.</summary>
     [Required]
@@ -108,7 +109,7 @@ public class DefaultCosmosDBCatchupSubscriptionOptionsConfigurator : IPostConfig
         }
         if (options.StreamNameParser is null)
         {
-            options.StreamNameParser = _serviceProvider.GetKeyedService<IStreamedNameParser>(options.ConnectionName) ?? new DefaultCosmosDBStreamNameParser();
+            options.StreamNameParser = _serviceProvider.GetKeyedService<IStreamNameParser>(options.ConnectionName) ?? new DefaultCosmosDBStreamNameParser();
         }
         if (options.TypeMapper is null)
         {

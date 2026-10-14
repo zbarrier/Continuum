@@ -1,6 +1,7 @@
 using System.Numerics;
 
 using Orleans.Runtime;
+using Continuum.Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.Tests;
 
@@ -15,8 +16,8 @@ namespace Continuum.Streaming.Orleans.Tests;
 /// </remarks>
 public class ProjectionStateTests
 {
-    private const string Topic = "counted";
-    private const string StreamName = "counted-1";
+    private const string Topic = "$all";
+    private const string Category = "counted";
     private const string StreamKey = "1";
 
     [Fact]
@@ -131,62 +132,18 @@ public class ProjectionStateTests
 
         // An ignored event is still consumed, so it must not be reconsidered on redelivery.
         Assert.False(hasChanges);
-        var lastSequence = state.LastSequenceByTopicThenPartitionThenStreamKey[Topic]["0"][StreamKey];
+        Assert.True(state.Watermarks.TryGet(Topic, "0", out var lastSequence));
         Assert.Equal(new BigInteger(1), lastSequence.SequenceNumber);
     }
 
     [Fact]
-    public async Task Tracks_Streams_Independently_Within_A_Topic()
+    public async Task Shares_One_Watermark_Across_Streams_In_A_Partition()
     {
         var state = new CountingProjectionState();
 
-        // The shape a grain sees when it consumes several streams through one $all subscription: the topic is the
-        // shared category and the sequence is a global log position, so the stream that is further ahead arrives
-        // with the higher number regardless of which stream produced it.
+        // Positions are ordered within a partition regardless of which stream an event belongs to, so an event
+        // behind the partition's watermark has already been delivered, whichever stream it came from.
         await state.WhenAsync(Event(sequenceNumber: 10, streamKey: "b"));
-        var hasChanges = await state.WhenAsync(Event(sequenceNumber: 4, streamKey: "a"));
-
-        // Keyed only by topic this event is behind the watermark and is silently dropped.
-        Assert.True(hasChanges);
-        Assert.Equal(2, state.Applied);
-    }
-
-    [Fact]
-    public async Task Separates_Streams_Sharing_A_Key_Across_Topics()
-    {
-        var state = new CountingProjectionState();
-
-        // A key is only unique within its category, so "order/1" and "snack/1" are different streams and must not
-        // share a watermark.
-        await state.WhenAsync(Event(sequenceNumber: 10, topic: "order", streamKey: "1"));
-        var hasChanges = await state.WhenAsync(Event(sequenceNumber: 4, topic: "snack", streamKey: "1"));
-
-        Assert.True(hasChanges);
-        Assert.Equal(2, state.Applied);
-    }
-
-    [Fact]
-    public async Task Tracks_A_Stream_By_Identity_Rather_Than_By_Its_Raw_Name()
-    {
-        var state = new CountingProjectionState();
-
-        // The watermark is keyed by the identity the store groups by, not by the raw name it arrived under, so two
-        // names that decompose to the same topic and key are one stream and keep one watermark.
-        await state.WhenAsync(Event(sequenceNumber: 10, streamName: "counted-1"));
-        var hasChanges = await state.WhenAsync(Event(sequenceNumber: 4, streamName: "some/other/form/counted-1"));
-
-        Assert.False(hasChanges);
-        Assert.Equal(1, state.Applied);
-    }
-
-    [Fact]
-    public async Task Still_Discards_A_Redelivery_On_The_Same_Stream()
-    {
-        var state = new CountingProjectionState();
-
-        // Adding the stream key to the watermark must not weaken de-duplication within a stream, which is the
-        // guarantee that makes redelivery after a failed write safe.
-        await state.WhenAsync(Event(sequenceNumber: 10, streamKey: "a"));
         var hasChanges = await state.WhenAsync(Event(sequenceNumber: 4, streamKey: "a"));
 
         Assert.False(hasChanges);
@@ -292,20 +249,17 @@ public class ProjectionStateTests
         ulong subSequenceNumber = 0,
         string partitionId = "0",
         string topic = Topic,
-        string streamName = StreamName,
+        string category = Category,
+        string? tenantId = null,
         string streamKey = StreamKey)
     {
+        var rawName = tenantId is null ? $"{category}-{streamKey}" : $"{category}-{tenantId}|{streamKey}";
         return new StreamedEvent<object>(
             Guid.CreateVersion7(),
             "Tests.Counted",
-            streamName: streamName,
-            streamKey: streamKey,
-            topic: topic,
-            partitionId: partitionId,
+            streamName: new StreamName(rawName, category, tenantId, streamKey),
             streamVersion: 0,
-            streamPosition: 0,
-            sequenceNumber: new BigInteger(sequenceNumber),
-            subSequenceNumber: subSequenceNumber,
+            cursor: new StreamedEventCursor(topic, partitionId, new BigInteger(sequenceNumber), subSequenceNumber),
             timestamp: DateTime.UtcNow,
             @event: new object());
     }

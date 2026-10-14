@@ -1,4 +1,4 @@
-﻿namespace Continuum.Streaming;
+namespace Continuum.Streams;
 
 /// <summary>
 /// Decomposes a provider stream name into the identities it encodes.
@@ -15,15 +15,10 @@
 ///     read names of different shapes from different stores.
 /// </para>
 /// </remarks>
-public interface IStreamedNameParser
+public interface IStreamNameParser
 {
     /// <summary>
-    /// Splits <paramref name="streamName"/> into its topic and stream key.
+    /// Splits <paramref name="streamName"/> into its category, tenant and key.
     /// </summary>
-    StreamedName Parse(string streamName);
-
-    /// <summary>
-    /// Returns only the key identifying the individual stream.
-    /// </summary>
-    string GetStreamKey(string streamName) => Parse(streamName).StreamKey;
+    IStreamName Parse(string streamName);
 }

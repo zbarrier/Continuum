@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 
 using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
+using Continuum.Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.Tests;
 
@@ -19,9 +20,9 @@ public class StreamedEventJsonConverterTests
     {
         var json = """
             {"unknown":{"nested":[1,2]},"event":{"Text":"early"},"metadata":{"values":{"tenant":"acme"}},
-             "eventId":"00000000-0000-0000-0000-000000000001","eventType":"Tests.Payload","streamName":"counted-1",
-             "streamKey":"1","topic":"counted","partitionId":"0","streamVersion":2,"streamPosition":3,
-             "sequenceNumber":"4","subSequenceNumber":5,"timestamp":"2024-01-02T03:04:05Z"}
+             "eventId":"00000000-0000-0000-0000-000000000001","eventType":"Tests.Payload",
+             "streamName":{"value":"counted-acme|1","category":"counted","tenantId":"acme","key":"1"},"streamVersion":2,
+             "cursor":{"topic":"$all","partition":"0","sequenceNumber":"4","subSequenceNumber":5},"timestamp":"2024-01-02T03:04:05Z"}
             """;
 
         var restored = JsonSerializer.Deserialize<IStreamedEvent<object>>(json, Options)!;
@@ -29,7 +30,9 @@ public class StreamedEventJsonConverterTests
         Assert.Equal("early", Assert.IsType<Payload>(restored.Event).Text);
         Assert.Equal("acme", restored.Metadata.GetValueOrDefault("tenant"));
         Assert.Equal(2UL, restored.StreamVersion);
-        Assert.Equal(4, restored.SequenceNumber);
+        Assert.Equal(new StreamName("counted-acme|1", "counted", "acme", "1"), restored.StreamName);
+        Assert.Equal("acme", restored.StreamName.TenantId);
+        Assert.Equal(new StreamedEventCursor("$all", "0", 4, 5), restored.Cursor);
     }
 
     [Theory]
@@ -38,11 +41,13 @@ public class StreamedEventJsonConverterTests
     [InlineData("event")]
     [InlineData("metadata")]
     [InlineData("streamName")]
+    [InlineData("cursor")]
     [InlineData("timestamp")]
     public void Throws_When_Required_Property_Is_Missing(string missing)
     {
         var original = new StreamedEvent<object>(
-            Guid.CreateVersion7(), "Tests.Payload", "counted-1", "1", "counted", "0", 0, 0, 1, 0, DateTime.UtcNow, new Payload("payload"));
+            Guid.CreateVersion7(), "Tests.Payload", new StreamName("counted-1", "counted", null, "1"), 0,
+            new StreamedEventCursor("$all", "0", 1, 0), DateTime.UtcNow, new Payload("payload"));
         var node = JsonNode.Parse(JsonSerializer.Serialize<IStreamedEvent<object>>(original, Options))!.AsObject();
         node.Remove(missing);
 

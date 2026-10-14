@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
 
 using Continuum.Streaming.Orleans.KurrentDB.Configuration;
@@ -243,7 +243,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
             return;
         }
 
-        var streamEvent = resolvedEvent.ToAllStreamEvent(deserializedEvent);
+        var streamEvent = resolvedEvent.ToAllStreamEvent(deserializedEvent, _options.StreamNameParser);
 
         await _channel.Writer.WriteAsync(streamEvent, cancellationToken);
     }
@@ -256,7 +256,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
         {
             while (_channel.Reader.TryRead(out var streamedEvent))
             {
-                lastStreamPosition = StreamSequenceNumber.ToCommitPosition(streamedEvent.SequenceNumber, streamedEvent.StreamName);
+                lastStreamPosition = streamedEvent.Cursor.ToKurrentDBPosition(streamedEvent.StreamName.Value);
 
                 if (ReferenceEquals(streamedEvent.Event, StreamEventExtensions.CheckpointMarker))
                 {
@@ -398,7 +398,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
             return;
         }
 
-        var streamEvent = resolvedEvent.ToStreamEvent(deserializedEvent);
+        var streamEvent = resolvedEvent.ToStreamEvent(deserializedEvent, _options.StreamNameParser);
 
         await _channel.Writer.WriteAsync(streamEvent, cancellationToken);
     }
@@ -417,7 +417,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
         {
             while (_channel.Reader.TryRead(out var streamEvent))
             {
-                lastStreamPosition = streamEvent.StreamPosition;
+                lastStreamPosition = streamEvent.Cursor.ToKurrentDBPosition(streamEvent.StreamName.Value);
 
                 if (ReferenceEquals(streamEvent.Event, StreamEventExtensions.CheckpointMarker))
                 {

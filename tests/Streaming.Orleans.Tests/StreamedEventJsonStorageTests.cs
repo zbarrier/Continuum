@@ -2,6 +2,7 @@ using Continuum.Events;
 using Continuum.Orleans.Events;
 using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
+using Continuum.Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.Tests;
 
@@ -24,7 +25,8 @@ public class StreamedEventJsonStorageTests
         var restored = RoundTrip(new Holder { Event = original }).Event!;
 
         Assert.Equal(original.EventId, restored.EventId);
-        Assert.Equal(original.SequenceNumber, restored.SequenceNumber);
+        Assert.Equal(original.StreamName, restored.StreamName);
+        Assert.Equal(original.Cursor, restored.Cursor);
         Assert.Equal(original.Timestamp, restored.Timestamp);
         Assert.Equal("payload", Assert.IsType<Payload>(restored.Event).Text);
         Assert.Equal("acme", restored.Metadata.GetValueOrDefault("tenant"));
@@ -46,7 +48,8 @@ public class StreamedEventJsonStorageTests
     private static Holder RoundTrip(Holder holder) => Serializer.Deserialize<Holder>(Serializer.Serialize(holder));
 
     private static StreamedEvent<object> Event(EventMetadata? metadata) =>
-        new(Guid.CreateVersion7(), "Tests.Payload", "counted-1", "1", "counted", "0", 0, 0, 1, 0, DateTime.UtcNow, new Payload("payload"), metadata);
+        new(Guid.CreateVersion7(), "Tests.Payload", new StreamName("counted-1", "counted", null, "1"), 0,
+            new StreamedEventCursor("$all", "0", 1, 0), DateTime.UtcNow, new Payload("payload"), metadata);
 
     private static TypeMappedJsonGrainStorageSerializer CreateSerializer()
     {

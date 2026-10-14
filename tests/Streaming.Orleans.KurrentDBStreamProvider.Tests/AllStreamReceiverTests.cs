@@ -158,7 +158,7 @@ public class AllStreamReceiverTests
                     payloads.Add(Encoding.UTF8.GetString(record.Event!.Data));
                     // In a silo the cache raises this once the event has been purged behind every cursor. Here the
                     // test is the consumer, so it reports delivery itself; without it nothing would ever checkpoint.
-                    await receiver.MessagesDeliveredAsync((ulong)record.SequenceNumber);
+                    await receiver.MessagesDeliveredAsync((ulong)record.Cursor.SequenceNumber);
                 }
                 if (payloads.Count >= expectedCount)
                 {
@@ -167,7 +167,7 @@ public class AllStreamReceiverTests
                     foreach (var record in receiver.Receive(10))
                     {
                         payloads.Add(Encoding.UTF8.GetString(record.Event!.Data));
-                        await receiver.MessagesDeliveredAsync((ulong)record.SequenceNumber);
+                        await receiver.MessagesDeliveredAsync((ulong)record.Cursor.SequenceNumber);
                     }
                     break;
                 }

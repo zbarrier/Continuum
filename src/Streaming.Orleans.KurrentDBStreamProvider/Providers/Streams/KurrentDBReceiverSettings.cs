@@ -1,4 +1,4 @@
-﻿using Orleans.Configuration;
+using Orleans.Configuration;
 
 namespace Orleans.Providers.Streams.KurrentDB;
 
@@ -27,4 +27,9 @@ public class KurrentDBReceiverSettings
     ///     The name of a KurrentDB stream.
     /// </summary>
     public string QueueName { get; set; } = null!;
+
+    /// <summary>
+    ///     The parser for the names of streams read by the receiver, or <see langword="null" /> for the default.
+    /// </summary>
+    public Continuum.Streams.IStreamNameParser? StreamNameParser { get; set; }
 }

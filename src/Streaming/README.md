@@ -12,10 +12,9 @@ dotnet add package Continuum.Streaming
 
 | Type | Purpose |
 | --- | --- |
-| `IStreamedEvent<T>` | An event delivered from a stream, with its id, type, stream name, key, topic, partition, version, position, sequence number, timestamp and metadata. |
+| `IStreamedEvent<T>` | An event delivered from a stream, with its id, type, stream name, version, cursor, timestamp and metadata. |
 | `IStreamedEventMetadata` | Read-only string metadata attached to a streamed event, with typed accessors for tracing and transaction information. Names starting with `$` are reserved. |
-| `StreamedName` | A stream name split into its topic and stream key. |
-| `IStreamedNameParser` | Parses a provider stream name into a `StreamedName`. |
+| `IStreamedEventCursor` | Where an event was delivered from: topic, partition and sequence position. |
 | `ICheckpointStore<TStreamPosition>` | Loads and stores the last processed position of a named subscription. |
 | `IStreamSubscription` / `IHostedStreamSubscription` | A named subscription and one whose lifetime is managed by a host. |
 
@@ -24,5 +23,5 @@ dotnet add package Continuum.Streaming
 Parsers are registered as keyed services so each connection can use its own naming convention:
 
 ```csharp
-builder.AddStreamedNameParser<MyStreamNameParser>("orders");
+builder.AddStreamNameParser<MyStreamNameParser>("orders");
 ```

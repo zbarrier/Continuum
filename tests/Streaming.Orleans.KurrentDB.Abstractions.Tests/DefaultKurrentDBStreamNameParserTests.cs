@@ -17,8 +17,31 @@ public class DefaultKurrentDBStreamNameParserTests
     {
         var parsed = _parser.Parse("snack-123");
 
-        Assert.Equal("snack", parsed.Topic);
-        Assert.Equal("123", parsed.StreamKey);
+        Assert.Equal("snack-123", parsed.Value);
+        Assert.Equal("snack", parsed.Category);
+        Assert.Null(parsed.TenantId);
+        Assert.False(parsed.HasTenant);
+        Assert.Equal("123", parsed.Key);
+    }
+
+    [Fact]
+    public void Splits_A_Tenant_Qualified_Name_Into_Its_Category_Tenant_And_Key()
+    {
+        var parsed = _parser.Parse("snack-acme|a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+
+        Assert.Equal("snack", parsed.Category);
+        Assert.True(parsed.HasTenant);
+        Assert.Equal("acme", parsed.TenantId);
+        Assert.Equal("a1b2c3d4-e5f6-7890-abcd-ef1234567890", parsed.Key);
+    }
+
+    [Theory]
+    [InlineData("snack-|123")]
+    [InlineData("snack-acme|")]
+    [InlineData("snack-")]
+    public void Rejects_An_Empty_Tenant_Or_Key(string streamName)
+    {
+        Assert.Throws<FormatException>(() => _parser.Parse(streamName));
     }
 
     [Fact]
@@ -28,8 +51,8 @@ public class DefaultKurrentDBStreamNameParserTests
         // would truncate the key and collapse distinct streams onto one identity.
         var parsed = _parser.Parse("snack-a1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
-        Assert.Equal("snack", parsed.Topic);
-        Assert.Equal("a1b2c3d4-e5f6-7890-abcd-ef1234567890", parsed.StreamKey);
+        Assert.Equal("snack", parsed.Category);
+        Assert.Equal("a1b2c3d4-e5f6-7890-abcd-ef1234567890", parsed.Key);
     }
 
     [Fact]

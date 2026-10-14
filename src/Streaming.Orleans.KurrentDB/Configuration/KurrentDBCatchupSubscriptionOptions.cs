@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 using Continuum.Streaming.Orleans.KurrentDB.Monitors;
 using Continuum.TypeMapping;
@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Continuum.Serialization.Orleans;
 
 using Orleans.Storage;
+using Continuum.Streams;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.Configuration;
 
@@ -55,6 +56,10 @@ public class KurrentDBCatchupSubscriptionOptions
     /// <summary>The type mapper, resolved from <see cref="TypeMapKinds" /> and <see cref="ConnectionName" /> when not set.</summary>
     [Required]
     public ITypeMapper TypeMapper { get; set; } = default!;
+
+    /// <summary>The stream name parser, resolved from <see cref="ConnectionName" /> when not set, falling back to <see cref="DefaultKurrentDBStreamNameParser" />.</summary>
+    [Required]
+    public IStreamNameParser StreamNameParser { get; set; } = default!;
 }
 
 /// <summary>
@@ -111,6 +116,10 @@ public class DefaultKurrentDBChannelCatchupSubscriptionOptionsConfigurator : IPo
         {
             string key = options.TypeMapKinds.ToTypeMapperKey(options.ConnectionName);
             options.TypeMapper = _serviceProvider.GetRequiredKeyedService<ITypeMapper>(key);
+        }
+        if (options.StreamNameParser is null)
+        {
+            options.StreamNameParser = _serviceProvider.GetKeyedService<IStreamNameParser>(options.ConnectionName) ?? new DefaultKurrentDBStreamNameParser();
         }
     }
 }

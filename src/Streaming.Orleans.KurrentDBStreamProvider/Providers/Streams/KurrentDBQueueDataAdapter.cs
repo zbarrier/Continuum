@@ -219,7 +219,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
         {
             return StreamId.Parse(Encoding.UTF8.GetBytes(orleansStreamId));
         }
-        return _options.StreamIdMapper(queueMessage.StreamName);
+        return _options.StreamIdMapper(queueMessage.StreamName.Value);
     }
 
     /// <summary>
@@ -233,18 +233,19 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
         var position = queueMessage.StreamVersion.ToString();
         // The commit position is stored alongside the event so the checkpoint can be written from the cache, after
         // delivery. It cannot be recovered from the event itself once link resolution is enabled.
-        var commitPosition = queueMessage.SequenceNumber.ToString();
+        var commitPosition = queueMessage.Cursor.SequenceNumber.ToString();
         var eventId = queueMessage.EventId.ToString();
         var eventType = queueMessage.EventType;
         // The consumer is handed an IStreamedEvent rebuilt from the cache, so the fields it needs that are not
-        // recoverable from CachedMessage travel with the event. PartitionId is deliberately absent: it is a fixed
-        // constant for this provider and is supplied on read rather than stored once per cached event. Topic is not,
-        // because it depends on the subscription strategy the receiver used, which the batch container cannot see.
-        var streamName = queueMessage.StreamName;
-        // The key is stored rather than re-derived on read, because recovering it means parsing the stream name,
-        // and how a name splits is an application concern the batch container has no parser for.
-        var streamKey = queueMessage.StreamKey;
-        var topic = queueMessage.Topic;
+        // recoverable from CachedMessage travel with the event. The cursor's topic and partition are absent: they are
+        // the stream category and stream, so they are rebuilt on read from the stream name parts stored below.
+        var streamName = queueMessage.StreamName.Value;
+        // The parsed parts are stored rather than re-derived on read, because recovering them means parsing the stream
+        // name, and how a name splits is an application concern the batch container has no parser for. A tenant id is
+        // never empty, so an empty string stands for a name that is not tenant qualified.
+        var streamCategory = queueMessage.StreamName.Category;
+        var tenantId = queueMessage.StreamName.TenantId ?? string.Empty;
+        var streamKey = queueMessage.StreamName.Key;
         var streamVersion = queueMessage.StreamVersion.ToString();
         var timestamp = queueMessage.Timestamp.Ticks.ToString();
         // The metadata bag round trips as the same JSON document shape the codec reads from KurrentDB, including the
@@ -263,8 +264,9 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
                    SegmentBuilder.CalculateAppendSize(eventId) + 
                    SegmentBuilder.CalculateAppendSize(eventType) + 
                    SegmentBuilder.CalculateAppendSize(streamName) +
+                   SegmentBuilder.CalculateAppendSize(streamCategory) +
+                   SegmentBuilder.CalculateAppendSize(tenantId) +
                    SegmentBuilder.CalculateAppendSize(streamKey) +
-                   SegmentBuilder.CalculateAppendSize(topic) +
                    SegmentBuilder.CalculateAppendSize(streamVersion) +
                    SegmentBuilder.CalculateAppendSize(timestamp) +
                    SegmentBuilder.CalculateAppendSize(metadata) +
@@ -280,8 +282,9 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
         SegmentBuilder.Append(segment, ref writeOffset, eventId);
         SegmentBuilder.Append(segment, ref writeOffset, eventType);
         SegmentBuilder.Append(segment, ref writeOffset, streamName);
+        SegmentBuilder.Append(segment, ref writeOffset, streamCategory);
+        SegmentBuilder.Append(segment, ref writeOffset, tenantId);
         SegmentBuilder.Append(segment, ref writeOffset, streamKey);
-        SegmentBuilder.Append(segment, ref writeOffset, topic);
         SegmentBuilder.Append(segment, ref writeOffset, streamVersion);
         SegmentBuilder.Append(segment, ref writeOffset, timestamp);
         SegmentBuilder.Append(segment, ref writeOffset, metadata);

@@ -1,4 +1,4 @@
-﻿using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans;
 
 namespace Orleans.Providers.Streams.KurrentDB;
 
@@ -27,7 +27,7 @@ public interface IKurrentDBReceiver
     ///     the cache buffers and materialized only when a consumer reads it.
     /// </returns>
     /// <remarks>
-    ///     <see cref="StreamedEvent{T}.SequenceNumber" /> carries the position the checkpoint is written from. For the
+    ///     <see cref="Continuum.Streaming.Orleans.StreamedEventCursor.SequenceNumber" /> carries the position the checkpoint is written from. For the
     ///     <c>$all</c> strategy this is the global commit position, which cannot be recovered from the event record
     ///     once link resolution is enabled, so it must be captured here rather than further down the pipeline.
     /// </remarks>

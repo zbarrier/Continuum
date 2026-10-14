@@ -94,7 +94,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
         // The $all subscription is validated to be the only queue of this provider, so the queue name uniquely
         // identifies the checkpoint stream of this stream provider.
         _subscriptionName = $"{settings.Options.Name}-{settings.QueueName}";
-        _checkpointMonitor = new KurrentDBCheckpointMonitor(logger, receiverOptions.CheckpointMonitorOptions, receiverOptions.CheckpointStore, _subscriptionName, StreamName.AllStream);
+        _checkpointMonitor = new KurrentDBCheckpointMonitor(logger, receiverOptions.CheckpointMonitorOptions, receiverOptions.CheckpointStore, _subscriptionName, Continuum.Streaming.Orleans.KurrentDB.StreamName.AllStream);
     }
 
     /// <summary>
@@ -275,7 +275,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
                             // Check duplication
                             if (_hashSet.TryAdd(resolvedEvent.Event.EventId, true))
                             {
-                                _queue.Enqueue(KurrentDBStreamedEventFactory.FromAllStream(resolvedEvent));
+                                _queue.Enqueue(KurrentDBStreamedEventFactory.FromAllStream(resolvedEvent, _settings.StreamNameParser));
                             }
                             // Resuming a dropped subscription must continue from the last event seen by the pump,
                             // otherwise the buffered but undelivered events would be received twice.

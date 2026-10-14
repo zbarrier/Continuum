@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
 
 using Continuum.Streaming.Orleans;
@@ -206,7 +206,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         {
             // Seed the checkpoint with the commit position of the first event so a restart before the first purge
             // resumes from the start of this batch rather than from the beginning of the log.
-            _checkpointer.Update(messages[0].SequenceNumber.ToString(), DateTime.UtcNow, CancellationToken.None);
+            _checkpointer.Update(messages[0].Cursor.SequenceNumber.ToString(), DateTime.UtcNow, CancellationToken.None);
         }
         return batches;
     }

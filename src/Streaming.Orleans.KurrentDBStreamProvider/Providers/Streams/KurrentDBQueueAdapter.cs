@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 using KurrentDB.Client;
 
@@ -156,7 +156,8 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
                                    Options = _options,
                                    ReceiverOptions = _receiverOptions,
                                    ConsumerGroup = $"{clusterOptions.Value.ServiceId}-{Name}",
-                                   QueueName = _streamQueueMapper.QueueToPartition(queueId)
+                                   QueueName = _streamQueueMapper.QueueToPartition(queueId),
+                                   StreamNameParser = _serviceProvider.GetKeyedService<Continuum.Streams.IStreamNameParser>(_options.ConnectionName)
                                };
         var receiverMonitorDimensions = new KurrentDBReceiverMonitorDimensions
                                         {

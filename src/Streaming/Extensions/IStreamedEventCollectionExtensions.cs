@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using Continuum.Streams;
+
 namespace Continuum.Streaming;
 
 /// <summary>
@@ -9,7 +11,7 @@ namespace Continuum.Streaming;
 public static class IStreamedEventCollectionExtensions
 {
     /// <summary>
-    /// Groups the events by <see cref="IStreamedEvent{T}.StreamName"/>, preserving their order within each group.
+    /// Groups the events by <see cref="IStreamName.Value"/>, preserving their order within each group.
     /// </summary>
     /// <param name="streamEvents">The events to group.</param>
     /// <returns>The events keyed by stream name.</returns>
@@ -22,7 +24,7 @@ public static class IStreamedEventCollectionExtensions
         for (int i = 0; i < listAsSpan.Length; i++)
         {
             var streamEvent = Unsafe.Add(ref searchSpace, i);
-            ref var valueOrNew = ref CollectionsMarshal.GetValueRefOrAddDefault(streamEventsByStreamName, streamEvent.StreamName, out bool exists);
+            ref var valueOrNew = ref CollectionsMarshal.GetValueRefOrAddDefault(streamEventsByStreamName, streamEvent.StreamName.Value, out bool exists);
             if (exists)
             {
                 valueOrNew!.Add(streamEvent);
@@ -37,7 +39,7 @@ public static class IStreamedEventCollectionExtensions
     }
 
     /// <summary>
-    /// Groups the events by <see cref="IStreamedEvent{T}.StreamKey"/>, preserving their order within each group.
+    /// Groups the events by <see cref="IStreamName.Key"/>, preserving their order within each group.
     /// </summary>
     /// <param name="streamEvents">The events to group.</param>
     /// <returns>The events keyed by stream key.</returns>
@@ -50,7 +52,7 @@ public static class IStreamedEventCollectionExtensions
         for (int i = 0; i < listAsSpan.Length; i++)
         {
             var streamEvent = Unsafe.Add(ref searchSpace, i);
-            ref var valueOrNew = ref CollectionsMarshal.GetValueRefOrAddDefault(streamEventsByStreamKey, streamEvent.StreamKey, out bool exists);
+            ref var valueOrNew = ref CollectionsMarshal.GetValueRefOrAddDefault(streamEventsByStreamKey, streamEvent.StreamName.Key, out bool exists);
             if (exists)
             {
                 valueOrNew!.Add(streamEvent);

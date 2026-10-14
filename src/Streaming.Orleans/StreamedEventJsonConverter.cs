@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Continuum.TypeMapping;
+using Continuum.Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans;
 
@@ -32,14 +33,9 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
 
         Guid? eventId = null;
         string? eventType = null;
-        string? streamName = null;
-        string? streamKey = null;
-        string? topic = null;
-        string? partitionId = null;
+        StreamName? streamName = null;
         ulong? streamVersion = null;
-        ulong? streamPosition = null;
-        BigInteger? sequenceNumber = null;
-        ulong? subSequenceNumber = null;
+        StreamedEventCursor? cursor = null;
         DateTime? timestamp = null;
         object? payload = null;
         var hasPayload = false;
@@ -59,28 +55,13 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
                     eventType = reader.GetString();
                     break;
                 case "streamName":
-                    streamName = reader.GetString();
-                    break;
-                case "streamKey":
-                    streamKey = reader.GetString();
-                    break;
-                case "topic":
-                    topic = reader.GetString();
-                    break;
-                case "partitionId":
-                    partitionId = reader.GetString();
+                    streamName = ReadStreamName(ref reader);
                     break;
                 case "streamVersion":
                     streamVersion = reader.GetUInt64();
                     break;
-                case "streamPosition":
-                    streamPosition = reader.GetUInt64();
-                    break;
-                case "sequenceNumber":
-                    sequenceNumber = BigInteger.Parse(Required(reader.GetString(), name), CultureInfo.InvariantCulture);
-                    break;
-                case "subSequenceNumber":
-                    subSequenceNumber = reader.GetUInt64();
+                case "cursor":
+                    cursor = ReadCursor(ref reader);
                     break;
                 case "timestamp":
                     timestamp = reader.GetDateTime();
@@ -120,16 +101,91 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
             Required(eventId, "eventId"),
             resolvedEventType,
             Required(streamName, "streamName"),
-            Required(streamKey, "streamKey"),
-            Required(topic, "topic"),
-            Required(partitionId, "partitionId"),
             Required(streamVersion, "streamVersion"),
-            Required(streamPosition, "streamPosition"),
-            Required(sequenceNumber, "sequenceNumber"),
-            Required(subSequenceNumber, "subSequenceNumber"),
+            Required(cursor, "cursor"),
             Required(timestamp, "timestamp"),
             payload ?? throw new JsonException($"Streamed event '{resolvedEventType}' has a null payload."),
             metadata ?? throw new JsonException("Streamed event is missing required property 'metadata'."));
+    }
+
+    private static StreamName ReadStreamName(ref Utf8JsonReader reader)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw new JsonException("Expected 'streamName' to be an object.");
+        }
+
+        string? value = null;
+        string? category = null;
+        string? tenantId = null;
+        string? key = null;
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var name = reader.GetString();
+            reader.Read();
+            switch (name)
+            {
+                case "value":
+                    value = reader.GetString();
+                    break;
+                case "category":
+                    category = reader.GetString();
+                    break;
+                case "tenantId":
+                    tenantId = reader.GetString();
+                    break;
+                case "key":
+                    key = reader.GetString();
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        return new StreamName(Required(value, "streamName.value"), Required(category, "streamName.category"), tenantId, Required(key, "streamName.key"));
+    }
+
+    private static StreamedEventCursor ReadCursor(ref Utf8JsonReader reader)
+    {
+        if (reader.TokenType != JsonTokenType.StartObject)
+        {
+            throw new JsonException("Expected 'cursor' to be an object.");
+        }
+
+        string? topic = null;
+        string? partition = null;
+        BigInteger? sequenceNumber = null;
+        ulong? subSequenceNumber = null;
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var name = reader.GetString();
+            reader.Read();
+            switch (name)
+            {
+                case "topic":
+                    topic = reader.GetString();
+                    break;
+                case "partition":
+                    partition = reader.GetString();
+                    break;
+                case "sequenceNumber":
+                    sequenceNumber = BigInteger.Parse(Required(reader.GetString(), "cursor.sequenceNumber"), CultureInfo.InvariantCulture);
+                    break;
+                case "subSequenceNumber":
+                    subSequenceNumber = reader.GetUInt64();
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        return new StreamedEventCursor(
+            Required(topic, "cursor.topic"),
+            Required(partition, "cursor.partition"),
+            Required(sequenceNumber, "cursor.sequenceNumber"),
+            Required(subSequenceNumber, "cursor.subSequenceNumber"));
     }
 
     private static T Required<T>(T? value, string name) where T : class =>
@@ -144,14 +200,22 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
         writer.WriteStartObject();
         writer.WriteString("eventId", value.EventId);
         writer.WriteString("eventType", value.EventType);
-        writer.WriteString("streamName", value.StreamName);
-        writer.WriteString("streamKey", value.StreamKey);
-        writer.WriteString("topic", value.Topic);
-        writer.WriteString("partitionId", value.PartitionId);
+        writer.WriteStartObject("streamName");
+        writer.WriteString("value", value.StreamName.Value);
+        writer.WriteString("category", value.StreamName.Category);
+        if (value.StreamName.HasTenant)
+        {
+            writer.WriteString("tenantId", value.StreamName.TenantId);
+        }
+        writer.WriteString("key", value.StreamName.Key);
+        writer.WriteEndObject();
         writer.WriteNumber("streamVersion", value.StreamVersion);
-        writer.WriteNumber("streamPosition", value.StreamPosition);
-        writer.WriteString("sequenceNumber", value.SequenceNumber.ToString(CultureInfo.InvariantCulture));
-        writer.WriteNumber("subSequenceNumber", value.SubSequenceNumber);
+        writer.WriteStartObject("cursor");
+        writer.WriteString("topic", value.Cursor.Topic);
+        writer.WriteString("partition", value.Cursor.Partition);
+        writer.WriteString("sequenceNumber", value.Cursor.SequenceNumber.ToString(CultureInfo.InvariantCulture));
+        writer.WriteNumber("subSequenceNumber", value.Cursor.SubSequenceNumber);
+        writer.WriteEndObject();
         writer.WriteString("timestamp", value.Timestamp);
         writer.WritePropertyName("event");
         JsonSerializer.Serialize(writer, value.Event, options.GetTypeInfo(value.Event.GetType()));

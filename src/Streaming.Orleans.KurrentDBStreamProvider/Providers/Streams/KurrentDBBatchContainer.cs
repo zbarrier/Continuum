@@ -132,17 +132,13 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     /// </summary>
     private StreamedEvent<object> ToStreamedEvent(object @event)
     {
+        var streamName = KurrentDBMessage.ToStreamName();
         return new StreamedEvent<object>(
             Guid.Parse(KurrentDBMessage.EventId),
             KurrentDBMessage.EventType,
-            KurrentDBMessage.StreamName,
-            KurrentDBMessage.StreamKey,
-            KurrentDBMessage.Topic,
-            StreamEventExtensions.DefaultPartitionId,
+            streamName,
             KurrentDBMessage.StreamVersion,
-            KurrentDBMessage.StreamVersion,
-            KurrentDBMessage.CommitPosition,
-            0,
+            StreamEventExtensions.ToCursor(streamName, KurrentDBMessage.CommitPosition),
             KurrentDBMessage.Timestamp,
             @event,
             KurrentDBMessage.Metadata);
