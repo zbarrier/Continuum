@@ -12,12 +12,12 @@ public static class KurrentDBStreamedEventConversions
     /// <summary>
     ///     The topic of checkpoint events read from the <c>$all</c> stream.
     /// </summary>
-    public const string AllStreamTopic = KurrentDBStreams.All;
+    public const string AllStreamCheckpointTopic = KurrentDBStreams.All;
 
     /// <summary>
     ///     The topic of checkpoint events read from a single stream.
     /// </summary>
-    public const string DefaultTopic = "DefaultTopic";
+    public const string StreamCheckpointTopic = "DefaultTopic";
 
     /// <summary>
     ///     The partition identifier assigned to KurrentDB events, which are not partitioned.
@@ -68,7 +68,7 @@ public static class KurrentDBStreamedEventConversions
             "AllStreamCheckpointEventType",
             CheckpointStreamName,
             0,
-            new StreamedEventCursor(AllStreamTopic, DefaultPartitionId, position.CommitPosition, 0),
+            new StreamedEventCursor(AllStreamCheckpointTopic, DefaultPartitionId, position.CommitPosition, 0),
             DateTime.UtcNow,
             CheckpointMarker);
         return streamEvent;
@@ -112,7 +112,7 @@ public static class KurrentDBStreamedEventConversions
             "StreamCheckpointEventType",
             CheckpointStreamName,
             0,
-            new StreamedEventCursor(DefaultTopic, DefaultPartitionId, position.ToUInt64(), 0),
+            new StreamedEventCursor(StreamCheckpointTopic, DefaultPartitionId, position.ToUInt64(), 0),
             DateTime.UtcNow,
             CheckpointMarker);
         return streamEvent;

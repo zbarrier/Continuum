@@ -49,7 +49,7 @@ public class StreamedEventJsonStorageTests
 
     private static StreamedEvent<object> Event(EventMetadata? metadata) =>
         new(Guid.CreateVersion7(), "Tests.Payload", new StreamName("counted-1", "counted", null, "1"), 0,
-            new StreamedEventCursor("$all", "0", 1, 0), DateTime.UtcNow, new Payload("payload"), metadata);
+            new StreamedEventCursor("orders", "1", 1, 0), DateTime.UtcNow, new Payload("payload"), metadata);
 
     private static TypeMappedJsonGrainStorageSerializer CreateSerializer()
     {

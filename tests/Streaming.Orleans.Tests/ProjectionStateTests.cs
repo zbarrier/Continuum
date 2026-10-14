@@ -16,8 +16,8 @@ namespace Continuum.Streaming.Orleans.Tests;
 /// </remarks>
 public class ProjectionStateTests
 {
-    private const string Topic = "$all";
     private const string Category = "counted";
+    private const string Topic = Category;
     private const string StreamKey = "1";
 
     [Fact]
