@@ -18,6 +18,13 @@ namespace Orleans.Providers.Streams.KurrentDB;
 /// <summary>
 ///     Subscribe from KurrentDB persistent subscriptions and receive data from internal queue.
 /// </summary>
+/// <remarks>
+///     Events are delivered in stream order only while one consumer is active on the consumer group. A
+///     <c>MaxSubscriberCount</c> above one, or a consumer strategy that spreads events across consumers, lets several
+///     receivers deliver parts of the same stream. Events are acknowledged as they leave the internal queue, which is how
+///     persistent subscriptions are meant to work. Use the <c>$all</c> stream subscription when delivery must be
+///     checkpointed only after events reach their consumers.
+/// </remarks>
 public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
 {
     private readonly KurrentDBReceiverSettings _settings;
