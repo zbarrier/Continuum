@@ -120,9 +120,9 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
     public string SubscriptionName => Name;
 
     /// <summary>
-    ///     The stream the subscription reads.
+    ///     The stream the subscription reads, or <see cref="KurrentDBStreams.All" /> to read every stream.
     /// </summary>
-    public abstract StreamName StreamName { get; }
+    public abstract string StreamName { get; }
 
     /// <summary>
     ///     The server-side filter applied when reading <c>$all</c>, or <see langword="null" /> for none.
@@ -132,7 +132,7 @@ public abstract class KurrentDBCatchupSubscription<TSubscription, TOptions> : Ba
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        if (StreamName.IsAllStream)
+        if (KurrentDBStreams.IsAll(StreamName))
         {
             _receivingTask = ReceiveFromAllStreamChannel();
             await SubscribeToAll(cancellationToken);

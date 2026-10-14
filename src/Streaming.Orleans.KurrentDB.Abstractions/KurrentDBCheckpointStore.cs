@@ -61,8 +61,8 @@ public sealed class KurrentDBCheckpointStore : ICheckpointStore<ulong>
             null, null, null, cancellationToken);
     }
 
-    private static StreamName ForCheckpoint(string subscriptionName, string partitionId)
-        => StreamName.ForCheckpoint($"{subscriptionName}-{partitionId}");
+    private static string ForCheckpoint(string subscriptionName, string partitionId)
+        => $"{CheckpointStreamPrefix}-{subscriptionName}-{partitionId}";
 
     internal sealed record Checkpoint(string Id, ulong Position);
 }

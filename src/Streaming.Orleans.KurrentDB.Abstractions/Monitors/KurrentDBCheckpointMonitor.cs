@@ -41,7 +41,7 @@ public sealed class KurrentDBCheckpointMonitor
     private readonly KurrentDBCheckpointMonitorOptions _options;
     private readonly ICheckpointStore<ulong> _checkpointStore;
     private readonly string _subscriptionName;
-    private readonly StreamName _streamName;
+    private readonly string _streamName;
     private readonly Stopwatch _timer;
 
     private bool _currentPositionNotCommitted;
@@ -60,13 +60,13 @@ public sealed class KurrentDBCheckpointMonitor
         KurrentDBCheckpointMonitorOptions? options,
         ICheckpointStore<ulong>? checkpointStore,
         string? subscriptionName,
-        StreamName? streamName)
+        string? streamName)
     {
         ArgumentNullException.ThrowIfNull(logger, nameof(logger));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
         ArgumentNullException.ThrowIfNull(checkpointStore, nameof(checkpointStore));
         ArgumentNullException.ThrowIfNullOrWhiteSpace(subscriptionName, nameof(subscriptionName));
-        ArgumentNullException.ThrowIfNull(streamName, nameof(streamName));
+        ArgumentException.ThrowIfNullOrWhiteSpace(streamName, nameof(streamName));
 
         _logger = logger;
         _options = options;

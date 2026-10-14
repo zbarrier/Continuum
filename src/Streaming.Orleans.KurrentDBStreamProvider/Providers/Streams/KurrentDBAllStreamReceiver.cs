@@ -94,7 +94,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
         // The $all subscription is validated to be the only queue of this provider, so the queue name uniquely
         // identifies the checkpoint stream of this stream provider.
         _subscriptionName = $"{settings.Options.Name}-{settings.QueueName}";
-        _checkpointMonitor = new KurrentDBCheckpointMonitor(logger, receiverOptions.CheckpointMonitorOptions, receiverOptions.CheckpointStore, _subscriptionName, Continuum.Streaming.Orleans.KurrentDB.StreamName.AllStream);
+        _checkpointMonitor = new KurrentDBCheckpointMonitor(logger, receiverOptions.CheckpointMonitorOptions, receiverOptions.CheckpointStore, _subscriptionName, KurrentDBStreams.All);
     }
 
     /// <summary>

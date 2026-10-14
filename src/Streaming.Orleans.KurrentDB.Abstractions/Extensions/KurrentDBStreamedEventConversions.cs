@@ -12,7 +12,7 @@ public static class KurrentDBStreamedEventConversions
     /// <summary>
     ///     The topic of checkpoint events read from the <c>$all</c> stream.
     /// </summary>
-    public const string AllStreamTopic = "$all";
+    public const string AllStreamTopic = KurrentDBStreams.All;
 
     /// <summary>
     ///     The topic of checkpoint events read from a single stream.
