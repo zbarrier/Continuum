@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<OutputType>Exe</OutputType>
+	<TargetFramework>net10.0</TargetFramework>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+	<IsPackable>false</IsPackable>
+	<PublishAot>true</PublishAot>
+	<!-- Fail the publish if any trim/AOT warnings leak through from the libraries. -->
+	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	<TrimmerSingleWarn>false</TrimmerSingleWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\..\src\Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions\Continuum.Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions.csproj" />
+	<ProjectReference Include="..\..\src\Streaming.Orleans.Azure.Storage\Continuum.Streaming.Orleans.Azure.Storage.csproj" />
+	<ProjectReference Include="..\..\src\Streaming.Orleans.KurrentDB.SelfHostedSubscriptions\Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.csproj" />
+	<ProjectReference Include="..\..\src\Streaming.Orleans.KurrentDB.StreamProvider\Continuum.Streaming.Orleans.KurrentDB.StreamProvider.csproj" />
+  </ItemGroup>
+
+</Project>

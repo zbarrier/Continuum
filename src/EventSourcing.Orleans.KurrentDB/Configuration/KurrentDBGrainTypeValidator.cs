@@ -53,6 +53,13 @@ public sealed class KurrentDBGrainTypeValidator : IConfigurationValidator
     {
         foreach (var grainType in manifestProvider.LocalGrainManifest.Grains.Keys)
         {
+            // The manifest lists generic grains by their unconstructed type, which GrainClassMap cannot resolve
+            // without type arguments; it throws instead of returning false.
+            if (GenericGrainType.TryParse(grainType, out var genericGrainType) && !genericGrainType.IsConstructed)
+            {
+                continue;
+            }
+
             if (classMap.TryGetGrainClass(grainType, out var grainClass))
             {
                 yield return (grainType.ToString()!, grainClass);

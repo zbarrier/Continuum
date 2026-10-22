@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <Description>Self-hosted Azure Cosmos DB change feed subscriptions for worker services.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    <!-- GrainStorageSerializer, StreamNameParser and TypeMapper are interfaces that cannot come from configuration. They are set in code or
+         resolved by DefaultCosmosDBCatchupSubscriptionOptionsConfigurator, so the binder skipping them is intended. -->
+    <NoWarn>$(NoWarn);SYSLIB1100;SYSLIB1101</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.63.2" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Streaming.Orleans\Continuum.Streaming.Orleans.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Continuum.Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions.Tests" />
+  </ItemGroup>
+
+</Project>

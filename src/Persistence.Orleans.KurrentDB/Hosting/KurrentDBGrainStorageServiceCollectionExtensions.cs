@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Continuum.Orleans.KurrentDB;
+
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
@@ -51,7 +53,8 @@ public static class KurrentDBGrainStorageServiceCollectionExtensions
         configureOptions?.Invoke(optionsBuilder);
         services.AddTransient<IConfigurationValidator>(sp => new KurrentDBGrainStorageOptionsValidator(sp.GetRequiredService<IOptionsMonitor<KurrentDBGrainStorageOptions>>().Get(name), name));
         services.AddTransient<IPostConfigureOptions<KurrentDBGrainStorageOptions>, DefaultKurrentDBGrainStorageOptionsConfigurator>();
-        services.ConfigureNamedOptionForLogging<KurrentDBGrainStorageOptions>(name);  
+        services.ConfigureNamedOptionForLogging<KurrentDBGrainStorageOptions>(name);
+        services.AddKurrentDBExceptionSerialization();
         services.AddSingleton(new KurrentDBGrainStorageRegistration(name));
         services.AddKeyedSingleton<IGrainStorage>(name, (sp, key) =>
         {

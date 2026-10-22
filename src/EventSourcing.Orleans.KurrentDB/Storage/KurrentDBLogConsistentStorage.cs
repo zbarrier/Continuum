@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-using Continuum.EventSourcing.Orleans.KurrentDB.Abstractions;
+using Continuum.Events;
 using Continuum.Orleans.KurrentDB;
 using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
@@ -131,7 +131,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
     #region Storage
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<TLogEntry?>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId, int fromVersion, int maxCount)
+    public async Task<IReadOnlyList<TLogEntry>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId, int fromVersion, int maxCount)
     {
         EnsureInitialized();
         ArgumentOutOfRangeException.ThrowIfNegative(fromVersion);
@@ -203,6 +203,13 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         {
             return await GetLastVersionAsync(grainTypeName, grainId);
         }
+        foreach (var entry in entries)
+        {
+            if (entry is null)
+            {
+                throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to write log entries for {grainTypeName} with ID {grainId} and stream {streamName}. Cannot append null entries."));
+            }
+        }
         using var operation = _instrumentation.Start(LogConsistentStorageInstrumentation.AppendOperation, grainTypeName, grainId, streamName);
         try
         {
@@ -212,7 +219,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
             // them, so a subscriber cannot recover the grouping later. Recording it here is what lets a projection
             // apply the whole append at once instead of briefly serving a half applied state. A grain writes to its
             // own stream, so all of these entries belong to one stream and the two counts are the same.
-            var transactionId = NewId.Next();
+            var transactionId = Guid.CreateVersion7();
             var serializedEntries = new EventData[entries.Count];
             for (var index = 0; index < serializedEntries.Length; index++)
             {
@@ -252,8 +259,6 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
 
     #region Serialize & Deserialize
 
-    private readonly static ReadOnlyMemory<byte> ReadonlyEmptyData = new();
-
     /// <summary>
     /// </summary>
     /// <param name="entry"></param>
@@ -265,12 +270,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         var eventId = Uuid.FromGuid(_eventIdGenerator());
         var metadata = KurrentDBEventMetadataCodec.Write(null, transaction);
         var readonlyMetadata = metadata is null ? null : (ReadOnlyMemory<byte>?)metadata;
-        if (entry is null)
-        {
-            var typeName = _typeMapper.GetTypeName<TLogEntry>();
-            return new EventData(eventId, typeName, ReadonlyEmptyData, readonlyMetadata, _contentType);
-        }
-        var entryTypeName = _typeMapper.GetTypeName(entry.GetType());
+        var entryTypeName = _typeMapper.GetTypeName(entry!.GetType());
         var entryData = _storageSerializer.Serialize(entry);
         var readonlyEntryData = entryData.ToMemory();
         return new EventData(eventId, entryTypeName, readonlyEntryData, readonlyMetadata, _contentType);
@@ -281,11 +281,12 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
     /// <param name="evt"></param>
     /// <typeparam name="TLogEntry"></typeparam>
     /// <returns></returns>
-    private TLogEntry? DeserializeEvent<TLogEntry>(ResolvedEvent evt)
+    private TLogEntry DeserializeEvent<TLogEntry>(ResolvedEvent evt)
     {
         var evtType = _typeMapper.GetType(evt.Event.EventType);
         var evtDataWithType = new BinaryDataWithType(evt.Event.Data, evtType);
-        return _storageSerializer.Deserialize<TLogEntry>(evtDataWithType);
+        return _storageSerializer.Deserialize<TLogEntry>(evtDataWithType)
+            ?? throw new InvalidOperationException($"Event of type '{evt.Event.EventType}' in stream '{evt.Event.EventStreamId}' with revision '{evt.Event.EventNumber}' deserialized to null.");
     }
 
     #endregion

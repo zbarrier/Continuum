@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <Description>Self-hosted KurrentDB catch-up subscriptions for worker services, with client-side checkpointing.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    <!-- CheckpointStore, GrainStorageSerializer and TypeMapper are interfaces that cannot come from configuration. They are set in code or
+         resolved by DefaultKurrentDBChannelCatchupSubscriptionOptionsConfigurator, so the binder skipping them is intended. -->
+    <NoWarn>$(NoWarn);SYSLIB1100;SYSLIB1101</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="KurrentDB.Client" Version="1.4.1" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.12" />
+    <PackageReference Include="Polly.Core" Version="8.6.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Streaming.Orleans.KurrentDB.Abstractions\Continuum.Streaming.Orleans.KurrentDB.Abstractions.csproj" />
+    <ProjectReference Include="..\Streaming.Orleans\Continuum.Streaming.Orleans.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Tests" />
+  </ItemGroup>
+
+</Project>

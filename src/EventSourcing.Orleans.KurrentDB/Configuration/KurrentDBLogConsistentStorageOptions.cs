@@ -1,5 +1,6 @@
-﻿using Continuum;
+using Continuum;
 using Continuum.Orleans.KurrentDB;
+using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
 
 using KurrentDB.Client;
@@ -73,7 +74,7 @@ public sealed class KurrentDBLogConsistentStorageOptions : IStorageProviderSeria
     /// <summary>
     ///     Generates the ID of each event appended to KurrentDB. Defaults to sequential GUIDs.
     /// </summary>
-    public Func<Guid> EventIdGenerator { get; set; } = NewId.NextSequentialGuid;
+    public Func<Guid> EventIdGenerator { get; set; } = Guid.CreateVersion7;
 
     /// <summary>
     ///    The type of EventData to store in KurrentDB. Defaults to domain events.
@@ -116,13 +117,17 @@ public class DefaultKurrentDBLogConsistentStorageOptionsConfigurator : IPostConf
         {
             options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.ConnectionName);
         }
+        if (options.GrainStorageSerializer is TypeMappedJsonGrainStorageSerializer typeMappedSerializer)
+        {
+            options.GrainStorageSerializer = typeMappedSerializer.WithRequiredStoredType();
+        }
         if (options.StreamNameFormatter is null)
         {
             options.StreamNameFormatter = KurrentDBLogConsistentStorageOptions.DefaultStreamNameFormatter;
         }
         if (options.EventIdGenerator is null)
         {
-            options.EventIdGenerator = NewId.NextSequentialGuid;
+            options.EventIdGenerator = Guid.CreateVersion7;
         }
         if (options.TypeMapper is null)
         {

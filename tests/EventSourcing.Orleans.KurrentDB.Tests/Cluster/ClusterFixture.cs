@@ -3,6 +3,8 @@ using System.Net;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 
+using KurrentDB.Client;
+
 using Orleans.TestingHost;
 
 namespace Continuum.EventSourcing.Orleans.KurrentDB.Tests;
@@ -18,6 +20,7 @@ public sealed class ClusterFixture : IAsyncLifetime
     private readonly IContainer _container = new ContainerBuilder("docker.kurrent.io/kurrent-latest/kurrentdb:25.1")
         .WithPortBinding(KurrentDBPort, true)
         .WithEnvironment("KURRENTDB_INSECURE", "true")
+        .WithEnvironment("KURRENTDB_MEM_DB", "true")
         .WithWaitStrategy(Wait.ForUnixContainer()
             .UntilHttpRequestIsSucceeded(r => r
                 .ForPort(KurrentDBPort)
@@ -36,6 +39,7 @@ public sealed class ClusterFixture : IAsyncLifetime
 
         var connectionString = FormattableString.Invariant(
             $"kurrentdb://{_container.Hostname}:{_container.GetMappedPublicPort(KurrentDBPort)}?tls=false");
+        await WaitUntilReadyAsync(connectionString);
 
         var builder = new TestClusterBuilder();
         builder.Properties[ConnectionStringKey] = connectionString;
@@ -52,5 +56,26 @@ public sealed class ClusterFixture : IAsyncLifetime
             await _cluster.DisposeAsync();
         }
         await _container.DisposeAsync();
+    }
+
+    // /health/live passes once the process is up, before the node has become leader and accepts writes, so retry a
+    // write for a while. Otherwise the first test can fail with "Server Is Not Ready".
+    private static async Task WaitUntilReadyAsync(string connectionString)
+    {
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(connectionString));
+        var deadline = DateTime.UtcNow.AddMinutes(1);
+        while (true)
+        {
+            try
+            {
+                await client.AppendToStreamAsync($"readiness-{Guid.NewGuid():N}", StreamState.NoStream,
+                    [new EventData(Uuid.NewUuid(), "readiness", ReadOnlyMemory<byte>.Empty)]);
+                return;
+            }
+            catch (Exception) when (DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(250));
+            }
+        }
     }
 }

@@ -1,7 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 using Continuum;
 using Continuum.EventSourcing.Orleans.CosmosDB;
+using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -61,11 +62,6 @@ public class CosmosDBLogConsistentStorageOptions
     public int QueryMaxItemCount { get; set; } = 1000;
 
     /// <summary>
-    ///     When true, events whose type can no longer be resolved are skipped instead of failing the read.
-    /// </summary>
-    public bool IgnoreMissingTypes { get; set; } = false;
-
-    /// <summary>
     ///     Used to generate the stream name for a grain.
     ///     The first string is the ServiceId.
     ///     The second string is the ProviderName.
@@ -77,7 +73,7 @@ public class CosmosDBLogConsistentStorageOptions
     /// <summary>
     ///     Generates the id of each appended event item.
     /// </summary>
-    public Func<NewId> EventIdGenerator { get; set; } = NewId.Next;
+    public Func<Guid> EventIdGenerator { get; set; } = Guid.CreateVersion7;
 
     /// <summary>
     ///    The type map used to name stored events. Defaults to domain events and metadata.
@@ -132,13 +128,17 @@ public class DefaultCosmosDBLogConsistentStorageOptionsConfigurator : IPostConfi
         {
             options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.ConnectionName);
         }
+        if (options.GrainStorageSerializer is TypeMappedJsonGrainStorageSerializer typeMappedSerializer)
+        {
+            options.GrainStorageSerializer = typeMappedSerializer.WithRequiredStoredType();
+        }
         if (options.StreamNameFormatter is null)
         {
             options.StreamNameFormatter = (serviceId, providerName, grainId) => $"{serviceId}/{grainId}";
         }
         if (options.EventIdGenerator is null)
         {
-            options.EventIdGenerator = NewId.Next;
+            options.EventIdGenerator = Guid.CreateVersion7;
         }
         if (options.TypeMapper is null)
         {

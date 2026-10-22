@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Continuum.Streaming</PackageId>
+    <Description>Provider-neutral event streaming abstractions for Continuum: streamed events and metadata, stream name parsing, checkpoint stores and subscriptions.</Description>
+    <PackageTags>streaming;event-streaming;subscriptions;checkpoints</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Continuum.Core.csproj" />
+  </ItemGroup>
+
+</Project>

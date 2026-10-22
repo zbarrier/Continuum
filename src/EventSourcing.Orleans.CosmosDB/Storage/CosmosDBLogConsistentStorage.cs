@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 
@@ -30,7 +30,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     private readonly CosmosDBLogConsistentStorageOptions _storageOptions;
     private readonly IGrainStorageSerializer _storageSerializer;
     private readonly Func<string, string, GrainId, string> _streamNameFormatter;
-    private readonly Func<NewId> _eventIdGenerator;
+    private readonly Func<Guid> _eventIdGenerator;
     private readonly ITypeMapper _typeMapper;
 
     private readonly CosmosClient _client;
@@ -211,11 +211,11 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     #region Storage
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<TLogEntry?>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId, int fromVersion, int maxCount)
+    public async Task<IReadOnlyList<TLogEntry>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId, int fromVersion, int maxCount)
     {
         EnsureInitialized();
         ArgumentOutOfRangeException.ThrowIfNegative(fromVersion);
-        List<TLogEntry?> entries = new();
+        List<TLogEntry> entries = new();
         if (maxCount <= 0)
         {
             return entries;
@@ -249,15 +249,12 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
                     {
                         if (!_typeMapper.TryGetType(item.DataType, out var evtType))
                         {
-                            if (_storageOptions.IgnoreMissingTypes)
-                            {
-                                _logger.LogWarning("Skipping event of unknown type '{EventType}' in stream '{StreamName}' with version '{StreamVersion}'.", item.DataType, streamName, item.Version);
-                                continue;
-                            }
                             throw new InvalidOperationException($"Event type '{item.DataType}' in stream '{streamName}' with version '{item.Version}' is not registered.");
                         }
                         var data = JsonSerializer.SerializeToUtf8Bytes(item.Data, CosmosDBJsonContext.Default.JsonElement);
-                        entries.Add(_storageSerializer.Deserialize<TLogEntry>(new BinaryDataWithType(data, evtType)));
+                        var entry = _storageSerializer.Deserialize<TLogEntry>(new BinaryDataWithType(data, evtType))
+                            ?? throw new InvalidOperationException($"Event of type '{item.DataType}' in stream '{streamName}' with version '{item.Version}' deserialized to null.");
+                        entries.Add(entry);
                     }
                 }
             }
@@ -390,7 +387,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
             }
             var eventDataEntry = new EventItem
             {
-                Id = _eventIdGenerator().ToSequentialGuid().ToString(),
+                Id = _eventIdGenerator().ToString(),
                 Type = EventItemType.Event,
                 StreamName = streamName,
                 Version = ++currentVersion,

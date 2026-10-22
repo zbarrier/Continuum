@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -23,7 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EventSourcing.Orleans\Continuum.EventSourcing.Orleans.csproj" />
-    <ProjectReference Include="..\EventSourcing.Orleans.KurrentDB.Abstractions\Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.csproj" />
     <ProjectReference Include="..\Orleans.KurrentDB\Continuum.Orleans.KurrentDB.csproj" />
   </ItemGroup>
 

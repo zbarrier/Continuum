@@ -1,0 +1,60 @@
+﻿using Continuum.Streaming.Orleans;
+
+using Microsoft.Extensions.Logging;
+
+using Orleans.Runtime;
+
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests.Grains;
+
+/// <summary>
+///     A projection built on <see cref="ProjectionGrain{TGrain, TState}" />, used to prove the base class
+///     subscribes, applies events to its persistent state and writes them.
+/// </summary>
+/// <remarks>
+///     The grain subscribes to the stream whose key matches its own primary key, which is the convention implicit
+///     subscriptions use. It is activated explicitly by the test rather than by an implicit subscription attribute,
+///     so that the assertions are about the base class rather than about Orleans' implicit activation.
+/// </remarks>
+public class ChatProjectionGrain : ProjectionGrain<ChatProjectionGrain, ChatProjectionState>, IChatProjectionGrain
+{
+    public ChatProjectionGrain(
+        [PersistentState("ChatProjection", "MemoryStorageProvider")] IPersistentState<ChatProjectionState> storage,
+        ILogger<ChatProjectionGrain> logger)
+        : base(storage, logger)
+    {
+    }
+
+    protected override IEnumerable<StreamSubscriptionSource> Subscriptions =>
+    [
+        new(Constants.AllStreamProviderName, StreamIdFromKey(Constants.EventSourcedStreamPrefix))
+    ];
+
+    public Task<string[]> GetAuthors() => Task.FromResult(State.Authors.ToArray());
+
+    public Task<int> GetAppliedCount() => Task.FromResult(State.AppliedCount);
+
+    public Task<IStreamedEvent<object>?> GetLastApplied() => Task.FromResult(State.LastApplied);
+}
+
+[GenerateSerializer]
+public class ChatProjectionState : ProjectionState<ChatProjectionState>
+{
+    [Id(0)] public List<string> Authors { get; init; } = new();
+
+    [Id(1)] public int AppliedCount { get; set; }
+
+    [Id(2)] public IStreamedEvent<object>? LastApplied { get; set; }
+
+    protected override ValueTask<bool> Handle(IStreamedEvent<object> streamedEvent)
+    {
+        if (streamedEvent.Event is not ChatMessage message)
+        {
+            return ValueTask.FromResult(false);
+        }
+
+        Authors.Add(message.Author);
+        AppliedCount++;
+        LastApplied = streamedEvent;
+        return ValueTask.FromResult(true);
+    }
+}

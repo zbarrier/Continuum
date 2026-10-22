@@ -1,5 +1,6 @@
 ﻿using Continuum.EventSourcing.Orleans;
 using Continuum.EventSourcing.Orleans.KurrentDB;
+using Continuum.Orleans.KurrentDB;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -62,6 +63,7 @@ public static class KurrentDBLogConsistentStorageServiceCollectionExtensions
         services.AddTransient<IConfigurationValidator>(sp => new KurrentDBGrainTypeValidator(sp, name));
         services.TryAddEnumerable(ServiceDescriptor.Transient<IPostConfigureOptions<KurrentDBLogConsistentStorageOptions>, DefaultKurrentDBLogConsistentStorageOptionsConfigurator>());
         services.ConfigureNamedOptionForLogging<KurrentDBLogConsistentStorageOptions>(name);
+        services.AddKurrentDBExceptionSerialization();
 
         services.AddKeyedSingleton<ILogConsistentStorage>(name, (sp, key) =>
         {

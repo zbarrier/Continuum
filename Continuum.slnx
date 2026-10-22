@@ -20,7 +20,6 @@
     <Project Path="src/Domain.Orleans/Continuum.Domain.Orleans.csproj" />
     <Project Path="src/Domain/Continuum.Domain.csproj" />
     <Project Path="src/EventSourcing.Orleans.CosmosDB/Continuum.EventSourcing.Orleans.CosmosDB.csproj" />
-    <Project Path="src/EventSourcing.Orleans.KurrentDB.Abstractions/Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.csproj" Id="5038290f-20d6-4874-be2b-344f2ec60498" />
     <Project Path="src/EventSourcing.Orleans.KurrentDB.Analyzers/Continuum.EventSourcing.Orleans.KurrentDB.Analyzers.csproj" />
     <Project Path="src/EventSourcing.Orleans.KurrentDB/Continuum.EventSourcing.Orleans.KurrentDB.csproj" />
     <Project Path="src/EventSourcing.Orleans/Continuum.EventSourcing.Orleans.csproj" />
@@ -31,6 +30,13 @@
     <Project Path="src/Persistence.Orleans.KurrentDB/Continuum.Persistence.Orleans.KurrentDB.csproj" />
     <Project Path="src/Persistence.Orleans/Continuum.Persistence.Orleans.csproj" />
     <Project Path="src/Persistence/Continuum.Persistence.csproj" />
+    <Project Path="src/Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions/Continuum.Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions.csproj" />
+    <Project Path="src/Streaming.Orleans.Azure.Storage/Continuum.Streaming.Orleans.Azure.Storage.csproj" />
+    <Project Path="src/Streaming.Orleans.KurrentDB.Abstractions/Continuum.Streaming.Orleans.KurrentDB.Abstractions.csproj" />
+    <Project Path="src/Streaming.Orleans.KurrentDB.SelfHostedSubscriptions/Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.csproj" />
+    <Project Path="src/Streaming.Orleans.KurrentDB.StreamProvider/Continuum.Streaming.Orleans.KurrentDB.StreamProvider.csproj" />
+    <Project Path="src/Streaming.Orleans/Continuum.Streaming.Orleans.csproj" />
+    <Project Path="src/Streaming/Continuum.Streaming.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ArrayPools.Tests/Continuum.ArrayPools.Tests.csproj" />
@@ -50,13 +56,22 @@
     <Project Path="tests/Domain.Tests/Continuum.Domain.Tests.csproj" />
     <Project Path="tests/EventSourcing.AotSmokeTest/Continuum.EventSourcing.AotSmokeTest.csproj" />
     <Project Path="tests/EventSourcing.Orleans.CosmosDB.Tests/Continuum.EventSourcing.Orleans.CosmosDB.Tests.csproj" />
-    <Project Path="tests/EventSourcing.Orleans.KurrentDB.Abstractions.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Abstractions.Tests.csproj" />
     <Project Path="tests/EventSourcing.Orleans.KurrentDB.Analyzers.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Analyzers.Tests.csproj" />
     <Project Path="tests/EventSourcing.Orleans.KurrentDB.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Tests.csproj" />
     <Project Path="tests/NewId.Benchmarks/Continuum.NewId.Benchmarks.csproj" />
     <Project Path="tests/NewId.Orleans.Tests/Continuum.NewId.Orleans.Tests.csproj" />
     <Project Path="tests/NewId.Tests/Continuum.NewId.Tests.csproj" />
     <Project Path="tests/Persistence.AotSmokeTest/Continuum.Persistence.AotSmokeTest.csproj" />
+    <Project Path="tests/Orleans.KurrentDB.Tests/Continuum.Orleans.KurrentDB.Tests.csproj" />
     <Project Path="tests/Persistence.Orleans.KurrentDB.Tests/Continuum.Persistence.Orleans.KurrentDB.Tests.csproj" />
+    <Project Path="tests/Streaming.AotSmokeTest/Continuum.Streaming.AotSmokeTest.csproj" />
+    <Project Path="tests/Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions.Tests/Continuum.Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.Azure.Storage.Tests/Continuum.Streaming.Orleans.Azure.Storage.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.KurrentDB.Abstractions.Tests/Continuum.Streaming.Orleans.KurrentDB.Abstractions.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Tests/Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.KurrentDB.StreamProvider.Tests/Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests.csproj" />
+    <Project Path="tests/Streaming.Orleans.Tests/Continuum.Streaming.Orleans.Tests.csproj" />
+    <Project Path="tests/Streaming.Tests/Continuum.Streaming.Tests.csproj" />
+    <Project Path="tests/Utilities.AotSmokeTest/Continuum.Utilities.AotSmokeTest.csproj" />
   </Folder>
 </Solution>
