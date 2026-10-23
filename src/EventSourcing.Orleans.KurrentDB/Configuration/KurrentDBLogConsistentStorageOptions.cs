@@ -57,10 +57,11 @@ public sealed class KurrentDBLogConsistentStorageOptions : IStorageProviderSeria
     ///     is deliberately not included: it scoped streams to a cluster, but it also meant no two parts of the
     ///     system could agree on a category without agreeing on the ServiceId first.
     ///     <para>
-    ///     A custom formatter adds identity to the stream name, such as a tenant: <c>{GrainType}-{TenantId}_{GrainKey}</c>.
-    ///     It must keep the grain type before the first <c>-</c> so it remains the category, and it is not a way around
-    ///     grain types that contain <c>-</c>, which are rejected at build time and silo startup. A deployment that shares
-    ///     one KurrentDB instance between services can use a formatter in the same way to keep them apart.
+    ///     A tenant qualified grain key, <c>{TenantId}|{Key}</c>, is used as-is, giving <c>{GrainType}-{TenantId}|{Key}</c>,
+    ///     so <c>$ce-{GrainType}</c> spans all tenants. A custom formatter must keep the grain type before the first
+    ///     <c>-</c> so it remains the category, and it is not a way around grain types that contain <c>-</c>, which are
+    ///     rejected at build time and silo startup. A deployment that shares one KurrentDB instance between services can
+    ///     use a formatter to keep them apart.
     ///     </para>
     /// </remarks>
     public Func<string, string, GrainId, string> StreamNameFormatter { get; set; } = DefaultStreamNameFormatter;
@@ -69,7 +70,7 @@ public sealed class KurrentDBLogConsistentStorageOptions : IStorageProviderSeria
     ///     The default <see cref="StreamNameFormatter"/>, producing <c>{GrainType}-{GrainKey}</c>.
     /// </summary>
     internal static readonly Func<string, string, GrainId, string> DefaultStreamNameFormatter =
-        (serviceId, providerName, grainId) => $"{grainId.Type}-{grainId.Key}";
+        (serviceId, providerName, grainId) => KurrentDBStreamName.Format(grainId.Type.ToString()!, grainId.Key.ToString()!);
 
     /// <summary>
     ///     Generates the ID of each event appended to KurrentDB. Defaults to sequential GUIDs.

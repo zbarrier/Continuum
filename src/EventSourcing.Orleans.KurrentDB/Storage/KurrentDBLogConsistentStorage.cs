@@ -86,6 +86,11 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         lifecycle.Subscribe(name, _storageOptions.InitStage, Init, Close);
     }
 
+    /// <summary>
+    ///     Initializes a storage created after silo startup, such as one for a tenant.
+    /// </summary>
+    internal Task InitializeAsync(CancellationToken cancellationToken) => Init(cancellationToken);
+
     private Task Init(CancellationToken cancellationToken)
     {
         var startTimestamp = Stopwatch.GetTimestamp();

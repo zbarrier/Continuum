@@ -19,28 +19,28 @@ public class KurrentDBStateManager : IDisposable, IAsyncDisposable
     private readonly KurrentDBOperationOptions _options;
     private readonly KurrentDBPolicyOptions _policyOptions;
     private readonly UserCredentials? _credentials;
-    private readonly IServiceProvider? _serviceProvider;
+    private readonly IServiceProvider _serviceProvider;
     private readonly Serializer _serializer;
     private readonly ILogger _logger;
 
+    // The client resolved by ConnectionName is a container owned keyed singleton shared with the rest of the provider,
+    // so it must not be disposed here.
     private KurrentDBClient? _client;
-
-    // A client resolved by ConnectionName is a container owned keyed singleton shared with the rest of the provider,
-    // so it must not be disposed here. Only a client built from ClientSettings is owned by this instance.
-    private bool _ownsClient;
     private bool _initialized;
 
     /// <summary>
     ///     Creates a new <see cref="KurrentDBStateManager" /> instance.
     /// </summary>
     /// <param name="options">Storage configuration.</param>
-    /// <param name="serviceProvider">Used to resolve the shared keyed client when a connection name is configured.</param>
+    /// <param name="serviceProvider">Used to resolve the shared keyed client registered for the connection name.</param>
     /// <param name="serializer"></param>
     /// <param name="logger">Logger to use.</param>
-    public KurrentDBStateManager(KurrentDBOperationOptions options, IServiceProvider? serviceProvider, Serializer serializer, ILogger<KurrentDBStateManager> logger)
+    public KurrentDBStateManager(KurrentDBOperationOptions options, IServiceProvider serviceProvider, Serializer serializer, ILogger<KurrentDBStateManager> logger)
     {
         ArgumentNullException.ThrowIfNull(options, nameof(options));
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.ConnectionName, nameof(options.ConnectionName));
         ArgumentNullException.ThrowIfNull(options.PolicyOptions, nameof(options.PolicyOptions));
+        ArgumentNullException.ThrowIfNull(serviceProvider, nameof(serviceProvider));
         ArgumentNullException.ThrowIfNull(serializer, nameof(serializer));
         ArgumentNullException.ThrowIfNull(logger, nameof(logger));
         _options = options;
@@ -54,7 +54,7 @@ public class KurrentDBStateManager : IDisposable, IAsyncDisposable
     #region Lifecycle
 
     /// <summary>
-    ///     Resolves or creates the KurrentDB client.
+    ///     Resolves the shared KurrentDB client.
     /// </summary>
     public void Init()
     {
@@ -62,17 +62,7 @@ public class KurrentDBStateManager : IDisposable, IAsyncDisposable
         var startTime = DateTime.UtcNow;
         try
         {
-            if (!string.IsNullOrWhiteSpace(_options.ConnectionName) && _serviceProvider is not null)
-            {
-                _client = _serviceProvider.GetRequiredKeyedService<KurrentDBClient>(_options.ConnectionName);
-                _ownsClient = false;
-            }
-            else
-            {
-                ArgumentNullException.ThrowIfNull(_options.ClientSettings, nameof(_options.ClientSettings));
-                _client = new KurrentDBClient(_options.ClientSettings);
-                _ownsClient = true;
-            }
+            _client = _serviceProvider.GetRequiredKeyedService<KurrentDBClient>(_options.ConnectionName);
             _initialized = true;
         }
         catch (Exception ex)
@@ -87,63 +77,19 @@ public class KurrentDBStateManager : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    ///     Disposes the KurrentDB client.
+    ///     Releases the shared KurrentDB client. The client is owned by the container and is not disposed.
     /// </summary>
-    public async Task Close()
+    public Task Close()
     {
-        if (_initialized == false || _client == null)
-        {
-            return;
-        }
-        const string operation = "Close";
-        var startTime = DateTime.UtcNow;
-        try
-        {
-            if (_ownsClient)
-            {
-                await _client.DisposeAsync().ConfigureAwait(false);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(KurrentDBErrorCodes.FailDisposingClient, ex, "Failed to close KurrentDB client.");
-            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to init KurrentDB client, {ex.GetType()}: {ex.Message}"));
-        }
-        finally
-        {
-            _client = null;
-            _initialized = false;
-            CheckAlertSlowAccess(startTime, operation);
-        }
+        Dispose();
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        if (_initialized == false || _client == null)
-        {
-            return;
-        }
-        const string operation = "Close";
-        var startTime = DateTime.UtcNow;
-        try
-        {
-            if (_ownsClient)
-            {
-                _client.Dispose();
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(KurrentDBErrorCodes.FailDisposingClient, ex, "Failed to close KurrentDB client.");
-            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to init KurrentDB client, {ex.GetType()}: {ex.Message}"));
-        }
-        finally
-        {
-            _client = null;
-            _initialized = false;
-            CheckAlertSlowAccess(startTime, operation);
-        }
+        _client = null;
+        _initialized = false;
     }
 
     /// <inheritdoc />

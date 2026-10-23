@@ -55,9 +55,10 @@ public class KurrentDBCheckpointer : IStreamQueueCheckpointer<string>
         ArgumentException.ThrowIfNullOrEmpty(streamProviderName, nameof(streamProviderName));
         ArgumentException.ThrowIfNullOrEmpty(queue, nameof(queue));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
+        ArgumentNullException.ThrowIfNull(serviceProvider, nameof(serviceProvider));
         ArgumentNullException.ThrowIfNull(serializer, nameof(serializer));
         ArgumentNullException.ThrowIfNull(loggerFactory, nameof(loggerFactory));
-        // _logger = loggerFactory.CreateLogger<KurrentDBCheckpointer>();
+        // _logger
         // _logger.LogInformation("Creating KurrentDB checkpointer for queue {Queue} of stream provider {StreamProviderName} with serviceId {ServiceId}.", queue, streamProviderName, serviceId);
         _persistInterval = options.PersistInterval;
         _stateManager = new KurrentDBStateManager(options, serviceProvider, serializer, loggerFactory.CreateLogger<KurrentDBStateManager>());

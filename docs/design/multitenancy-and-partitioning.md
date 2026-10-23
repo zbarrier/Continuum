@@ -133,7 +133,7 @@ In other words, the stream name is the grain type, then `-`, then the Orleans gr
 - KurrentDB providers resolve `GetRequiredKeyedService<KurrentDBClient>(ConnectionName)`. Tenants on the same database therefore share **one** client, so there is one client per database, not per tenant.
 - A tenant that needs its own database gets its own connection name and client.
 - Things to fix or verify:
-  - `KurrentDBStateManager` (`src/Streaming.Orleans.KurrentDB.StreamProvider/Providers/Storage/KurrentDBStateManager.cs`) falls back to `new KurrentDBClient(_options.ClientSettings)` when no connection name is set. That would create a client per tenant. Require the connection name, or make sure tenant options always set it.
+  - `KurrentDBStateManager` (`src/Streaming.Orleans.KurrentDB.StreamProvider/Providers/Storage/KurrentDBStateManager.cs`) now requires a connection name and always resolves the shared keyed client; the `ClientSettings` fallback was removed.
   - Shared clients must be owned by DI. A tenant provider must never dispose a shared client.
 - With a database per tenant, checkpoints and the KurrentDB de-duplication scope must include the tenant or connection name, for example a subscription per tenant database.
 

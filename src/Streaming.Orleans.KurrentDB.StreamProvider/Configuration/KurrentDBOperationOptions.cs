@@ -23,21 +23,11 @@ public class KurrentDBOperationOptions
     ///     The name of the KurrentDB connection used to resolve the keyed <see cref="KurrentDBClient" />.
     /// </summary>
     /// <remarks>
-    ///     Preferred over <see cref="ClientSettings" />. When set, the container owned client registered for this name
-    ///     is shared rather than a private client being created and disposed per component.
+    ///     Required. The container owned client registered for this name is shared rather than a private client being
+    ///     created per component, so tenants that share a database also share one client.
     /// </remarks>
     [Redact]
     public string? ConnectionName { get; set; }
-
-    /// <summary>
-    ///     Settings to be used when configuring the KurrentDB client.
-    /// </summary>
-    /// <remarks>
-    ///     Only used when <see cref="ConnectionName" /> is not set. The resulting client is owned and disposed by the
-    ///     component that created it.
-    /// </remarks>
-    [Redact]
-    public KurrentDBClientSettings? ClientSettings { get; set; }
 
     /// <summary>
     ///     The credentials that have permissions to append and read events.
@@ -74,13 +64,9 @@ public class KurrentDBOperationOptionsValidator<TOptions> : IConfigurationValida
     /// <inheritdoc />
     public void ValidateConfiguration()
     {
-        // Exactly one client source must be configured, otherwise the state manager has no way to reach KurrentDB and
-        // configuring both would make it ambiguous which connection actually wins.
-        var hasConnectionName = !string.IsNullOrWhiteSpace(Options.ConnectionName);
-        var hasClientSettings = Options.ClientSettings is not null;
-        if (hasConnectionName == false && hasClientSettings == false)
+        if (string.IsNullOrWhiteSpace(Options.ConnectionName))
         {
-            throw new OrleansConfigurationException($"{typeof(TOptions).Name} on stream provider {Name} is invalid. Either {nameof(KurrentDBOperationOptions.ConnectionName)} or {nameof(KurrentDBOperationOptions.ClientSettings)} must be configured.");
+            throw new OrleansConfigurationException($"{typeof(TOptions).Name} on stream provider {Name} is invalid. {nameof(KurrentDBOperationOptions.ConnectionName)} is required.");
         }
         if (Options.Credentials is null)
         {
