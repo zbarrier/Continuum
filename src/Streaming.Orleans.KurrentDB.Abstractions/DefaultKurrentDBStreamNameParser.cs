@@ -1,4 +1,5 @@
 using Continuum.Streams;
+using Continuum.Orleans.KurrentDB;
 using Continuum.Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.KurrentDB;
@@ -15,7 +16,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB;
 /// </remarks>
 public sealed class DefaultKurrentDBStreamNameParser : IStreamNameParser
 {
-    private const char CategorySeparator = '-';
+    private const char CategorySeparator = KurrentDBStreamName.CategorySeparator;
 
     /// <inheritdoc />
     public IStreamName Parse(string streamName)

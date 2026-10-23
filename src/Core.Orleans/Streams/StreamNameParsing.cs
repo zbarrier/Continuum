@@ -1,3 +1,4 @@
+using Continuum.Orleans.Tenancy;
 using Continuum.Streams;
 
 namespace Continuum.Orleans.Streams;
@@ -10,7 +11,7 @@ public static class StreamNameParsing
     /// <summary>
     /// The separator between a tenant id and the key in a tenant qualified stream name.
     /// </summary>
-    public const char TenantSeparator = '|';
+    public const char TenantSeparator = TenantKey.Separator;
 
     /// <summary>
     /// Builds a <see cref="StreamName"/> from a name already split into its category and the remainder, splitting the
@@ -43,6 +44,7 @@ public static class StreamNameParsing
             throw new FormatException($"Stream name '{value}' has an empty key.");
         }
 
-        return new StreamName(value, category, remainder[..separatorIndex], remainder[(separatorIndex + 1)..]);
+        TenantKey.Split(remainder, out var tenantId, out var key);
+        return new StreamName(value, category, tenantId, key);
     }
 }
