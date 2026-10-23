@@ -1,3 +1,5 @@
+using Continuum.Orleans.Tenancy;
+using Microsoft.Extensions.Logging;
 using Continuum.Persistence.Orleans;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -39,8 +41,13 @@ public static class KurrentDBGrainStorageFactory
             var storage = ActivatorUtilities.CreateInstance<KurrentDBGrainStorage>(serviceProvider, name, options);
             await storage.InitializeAsync(cancellationToken).ConfigureAwait(false);
             return storage;
-        });
+        }, CreateFailureLogger(serviceProvider, name));
+
     }
+
+    private static TenantStorageFailureLogger CreateFailureLogger(IServiceProvider serviceProvider, string name) =>
+        new(serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<TenantStorageFailureLogger>(), name,
+            serviceProvider.GetService<TimeProvider>());
 
     private static KurrentDBGrainStorageOptions CreateTenantOptions(IServiceProvider serviceProvider, string name, string tenantId,
         Action<string, KurrentDBGrainStorageOptions> configureTenantOptions)

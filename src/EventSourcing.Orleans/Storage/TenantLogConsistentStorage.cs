@@ -16,6 +16,7 @@ public sealed class TenantLogConsistentStorage : ILogConsistentStorage, ILifecyc
 {
     private readonly ILogConsistentStorage _defaultStorage;
     private readonly Func<string, CancellationToken, Task<ILogConsistentStorage>> _createTenantStorage;
+    private readonly TenantStorageFailureLogger _failureLogger;
     private readonly ConcurrentDictionary<string, Lazy<Task<ILogConsistentStorage>>> _tenantStorages = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -23,10 +24,14 @@ public sealed class TenantLogConsistentStorage : ILogConsistentStorage, ILifecyc
     /// </summary>
     /// <param name="defaultStorage">The storage used by grains without a tenant.</param>
     /// <param name="createTenantStorage">Creates and initializes the storage for a tenant.</param>
-    public TenantLogConsistentStorage(ILogConsistentStorage defaultStorage, Func<string, CancellationToken, Task<ILogConsistentStorage>> createTenantStorage)
+    /// <param name="failureLogger">Logs failures to create a tenant's storage.</param>
+    public TenantLogConsistentStorage(ILogConsistentStorage defaultStorage, Func<string, CancellationToken, Task<ILogConsistentStorage>> createTenantStorage,
+        TenantStorageFailureLogger failureLogger)
     {
         ArgumentNullException.ThrowIfNull(defaultStorage);
         ArgumentNullException.ThrowIfNull(createTenantStorage);
+        ArgumentNullException.ThrowIfNull(failureLogger);
+        _failureLogger = failureLogger;
         _defaultStorage = defaultStorage;
         _createTenantStorage = createTenantStorage;
     }
@@ -76,10 +81,13 @@ public sealed class TenantLogConsistentStorage : ILogConsistentStorage, ILifecyc
     {
         try
         {
-            return await _createTenantStorage(tenantId, CancellationToken.None).ConfigureAwait(false);
+            var storage = await _createTenantStorage(tenantId, CancellationToken.None).ConfigureAwait(false);
+            _failureLogger.Succeeded(tenantId);
+            return storage;
         }
-        catch
+        catch (Exception ex)
         {
+            _failureLogger.Failed(tenantId, ex);
             // Let the next call retry rather than caching the failure for the life of the silo.
             _tenantStorages.TryRemove(tenantId, out _);
             throw;

@@ -5,6 +5,9 @@ namespace Continuum.EventSourcing.Orleans.KurrentDB.Tests;
 
 public class TenantLogConsistentStorageTests
 {
+    private static TenantStorageFailureLogger FailureLogger() =>
+        new(Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance, "test");
+
     private static GrainId GrainFor(string? tenantId, string key) =>
         GrainId.Create("snack", TenantKey.Create(tenantId, key));
 
@@ -17,7 +20,7 @@ public class TenantLogConsistentStorageTests
         {
             created.Add(tenantId);
             return Task.FromResult<ILogConsistentStorage>(new FakeStorage());
-        });
+        }, FailureLogger());
 
         await sut.GetLastVersionAsync("snack", GrainFor(null, "1"));
 
@@ -35,7 +38,7 @@ public class TenantLogConsistentStorageTests
             var storage = new FakeStorage();
             storages.Add(tenantId, storage);
             return Task.FromResult<ILogConsistentStorage>(storage);
-        });
+        }, FailureLogger());
 
         await sut.GetLastVersionAsync("snack", GrainFor("acme", "1"));
         await sut.AppendAsync("snack", GrainFor("acme", "2"), new List<string> { "e" }, 0);
@@ -56,7 +59,7 @@ public class TenantLogConsistentStorageTests
             return attempts == 1
                 ? Task.FromException<ILogConsistentStorage>(new InvalidOperationException("boom"))
                 : Task.FromResult<ILogConsistentStorage>(new FakeStorage());
-        });
+        }, FailureLogger());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.GetLastVersionAsync("snack", GrainFor("acme", "1")));
         await sut.GetLastVersionAsync("snack", GrainFor("acme", "1"));

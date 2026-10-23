@@ -18,6 +18,7 @@ public sealed class TenantGrainStorage : IGrainStorage, ILifecycleParticipant<IS
 {
     private readonly IGrainStorage _defaultStorage;
     private readonly Func<string, CancellationToken, Task<IGrainStorage>> _createTenantStorage;
+    private readonly TenantStorageFailureLogger _failureLogger;
     private readonly ConcurrentDictionary<string, Lazy<Task<IGrainStorage>>> _tenantStorages = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -25,10 +26,14 @@ public sealed class TenantGrainStorage : IGrainStorage, ILifecycleParticipant<IS
     /// </summary>
     /// <param name="defaultStorage">The storage used by grains without a tenant.</param>
     /// <param name="createTenantStorage">Creates and initializes the storage for a tenant.</param>
-    public TenantGrainStorage(IGrainStorage defaultStorage, Func<string, CancellationToken, Task<IGrainStorage>> createTenantStorage)
+    /// <param name="failureLogger">Logs failures to create a tenant's storage.</param>
+    public TenantGrainStorage(IGrainStorage defaultStorage, Func<string, CancellationToken, Task<IGrainStorage>> createTenantStorage,
+        TenantStorageFailureLogger failureLogger)
     {
         ArgumentNullException.ThrowIfNull(defaultStorage);
         ArgumentNullException.ThrowIfNull(createTenantStorage);
+        ArgumentNullException.ThrowIfNull(failureLogger);
+        _failureLogger = failureLogger;
         _defaultStorage = defaultStorage;
         _createTenantStorage = createTenantStorage;
     }
@@ -78,10 +83,13 @@ public sealed class TenantGrainStorage : IGrainStorage, ILifecycleParticipant<IS
     {
         try
         {
-            return await _createTenantStorage(tenantId, CancellationToken.None).ConfigureAwait(false);
+            var storage = await _createTenantStorage(tenantId, CancellationToken.None).ConfigureAwait(false);
+            _failureLogger.Succeeded(tenantId);
+            return storage;
         }
-        catch
+        catch (Exception ex)
         {
+            _failureLogger.Failed(tenantId, ex);
             // Let the next call retry rather than caching the failure for the life of the silo.
             _tenantStorages.TryRemove(tenantId, out _);
             throw;

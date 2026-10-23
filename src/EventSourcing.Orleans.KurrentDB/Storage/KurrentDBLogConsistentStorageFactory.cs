@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Continuum.Orleans.Tenancy;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -46,8 +47,13 @@ public static class KurrentDBLogConsistentStorageFactory
                 serviceProvider.GetRequiredService<ILogger<KurrentDBLogConsistentStorage>>());
             await storage.InitializeAsync(cancellationToken).ConfigureAwait(false);
             return storage;
-        });
+        }, CreateFailureLogger(serviceProvider, name));
+
     }
+
+    private static TenantStorageFailureLogger CreateFailureLogger(IServiceProvider serviceProvider, string name) =>
+        new(serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<TenantStorageFailureLogger>(), name,
+            serviceProvider.GetService<TimeProvider>());
 
     private static KurrentDBLogConsistentStorageOptions CreateTenantOptions(IServiceProvider serviceProvider, string name, string tenantId,
         Action<string, KurrentDBLogConsistentStorageOptions> configureTenantOptions)
