@@ -23,6 +23,7 @@ public class KurrentDBMessage
 {
     /// <summary>
     /// </summary>
+    /// <param name="sourceConnectionName">The logical connection the event was read from.</param>
     /// <param name="streamId"></param>
     /// <param name="position"></param>
     /// <param name="commitPosition"></param>
@@ -37,11 +38,13 @@ public class KurrentDBMessage
     /// <param name="timestamp">The time the event was recorded.</param>
     /// <param name="metadata">The event metadata.</param>
     /// <param name="streamKey">The stream key parsed from the stream name.</param>
-    public KurrentDBMessage(StreamId streamId, string position, ulong commitPosition, long sequenceNumber, DateTime enqueueTimeUtc, DateTime dequeueTimeUtc, 
+    public KurrentDBMessage(string sourceConnectionName, StreamId streamId, string position, ulong commitPosition, long sequenceNumber, DateTime enqueueTimeUtc, DateTime dequeueTimeUtc, 
         string eventId, string eventType, ReadOnlyMemory<byte> data,
         string? streamName = null, ulong streamVersion = 0, DateTime timestamp = default,
         IEventMetadata? metadata = null, string? streamKey = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
+        SourceConnectionName = sourceConnectionName;
         StreamId = streamId;
         Position = position;
         CommitPosition = commitPosition;
@@ -62,8 +65,11 @@ public class KurrentDBMessage
     ///     Initializes a new instance of the <see cref="KurrentDBMessage" /> class.
     /// </summary>
     /// <param name="cachedMessage"></param>
-    public KurrentDBMessage(CachedMessage cachedMessage)
+    /// <param name="sourceConnectionName">The logical connection the cached event was read from.</param>
+    public KurrentDBMessage(CachedMessage cachedMessage, string sourceConnectionName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
+        SourceConnectionName = sourceConnectionName;
         var readOffset = 0;
         StreamId = cachedMessage.StreamId;
         Position = ReadRequiredString(cachedMessage.Segment, ref readOffset);
@@ -88,6 +94,12 @@ public class KurrentDBMessage
     internal static string ReadRequiredString(ArraySegment<byte> segment, ref int readOffset) =>
         SegmentBuilder.ReadNextString(segment, ref readOffset)
         ?? throw new InvalidOperationException("Cached KurrentDB message segment contains an unexpected null string.");
+
+    /// <summary>
+    ///     The logical connection the event was read from.
+    /// </summary>
+    [Id(20)]
+    public string SourceConnectionName { get; set; } = string.Empty;
 
     /// <summary>
     ///     The stream identifier.

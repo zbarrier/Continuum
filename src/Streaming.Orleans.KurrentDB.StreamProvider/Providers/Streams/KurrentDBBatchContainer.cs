@@ -138,7 +138,7 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
             KurrentDBMessage.EventType,
             streamName,
             KurrentDBMessage.StreamVersion,
-            KurrentDBStreamedEventConversions.ToCursor(streamName, KurrentDBMessage.CommitPosition),
+            KurrentDBStreamedEventConversions.ToCursor(KurrentDBMessage.SourceConnectionName, streamName, KurrentDBMessage.CommitPosition),
             KurrentDBMessage.Timestamp,
             @event,
             KurrentDBMessage.Metadata);

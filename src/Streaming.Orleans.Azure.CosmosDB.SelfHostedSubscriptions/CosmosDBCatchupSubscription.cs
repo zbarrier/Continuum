@@ -243,7 +243,7 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             eventType: eventItem.DataType,
             streamName: _streamNameParser.Parse(eventItem.StreamName),
             streamVersion: eventItem.Version,
-            cursor: new StreamedEventCursor(_options.MonitoredContainerName, context.LeaseToken, eventItem.LogicalSequenceNumber, eventItem.SubSequenceNumber),
+            cursor: new StreamedEventCursor(_options.ConnectionName, _options.MonitoredContainerName, context.LeaseToken, eventItem.LogicalSequenceNumber, eventItem.SubSequenceNumber),
             timestamp: timestamp,
             @event: deserializedEvent);
 

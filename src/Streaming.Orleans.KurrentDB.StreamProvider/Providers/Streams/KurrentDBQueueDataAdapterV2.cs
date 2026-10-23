@@ -52,8 +52,8 @@ public class KurrentDBQueueDataAdapterV2 : IKurrentDBDataAdapter
     /// <returns></returns>
     public virtual IBatchContainer GetBatchContainer(ref CachedMessage cachedMessage)
     {
-        var evenStoreMessage = new KurrentDBMessage(cachedMessage);
-        return GetBatchContainer(evenStoreMessage);
+        var kurrentDBMessage = new KurrentDBMessage(cachedMessage, _options.ConnectionName);
+        return GetBatchContainer(kurrentDBMessage);
     }
 
     /// <summary>

@@ -18,6 +18,7 @@ public class ProjectionStateTests
 {
     private const string Category = "counted";
     private const string Topic = Category;
+    private const string SourceConnection = "store";
     private const string StreamKey = "1";
 
     [Fact]
@@ -124,6 +125,19 @@ public class ProjectionStateTests
     }
 
     [Fact]
+    public async Task Keeps_A_Separate_Watermark_Per_Source_Connection()
+    {
+        var state = new CountingProjectionState();
+
+        // Positions are local to a database, so a lower position from another source is a different event.
+        await state.WhenAsync(Event(sequenceNumber: 10, sourceConnectionName: "store-a"));
+        var hasChanges = await state.WhenAsync(Event(sequenceNumber: 4, sourceConnectionName: "store-b"));
+
+        Assert.True(hasChanges);
+        Assert.Equal(2, state.Applied);
+    }
+
+    [Fact]
     public async Task Advances_The_Watermark_Even_When_The_Handler_Ignores_The_Event()
     {
         var state = new CountingProjectionState { Handled = false };
@@ -132,7 +146,7 @@ public class ProjectionStateTests
 
         // An ignored event is still consumed, so it must not be reconsidered on redelivery.
         Assert.False(hasChanges);
-        Assert.True(state.Watermarks.TryGet(Topic, "0", out var lastSequence));
+        Assert.True(state.Watermarks.TryGet(SourceConnection, Topic, "0", out var lastSequence));
         Assert.Equal(new BigInteger(1), lastSequence.SequenceNumber);
     }
 
@@ -249,6 +263,7 @@ public class ProjectionStateTests
         ulong subSequenceNumber = 0,
         string partitionId = "0",
         string topic = Topic,
+        string sourceConnectionName = SourceConnection,
         string category = Category,
         string? tenantId = null,
         string streamKey = StreamKey)
@@ -259,7 +274,7 @@ public class ProjectionStateTests
             "Tests.Counted",
             streamName: new StreamName(rawName, category, tenantId, streamKey),
             streamVersion: 0,
-            cursor: new StreamedEventCursor(topic, partitionId, new BigInteger(sequenceNumber), subSequenceNumber),
+            cursor: new StreamedEventCursor(sourceConnectionName, topic, partitionId, new BigInteger(sequenceNumber), subSequenceNumber),
             timestamp: DateTime.UtcNow,
             @event: new object());
     }

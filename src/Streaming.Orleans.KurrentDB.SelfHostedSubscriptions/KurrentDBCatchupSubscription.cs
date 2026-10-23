@@ -373,7 +373,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                     case StreamMessage.AllStreamCheckpointReached(Position position):
                         {
                             _logger.LogInformation("Checkpoint reached at position {Position} for subscription '{SubscriptionName}'.", position, SubscriptionName);
-                            var checkpointEvent = position.ToAllStreamCheckpointEvent();
+                            var checkpointEvent = position.ToAllStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
                         }
                         break;
@@ -398,7 +398,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                     case StreamMessage.LastAllStreamPosition(var position):
                         {
                             _logger.LogInformation("Subscription '{SubscriptionName}' reached last position of the stream at {Position}.", SubscriptionName, position);
-                            var checkpointEvent = position.ToAllStreamCheckpointEvent();
+                            var checkpointEvent = position.ToAllStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
                         }
                         break;
@@ -453,7 +453,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             return;
         }
 
-        var streamEvent = resolvedEvent.ToAllStreamEvent(deserializedEvent, _options.StreamNameParser);
+        var streamEvent = resolvedEvent.ToAllStreamEvent(_options.ConnectionName, deserializedEvent, _options.StreamNameParser);
 
         await _channel.Writer.WriteAsync(streamEvent, cancellationToken);
     }
@@ -489,7 +489,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                     case StreamMessage.StreamCheckpointReached(StreamPosition position):
                         {
                             _logger.LogInformation("Checkpoint reached at position {Position} for subscription '{SubscriptionName}'.", position, SubscriptionName);
-                            var checkpointEvent = position.ToStreamCheckpointEvent();
+                            var checkpointEvent = position.ToStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
                         }
                         break;
@@ -514,7 +514,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                     case StreamMessage.FirstStreamPosition(StreamPosition position):
                         {
                             _logger.LogInformation("Subscription '{SubscriptionName}' reached first position of the stream at {Position}.", SubscriptionName, position);
-                            var checkpointEvent = position.ToStreamCheckpointEvent();
+                            var checkpointEvent = position.ToStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
                         }
                         break;
@@ -522,7 +522,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                     case StreamMessage.LastStreamPosition(StreamPosition position):
                         {
                             _logger.LogInformation("Subscription '{SubscriptionName}' reached last position of the stream at {Position}.", SubscriptionName, position);
-                            var checkpointEvent = position.ToStreamCheckpointEvent();
+                            var checkpointEvent = position.ToStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
                         }
                         break;
@@ -577,7 +577,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             return;
         }
 
-        var streamEvent = resolvedEvent.ToStreamEvent(deserializedEvent, _options.StreamNameParser);
+        var streamEvent = resolvedEvent.ToStreamEvent(_options.ConnectionName, deserializedEvent, _options.StreamNameParser);
 
         await _channel.Writer.WriteAsync(streamEvent, cancellationToken);
     }

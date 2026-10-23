@@ -238,7 +238,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
             // Check duplication
             if (_hashSet.TryAdd(resolvedEvent.Event.EventId, true))
             {
-                _queue.Enqueue(KurrentDBStreamedEventFactory.FromPersistentSubscription(resolvedEvent, _settings.StreamNameParser));
+                _queue.Enqueue(KurrentDBStreamedEventFactory.FromPersistentSubscription(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser));
             }
         }
         catch (Exception ex)

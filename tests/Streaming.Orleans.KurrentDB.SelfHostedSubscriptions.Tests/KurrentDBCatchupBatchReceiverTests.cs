@@ -57,7 +57,7 @@ public class KurrentDBCatchupBatchReceiverTests
     {
         var name = new DefaultKurrentDBStreamNameParser().Parse(streamName);
         return new StreamedEvent<object>(Guid.NewGuid(), nameof(OrderPlaced), name, 0,
-            KurrentDBStreamedEventConversions.ToCursor(name, position), DateTime.UtcNow, new OrderPlaced(number),
+            KurrentDBStreamedEventConversions.ToCursor("store", name, position), DateTime.UtcNow, new OrderPlaced(number),
             transaction is null ? null : EventMetadata.Create(null, null, null, transaction));
     }
 
@@ -93,7 +93,7 @@ public class KurrentDBCatchupBatchReceiverTests
     [Fact]
     public async Task Keeps_checkpoint_markers_out_of_batches_but_records_their_position()
     {
-        await RunToCompletionAsync(CreateReceiver(), Event("order-1", 10, 1), new Position(50, 50).ToAllStreamCheckpointEvent());
+        await RunToCompletionAsync(CreateReceiver(), Event("order-1", 10, 1), new Position(50, 50).ToAllStreamCheckpointEvent("store"));
 
         var batch = Assert.Single(_batches);
         Assert.Equal([1], batch.Select(e => ((OrderPlaced)e.Event).Number));
@@ -103,7 +103,7 @@ public class KurrentDBCatchupBatchReceiverTests
     [Fact]
     public async Task Records_the_position_of_a_checkpoint_marker_without_calling_the_handler()
     {
-        await RunToCompletionAsync(CreateReceiver(), new Position(50, 50).ToAllStreamCheckpointEvent());
+        await RunToCompletionAsync(CreateReceiver(), new Position(50, 50).ToAllStreamCheckpointEvent("store"));
 
         Assert.Empty(_batches);
         Assert.Equal([50UL], _store.Stored);

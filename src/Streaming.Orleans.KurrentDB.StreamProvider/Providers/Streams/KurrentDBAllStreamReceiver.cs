@@ -287,7 +287,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
                             // Check duplication
                             if (_hashSet.TryAdd(resolvedEvent.Event.EventId, true))
                             {
-                                _queue.Enqueue(KurrentDBStreamedEventFactory.FromAllStream(resolvedEvent, _settings.StreamNameParser));
+                                _queue.Enqueue(KurrentDBStreamedEventFactory.FromAllStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser));
                             }
                             // Resuming a dropped subscription must continue from the last event seen by the pump,
                             // otherwise the buffered but undelivered events would be received twice.

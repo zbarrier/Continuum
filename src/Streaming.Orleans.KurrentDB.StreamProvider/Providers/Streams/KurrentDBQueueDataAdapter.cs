@@ -51,7 +51,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// <returns></returns>
     public virtual IBatchContainer GetBatchContainer(ref CachedMessage cachedMessage)
     {
-        var kurrentDBMessage = new KurrentDBMessage(cachedMessage);
+        var kurrentDBMessage = new KurrentDBMessage(cachedMessage, _options.ConnectionName);
         return GetBatchContainer(kurrentDBMessage);
     }
 
@@ -161,7 +161,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
         return new CachedMessage
                {
                    StreamId = position.StreamId,
-                   SequenceNumber = (long)queueMessage.StreamVersion,
+                   SequenceNumber = KurrentDBQueueDataAdapterV2.ToOrleansSequenceToken(queueMessage.Cursor.SequenceNumber, queueMessage.StreamName.Value),
                    EventIndex = position.SequenceToken.EventIndex,
                    EnqueueTimeUtc = queueMessage.Timestamp,
                    DequeueTimeUtc = dequeueTime,
@@ -178,7 +178,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     {
         ArgumentNullException.ThrowIfNull(queueMessage, nameof(queueMessage));
         var streamId = GetStreamId(queueMessage);
-        var sequenceToken = new KurrentDBSequenceToken(queueMessage.StreamVersion.ToString(), (long)queueMessage.StreamVersion, 0);
+        var sequenceToken = new KurrentDBSequenceToken(queueMessage.Cursor.SequenceNumber.ToString(), KurrentDBQueueDataAdapterV2.ToOrleansSequenceToken(queueMessage.Cursor.SequenceNumber, queueMessage.StreamName.Value), 0);
         return new StreamPosition(streamId, sequenceToken);
     }
 
@@ -230,8 +230,8 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// <returns></returns>
     protected virtual ArraySegment<byte> EncodeMessageIntoSegment(StreamedEvent<KurrentDBRawEvent> queueMessage, Func<int, ArraySegment<byte>> getSegment)
     {
-        var position = queueMessage.StreamVersion.ToString();
-        // The commit position is stored alongside the event so the checkpoint can be written from the cache, after
+        var position = queueMessage.Cursor.SequenceNumber.ToString();
+        // The commit position
         // delivery. It cannot be recovered from the event itself once link resolution is enabled.
         var commitPosition = queueMessage.Cursor.SequenceNumber.ToString();
         var eventId = queueMessage.EventId.ToString();
