@@ -226,7 +226,7 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
         await Task.Delay(500, TestContext.Current.CancellationToken);
         await subscription.StopAsync(TestContext.Current.CancellationToken);
 
-        var streams = harness.Settings.ReceivedStreams(FirstCatchupSubscription.Name).OrderBy(s => s.Value, StringComparer.Ordinal).ToList();
+        var streams = harness.Settings.ReceivedStreams(FirstCatchupSubscription.Name).OrderBy(s => s.TenantId ?? string.Empty, StringComparer.Ordinal).ToList();
         Assert.Equal([untenanted, acme, contoso], streams.Select(s => s.Value));
         Assert.All(streams, s => Assert.Equal(category, s.Category));
         Assert.All(streams, s => Assert.Equal(key, s.Key));
