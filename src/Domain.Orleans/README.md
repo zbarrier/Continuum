@@ -45,7 +45,7 @@ Event handlers match the exact event type. The grain resolves `DeepCopier<TState
 [GenerateSerializer]
 public sealed class DoorState : EventDrivenStateMachineState<DoorState, DoorEvent, DoorStatus, DoorCommand>
 {
-    public DoorState() : base(() => new StateMachine<DoorStatus, DoorCommand>(DoorStatus.Closed)) { }
+    public DoorState() : base(DoorStatus.Closed) { }
 
     [Id(0)] public int OpenCount { get; set; }
 
@@ -59,7 +59,7 @@ public sealed class DoorState : EventDrivenStateMachineState<DoorState, DoorEven
 }
 ```
 
-Each event carries the command it fires. `ConfigureStateMachine` runs again on every session copy, because deep copies don't carry over Stateless transitions.
+Each event carries the command it fires. The current status is stored on the state, and the constructor builds the state machine over it and calls `ConfigureStateMachine`, so copies and deserialized states (including snapshots) always have their transitions.
 
 ## Transactions
 
