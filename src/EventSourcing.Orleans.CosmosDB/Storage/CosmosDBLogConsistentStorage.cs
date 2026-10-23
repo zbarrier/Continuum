@@ -85,6 +85,11 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         lifecycle.Subscribe(name, _storageOptions.InitStage, Init, Close);
     }
 
+    /// <summary>
+    ///     Initializes a storage created after silo startup, such as one for a tenant.
+    /// </summary>
+    internal Task InitializeAsync(CancellationToken cancellationToken) => Init(cancellationToken);
+
     private async Task Init(CancellationToken cancellationToken)
     {
         var timer = Stopwatch.StartNew();

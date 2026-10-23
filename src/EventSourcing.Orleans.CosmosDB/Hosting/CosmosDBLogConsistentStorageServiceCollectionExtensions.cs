@@ -55,6 +55,31 @@ public static class CosmosDBLogConsistentStorageServiceCollectionExtensions
     public static IServiceCollection AddAzureCosmosDBBasedLogConsistencyProvider(this IServiceCollection services, string name,
         Action<OptionsBuilder<CosmosDBLogConsistentStorageOptions>>? configureOptions = null)
     {
+        return services.AddAzureCosmosDBBasedLogConsistencyProvider(name, configureOptions, CosmosDBLogConsistentStorageFactory.Create);
+    }
+
+    /// <summary>
+    ///     Configures Azure Cosmos DB as a log consistency storage provider that routes each grain to the storage for its tenant.
+    /// </summary>
+    /// <remarks>
+    ///     The tenant is read from the grain key, <c>{TenantId}|{Key}</c>. <paramref name="configureTenantOptions"/> is
+    ///     called once per tenant with a copy of the provider's options; set <c>ConnectionName</c>, <c>DatabaseName</c>
+    ///     or <c>ContainerName</c> to give a tenant dedicated resources. Tenants sharing a connection name share one
+    ///     client. Grains without a tenant, and tenants the callback leaves unchanged, use the provider's settings.
+    /// </remarks>
+    public static IServiceCollection AddMultitenantAzureCosmosDBBasedLogConsistencyProvider(this IServiceCollection services, string name,
+        Action<string, CosmosDBLogConsistentStorageOptions> configureTenantOptions,
+        Action<OptionsBuilder<CosmosDBLogConsistentStorageOptions>>? configureOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(configureTenantOptions);
+        return services.AddAzureCosmosDBBasedLogConsistencyProvider(name, configureOptions,
+            (sp, key) => CosmosDBLogConsistentStorageFactory.CreateMultitenant(sp, key, configureTenantOptions));
+    }
+
+    private static IServiceCollection AddAzureCosmosDBBasedLogConsistencyProvider(this IServiceCollection services, string name,
+        Action<OptionsBuilder<CosmosDBLogConsistentStorageOptions>>? configureOptions,
+        Func<IServiceProvider, string, ILogConsistentStorage> createStorage)
+    {
         // Configure log storage. Validation is done by the Orleans IConfigurationValidator below, which runs at silo startup.
         var optionsBuilder = services.AddOptions<CosmosDBLogConsistentStorageOptions>(name)
             .BindConfiguration($"{DefaultConfigSection}:{name}");
@@ -66,7 +91,7 @@ public static class CosmosDBLogConsistentStorageServiceCollectionExtensions
         services.AddKeyedSingleton<ILogConsistentStorage>(name, (sp, key) =>
         {
             return key is string strKey
-                ? CosmosDBLogConsistentStorageFactory.Create(sp, strKey)
+                ? createStorage(sp, strKey)
                 : throw new ArgumentException($"The value provided for the {nameof(key)} parameter must be a string ({nameof(ILogConsistentStorage)}).", nameof(key));
         });
         if (string.Equals(name, ProviderConstants.DEFAULT_LOG_CONSISTENCY_PROVIDER_NAME, StringComparison.Ordinal))
