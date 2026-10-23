@@ -112,6 +112,11 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    ///     Initializes a storage that is created after the silo has started, such as a tenant's storage.
+    /// </summary>
+    internal Task InitializeAsync(CancellationToken cancellationToken) => Init(cancellationToken);
+
     private void EnsureInitialized()
     {
         if (!_initialized)

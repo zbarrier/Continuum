@@ -48,6 +48,33 @@ public static class KurrentDBGrainStorageServiceCollectionExtensions
     public static IServiceCollection AddKurrentDBGrainStorage(this IServiceCollection services, string name,
         Action<OptionsBuilder<KurrentDBGrainStorageOptions>>? configureOptions = null)
     {
+        return services.AddKurrentDBGrainStorage(name, KurrentDBGrainStorageFactory.Create, configureOptions);
+    }
+
+    /// <summary>
+    ///     Configures KurrentDB as a grain storage provider with separate storage per tenant.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="name">The storage provider name.</param>
+    /// <param name="configureTenantOptions">
+    ///     Configures a tenant's options, which start from a copy of the provider's options. Set
+    ///     <see cref="KurrentDBGrainStorageOptions.ConnectionName"/> to give a tenant its own connection.
+    /// </param>
+    /// <param name="configureOptions">Configures the provider's options, used by grains without a tenant.</param>
+    public static IServiceCollection AddMultitenantKurrentDBGrainStorage(this IServiceCollection services, string name,
+        Action<string, KurrentDBGrainStorageOptions> configureTenantOptions,
+        Action<OptionsBuilder<KurrentDBGrainStorageOptions>>? configureOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(configureTenantOptions);
+        return services.AddKurrentDBGrainStorage(name,
+            (sp, providerName) => KurrentDBGrainStorageFactory.CreateMultitenant(sp, providerName, configureTenantOptions),
+            configureOptions);
+    }
+
+    private static IServiceCollection AddKurrentDBGrainStorage(this IServiceCollection services, string name,
+        Func<IServiceProvider, string, IGrainStorage> createStorage,
+        Action<OptionsBuilder<KurrentDBGrainStorageOptions>>? configureOptions)
+    {
         // Validation is done by the Orleans IConfigurationValidator below, which runs at silo startup.
         var optionsBuilder = services.AddOptions<KurrentDBGrainStorageOptions>(name);
         configureOptions?.Invoke(optionsBuilder);
@@ -59,7 +86,7 @@ public static class KurrentDBGrainStorageServiceCollectionExtensions
         services.AddKeyedSingleton<IGrainStorage>(name, (sp, key) =>
         {
             return key is string strKey
-                ? (IGrainStorage)KurrentDBGrainStorageFactory.Create(sp, strKey)
+                ? createStorage(sp, strKey)
                 : throw new ArgumentException($"The value provided for the {nameof(key)} parameter must be a string ({nameof(IGrainStorage)}).", nameof(key));
         });
         if (string.Equals(name, ProviderConstants.DEFAULT_STORAGE_PROVIDER_NAME, StringComparison.Ordinal))
