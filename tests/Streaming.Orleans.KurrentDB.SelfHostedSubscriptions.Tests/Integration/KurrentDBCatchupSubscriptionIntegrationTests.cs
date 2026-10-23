@@ -1,8 +1,9 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text;
 
 using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Diagnostics;
+using Continuum.Streams;
 using Continuum.TypeMapping;
 
 using KurrentDB.Client;
@@ -206,6 +207,32 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
         Assert.Equal(3UL, restarted.CheckpointStore.Positions[FirstCatchupSubscription.Name]);
     }
 
+    [Fact]
+    public async Task A_category_subscription_receives_every_tenant_and_parses_tenant_qualified_stream_names()
+    {
+        await using var harness = CreateHarness();
+        var category = $"order{Guid.NewGuid():N}";
+        var key = Guid.NewGuid().ToString();
+        var acme = await AppendAsync(1, $"{category}-acme|{key}");
+        var contoso = await AppendAsync(1, $"{category}-contoso|{key}");
+        var untenanted = await AppendAsync(1, $"{category}-{key}");
+        await AppendAsync(1);
+        harness.Settings.Streams[FirstCatchupSubscription.Name] = "$all";
+        harness.Settings.Filters[FirstCatchupSubscription.Name] = StreamFilter.Prefix($"{category}-");
+
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => harness.Settings.ReceivedStreams(FirstCatchupSubscription.Name).Count == 3);
+        await Task.Delay(500, TestContext.Current.CancellationToken);
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        var streams = harness.Settings.ReceivedStreams(FirstCatchupSubscription.Name).OrderBy(s => s.Value, StringComparer.Ordinal).ToList();
+        Assert.Equal([untenanted, acme, contoso], streams.Select(s => s.Value));
+        Assert.All(streams, s => Assert.Equal(category, s.Category));
+        Assert.All(streams, s => Assert.Equal(key, s.Key));
+        Assert.Equal([null, "acme", "contoso"], streams.Select(s => s.TenantId));
+    }
+
     private Harness CreateHarness(InMemoryCheckpointStore? checkpointStore = null, bool enabled = true,
         Action<KurrentDBCatchupSubscriptionOptions>? configure = null)
     {
@@ -284,8 +311,12 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
     public sealed class TestSubscriptionSettings
     {
         private readonly ConcurrentDictionary<string, ConcurrentQueue<string>> _received = new();
+        private readonly ConcurrentDictionary<string, ConcurrentQueue<IStreamName>> _receivedStreams = new();
 
         public ConcurrentDictionary<string, string> Streams { get; } = new();
+        public ConcurrentDictionary<string, IEventFilter> Filters { get; } = new();
+
+        public List<IStreamName> ReceivedStreams(string subscriptionName) => _receivedStreams.GetOrAdd(subscriptionName, _ => new()).ToList();
         public ConcurrentBag<string> Failing { get; } = [];
         public ConcurrentDictionary<string, bool> TransientFailing { get; } = new();
 
@@ -294,9 +325,11 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
         public void Record(string subscriptionName, IEnumerable<IStreamedEvent<object>> events)
         {
             var received = _received.GetOrAdd(subscriptionName, _ => new());
+            var receivedStreams = _receivedStreams.GetOrAdd(subscriptionName, _ => new());
             foreach (var streamedEvent in events)
             {
                 received.Enqueue((string)streamedEvent.Event);
+                receivedStreams.Enqueue(streamedEvent.StreamName);
             }
         }
     }
@@ -309,7 +342,7 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
 
         public override string StreamName => _settings.Streams[Name];
 
-        public override IEventFilter? FilterOptions => null;
+        public override IEventFilter? FilterOptions => _settings.Filters.GetValueOrDefault(Name);
 
         protected override Task OnNextBatchAsync(List<IStreamedEvent<object>> streamEvents)
         {

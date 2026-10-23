@@ -1,8 +1,8 @@
 # Design: Multi-Tenancy, Partition-Aware Checkpoints, and Projection De-duplication
 
-Status: **Partially implemented.**
+Status: **Implemented.**
 - Partition-aware checkpoints, projection watermarks, and provider cursor scopes (sections 1-3): implemented.
-- Multi-tenancy (section 4): agreed design, not implemented. It is the final step before the 1.0.0 release.
+- Multi-tenancy (section 4): implemented for KurrentDB event sourcing, CosmosDB event sourcing and KurrentDB grain storage. A database per tenant for subscriptions is not implemented (see "Storage per tenant and sharing clients").
 
 This document records decisions and the reasoning behind them, so later work does not reopen settled questions.
 
@@ -77,11 +77,11 @@ Each provider chooses the topic and partition so that events reach a projection 
 
 ---
 
-## 4. Multi-tenancy (agreed, not implemented)
+## 4. Multi-tenancy (implemented)
 
 ### Library
-Use **Orleans.Multitenant** (https://github.com/VincentH-Net/Orleans.Multitenant):
-- **Requirement:** Orleans **10.4+**. Continuum is on 10.3.1, so it must be upgraded first.
+Applications use **Orleans.Multitenant** (https://github.com/VincentH-Net/Orleans.Multitenant). Continuum libraries do not reference it:
+- **Requirement:** Orleans **10.4+**. Continuum is on 10.4.0.
 - **Grain keys:** the tenant goes in the grain key as `{TenantId}|{Key}`. The separator `|` is hard-coded and cannot be configured. A grain with no tenant uses the plain key.
 - **Grain IDs:** the grain type is **not** in the key; Orleans keeps it separately in `GrainId.Type`.
 - **Helpers to use:**
@@ -95,8 +95,8 @@ Use **Orleans.Multitenant** (https://github.com/VincentH-Net/Orleans.Multitenant
 - **Grain keys:** only `IGrainWithStringKey` grains can be tenant-specific. Continuum's event sourcing already requires string keys.
 - **AOT caveat:** its internals read Orleans' internal `Grain.ServiceProvider` and `Grain.GrainFactory` properties through reflection, which is not AOT/trim-safe.
   - Continuum libraries must be `IsAotCompatible` with no warnings.
-  - So only application or silo code should reference the package.
-  - If Continuum libraries need key handling, fork just the small key-format helpers (about 100 lines) into Continuum.
+  - So only application or silo code references the package.
+  - Continuum reproduces the key format in `Continuum.Orleans.Tenancy.TenantKey` (`Create` and `Split`), which is AOT-safe and produces the same keys as the library.
 
 ### Stream name format
 ```
@@ -104,6 +104,13 @@ Use **Orleans.Multitenant** (https://github.com/VincentH-Net/Orleans.Multitenant
 {GrainType}-{Key}                no tenant        e.g. Order-3f2a9c1e-...
 ```
 In other words, the stream name is the grain type, then `-`, then the Orleans grain key exactly as the library builds it. Converting between a `GrainId` or `StreamId` and a stream name is just concatenating, or splitting on the **first** `-`.
+
+This format is KurrentDB-specific and lives in `Continuum.Orleans.KurrentDB.KurrentDBStreamName` (`Format` and `ValidateCategory`). The store-neutral `StreamNameParsing` only splits a category from its remainder and reads the tenant from the remainder; each store decides its own separator.
+
+| Store | Event stream name | Grain state stream name |
+|---|---|---|
+| KurrentDB | `{GrainType}-{TenantId}\|{Key}` | `state__{GrainType}-{TenantId}\|{Key}` |
+| CosmosDB | `{ServiceId}/{GrainId}` (the tenant is inside the grain key, parsed at the last `/`) | n/a |
 
 ### Character rules (validate when IDs are created)
 | Part | `-` allowed | `\|` allowed | Other |
@@ -129,12 +136,18 @@ In other words, the stream name is the grain type, then `-`, then the Orleans gr
 - The library's stream filters then route and authorize by tenant.
 
 ### Storage per tenant and sharing clients
+- Orleans.Multitenant's `AddMultitenantGrainStorage` builds tenant options from scratch, without the provider's settings or the connection-based serializer and type mapper, so it cannot be used with Continuum providers. Continuum has its own registrations instead:
+  - `AddMultitenantKurrentDBBasedLogConsistencyProvider` (KurrentDB event sourcing)
+  - `AddMultitenantAzureCosmosDBBasedLogConsistencyProvider` (CosmosDB event sourcing)
+  - `AddMultitenantKurrentDBGrainStorage` (KurrentDB grain state)
+- Each takes `configureTenantOptions(tenantId, options)` plus the normal options callback. A tenant's options start from a copy of the provider's options; grains without a tenant use the provider's own storage. When the callback changes `ConnectionName`, the serializer and type mapper are resolved again for the new connection unless the callback set them.
+- The routing is done by `TenantLogConsistentStorage` and `TenantGrainStorage`. A tenant's storage is created and validated on first use and reused afterwards. If creation fails, the error is rethrown to the caller and the next call retries.
+- `TenantStorageFailureLogger` logs every creation failure as an error, with the tenant ID, provider name and failure count. After a tenant has been failing for 5 minutes, it logs at most once a minute for that tenant, with the number of failures not logged. A later success is logged once and resets the tenant.
 - Per-tenant provider instances set `ConnectionName` in `configureTenantOptions` from a tenant-to-connection map (default `"shared"`).
 - KurrentDB providers resolve `GetRequiredKeyedService<KurrentDBClient>(ConnectionName)`. Tenants on the same database therefore share **one** client, so there is one client per database, not per tenant.
 - A tenant that needs its own database gets its own connection name and client.
-- Things to fix or verify:
-  - `KurrentDBStateManager` (`src/Streaming.Orleans.KurrentDB.StreamProvider/Providers/Storage/KurrentDBStateManager.cs`) now requires a connection name and always resolves the shared keyed client; the `ClientSettings` fallback was removed.
-  - Shared clients must be owned by DI. A tenant provider must never dispose a shared client.
+- `ConnectionName` is required by every KurrentDB provider, including `KurrentDBStateManager`; the stream provider's `ClientSettings` fallback was removed.
+- Shared clients are owned by DI. Storage providers, including tenant instances, never dispose a client.
 - With a database per tenant, checkpoints and the KurrentDB de-duplication scope must include the tenant or connection name, for example a subscription per tenant database.
 
 ### Architecture rule
@@ -142,13 +155,14 @@ In other words, the stream name is the grain type, then `-`, then the Orleans gr
 - Reports that span tenants or sources consume **integration events**. A separate step publishes them from each source to EventHub, Kafka or Kinesis.
 
 ### Integration checklist
-1. Upgrade Orleans to 10.4+.
-2. Add a stream name builder and parser in Continuum following the rules above, with validation. Tests should cover names with and without a tenant, GUID keys, and invalid characters.
-3. Event-sourced grains: build stream names as `GrainType + "-" + grainId.Key`.
-4. Stream providers and subscriptions: build the Orleans `StreamId` key from the stream name's remainder.
-5. Per-tenant storage: register providers with `AddMultitenantGrainStorage` and map tenants to connection names. Pass `TypeMappedJsonGrainStorageSerializer(requireStoredType: true)` to tenant instances of event-sourcing providers.
-6. Remove or guard the `KurrentDBStateManager` client fallback.
-7. Confirm AOT: Continuum library builds stay free of AOT/trim warnings.
+1. ~~Upgrade Orleans to 10.4+.~~ Done.
+2. ~~Add a stream name builder and parser in Continuum following the rules above, with validation.~~ Done: `TenantKey`, `StreamNameParsing`, `KurrentDBStreamName`.
+3. ~~Event-sourced grains: build stream names as `GrainType + "-" + grainId.Key`.~~ Done.
+4. ~~Stream providers and subscriptions: build the Orleans `StreamId` key from the stream name's remainder.~~ Done.
+5. ~~Per-tenant storage, mapping tenants to connection names.~~ Done with Continuum's own multitenant registrations (see above). Tenant instances of event-sourcing providers keep `TypeMappedJsonGrainStorageSerializer(requireStoredType: true)` because the serializer is resolved per connection.
+6. ~~Remove the `KurrentDBStateManager` client fallback.~~ Done.
+7. ~~Confirm AOT: Continuum library builds stay free of AOT/trim warnings.~~ Done.
+8. Database per tenant for subscriptions (checkpoints and de-duplication scoped by tenant or connection): not done.
 
 ---
 

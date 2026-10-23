@@ -44,6 +44,27 @@ Options are validated at silo startup.
 
 By default a grain's state is stored in `state__{GrainType}-{GrainKey}`. The `state__` prefix keeps state streams apart from the event streams written by `Continuum.EventSourcing.Orleans.KurrentDB`. It sits before the first `-`, so state streams also have their own KurrentDB category. The default name does not include the ServiceId; services sharing one KurrentDB instance can use `StreamNameFormatter` to keep their streams apart.
 
+## Multi-tenancy
+
+Tenant grains use Orleans.Multitenant keys, `{TenantId}|{Key}`, so their state is stored in `state__{GrainType}-{TenantId}|{Key}`. To give tenants their own connection, register the provider with `AddMultitenantKurrentDBGrainStorage`:
+
+```csharp
+siloBuilder.AddMultitenantKurrentDBGrainStorage("Default",
+	(tenantId, options) =>
+	{
+		if (dedicatedTenants.Contains(tenantId))
+		{
+			options.ConnectionName = $"kurrentdb-{tenantId}";
+		}
+	},
+	ob => ob.Configure(options => options.ConnectionName = "kurrentdb"));
+```
+
+- A tenant's options start from a copy of the provider's options, then the callback runs. Grains without a tenant use the provider's own storage.
+- When the callback changes `ConnectionName`, the serializer and type mapper are resolved again for that connection, so register a keyed `KurrentDBClient`, serializer and type mapper for every connection name. Tenants that share a connection share one client.
+- A tenant's storage is created and validated on first use. If that fails, the caller gets the exception, the next call retries, and the failure is logged as an error. Logging is throttled to once a minute only after a tenant has been failing for 5 minutes.
+- Orleans.Multitenant's `AddMultitenantGrainStorage` cannot be used with this provider, because it builds tenant options without the provider's settings.
+
 ## ETags and conflicts
 
 The ETag is the stream revision of the latest state event. Writes and clears use it as the expected revision, so a stale ETag, or a missing ETag when the stream already exists, throws Orleans' `InconsistentStateException` with the stored and current ETags. Other KurrentDB failures are wrapped in `KurrentDBStorageException`.

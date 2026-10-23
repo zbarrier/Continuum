@@ -42,6 +42,35 @@ Options can also be bound from configuration
 | `StartupConnectionTimeout` | `00:00:30` | How long silo startup retries when Cosmos DB is unreachable while validating the container. |
 | `RequestChargeWarningThreshold` | `50` | Operations consuming more request units (RUs) than this are logged as warnings; others are logged at debug level. |
 
+## Multi-tenancy
+
+Tenant grains use Orleans.Multitenant keys, `{TenantId}|{Key}`. The tenant stays inside the grain ID, so the default stream name is `{ServiceId}/{GrainId}` for tenant grains too. Tenant IDs must not be empty or contain `|`, and must not contain characters Cosmos DB does not allow in `id` values (`/ \ ? #`).
+
+To give tenants their own connection, database or container, register the provider with `AddMultitenantAzureCosmosDBBasedLogConsistencyProvider`:
+
+```csharp
+services.AddMultitenantAzureCosmosDBBasedLogConsistencyProvider("Default",
+    (tenantId, options) =>
+    {
+        if (dedicatedTenants.Contains(tenantId))
+        {
+            options.ConnectionName = $"cosmosdb-{tenantId}";
+            options.ContainerName = $"events-{tenantId}";
+        }
+    },
+    ob => ob.Configure(options =>
+    {
+        options.ConnectionName = "cosmosdb";
+        options.DatabaseName = "app";
+        options.ContainerName = "events";
+    }));
+```
+
+- A tenant's options start from a copy of the provider's options, then the callback runs. Grains without a tenant use the provider's own storage.
+- When the callback changes `ConnectionName`, the serializer and type mapper are resolved again for that connection, so register a keyed `CosmosClient`, serializer and type mapper for every connection name.
+- A tenant's storage is created on first use, which validates that its container exists. If that fails, the caller gets the exception, the next call retries, and the failure is logged as an error. Logging is throttled to once a minute only after a tenant has been failing for 5 minutes.
+- Orleans.Multitenant's `AddMultitenantGrainStorage` cannot be used with this provider.
+
 ## Telemetry
 
 The provider publishes metrics through `System.Diagnostics.Metrics` and traces through `ActivitySource`, so no OpenTelemetry package is required. Register the names with OpenTelemetry (for example in Aspire service defaults):
