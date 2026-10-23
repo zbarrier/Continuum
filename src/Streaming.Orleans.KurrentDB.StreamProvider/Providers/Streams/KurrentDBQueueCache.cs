@@ -159,7 +159,12 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
     /// <returns></returns>
     public object GetCursor(StreamId streamId, StreamSequenceToken? sequenceToken)
     {
-        var cursor = _cache.GetCursor(streamId, sequenceToken);
+        var result = _cache.TryGetCursor(streamId, sequenceToken);
+        if (result.CacheMiss is { } cacheMiss)
+        {
+            throw cacheMiss.ToException();
+        }
+        var cursor = result.Cursor!;
         _cursorTracker.Register(cursor);
         return cursor;
     }
@@ -187,7 +192,12 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
     /// <returns></returns>
     public bool TryGetNextMessage(object cursorObj, [MaybeNullWhen(false)] out IBatchContainer container)
     {
-        if (!_cache.TryGetNextMessage(cursorObj, out container))
+        var result = _cache.TryGetNextMessageWithResult(cursorObj, out container);
+        if (result.CacheMiss is { } cacheMiss)
+        {
+            throw cacheMiss.ToException();
+        }
+        if (result.Kind != QueueCacheCursorMoveResultKind.Success || container is null)
         {
             return false;
         }
