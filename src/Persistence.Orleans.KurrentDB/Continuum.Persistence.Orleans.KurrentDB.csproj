@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="KurrentDB.Client" Version="1.4.1" />
+    <PackageReference Include="KurrentDB.Client" Version="1.6.0" />
   </ItemGroup>
 
   <ItemGroup>
