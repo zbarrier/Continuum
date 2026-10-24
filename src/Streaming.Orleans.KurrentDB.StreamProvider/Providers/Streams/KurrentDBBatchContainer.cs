@@ -134,7 +134,7 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     {
         var streamName = KurrentDBMessage.ToStreamName();
         return new StreamedEvent<object>(
-            Guid.Parse(KurrentDBMessage.EventId),
+            KurrentDBMessage.EventId,
             KurrentDBMessage.EventType,
             streamName,
             KurrentDBMessage.StreamVersion,

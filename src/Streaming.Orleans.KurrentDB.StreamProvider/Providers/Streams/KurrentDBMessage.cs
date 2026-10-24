@@ -37,7 +37,7 @@ public class KurrentDBMessage
     /// <param name="metadata">The event metadata.</param>
     /// <param name="streamKey">The stream key parsed from the stream name.</param>
     public KurrentDBMessage(string sourceConnectionName, StreamId streamId, string position, ulong commitPosition, long sequenceNumber,
-        string eventId, string eventType, ReadOnlyMemory<byte> data,
+        Guid eventId, string eventType, ReadOnlyMemory<byte> data,
         string? streamName = null, ulong streamVersion = 0, DateTime timestamp = default,
         IEventMetadata? metadata = null, string? streamKey = null)
     {
@@ -71,7 +71,7 @@ public class KurrentDBMessage
         Position = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         CommitPosition = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
         SequenceNumber = cachedMessage.SequenceNumber;
-        EventId = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        EventId = new Guid(SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset).AsSpan());
         EventType = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         StreamName = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         StreamCategory = ReadRequiredString(cachedMessage.Segment, ref readOffset);
@@ -123,7 +123,7 @@ public class KurrentDBMessage
     ///     The id of the event in the stream.
     /// </summary>
     [Id(5)]
-    public string EventId { get; set; }
+    public Guid EventId { get; set; }
 
     /// <summary>
     ///     The type name of the event.

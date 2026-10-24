@@ -99,7 +99,7 @@ public class KurrentDBQueueDataAdapterV2 : IKurrentDBDataAdapter
             }
             // Orleans retries a faulted delivery repeatedly and only logs its own warning, so the cause is reported
             // here as an error, once per event, to keep a halted subscription from looking merely slow.
-            if (_haltedEventReporter.ShouldReport(kurrentDBMessage.EventId))
+            if (_haltedEventReporter.ShouldReport(kurrentDBMessage.EventId.ToString()))
             {
                 _logger?.LogError("{Fault} Delivery is halted because {Option} is {Behavior}.", fault, nameof(KurrentDBDataAdapterOptions.UnknownEventTypeBehavior), nameof(KurrentDBUnknownEventTypeBehavior.Halt));
             }
@@ -243,7 +243,7 @@ public class KurrentDBQueueDataAdapterV2 : IKurrentDBDataAdapter
         // The commit position is stored alongside the event so the checkpoint can be written from the cache, after
         // delivery. It cannot be recovered from the event itself once link resolution is enabled.
         var commitPosition = queueMessage.Cursor.SequenceNumber.ToString();
-        var eventId = queueMessage.EventId.ToString();
+        var eventId = queueMessage.EventId.ToByteArray();
         var eventType = queueMessage.EventType;
         // The consumer is handed an IStreamedEvent rebuilt from the cache, so the fields it needs that are not
         // recoverable from CachedMessage travel with the event. The cursor's topic and partition are absent: they are
