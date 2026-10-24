@@ -64,7 +64,7 @@ public class KurrentDBQueueCacheStartPositionTests
 
     private static StreamedEvent<KurrentDBRawEvent> CreateEvent(ulong streamVersion, ulong commitPosition, DateTime timestamp) =>
         new(Guid.NewGuid(), "test-event", Stream, streamVersion, new StreamedEventCursor("test", Stream.Category, Stream.Value, commitPosition, 0),
-            timestamp, new KurrentDBRawEvent([1], []));
+            timestamp, new KurrentDBRawEvent([1]));
 
     private static (KurrentDBQueueCache Cache, StreamId StreamId) CreateCacheWithOldestEventsPurged()
     {

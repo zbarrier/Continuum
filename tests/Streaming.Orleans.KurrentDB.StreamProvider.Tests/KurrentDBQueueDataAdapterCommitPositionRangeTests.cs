@@ -4,7 +4,7 @@ using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
-public class KurrentDBQueueDataAdapterSequenceTokenTests
+public class KurrentDBQueueDataAdapterCommitPositionRangeTests
 {
     [Fact]
     public void Converts_The_Largest_Representable_Sequence_Number()

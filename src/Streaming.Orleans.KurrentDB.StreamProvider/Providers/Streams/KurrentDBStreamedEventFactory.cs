@@ -52,7 +52,7 @@ internal static class KurrentDBStreamedEventFactory
 
     private static StreamedEvent<KurrentDBRawEvent> Create(EventRecord record, string sourceConnectionName, ulong commitPosition, IStreamNameParser? nameParser)
     {
-        var payload = new KurrentDBRawEvent(record.Data.ToArray(), record.Metadata.ToArray());
+        var payload = new KurrentDBRawEvent(record.Data.ToArray());
 
         // The metadata slot is shared. Whoever appended the event may have supplied entries of their own, and the
         // client merges its tracing context into the same document whenever an Activity was recording. Decoding it
