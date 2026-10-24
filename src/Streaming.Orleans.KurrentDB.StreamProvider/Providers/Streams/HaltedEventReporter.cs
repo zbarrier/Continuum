@@ -31,7 +31,7 @@ internal sealed class HaltedEventReporter : IDisposable
     /// <summary>
     ///     Returns <see langword="true" /> the first time an event is seen, and again once its report has expired.
     /// </summary>
-    public bool ShouldReport(string eventId)
+    public bool ShouldReport(Guid eventId)
     {
         if (_reported.TryGetValue(eventId, out _))
         {

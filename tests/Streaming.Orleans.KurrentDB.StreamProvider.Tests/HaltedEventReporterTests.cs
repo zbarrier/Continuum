@@ -7,17 +7,20 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 /// </summary>
 public class HaltedEventReporterTests
 {
+    private static readonly Guid Event1 = Guid.NewGuid();
+    private static readonly Guid Event2 = Guid.NewGuid();
+
     [Fact]
     public void Reports_An_Event_Only_Once_Within_The_Interval()
     {
         var clock = new ManualTimeProvider();
         using var reporter = new HaltedEventReporter(clock);
 
-        Assert.True(reporter.ShouldReport("event-1"));
-        Assert.False(reporter.ShouldReport("event-1"));
+        Assert.True(reporter.ShouldReport(Event1));
+        Assert.False(reporter.ShouldReport(Event1));
 
         clock.Advance(HaltedEventReporter.ReportInterval - TimeSpan.FromSeconds(1));
-        Assert.False(reporter.ShouldReport("event-1"));
+        Assert.False(reporter.ShouldReport(Event1));
     }
 
     [Fact]
@@ -26,11 +29,11 @@ public class HaltedEventReporterTests
         var clock = new ManualTimeProvider();
         using var reporter = new HaltedEventReporter(clock);
 
-        Assert.True(reporter.ShouldReport("event-1"));
+        Assert.True(reporter.ShouldReport(Event1));
 
         clock.Advance(HaltedEventReporter.ReportInterval + TimeSpan.FromSeconds(1));
-        Assert.True(reporter.ShouldReport("event-1"));
-        Assert.False(reporter.ShouldReport("event-1"));
+        Assert.True(reporter.ShouldReport(Event1));
+        Assert.False(reporter.ShouldReport(Event1));
     }
 
     [Fact]
@@ -38,10 +41,10 @@ public class HaltedEventReporterTests
     {
         using var reporter = new HaltedEventReporter(new ManualTimeProvider());
 
-        Assert.True(reporter.ShouldReport("event-1"));
-        Assert.True(reporter.ShouldReport("event-2"));
-        Assert.False(reporter.ShouldReport("event-1"));
-        Assert.False(reporter.ShouldReport("event-2"));
+        Assert.True(reporter.ShouldReport(Event1));
+        Assert.True(reporter.ShouldReport(Event2));
+        Assert.False(reporter.ShouldReport(Event1));
+        Assert.False(reporter.ShouldReport(Event2));
     }
 
     private sealed class ManualTimeProvider : TimeProvider

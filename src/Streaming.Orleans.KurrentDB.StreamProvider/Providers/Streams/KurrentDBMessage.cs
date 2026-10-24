@@ -43,17 +43,17 @@ public class KurrentDBMessage
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         ArgumentNullException.ThrowIfNull(streamName);
         SourceConnectionName = sourceConnectionName;
+        EventId = eventId;
         StreamId = streamId;
+        StreamName = streamName;
         Position = position;
         CommitPosition = commitPosition;
+        StreamVersion = streamVersion;
         SequenceNumber = sequenceNumber;
-        EventId = eventId;
         EventType = eventType;
         Data = data;
-        StreamName = streamName;
-        StreamVersion = streamVersion;
-        Timestamp = timestamp;
         Metadata = metadata ?? EventMetadata.Empty;
+        Timestamp = timestamp;
     }
 
     /// <summary>
@@ -65,28 +65,51 @@ public class KurrentDBMessage
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         SourceConnectionName = sourceConnectionName;
+        // Reads must follow the write order in KurrentDBQueueDataAdapter.EncodeMessageIntoSegment.
         var readOffset = 0;
+        EventId = new Guid(SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset).AsSpan());
         StreamId = cachedMessage.StreamId;
+        StreamName = ReadStreamName(cachedMessage.Segment, ref readOffset);
         Position = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         CommitPosition = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
-        SequenceNumber = cachedMessage.SequenceNumber;
-        EventId = new Guid(SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset).AsSpan());
-        EventType = ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        var streamName = ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        var streamCategory = ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        var tenantId = ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        var streamKey = ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        StreamName = new StreamName(streamName, streamCategory, tenantId.Length == 0 ? null : tenantId, streamKey);
         StreamVersion = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
-        Timestamp = new DateTime(long.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset)), DateTimeKind.Utc);
+        SequenceNumber = cachedMessage.SequenceNumber;
+        EventType = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        Data = SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset);
         // Tracing and transaction values travel inside the metadata document rather than as their own fields.
         Metadata = MetadataCodec.Read(Encoding.UTF8.GetBytes(ReadRequiredString(cachedMessage.Segment, ref readOffset)));
-        Data = SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset);
+        Timestamp = new DateTime(long.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset)), DateTimeKind.Utc);
     }
 
     internal static string ReadRequiredString(ArraySegment<byte> segment, ref int readOffset) =>
         SegmentBuilder.ReadNextString(segment, ref readOffset)
         ?? throw new InvalidOperationException("Cached KurrentDB message segment contains an unexpected null string.");
+
+    // The parsed parts are stored rather than re-derived on read, because recovering them means parsing the stream
+    // name, and how a name splits is an application concern the cache has no parser for. A tenant id is never empty,
+    // so an empty string stands for a name that is not tenant qualified.
+    internal static int CalculateStreamNameSize(StreamName streamName) =>
+        SegmentBuilder.CalculateAppendSize(streamName.Value) +
+        SegmentBuilder.CalculateAppendSize(streamName.Category) +
+        SegmentBuilder.CalculateAppendSize(streamName.TenantId ?? string.Empty) +
+        SegmentBuilder.CalculateAppendSize(streamName.Key);
+
+    internal static void WriteStreamName(ArraySegment<byte> segment, ref int writeOffset, StreamName streamName)
+    {
+        SegmentBuilder.Append(segment, ref writeOffset, streamName.Value);
+        SegmentBuilder.Append(segment, ref writeOffset, streamName.Category);
+        SegmentBuilder.Append(segment, ref writeOffset, streamName.TenantId ?? string.Empty);
+        SegmentBuilder.Append(segment, ref writeOffset, streamName.Key);
+    }
+
+    internal static StreamName ReadStreamName(ArraySegment<byte> segment, ref int readOffset)
+    {
+        var value = ReadRequiredString(segment, ref readOffset);
+        var category = ReadRequiredString(segment, ref readOffset);
+        var tenantId = ReadRequiredString(segment, ref readOffset);
+        var key = ReadRequiredString(segment, ref readOffset);
+        return new StreamName(value, category, tenantId.Length == 0 ? null : tenantId, key);
+    }
 
     /// <summary>
     ///     The logical connection the event was read from.

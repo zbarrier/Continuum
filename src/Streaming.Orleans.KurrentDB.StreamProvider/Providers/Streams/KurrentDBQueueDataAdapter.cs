@@ -13,6 +13,7 @@ using Orleans.Serialization;
 using Orleans.Streams;
 
 using MetadataCodec = global::Continuum.Orleans.KurrentDB.KurrentDBEventMetadataCodec;
+using StreamName = global::Continuum.Orleans.Streams.StreamName;
 using StreamPosition = Orleans.Streams.StreamPosition;
 
 using Continuum.Serialization.Orleans;
@@ -99,7 +100,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
             }
             // Orleans retries a faulted delivery repeatedly and only logs its own warning, so the cause is reported
             // here as an error, once per event, to keep a halted subscription from looking merely slow.
-            if (_haltedEventReporter.ShouldReport(kurrentDBMessage.EventId.ToString()))
+            if (_haltedEventReporter.ShouldReport(kurrentDBMessage.EventId))
             {
                 _logger?.LogError("{Fault} Delivery is halted because {Option} is {Behavior}.", fault, nameof(KurrentDBDataAdapterOptions.UnknownEventTypeBehavior), nameof(KurrentDBUnknownEventTypeBehavior.Halt));
             }
@@ -239,65 +240,53 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// <returns></returns>
     protected virtual ArraySegment<byte> EncodeMessageIntoSegment(StreamedEvent<KurrentDBRawEvent> queueMessage, Func<int, ArraySegment<byte>> getSegment)
     {
+        var eventId = queueMessage.EventId.ToByteArray();
+        // The consumer is handed an IStreamedEvent rebuilt from the cache, so the fields it needs that are not
+        // recoverable from CachedMessage travel with the event. The cursor's topic and partition are absent: they are
+        // the stream category and stream, so they are rebuilt on read from the stream name stored below.
+        var streamName = StreamName.From(queueMessage.StreamName);
         var position = queueMessage.StreamVersion.ToString();
         // The commit position is stored alongside the event so the checkpoint can be written from the cache, after
         // delivery. It cannot be recovered from the event itself once link resolution is enabled.
         var commitPosition = queueMessage.Cursor.SequenceNumber.ToString();
-        var eventId = queueMessage.EventId.ToByteArray();
-        var eventType = queueMessage.EventType;
-        // The consumer is handed an IStreamedEvent rebuilt from the cache, so the fields it needs that are not
-        // recoverable from CachedMessage travel with the event. The cursor's topic and partition are absent: they are
-        // the stream category and stream, so they are rebuilt on read from the stream name parts stored below.
-        var streamName = queueMessage.StreamName.Value;
-        // The parsed parts are stored rather than re-derived on read, because recovering them means parsing the stream
-        // name, and how a name splits is an application concern the batch container has no parser for. A tenant id is
-        // never empty, so an empty string stands for a name that is not tenant qualified.
-        var streamCategory = queueMessage.StreamName.Category;
-        var tenantId = queueMessage.StreamName.TenantId ?? string.Empty;
-        var streamKey = queueMessage.StreamName.Key;
         var streamVersion = queueMessage.StreamVersion.ToString();
-        var timestamp = queueMessage.Timestamp.Ticks.ToString();
+        var eventType = queueMessage.EventType;
+        // The event is cached exactly as KurrentDB holds it. Both writers now produce the same record shape, a bare
+        // serialized event under its mapped type name, so there is nothing to convert on the way in and an event whose
+        // type this silo does not know can still be cached and simply fails for its own stream on read.
+        ReadOnlySpan<byte> data = queueMessage.Event!.Data;
         // The metadata bag round trips as the same JSON document shape the codec reads from KurrentDB, including the
         // tracing and transaction values, so nothing the event carried is lost while it sits in the cache. The codec
         // returns null when there is nothing worth writing, which the segment represents as an empty string.
         var metadataBytes = MetadataCodec.WriteAll(queueMessage.Metadata);
         var metadata = metadataBytes is null ? string.Empty : Encoding.UTF8.GetString(metadataBytes);
-        // The event is cached exactly as KurrentDB holds it. Both writers now produce the same record shape, a bare
-        // serialized event under its mapped type name, so there is nothing to convert on the way in and an event whose
-        // type this silo does not know can still be cached and simply fails for its own stream on read.
-        ReadOnlySpan<byte> data = queueMessage.Event!.Data;
+        var timestamp = queueMessage.Timestamp.Ticks.ToString();
 
         // get total size.
-        var size = SegmentBuilder.CalculateAppendSize(position) +
+        var size = SegmentBuilder.CalculateAppendSize(eventId) +
+                   KurrentDBMessage.CalculateStreamNameSize(streamName) +
+                   SegmentBuilder.CalculateAppendSize(position) +
                    SegmentBuilder.CalculateAppendSize(commitPosition) +
-                   SegmentBuilder.CalculateAppendSize(eventId) + 
-                   SegmentBuilder.CalculateAppendSize(eventType) + 
-                   SegmentBuilder.CalculateAppendSize(streamName) +
-                   SegmentBuilder.CalculateAppendSize(streamCategory) +
-                   SegmentBuilder.CalculateAppendSize(tenantId) +
-                   SegmentBuilder.CalculateAppendSize(streamKey) +
                    SegmentBuilder.CalculateAppendSize(streamVersion) +
-                   SegmentBuilder.CalculateAppendSize(timestamp) +
+                   SegmentBuilder.CalculateAppendSize(eventType) +
+                   SegmentBuilder.CalculateAppendSize(data) +
                    SegmentBuilder.CalculateAppendSize(metadata) +
-                   SegmentBuilder.CalculateAppendSize(data);
+                   SegmentBuilder.CalculateAppendSize(timestamp);
 
         // get segment
         var segment = getSegment(size);
 
-        // encode
+        // encode. The order must match the reads in the KurrentDBMessage cached message constructor.
         var writeOffset = 0;
+        SegmentBuilder.Append(segment, ref writeOffset, eventId);
+        KurrentDBMessage.WriteStreamName(segment, ref writeOffset, streamName);
         SegmentBuilder.Append(segment, ref writeOffset, position);
         SegmentBuilder.Append(segment, ref writeOffset, commitPosition);
-        SegmentBuilder.Append(segment, ref writeOffset, eventId);
-        SegmentBuilder.Append(segment, ref writeOffset, eventType);
-        SegmentBuilder.Append(segment, ref writeOffset, streamName);
-        SegmentBuilder.Append(segment, ref writeOffset, streamCategory);
-        SegmentBuilder.Append(segment, ref writeOffset, tenantId);
-        SegmentBuilder.Append(segment, ref writeOffset, streamKey);
         SegmentBuilder.Append(segment, ref writeOffset, streamVersion);
-        SegmentBuilder.Append(segment, ref writeOffset, timestamp);
-        SegmentBuilder.Append(segment, ref writeOffset, metadata);
+        SegmentBuilder.Append(segment, ref writeOffset, eventType);
         SegmentBuilder.Append(segment, ref writeOffset, data);
+        SegmentBuilder.Append(segment, ref writeOffset, metadata);
+        SegmentBuilder.Append(segment, ref writeOffset, timestamp);
 
         return segment;
     }
