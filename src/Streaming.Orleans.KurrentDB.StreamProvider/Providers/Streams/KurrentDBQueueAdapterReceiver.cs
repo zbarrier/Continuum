@@ -273,7 +273,13 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
     /// <inheritdoc />
     public IQueueCacheCursor GetCacheCursor(StreamId streamId, StreamSequenceToken? token)
     {
-        return new Cursor(_cache!, streamId, token);
+        return new Cursor(_cache!, _cache!.GetCursor(streamId, token));
+    }
+
+    /// <inheritdoc />
+    public QueueCacheCursorResult<IQueueCacheCursor> TryGetCacheCursorAtPosition(StreamId streamId, StreamSubscriptionStartPosition startPosition)
+    {
+        return QueueCacheCursorResult<IQueueCacheCursor>.FromCursor(new Cursor(_cache!, _cache!.GetCursorAtPosition(streamId, startPosition)));
     }
 
     /// <inheritdoc />
@@ -328,10 +334,10 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         private IBatchContainer _current;
         private bool _deliveryFailed;
 
-        public Cursor(IKurrentDBQueueCache cache, StreamId streamId, StreamSequenceToken? token)
+        public Cursor(IKurrentDBQueueCache cache, object cursor)
         {
             _cache = cache;
-            _cursor = cache.GetCursor(streamId, token);
+            _cursor = cursor;
             _current = null!;
         }
 

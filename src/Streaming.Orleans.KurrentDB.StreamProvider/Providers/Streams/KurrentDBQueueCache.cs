@@ -169,6 +169,19 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
         return cursor;
     }
 
+    /// <inheritdoc />
+    public object GetCursorAtPosition(StreamId streamId, StreamSubscriptionStartPosition startPosition)
+    {
+        var result = _cache.TryGetCursorAtPosition(streamId, startPosition);
+        if (result.CacheMiss is { } cacheMiss)
+        {
+            throw cacheMiss.ToException();
+        }
+        var cursor = result.Cursor!;
+        _cursorTracker.Register(cursor);
+        return cursor;
+    }
+
     /// <summary>
     ///     Stop tracking a cursor that is no longer reading, so it no longer holds back purging.
     /// </summary>
@@ -219,9 +232,8 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
             // not enough items in cache.
             return false;
         }
-        var location = (IKurrentDBLocation)sequenceToken;
         double cacheSize = _cache.Newest.Value.SequenceNumber - _cache.Oldest.Value.SequenceNumber;
-        var distanceFromNewestMessage = _cache.Newest.Value.SequenceNumber - location.SequenceNumber;
+        var distanceFromNewestMessage = _cache.Newest.Value.SequenceNumber - sequenceToken.SequenceNumber;
         // pressure is the ratio of the distance from the front of the cache to the
         cachePressureContribution = distanceFromNewestMessage / cacheSize;
         return true;

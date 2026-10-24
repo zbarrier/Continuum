@@ -26,7 +26,6 @@ public class KurrentDBMessage
     /// </summary>
     /// <param name="sourceConnectionName">The logical connection the event was read from.</param>
     /// <param name="streamId"></param>
-    /// <param name="position"></param>
     /// <param name="commitPosition"></param>
     /// <param name="sequenceNumber"></param>
     /// <param name="eventId"></param>
@@ -36,7 +35,7 @@ public class KurrentDBMessage
     /// <param name="streamVersion">The version of the event within its stream.</param>
     /// <param name="timestamp">The time the event was recorded.</param>
     /// <param name="metadata">The event metadata.</param>
-    public KurrentDBMessage(string sourceConnectionName, StreamId streamId, string position, ulong commitPosition, long sequenceNumber,
+    public KurrentDBMessage(string sourceConnectionName, StreamId streamId, ulong commitPosition, long sequenceNumber,
         Guid eventId, string eventType, ReadOnlyMemory<byte> data, StreamName streamName,
         ulong streamVersion = 0, DateTime timestamp = default, IEventMetadata? metadata = null)
     {
@@ -46,7 +45,6 @@ public class KurrentDBMessage
         EventId = eventId;
         StreamId = streamId;
         StreamName = streamName;
-        Position = position;
         CommitPosition = commitPosition;
         StreamVersion = streamVersion;
         SequenceNumber = sequenceNumber;
@@ -67,11 +65,10 @@ public class KurrentDBMessage
         SourceConnectionName = sourceConnectionName;
         // Reads must follow the write order in KurrentDBQueueDataAdapter.EncodeMessageIntoSegment.
         var readOffset = 0;
+        CommitPosition = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
         EventId = new Guid(SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset).AsSpan());
         StreamId = cachedMessage.StreamId;
         StreamName = ReadStreamName(cachedMessage.Segment, ref readOffset);
-        Position = ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        CommitPosition = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
         StreamVersion = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
         SequenceNumber = cachedMessage.SequenceNumber;
         EventType = ReadRequiredString(cachedMessage.Segment, ref readOffset);
@@ -137,33 +134,27 @@ public class KurrentDBMessage
     public StreamName StreamName { get; set; }
 
     /// <summary>
-    ///     Referring to a potential logical record position in the KurrentDB transaction file.
-    /// </summary>
-    [Id(4)]
-    public string Position { get; set; }
-
-    /// <summary>
     ///     The <c>$all</c> commit position the event was read at, used to write checkpoints after delivery.
     /// </summary>
-    [Id(5)]
+    [Id(4)]
     public ulong CommitPosition { get; set; }
 
     /// <summary>
     ///     The event number of the event within its KurrentDB stream.
     /// </summary>
-    [Id(6)]
+    [Id(5)]
     public ulong StreamVersion { get; set; }
 
     /// <summary>
-    ///     The position of the event in the stream.
+    ///     The Orleans sequence number, which is <see cref="CommitPosition" /> narrowed to a signed 64-bit value.
     /// </summary>
-    [Id(7)]
+    [Id(6)]
     public long SequenceNumber { get; set; }
 
     /// <summary>
     ///     The type name of the event.
     /// </summary>
-    [Id(8)]
+    [Id(7)]
     public string EventType { get; set; }
 
     /// <summary>
@@ -180,12 +171,12 @@ public class KurrentDBMessage
     /// <summary>
     ///     The producer supplied metadata the event carried, with well known entries already lifted out.
     /// </summary>
-    [Id(9)]
+    [Id(8)]
     public IEventMetadata Metadata { get; set; } = EventMetadata.Empty;
 
     /// <summary>
     ///     The time the event was created by its producer, in UTC.
     /// </summary>
-    [Id(10)]
+    [Id(9)]
     public DateTime Timestamp { get; set; }
 }

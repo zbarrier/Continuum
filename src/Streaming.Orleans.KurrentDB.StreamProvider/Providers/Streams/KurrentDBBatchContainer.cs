@@ -8,6 +8,7 @@ using KurrentDB.Client;
 
 
 using Orleans.Configuration;
+using Orleans.Providers.Streams.Common;
 using Orleans.Runtime;
 using Orleans.Serialization;
 using Orleans.Streams;
@@ -43,7 +44,7 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
         Payload = materialization.Event;
         Fault = materialization.Fault;
         IsSuppressed = materialization.IsSuppressed;
-        Token = new KurrentDBSequenceToken(kurrentDBMessage.Position, kurrentDBMessage.SequenceNumber, 0);
+        Token = new EventSequenceToken(kurrentDBMessage.SequenceNumber, 0);
     }
 
     [Id(0)]
@@ -81,7 +82,7 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     ///     Ges the stream sequence token for the start of this batch.
     /// </summary>
     [Id(1)]
-    private KurrentDBSequenceToken Token { get; set; } = new();
+    private EventSequenceToken Token { get; set; } = new();
 
     /// <summary>
     ///     Ges the stream sequence token for the start of this batch.
@@ -126,7 +127,7 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
             // advancing the consumer past an event it never received.
             throw new InvalidOperationException(Fault);
         }
-        return [Tuple.Create((T)(object)ToStreamedEvent(Payload ?? throw new InvalidOperationException("A resolved KurrentDB record has no event.")), (StreamSequenceToken)new KurrentDBSequenceToken(Token.Position, Token.SequenceNumber, 0))];
+        return [Tuple.Create((T)(object)ToStreamedEvent(Payload ?? throw new InvalidOperationException("A resolved KurrentDB record has no event.")), (StreamSequenceToken)new EventSequenceToken(Token.SequenceNumber, 0))];
     }
 
     /// <summary>

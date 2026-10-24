@@ -131,9 +131,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// <returns></returns>
     public virtual StreamSequenceToken GetSequenceToken(ref CachedMessage cachedMessage)
     {
-        var readOffset = 0;
-        var position = KurrentDBMessage.ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        return new KurrentDBSequenceToken(position, cachedMessage.SequenceNumber, cachedMessage.EventIndex);
+        return new EventSequenceToken(cachedMessage.SequenceNumber, cachedMessage.EventIndex);
     }
 
     /// <summary>
@@ -188,18 +186,8 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     {
         ArgumentNullException.ThrowIfNull(queueMessage, nameof(queueMessage));
         var streamId = GetStreamId(queueMessage);
-        var sequenceToken = new KurrentDBSequenceToken(queueMessage.Cursor.SequenceNumber.ToString(), ToOrleansSequenceToken(queueMessage.Cursor.SequenceNumber, queueMessage.StreamName.Value), 0);
+        var sequenceToken = new EventSequenceToken(ToOrleansSequenceToken(queueMessage.Cursor.SequenceNumber, queueMessage.StreamName.Value), 0);
         return new StreamPosition(streamId, sequenceToken);
-    }
-
-    /// <summary>
-    ///     Get position from cached message.
-    ///     Left to derived class, as only it knows how to get this from the cached message.
-    /// </summary>
-    public virtual string GetPosition(CachedMessage cachedMessage)
-    {
-        var readOffset = 0;
-        return KurrentDBMessage.ReadRequiredString(cachedMessage.Segment, ref readOffset);
     }
 
     /// <summary>
@@ -207,9 +195,8 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// </summary>
     public virtual ulong GetCommitPosition(CachedMessage cachedMessage)
     {
+        // The commit position is written first because eviction reads it for every cached message.
         var readOffset = 0;
-        // Skip the stream position, the commit position is written straight after it.
-        KurrentDBMessage.ReadRequiredString(cachedMessage.Segment, ref readOffset);
         return ulong.Parse(KurrentDBMessage.ReadRequiredString(cachedMessage.Segment, ref readOffset));
     }
 
@@ -245,7 +232,6 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
         // recoverable from CachedMessage travel with the event. The cursor's topic and partition are absent: they are
         // the stream category and stream, so they are rebuilt on read from the stream name stored below.
         var streamName = StreamName.From(queueMessage.StreamName);
-        var position = queueMessage.StreamVersion.ToString();
         // The commit position is stored alongside the event so the checkpoint can be written from the cache, after
         // delivery. It cannot be recovered from the event itself once link resolution is enabled.
         var commitPosition = queueMessage.Cursor.SequenceNumber.ToString();
@@ -263,10 +249,9 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
         var timestamp = queueMessage.Timestamp.Ticks.ToString();
 
         // get total size.
-        var size = SegmentBuilder.CalculateAppendSize(eventId) +
+        var size = SegmentBuilder.CalculateAppendSize(commitPosition) +
+                   SegmentBuilder.CalculateAppendSize(eventId) +
                    KurrentDBMessage.CalculateStreamNameSize(streamName) +
-                   SegmentBuilder.CalculateAppendSize(position) +
-                   SegmentBuilder.CalculateAppendSize(commitPosition) +
                    SegmentBuilder.CalculateAppendSize(streamVersion) +
                    SegmentBuilder.CalculateAppendSize(eventType) +
                    SegmentBuilder.CalculateAppendSize(data) +
@@ -276,12 +261,12 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
         // get segment
         var segment = getSegment(size);
 
-        // encode. The order must match the reads in the KurrentDBMessage cached message constructor.
+        // encode. The order must match the reads in the KurrentDBMessage cached message constructor. The commit
+        // position comes first so GetCommitPosition can read it without walking the rest of the segment.
         var writeOffset = 0;
+        SegmentBuilder.Append(segment, ref writeOffset, commitPosition);
         SegmentBuilder.Append(segment, ref writeOffset, eventId);
         KurrentDBMessage.WriteStreamName(segment, ref writeOffset, streamName);
-        SegmentBuilder.Append(segment, ref writeOffset, position);
-        SegmentBuilder.Append(segment, ref writeOffset, commitPosition);
         SegmentBuilder.Append(segment, ref writeOffset, streamVersion);
         SegmentBuilder.Append(segment, ref writeOffset, eventType);
         SegmentBuilder.Append(segment, ref writeOffset, data);

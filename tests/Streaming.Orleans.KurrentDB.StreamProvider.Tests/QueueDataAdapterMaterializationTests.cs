@@ -47,7 +47,7 @@ public class QueueDataAdapterMaterializationTests
             GrainStorageSerializer = new FakeSerializer(deserialize),
             UnknownEventTypeBehavior = unknownBehavior,
         };
-        var message = new KurrentDBMessage("test", StreamId.Create("test", "1"), "0", 0, 1, Guid.NewGuid(), eventType, data, new StreamName("test-1", "test", null, "1"));
+        var message = new KurrentDBMessage("test", StreamId.Create("test", "1"), 0, 1, Guid.NewGuid(), eventType, data, new StreamName("test-1", "test", null, "1"));
         IBatchContainer container = new TestAdapter(options).Build(message);
         return container.GetEvents<IStreamedEvent<object>>().ToList();
     }
