@@ -1,5 +1,6 @@
 using System.Text;
 
+using Continuum.Orleans.Streams;
 using Continuum.Streaming;
 using Continuum.TypeMapping;
 
@@ -48,7 +49,7 @@ public class QueueDataAdapterMaterializationTests
             GrainStorageSerializer = new FakeSerializer(deserialize),
             UnknownEventTypeBehavior = unknownBehavior,
         };
-        var message = new KurrentDBMessage("test", StreamId.Create("test", "1"), "0", 0, 1, Guid.NewGuid(), eventType, data, "test-1");
+        var message = new KurrentDBMessage("test", StreamId.Create("test", "1"), "0", 0, 1, Guid.NewGuid(), eventType, data, new StreamName("test-1", "test", null, "1"));
         IBatchContainer container = v2
             ? new TestAdapterV2(options).Build(message)
             : new TestAdapter(options).Build(message);

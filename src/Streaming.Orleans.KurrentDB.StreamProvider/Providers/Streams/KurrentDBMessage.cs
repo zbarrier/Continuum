@@ -1,6 +1,7 @@
-﻿using Continuum.Events;
+using Continuum.Events;
 using Continuum.Orleans.Events;
 using Continuum.Orleans.KurrentDB;
+using Continuum.Orleans.Streams;
 using System.Text;
 
 using Continuum.Streaming;
@@ -35,13 +36,12 @@ public class KurrentDBMessage
     /// <param name="streamVersion">The version of the event within its stream.</param>
     /// <param name="timestamp">The time the event was recorded.</param>
     /// <param name="metadata">The event metadata.</param>
-    /// <param name="streamKey">The stream key parsed from the stream name.</param>
     public KurrentDBMessage(string sourceConnectionName, StreamId streamId, string position, ulong commitPosition, long sequenceNumber,
-        Guid eventId, string eventType, ReadOnlyMemory<byte> data,
-        string? streamName = null, ulong streamVersion = 0, DateTime timestamp = default,
-        IEventMetadata? metadata = null, string? streamKey = null)
+        Guid eventId, string eventType, ReadOnlyMemory<byte> data, StreamName streamName,
+        ulong streamVersion = 0, DateTime timestamp = default, IEventMetadata? metadata = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
+        ArgumentNullException.ThrowIfNull(streamName);
         SourceConnectionName = sourceConnectionName;
         StreamId = streamId;
         Position = position;
@@ -50,8 +50,7 @@ public class KurrentDBMessage
         EventId = eventId;
         EventType = eventType;
         Data = data;
-        StreamName = streamName ?? string.Empty;
-        StreamKey = streamKey ?? string.Empty;
+        StreamName = streamName;
         StreamVersion = streamVersion;
         Timestamp = timestamp;
         Metadata = metadata ?? EventMetadata.Empty;
@@ -73,11 +72,11 @@ public class KurrentDBMessage
         SequenceNumber = cachedMessage.SequenceNumber;
         EventId = new Guid(SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset).AsSpan());
         EventType = ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        StreamName = ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        StreamCategory = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        var streamName = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        var streamCategory = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         var tenantId = ReadRequiredString(cachedMessage.Segment, ref readOffset);
-        TenantId = tenantId.Length == 0 ? null : tenantId;
-        StreamKey = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        var streamKey = ReadRequiredString(cachedMessage.Segment, ref readOffset);
+        StreamName = new StreamName(streamName, streamCategory, tenantId.Length == 0 ? null : tenantId, streamKey);
         StreamVersion = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
         Timestamp = new DateTime(long.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset)), DateTimeKind.Utc);
         // Tracing and transaction values travel inside the metadata document rather than as their own fields.
@@ -134,38 +133,19 @@ public class KurrentDBMessage
     /// <summary>
     ///     The raw bytes representing the data of this event.
     /// </summary>
-    [Id(7)]
+    /// <remarks>
+    ///     Only the data adapter reads this, to materialize the event into the batch container's payload. It is
+    ///     deliberately not serialized: once a batch container is copied or sent to a consumer this is empty, and the
+    ///     materialized payload is the event's only representation, so the event is never carried twice.
+    /// </remarks>
+    [field: NonSerialized]
     public ReadOnlyMemory<byte> Data { get; set; }
 
     /// <summary>
-    ///     The KurrentDB stream the event was read from, such as <c>snack-123</c>.
+    ///     The KurrentDB stream the event was read from, such as <c>snack-123</c>, with its parsed category, tenant and key.
     /// </summary>
     [Id(12)]
-    public string StreamName { get; set; } = string.Empty;
-
-    /// <summary>
-    ///     The key identifying the individual stream within its category. For <c>snack-123</c> this is <c>123</c>.
-    /// </summary>
-    [Id(17)]
-    public string StreamKey { get; set; } = string.Empty;
-
-    /// <summary>
-    ///     The category parsed from the stream name. For <c>snack-123</c> this is <c>snack</c>.
-    /// </summary>
-    [Id(18)]
-    public string StreamCategory { get; set; } = string.Empty;
-
-    /// <summary>
-    ///     The tenant parsed from the stream name, or <see langword="null" /> when it is not tenant qualified.
-    /// </summary>
-    [Id(19)]
-    public string? TenantId { get; set; }
-
-    /// <summary>
-    ///     The parsed stream name, or <see langword="null" /> when the message carries no stream name.
-    /// </summary>
-    public Continuum.Orleans.Streams.StreamName ToStreamName()
-        => new(StreamName, StreamCategory, TenantId, StreamKey.Length == 0 ? StreamName : StreamKey);
+    public StreamName StreamName { get; set; }
 
     /// <summary>
     ///     The event number of the event within its KurrentDB stream.
