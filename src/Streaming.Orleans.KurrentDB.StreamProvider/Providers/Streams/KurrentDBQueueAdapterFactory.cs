@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Orleans.Configuration;
@@ -57,7 +57,7 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory
     private static IKurrentDBDataAdapter CreateDefaultDataAdapter(IServiceProvider serviceProvider, string name)
     {
         var adapterOptions = serviceProvider.GetOptionsByName<KurrentDBDataAdapterOptions>(name);
-        return ActivatorUtilities.CreateInstance<KurrentDBQueueDataAdapterV2>(serviceProvider, adapterOptions);
+        return ActivatorUtilities.CreateInstance<KurrentDBQueueDataAdapter>(serviceProvider, adapterOptions);
     }
 
     /// <summary>

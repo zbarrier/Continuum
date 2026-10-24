@@ -91,43 +91,56 @@ public class KurrentDBMessage
     /// <summary>
     ///     The logical connection the event was read from.
     /// </summary>
-    [Id(20)]
+    [Id(0)]
     public string SourceConnectionName { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The id of the event in the stream.
+    /// </summary>
+    [Id(1)]
+    public Guid EventId { get; set; }
+
 
     /// <summary>
     ///     The stream identifier.
     /// </summary>
-    [Id(0)]
+    [Id(2)]
     public StreamId StreamId { get; set; }
+
+    /// <summary>
+    ///     The KurrentDB stream the event was read from, such as <c>snack-123</c>, with its parsed category, tenant and key.
+    /// </summary>
+    [Id(3)]
+    public StreamName StreamName { get; set; }
 
     /// <summary>
     ///     Referring to a potential logical record position in the KurrentDB transaction file.
     /// </summary>
-    [Id(1)]
+    [Id(4)]
     public string Position { get; set; }
 
     /// <summary>
     ///     The <c>$all</c> commit position the event was read at, used to write checkpoints after delivery.
     /// </summary>
-    [Id(8)]
+    [Id(5)]
     public ulong CommitPosition { get; set; }
+
+    /// <summary>
+    ///     The event number of the event within its KurrentDB stream.
+    /// </summary>
+    [Id(6)]
+    public ulong StreamVersion { get; set; }
 
     /// <summary>
     ///     The position of the event in the stream.
     /// </summary>
-    [Id(2)]
+    [Id(7)]
     public long SequenceNumber { get; set; }
-
-    /// <summary>
-    ///     The id of the event in the stream.
-    /// </summary>
-    [Id(5)]
-    public Guid EventId { get; set; }
 
     /// <summary>
     ///     The type name of the event.
     /// </summary>
-    [Id(6)]
+    [Id(8)]
     public string EventType { get; set; }
 
     /// <summary>
@@ -142,26 +155,14 @@ public class KurrentDBMessage
     public ReadOnlyMemory<byte> Data { get; set; }
 
     /// <summary>
-    ///     The KurrentDB stream the event was read from, such as <c>snack-123</c>, with its parsed category, tenant and key.
+    ///     The producer supplied metadata the event carried, with well known entries already lifted out.
     /// </summary>
-    [Id(12)]
-    public StreamName StreamName { get; set; }
-
-    /// <summary>
-    ///     The event number of the event within its KurrentDB stream.
-    /// </summary>
-    [Id(13)]
-    public ulong StreamVersion { get; set; }
+    [Id(9)]
+    public IEventMetadata Metadata { get; set; } = EventMetadata.Empty;
 
     /// <summary>
     ///     The time the event was created by its producer, in UTC.
     /// </summary>
-    [Id(14)]
+    [Id(10)]
     public DateTime Timestamp { get; set; }
-
-    /// <summary>
-    ///     The producer supplied metadata the event carried, with well known entries already lifted out.
-    /// </summary>
-    [Id(15)]
-    public IEventMetadata Metadata { get; set; } = EventMetadata.Empty;
 }

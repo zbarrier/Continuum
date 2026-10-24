@@ -4,12 +4,12 @@ using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
-public class KurrentDBQueueDataAdapterV2SequenceTokenTests
+public class KurrentDBQueueDataAdapterSequenceTokenTests
 {
     [Fact]
     public void Converts_The_Largest_Representable_Sequence_Number()
     {
-        Assert.Equal(long.MaxValue, KurrentDBQueueDataAdapterV2.ToOrleansSequenceToken(new BigInteger(long.MaxValue), "chat-1"));
+        Assert.Equal(long.MaxValue, KurrentDBQueueDataAdapter.ToOrleansSequenceToken(new BigInteger(long.MaxValue), "chat-1"));
     }
 
     [Fact]
@@ -19,7 +19,7 @@ public class KurrentDBQueueDataAdapterV2SequenceTokenTests
         var justPastLongRange = new BigInteger(long.MaxValue) + 1;
 
         var exception = Assert.Throws<NotSupportedException>(
-            () => KurrentDBQueueDataAdapterV2.ToOrleansSequenceToken(justPastLongRange, "chat-1"));
+            () => KurrentDBQueueDataAdapter.ToOrleansSequenceToken(justPastLongRange, "chat-1"));
 
         Assert.Contains("chat-1", exception.Message, StringComparison.Ordinal);
     }

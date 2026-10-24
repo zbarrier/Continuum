@@ -1,5 +1,6 @@
 using System.Text;
 
+using Continuum.Streaming;
 using Continuum.Streaming.Orleans;
 
 using KurrentDB.Client;
@@ -159,14 +160,16 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
         ArgumentNullException.ThrowIfNull(queueMessage, nameof(queueMessage));
         ArgumentNullException.ThrowIfNull(getSegment, nameof(getSegment));
         return new CachedMessage
-               {
-                   StreamId = position.StreamId,
-                   SequenceNumber = KurrentDBQueueDataAdapterV2.ToOrleansSequenceToken(queueMessage.Cursor.SequenceNumber, queueMessage.StreamName.Value),
-                   EventIndex = position.SequenceToken.EventIndex,
-                   EnqueueTimeUtc = queueMessage.Timestamp,
-                   DequeueTimeUtc = dequeueTime,
-                   Segment = EncodeMessageIntoSegment(queueMessage, getSegment)
-               };
+        {
+            StreamId = position.StreamId,
+            // Must agree with the token built in GetStreamPosition. The cache compares this against cursor tokens,
+            // so a per-stream version here would collide across the many streams a $all receiver caches together.
+            SequenceNumber = ToOrleansSequenceToken(queueMessage.Cursor.SequenceNumber, queueMessage.StreamName.Value),
+            EventIndex = position.SequenceToken.EventIndex,
+            EnqueueTimeUtc = queueMessage.Timestamp,
+            DequeueTimeUtc = dequeueTime,
+            Segment = EncodeMessageIntoSegment(queueMessage, getSegment)
+        };
     }
 
     /// <summary>
@@ -174,11 +177,17 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// </summary>
     /// <param name="queueMessage"></param>
     /// <returns></returns>
+    /// <remarks>
+    ///     The token is built from the <c>$all</c> commit position rather than the per-stream version. A receiver
+    ///     reading <c>$all</c> caches events from many streams in one queue, and the cache orders and locates cached
+    ///     messages by this sequence number; the stream version restarts at zero for every stream, so the first event
+    ///     of each stream would share sequence number zero and the cache would treat them as the same position.
+    /// </remarks>
     public virtual StreamPosition GetStreamPosition(StreamedEvent<KurrentDBRawEvent> queueMessage)
     {
         ArgumentNullException.ThrowIfNull(queueMessage, nameof(queueMessage));
         var streamId = GetStreamId(queueMessage);
-        var sequenceToken = new KurrentDBSequenceToken(queueMessage.Cursor.SequenceNumber.ToString(), KurrentDBQueueDataAdapterV2.ToOrleansSequenceToken(queueMessage.Cursor.SequenceNumber, queueMessage.StreamName.Value), 0);
+        var sequenceToken = new KurrentDBSequenceToken(queueMessage.Cursor.SequenceNumber.ToString(), ToOrleansSequenceToken(queueMessage.Cursor.SequenceNumber, queueMessage.StreamName.Value), 0);
         return new StreamPosition(streamId, sequenceToken);
     }
 
@@ -230,8 +239,8 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
     /// <returns></returns>
     protected virtual ArraySegment<byte> EncodeMessageIntoSegment(StreamedEvent<KurrentDBRawEvent> queueMessage, Func<int, ArraySegment<byte>> getSegment)
     {
-        var position = queueMessage.Cursor.SequenceNumber.ToString();
-        // The commit position
+        var position = queueMessage.StreamVersion.ToString();
+        // The commit position is stored alongside the event so the checkpoint can be written from the cache, after
         // delivery. It cannot be recovered from the event itself once link resolution is enabled.
         var commitPosition = queueMessage.Cursor.SequenceNumber.ToString();
         var eventId = queueMessage.EventId.ToByteArray();
@@ -289,6 +298,23 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter
         SegmentBuilder.Append(segment, ref writeOffset, timestamp);
         SegmentBuilder.Append(segment, ref writeOffset, metadata);
         SegmentBuilder.Append(segment, ref writeOffset, data);
+
         return segment;
+    }
+
+    /// <summary>
+    ///     Narrows a KurrentDB position to the signed 64-bit sequence number the Orleans queue cache orders by.
+    /// </summary>
+    /// <exception cref="NotSupportedException"><paramref name="sequenceNumber"/> does not fit in a <see cref="long"/>.</exception>
+    internal static long ToOrleansSequenceToken(System.Numerics.BigInteger sequenceNumber, string streamName)
+    {
+        if (sequenceNumber < long.MinValue || sequenceNumber > long.MaxValue)
+        {
+            throw new NotSupportedException(
+                $"The sequence number {sequenceNumber} on stream \"{streamName}\" cannot be represented in an Orleans " +
+                $"stream sequence token, which orders events by a signed 64-bit integer with a maximum of {long.MaxValue}.");
+        }
+
+        return (long)sequenceNumber;
     }
 }

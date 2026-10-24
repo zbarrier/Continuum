@@ -1,6 +1,7 @@
 using Continuum;
 using Continuum.Streaming;
 using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB;
 using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 using KurrentDB.Client;
@@ -8,6 +9,7 @@ using KurrentDB.Client;
 
 using Orleans.Configuration;
 using Orleans.Runtime;
+using Orleans.Serialization;
 using Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
@@ -128,6 +130,9 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     }
 
     /// <summary>
+    ///     Rebuilds the streamed event envelope for one event in the batch.
+    /// </summary>
+    /// <summary>
     ///     Rebuilds the streamed event envelope for the event this record holds.
     /// </summary>
     private StreamedEvent<object> ToStreamedEvent(object @event)
@@ -150,7 +155,9 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     /// </summary>
     /// <returns><see langword="true" /> if the <see cref="global::Orleans.Runtime.RequestContext" /> was indeed modified, <see langword="false" /> otherwise.</returns>
     /// <remarks>
-    ///     Only tracing is restored; see <see cref="KurrentDBBatchContainerV2.ImportRequestContext" />.
+    ///     Only tracing is restored, rebuilt as a W3C traceparent from the ids the event carried. The rest of the
+    ///     producer's request context is ambient call-chain state that belonged to the grain call that produced the
+    ///     event, not information about the event, so replaying it onto an unrelated consumer call would be wrong.
     /// </remarks>
     public bool ImportRequestContext()
     {
