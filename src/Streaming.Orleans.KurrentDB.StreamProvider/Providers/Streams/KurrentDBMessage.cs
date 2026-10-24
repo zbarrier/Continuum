@@ -1,4 +1,4 @@
-using Continuum.Events;
+﻿using Continuum.Events;
 using Continuum.Orleans.Events;
 using Continuum.Orleans.KurrentDB;
 using System.Text;
@@ -28,8 +28,6 @@ public class KurrentDBMessage
     /// <param name="position"></param>
     /// <param name="commitPosition"></param>
     /// <param name="sequenceNumber"></param>
-    /// <param name="enqueueTimeUtc"></param>
-    /// <param name="dequeueTimeUtc"></param>
     /// <param name="eventId"></param>
     /// <param name="eventType"></param>
     /// <param name="data"></param>
@@ -38,7 +36,7 @@ public class KurrentDBMessage
     /// <param name="timestamp">The time the event was recorded.</param>
     /// <param name="metadata">The event metadata.</param>
     /// <param name="streamKey">The stream key parsed from the stream name.</param>
-    public KurrentDBMessage(string sourceConnectionName, StreamId streamId, string position, ulong commitPosition, long sequenceNumber, DateTime enqueueTimeUtc, DateTime dequeueTimeUtc, 
+    public KurrentDBMessage(string sourceConnectionName, StreamId streamId, string position, ulong commitPosition, long sequenceNumber,
         string eventId, string eventType, ReadOnlyMemory<byte> data,
         string? streamName = null, ulong streamVersion = 0, DateTime timestamp = default,
         IEventMetadata? metadata = null, string? streamKey = null)
@@ -49,8 +47,6 @@ public class KurrentDBMessage
         Position = position;
         CommitPosition = commitPosition;
         SequenceNumber = sequenceNumber;
-        EnqueueTimeUtc = enqueueTimeUtc;
-        DequeueTimeUtc = dequeueTimeUtc;
         EventId = eventId;
         EventType = eventType;
         Data = data;
@@ -75,8 +71,6 @@ public class KurrentDBMessage
         Position = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         CommitPosition = ulong.Parse(ReadRequiredString(cachedMessage.Segment, ref readOffset));
         SequenceNumber = cachedMessage.SequenceNumber;
-        EnqueueTimeUtc = cachedMessage.EnqueueTimeUtc;
-        DequeueTimeUtc = cachedMessage.DequeueTimeUtc;
         EventId = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         EventType = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         StreamName = ReadRequiredString(cachedMessage.Segment, ref readOffset);
@@ -124,18 +118,6 @@ public class KurrentDBMessage
     /// </summary>
     [Id(2)]
     public long SequenceNumber { get; set; }
-    /// <summary>
-    ///     The time message was written to the message queue.
-    /// </summary>
-
-    [Id(3)]
-    public DateTime EnqueueTimeUtc { get; set; }
-
-    /// <summary>
-    ///     The time this message was read from the message queue.
-    /// </summary>
-    [Id(4)]
-    public DateTime DequeueTimeUtc { get; set; }
 
     /// <summary>
     ///     The id of the event in the stream.
