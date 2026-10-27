@@ -17,14 +17,23 @@ public static class GlobalGrainErrorHandler
         switch (ex)
         {
             case System.TimeoutException:
-                logger.LogError(ex, "Grain call failed with timeout exception.");
+                logger.GrainCallTimedOut(ex);
                 error = RequestErrors.NewDeadlineExceeded("The operation timed out before it could complete.");
                 break;
             default:
-                logger.LogError(ex, "Grain call failed with exception.");
+                logger.GrainCallFailed(ex);
                 error = RequestErrors.NewUnknown("An unexpected error occurred.");
                 break;
         }
         return error;
     };
+}
+
+internal static partial class GlobalGrainErrorHandlerLog
+{
+    [LoggerMessage(Level = LogLevel.Error, Message = "Grain call failed with timeout exception.")]
+    public static partial void GrainCallTimedOut(this ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Grain call failed with exception.")]
+    public static partial void GrainCallFailed(this ILogger logger, Exception exception);
 }

@@ -19,7 +19,7 @@
 	
   <ItemGroup>
     <PackageReference Include="Grpc.Net.Common" Version="2.84.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.13" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />

@@ -15,7 +15,7 @@ public sealed class DoorClosed() : DoorEvent(DoorCommand.Close);
 [GenerateSerializer]
 public sealed class DoorState : EventDrivenStateMachineState<DoorState, DoorEvent, DoorStatus, DoorCommand>
 {
-    public DoorState() : base(() => new StateMachine<DoorStatus, DoorCommand>(DoorStatus.Closed)) { }
+    public DoorState() : base(DoorStatus.Closed) { }
 
     [Id(0)] public int OpenCount { get; set; }
 
@@ -59,13 +59,14 @@ public class EventDrivenStateMachineSessionTests
     }
 
     [Fact]
-    public async Task DeepCopy_DoesNotPreserveStateMachineConfiguration()
+    public async Task DeepCopy_PreservesStatusAndTransitions()
     {
         var source = new DoorState();
         source.When(new DoorOpened());
         var copy = TestServices.Copier<DoorState>().Copy(source)!;
         Assert.Equal(DoorStatus.Open, copy.StateMachine.State);
-        Assert.Empty(await copy.StateMachine.GetPermittedTriggersAsync());
+        Assert.Equal([DoorCommand.Close], await copy.StateMachine.GetPermittedTriggersAsync());
+        Assert.Equal(1, copy.OpenCount);
     }
 
     [Fact]

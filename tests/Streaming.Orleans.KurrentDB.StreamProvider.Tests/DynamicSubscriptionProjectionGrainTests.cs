@@ -106,7 +106,7 @@ public class DynamicSubscriptionProjectionGrainTests
         await WaitForAsync(projection, expectedCount: 1);
 
         await _fixture.Cluster.Client.GetGrain<IManagementGrain>(0)
-            .ForceActivationCollection(TimeSpan.Zero);
+            .ForceActivationCollection(TimeSpan.Zero, TestContext.Current.CancellationToken);
 
         await AppendAsync(client, followed, "Grace");
 

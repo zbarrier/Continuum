@@ -1,0 +1,206 @@
+using Continuum.Orleans.Streams;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+using Continuum.TypeMapping;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+
+using Orleans.Configuration;
+using Orleans.Providers.Streams.Common;
+using Orleans.Runtime;
+using Orleans.Serialization;
+using Orleans.Storage;
+using Orleans.Streams;
+
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
+
+/// <summary>
+///     Verifies that a cursor still reading old events holds back both purging and the checkpoint, and that releasing it
+///     lets both advance.
+/// </summary>
+public class KurrentDBQueueCacheCursorTrackingTests
+{
+    private static readonly Serializer OrleansSerializer = new ServiceCollection().AddSerializer().BuildServiceProvider().GetRequiredService<Serializer>();
+
+    private static readonly StreamName Stream = new("test-1", "test", null, "1");
+
+    private sealed class FakeTypeMapper : TypeMapper;
+
+    private sealed class FakeSerializer : IGrainStorageSerializer
+    {
+        public BinaryData Serialize<T>(T? input) => throw new NotSupportedException();
+
+        public T Deserialize<T>(BinaryData input) => throw new NotSupportedException();
+    }
+
+    private static KurrentDBQueueDataAdapter CreateAdapter() => new(OrleansSerializer, new KurrentDBDataAdapterOptions
+    {
+        ConnectionName = "test",
+        TypeMapper = new FakeTypeMapper(),
+        GrainStorageSerializer = new FakeSerializer(),
+    });
+
+    private static KurrentDBQueueCache CreateCache(KurrentDBQueueDataAdapter adapter)
+    {
+        var logger = NullLogger.Instance;
+        var bufferPool = new ObjectPool<FixedSizeBuffer>(() => new FixedSizeBuffer(1 << 20));
+        var cursorTracker = new KurrentDBCursorTracker();
+        // Zero limits purge every event that is older than the newest one, once nothing is still reading it.
+        var timePurge = new TimePurgePredicate(TimeSpan.Zero, TimeSpan.Zero);
+        var evictionStrategy = new KurrentDBEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
+        return new KurrentDBQueueCache("queue", 100, bufferPool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
+    }
+
+    private static StreamedEvent<KurrentDBRawEvent> CreateEvent(ulong streamVersion, ulong commitPosition, DateTime timestamp) =>
+        new(Guid.NewGuid(), "test-event", Stream, streamVersion, new StreamedEventCursor("test", Stream.Category, Stream.Value, commitPosition, 0),
+            timestamp, new KurrentDBRawEvent([1]));
+
+    private static (KurrentDBQueueCache Cache, StreamId StreamId, List<ulong> Checkpoints) CreateFilledCache()
+    {
+        var cache = CreateCache(CreateAdapter());
+        var checkpoints = new List<ulong>();
+        cache.OnCheckpointablePosition = checkpoints.Add;
+        var start = DateTime.UtcNow.AddHours(-1);
+        var positions = cache.Add(
+        [
+            CreateEvent(0, 100, start),
+            CreateEvent(1, 200, start.AddMinutes(1)),
+            CreateEvent(2, 300, start.AddMinutes(2)),
+        ], start.AddMinutes(2));
+        return (cache, positions[0].StreamId, checkpoints);
+    }
+
+    private static long OldestAvailable(KurrentDBQueueCache cache, StreamId streamId)
+    {
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        try
+        {
+            Assert.True(cache.TryGetNextMessage(cursor, out var container));
+            return container.SequenceToken.SequenceNumber;
+        }
+        finally
+        {
+            cache.ReleaseCursor(cursor);
+        }
+    }
+
+    [Fact]
+    public void A_Cursor_That_Has_Not_Read_Anything_Blocks_Purging_And_Checkpointing()
+    {
+        var (cache, streamId, checkpoints) = CreateFilledCache();
+        cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+
+        cache.SignalPurge();
+
+        Assert.Empty(checkpoints);
+        Assert.Equal(100, OldestAvailable(cache, streamId));
+    }
+
+    [Fact]
+    public void A_Slow_Cursor_Keeps_The_Checkpoint_At_Its_Last_Delivered_Position()
+    {
+        var (cache, streamId, checkpoints) = CreateFilledCache();
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        cache.RecordDelivered(cursor, 100);
+
+        cache.SignalPurge();
+
+        Assert.Equal([100UL], checkpoints);
+        Assert.Equal(200, OldestAvailable(cache, streamId));
+    }
+
+    [Fact]
+    public void The_Slowest_Of_Several_Cursors_Holds_Back_Purging()
+    {
+        var (cache, streamId, checkpoints) = CreateFilledCache();
+        var fast = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        var slow = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        cache.RecordDelivered(fast, 300);
+        cache.RecordDelivered(slow, 100);
+
+        cache.SignalPurge();
+
+        Assert.Equal([100UL], checkpoints);
+        Assert.Equal(200, OldestAvailable(cache, streamId));
+    }
+
+    [Fact]
+    public void Releasing_The_Slow_Cursor_Lets_Purging_And_Checkpointing_Advance()
+    {
+        var (cache, streamId, checkpoints) = CreateFilledCache();
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        cache.SignalPurge();
+        Assert.Empty(checkpoints);
+
+        cache.ReleaseCursor(cursor);
+        cache.SignalPurge();
+
+        Assert.Equal([200UL], checkpoints);
+        Assert.Equal(300, OldestAvailable(cache, streamId));
+    }
+
+    [Fact]
+    public void A_Caught_Up_Cursor_Does_Not_Hold_Back_Purging()
+    {
+        var (cache, streamId, checkpoints) = CreateFilledCache();
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+
+        cache.RecordCaughtUp(cursor);
+        cache.SignalPurge();
+
+        Assert.Equal([200UL], checkpoints);
+        Assert.Equal(300, OldestAvailable(cache, streamId));
+    }
+
+    [Fact]
+    public void A_Caught_Up_Cursor_Holds_Back_Events_Added_Later()
+    {
+        var (cache, streamId, checkpoints) = CreateFilledCache();
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        cache.RecordCaughtUp(cursor);
+        var later = DateTime.UtcNow.AddMinutes(-30);
+        cache.Add([CreateEvent(3, 400, later), CreateEvent(4, 500, later.AddMinutes(1))], later.AddMinutes(1));
+
+        cache.SignalPurge();
+
+        Assert.Equal([300UL], checkpoints);
+        Assert.Equal(400, OldestAvailable(cache, streamId));
+    }
+
+    [Fact]
+    public void A_Woken_Cursor_Reads_Events_Added_After_Its_Old_Position_Was_Purged()
+    {
+        var (cache, streamId, _) = CreateFilledCache();
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        while (cache.TryGetNextMessage(cursor, out _))
+        {
+        }
+        cache.RecordCaughtUp(cursor);
+        cache.SignalPurge();
+        var later = DateTime.UtcNow.AddMinutes(-30);
+        cache.Add([CreateEvent(3, 400, later), CreateEvent(4, 500, later.AddMinutes(1))], later.AddMinutes(1));
+
+        cache.SignalPurge();
+
+        Assert.True(cache.TryGetNextMessage(cursor, out var first));
+        Assert.Equal(400, first.SequenceToken.SequenceNumber);
+        Assert.True(cache.TryGetNextMessage(cursor, out var second));
+        Assert.Equal(500, second.SequenceToken.SequenceNumber);
+    }
+
+    [Fact]
+    public void A_Released_Caught_Up_Cursor_Is_Not_Woken()
+    {
+        var (cache, streamId, checkpoints) = CreateFilledCache();
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        cache.RecordCaughtUp(cursor);
+        cache.ReleaseCursor(cursor);
+        var later = DateTime.UtcNow.AddMinutes(-30);
+        cache.Add([CreateEvent(3, 400, later), CreateEvent(4, 500, later.AddMinutes(1))], later.AddMinutes(1));
+
+        cache.SignalPurge();
+
+        Assert.Equal([400UL], checkpoints);
+        Assert.Equal(500, OldestAvailable(cache, streamId));
+    }
+}

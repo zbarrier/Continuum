@@ -1,8 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Orleans.Configuration;
-using Continuum.Orleans.KurrentDB;
+﻿using Continuum.Orleans.KurrentDB;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+
+using Orleans.Configuration;
 
 namespace Orleans.Hosting;
 
@@ -27,11 +29,12 @@ public class SiloKurrentDBStreamConfigurator : SiloRecoverableStreamConfigurator
                 services.AddKurrentDBExceptionSerialization();
                 services.ConfigureNamedOptionForLogging<KurrentDBOptions>(name)
                         .ConfigureNamedOptionForLogging<KurrentDBStreamCachePressureOptions>(name)
+                        .ConfigureNamedOptionForLogging<KurrentDBStreamCacheBufferPoolOptions>(name)
+                        .AddTransient<IConfigurationValidator>(sp => new KurrentDBStreamCacheBufferPoolOptionsValidator(sp.GetOptionsByName<KurrentDBStreamCacheBufferPoolOptions>(name), name))
                         .ConfigureNamedOptionForLogging<KurrentDBDataAdapterOptions>(name)
                         .AddTransient<IConfigurationValidator>(sp => new KurrentDBOptionsValidator(sp.GetOptionsByName<KurrentDBOptions>(name), name))
                         .AddTransient<IConfigurationValidator>(sp => new KurrentDBDataAdapterOptionsValidator(sp.GetOptionsByName<KurrentDBDataAdapterOptions>(name), name))
-                        .AddTransient<IConfigurationValidator>(sp => new KurrentDBStreamPullingAgentOptionsValidator(sp.GetOptionsByName<StreamPullingAgentOptions>(name), name))
-                        .AddTransient<IConfigurationValidator>(sp => new StreamCheckpointerConfigurationValidator(sp, name));
+                        .AddTransient<IConfigurationValidator>(sp => new KurrentDBStreamPullingAgentOptionsValidator(sp.GetOptionsByName<StreamPullingAgentOptions>(name), name));
             });
     }
 }

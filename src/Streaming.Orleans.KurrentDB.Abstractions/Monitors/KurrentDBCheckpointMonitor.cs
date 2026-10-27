@@ -27,6 +27,11 @@ public sealed class KurrentDBCheckpointMonitorOptions
     /// <summary>
     ///     The time after which a pending checkpoint is committed.
     /// </summary>
+    /// <remarks>
+    ///     This is checked when events or checkpoint messages arrive, not on a background timer, so an idle
+    ///     subscription keeps its last position uncommitted until more arrive or it shuts down, which flushes it. A
+    ///     crash while idle only replays that uncommitted tail, which delivery already tolerates as at-least-once.
+    /// </remarks>
     [Required, TimeSpanRange("00:00:01", "1.00:00:00")]
     public TimeSpan MaxTimeBeforeCommit { get; set; } = TimeSpan.FromSeconds(20);
 }
@@ -188,11 +193,7 @@ public sealed class KurrentDBCheckpointMonitor
 
     private Task CommitCheckpointAsync(CancellationToken cancellationToken)
     {
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug("Subscription '{SubscriptionName}' for stream '{StreamName}' committing checkpoint at position '{CommitPosition}'.",
-                _subscriptionName, _streamName, _currentPosition);
-        }
+        _logger.CommittingCheckpoint(_subscriptionName, _streamName, _currentPosition);
         return _checkpointStore.StoreCheckpointAsync(_subscriptionName, KurrentDBStreamedEventConversions.DefaultPartitionId, _currentPosition!.Value, cancellationToken);
     }
 
@@ -202,4 +203,10 @@ public sealed class KurrentDBCheckpointMonitor
         _eventsProcessedSinceLastCommit = 0;
         _lastCommitTimestamp = _timeProvider.GetTimestamp();
     }
+}
+
+internal static partial class KurrentDBCheckpointMonitorLog
+{
+	[LoggerMessage(Level = LogLevel.Debug, Message = "Subscription '{SubscriptionName}' for stream '{StreamName}' committing checkpoint at position '{CommitPosition}'.")]
+	public static partial void CommittingCheckpoint(this ILogger logger, string subscriptionName, string streamName, ulong? commitPosition);
 }

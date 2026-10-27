@@ -15,12 +15,20 @@
 - Add a test project only when the library has behavior that genuinely needs testing; Continuum libraries do not each need their own test project.
 - Abstractions projects must not know anything about implementation projects. Tests that need implementation types or internals belong in the implementation's own test project (e.g., Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Tests), never in the Abstractions test project; InternalsVisibleTo should only grant access to the implementation's own test project.
 - Continuum event-sourcing storage providers (KurrentDB, CosmosDB) must always use TypeMappedJsonGrainStorageSerializer with requireStoredType: true; the option defaults to false for all other uses (e.g., grain state storage).
+- Prefer real class names (e.g., KurrentDBEventMetadataCodec) with normal namespace using statements over using-aliases like `using MetadataCodec = ...`, and prefer using statements over fully qualified names.
 
 ## Exception Handling
 - In Continuum, business application grains are responsible for catching exceptions, logging exception-specific details, and returning errors in a Result; inner exception details must not leak to the UI. Internal Continuum library code and tests do not use or test the Result-returning pattern; that is for consuming business apps to implement.
 
 ## Multi-Tenancy Design
 - Continuum multi-tenancy design (planned, not implemented): use Orleans.Multitenant. Grain keys are "{TenantId}|{Key}". Stream names are "{GrainType}-{TenantId}|{Key}" (non-tenant: "{GrainType}-{Key}"), i.e. GrainType + "-" + Orleans grain key. GrainTypes cannot contain '-' or '|'; keys may contain '-' (GUIDs) but never '|'; tenant IDs must be non-empty and contain no '|'. A '|' after the category means tenant-qualified, so one parser handles both.
-- Subscriptions stay tenant-unaware (KurrentDB $ce-{GrainType} spans tenants); Orleans.Multitenant filters enforce tenant isolation.
+- Subscriptions stay tenant-unaware (KurrentDB $ce-{GrainType} spans tenants); Orleans.Multitenant filters enforce tenant isolation. The Continuum KurrentDB stream provider subscribes to the $all stream (not $ce-{GrainType} category subscriptions). Orleans.Multitenant tenant isolation filters are left for consuming apps to add themselves; Continuum only needs to follow a naming scheme compatible with Orleans.Multitenant.
 - Per-tenant storage providers set ConnectionName via configureTenantOptions so tenants sharing a database share one keyed KurrentDBClient; dedicated tenants use their own connection name.
 - Cross-tenant/cross-source reports consume integration events from EventHub/Kafka/Kinesis, never direct from multiple KurrentDB databases.
+
+## Streaming Cursors and Checkpoints
+- Continuum streaming cursors and checkpoints use an explicit SourceConnectionName as the first key segment (SourceConnectionName -> Topic -> Partition -> SequenceNumber -> SubSequenceNumber; SourceConnectionName -> SubscriptionName -> Partition -> position), not hidden in the partition. CheckpointConnectionName only selects where checkpoints are stored. Connection names are permanent logical identifiers that must never be renamed.
+- In the Continuum KurrentDB stream provider, persistent subscription events are intentionally acked as they are received (not when consumed); the checkpoint lives on the KurrentDB server side. Do not flag ack-on-receive as a bug.
+- Events with an active cursor must never be dropped: a cursor with unread events must keep blocking purge and checkpointing indefinitely. Do not suggest staleness timeouts or similar mechanisms that would purge unread events.
+- ProjectionGrain must save state before acknowledging each delivered event or batch; do not buffer or throttle projection state writes by default, since a delivered event may be checkpointed and purged. A buffered/throttled projection may be added later only as an explicit opt-in when the user asks for it.
+- KurrentDB persistent subscriptions are intended only for consumers that can tolerate dropped and out-of-order events; ack-on-receive stays. Consumers that need ordering and no drops should use catch-up subscriptions. Do not propose ack-on-purge for persistent subscriptions.

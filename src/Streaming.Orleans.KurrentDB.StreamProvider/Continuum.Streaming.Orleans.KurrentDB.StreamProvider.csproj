@@ -8,13 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="KurrentDB.Client" Version="1.4.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.12" />
-    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.12" />
-    <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.3.1" />
-    <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.3.1" />
-    <PackageReference Include="Microsoft.Orleans.Serialization.Protobuf" Version="10.3.1" />
-    <PackageReference Include="Microsoft.Orleans.Streaming" Version="10.3.1" />
+    <PackageReference Include="KurrentDB.Client" Version="1.6.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.4.0" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.4.0" />
+    <PackageReference Include="Microsoft.Orleans.Serialization.Protobuf" Version="10.4.0" />
+    <PackageReference Include="Microsoft.Orleans.Streaming" Version="10.4.0" />
   </ItemGroup>
 
   <ItemGroup>

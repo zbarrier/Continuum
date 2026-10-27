@@ -85,42 +85,35 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         lifecycle.Subscribe(name, _storageOptions.InitStage, Init, Close);
     }
 
+    /// <summary>
+    ///     Initializes a storage created after silo startup, such as one for a tenant.
+    /// </summary>
+    internal Task InitializeAsync(CancellationToken cancellationToken) => Init(cancellationToken);
+
     private async Task Init(CancellationToken cancellationToken)
     {
         var timer = Stopwatch.StartNew();
         try
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("CosmosDBLogConsistentStorage {Name} is initializing: ServiceId={ServiceId}", _name, _serviceId);
-            }
+            _logger.StorageInitializing(_name, _serviceId);
 
             await ValidateContainerAsync(cancellationToken);
 
             _initialized = true;
-            
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                timer.Stop();
-                _logger.LogDebug(
-                    "Init: Name={Name} ServiceId={ServiceId}, initialized in {ElapsedMilliseconds} ms", 
-                    _name, _serviceId, timer.Elapsed.TotalMilliseconds.ToString("0.00"));
-            }
+
+            timer.Stop();
+            _logger.StorageInitialized(_name, _serviceId, timer.Elapsed.TotalMilliseconds);
         }
         catch (CosmosDBLogConsistentStorageException ex)
         {
             timer.Stop();
-            _logger.LogError(ex,
-                "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms",
-                _name, _serviceId, timer.Elapsed.TotalMilliseconds.ToString("0.00"));
+            _logger.StorageInitializationFailed(ex, _name, _serviceId, timer.Elapsed.TotalMilliseconds);
             throw;
         }
         catch (Exception ex)
         {
             timer.Stop();
-            _logger.LogError(ex, 
-                "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms", 
-                _name, _serviceId, timer.Elapsed.TotalMilliseconds.ToString("0.00"));
+            _logger.StorageInitializationFailed(ex, _name, _serviceId, timer.Elapsed.TotalMilliseconds);
             throw new CosmosDBLogConsistentStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -167,9 +160,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
                         $"Could not connect to Cosmos DB to validate container '{_storageOptions.ContainerName}' in database '{_storageOptions.DatabaseName}' within {_storageOptions.StartupConnectionTimeout.TotalSeconds:0} seconds ({attempt} attempts)."), ex);
                 }
 
-                _logger.LogWarning(ex,
-                    "Init: Name={Name} ServiceId={ServiceId}, Cosmos DB is unreachable (attempt {Attempt}), retrying in {Delay} ms",
-                    _name, _serviceId, attempt, delay.TotalMilliseconds);
+                _logger.CosmosUnreachable(ex, _name, _serviceId, attempt, delay.TotalMilliseconds);
 
                 await Task.Delay(delay < remaining ? delay : remaining, cancellationToken);
                 delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, TimeSpan.FromSeconds(8).Ticks));
@@ -201,7 +192,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Close: Name={Name} ServiceId={ServiceId}", _name, _serviceId);
+            _logger.StorageCloseFailed(ex, _name, _serviceId);
             throw new CosmosDBLogConsistentStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -267,7 +258,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         catch (Exception ex)
         {
             operation.Fail(ex);
-            _logger.LogError(ex, "Failed to read log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}", grainTypeName, grainId, streamName);
+            _logger.ReadLogEntriesFailed(ex, grainTypeName, grainId, streamName);
             throw new CosmosDBLogConsistentStorageException(FormattableString.Invariant($"Failed to read log entries for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -290,7 +281,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         catch (Exception ex)
         {
             operation.Fail(ex);
-            _logger.LogError(ex, "Failed to read last log entry for {GrainType} grain with ID {GrainId} and stream {StreamName}", grainTypeName, grainId, streamName);
+            _logger.ReadLastLogEntryFailed(ex, grainTypeName, grainId, streamName);
             throw new CosmosDBLogConsistentStorageException(FormattableString.Invariant($"Failed to read last log entry for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -429,13 +420,11 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     {
         if (requestCharge > _storageOptions.RequestChargeWarningThreshold)
         {
-            _logger.LogWarning("Operation '{Operation}' on stream '{StreamName}' with '{EventCount}' events consumed '{RequestUnits}' RUs, exceeding the warning threshold of '{RequestChargeWarningThreshold}' RUs",
-                operation, streamName, eventCount, requestCharge, _storageOptions.RequestChargeWarningThreshold);
+            _logger.RequestChargeExceeded(operation, streamName, eventCount, requestCharge, _storageOptions.RequestChargeWarningThreshold);
         }
-        else if (_logger.IsEnabled(LogLevel.Debug))
+        else
         {
-            _logger.LogDebug("Operation '{Operation}' on stream '{StreamName}' with '{EventCount}' events consumed '{RequestUnits}' RUs",
-                operation, streamName, eventCount, requestCharge);
+            _logger.RequestCharge(operation, streamName, eventCount, requestCharge);
         }
     }
 
@@ -487,4 +476,34 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         => new(JsonSerializer.SerializeToUtf8Bytes(item, CosmosDBJsonContext.Default.EventItem), writable: false);
 
     #endregion
+}
+
+internal static partial class CosmosDBLogConsistentStorageLog
+{
+    [LoggerMessage(Level = LogLevel.Debug, Message = "CosmosDBLogConsistentStorage {Name} is initializing: ServiceId={ServiceId}")]
+    public static partial void StorageInitializing(this ILogger logger, string name, string serviceId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Init: Name={Name} ServiceId={ServiceId}, initialized in {ElapsedMilliseconds} ms")]
+    public static partial void StorageInitialized(this ILogger logger, string name, string serviceId, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms")]
+    public static partial void StorageInitializationFailed(this ILogger logger, Exception exception, string name, string serviceId, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Init: Name={Name} ServiceId={ServiceId}, Cosmos DB is unreachable (attempt {Attempt}), retrying in {Delay} ms")]
+    public static partial void CosmosUnreachable(this ILogger logger, Exception exception, string name, string serviceId, int attempt, double delay);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Close: Name={Name} ServiceId={ServiceId}")]
+    public static partial void StorageCloseFailed(this ILogger logger, Exception exception, string name, string serviceId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
+    public static partial void ReadLogEntriesFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read last log entry for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
+    public static partial void ReadLastLogEntryFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Operation '{Operation}' on stream '{StreamName}' with '{EventCount}' events consumed '{RequestUnits}' RUs, exceeding the warning threshold of '{RequestChargeWarningThreshold}' RUs")]
+    public static partial void RequestChargeExceeded(this ILogger logger, string operation, string streamName, int eventCount, double requestUnits, double requestChargeWarningThreshold);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Operation '{Operation}' on stream '{StreamName}' with '{EventCount}' events consumed '{RequestUnits}' RUs")]
+    public static partial void RequestCharge(this ILogger logger, string operation, string streamName, int eventCount, double requestUnits);
 }

@@ -76,8 +76,14 @@ public class KurrentDBGrainStorageOptions : IStorageProviderSerializerOptions
     ///     event stream cannot collide now that the ServiceId no longer separates them. It sits before the first
     ///     <c>-</c>, so it forms part of the category and state streams group separately from event streams.
     /// </remarks>
-    public Func<string, string, GrainId, string> StreamNameFormatter { get; set; } =
-        (serviceId, providerName, grainId) => $"state__{grainId.Type}-{grainId.Key}";
+    public Func<string, string, GrainId, string> StreamNameFormatter { get; set; } = DefaultStreamNameFormatter;
+
+    /// <summary>
+    ///     The default <see cref="StreamNameFormatter"/>, producing <c>state__{GrainType}-{GrainKey}</c>. A tenant qualified
+    ///     grain key, <c>{TenantId}|{Key}</c>, is used as-is.
+    /// </summary>
+    internal static readonly Func<string, string, GrainId, string> DefaultStreamNameFormatter =
+        (serviceId, providerName, grainId) => KurrentDBStreamName.Format($"state__{grainId.Type}", grainId.Key.ToString()!);
 
     /// <summary>
     ///     Generates the ID of each state event appended to KurrentDB. Defaults to sequential GUIDs.
@@ -128,7 +134,7 @@ public class DefaultKurrentDBGrainStorageOptionsConfigurator : IPostConfigureOpt
         }
         if (options.StreamNameFormatter is null)
         {
-            options.StreamNameFormatter = (serviceId, providerName, grainId) => $"state__{grainId.Type}-{grainId.Key}";
+            options.StreamNameFormatter = KurrentDBGrainStorageOptions.DefaultStreamNameFormatter;
         }
         if (options.EventIdGenerator is null)
         {

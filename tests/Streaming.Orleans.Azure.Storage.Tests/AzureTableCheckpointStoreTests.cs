@@ -86,6 +86,28 @@ public sealed class AzureTableCheckpointStoreTests(AzuriteFixture fixture)
     }
 
     [Fact]
+    public async Task Does_Not_Move_The_Checkpoint_Backwards()
+    {
+        var store = Store<ulong>();
+        var subscription = NewSubscription();
+
+        await store.StoreCheckpointAsync(subscription, PartitionId, 20, Token);
+        await store.StoreCheckpointAsync(subscription, PartitionId, 10, Token);
+
+        Assert.Equal(20UL, await store.GetLastCheckpointAsync(subscription, PartitionId, Token));
+    }
+
+    [Fact]
+    public async Task Concurrent_Writers_Keep_The_Highest_Checkpoint()
+    {
+        var subscription = NewSubscription();
+
+        await Task.WhenAll(Enumerable.Range(1, 20).Select(i => Store<ulong>().StoreCheckpointAsync(subscription, PartitionId, (ulong)i, Token)));
+
+        Assert.Equal(20UL, await Store<ulong>().GetLastCheckpointAsync(subscription, PartitionId, Token));
+    }
+
+    [Fact]
     public async Task Keeps_Partitions_Of_A_Subscription_Separate()
     {
         var store = Store<ulong>();

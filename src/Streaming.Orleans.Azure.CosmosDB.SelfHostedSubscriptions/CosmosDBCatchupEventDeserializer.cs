@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 using Continuum.Serialization.Orleans;
@@ -21,24 +22,37 @@ internal static class CosmosDBCatchupEventDeserializer
         deserializedEvent = null;
         if (change.Data.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
         {
-            logger.LogWarning("Skipping change {Id} of type {DataType} in stream {StreamName} because it has no payload.", change.Id, change.DataType, change.StreamName);
+            logger.ChangeHasNoPayload(change.Id, change.DataType, change.StreamName);
             return false;
         }
         try
         {
-            var data = JsonSerializer.SerializeToUtf8Bytes(change.Data, ChangeFeedJsonContext.Default.JsonElement);
+            // The payload's raw UTF-8 is copied as-is rather than re-serialized from the parsed element.
+            var data = JsonMarshal.GetRawUtf8Value(change.Data).ToArray();
             deserializedEvent = serializer.Deserialize<object>(new BinaryDataWithType(data, type));
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Skipping change {Id} of type {DataType} in stream {StreamName} because it could not be deserialized.", change.Id, change.DataType, change.StreamName);
+            logger.ChangeDeserializationFailed(ex, change.Id, change.DataType, change.StreamName);
             return false;
         }
         if (deserializedEvent is null)
         {
-            logger.LogWarning("Skipping change {Id} of type {DataType} in stream {StreamName} because it deserialized to null.", change.Id, change.DataType, change.StreamName);
+            logger.ChangeDeserializedToNull(change.Id, change.DataType, change.StreamName);
             return false;
         }
         return true;
     }
+}
+
+internal static partial class CosmosDBCatchupEventDeserializerLog
+{
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping change {Id} of type {DataType} in stream {StreamName} because it has no payload.")]
+    public static partial void ChangeHasNoPayload(this ILogger logger, string id, string dataType, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping change {Id} of type {DataType} in stream {StreamName} because it could not be deserialized.")]
+    public static partial void ChangeDeserializationFailed(this ILogger logger, Exception exception, string id, string dataType, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping change {Id} of type {DataType} in stream {StreamName} because it deserialized to null.")]
+    public static partial void ChangeDeserializedToNull(this ILogger logger, string id, string dataType, string streamName);
 }

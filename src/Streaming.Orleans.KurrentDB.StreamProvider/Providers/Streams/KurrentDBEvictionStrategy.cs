@@ -45,4 +45,16 @@ internal sealed class KurrentDBEvictionStrategy : ChronologicalEvictionStrategy
         // Only purge events the slowest cursor has already been handed.
         return _dataAdapter.GetCommitPosition(cachedMessage) <= slowestCommitPosition.Value;
     }
+
+    /// <summary>
+    ///     Returns every block still held by the cache to its pool. Called when the cache is disposed, so blocks are not
+    ///     stranded when a queue leaves this silo.
+    /// </summary>
+    public void ReleaseBlocks()
+    {
+        while (inUseBuffers.TryDequeue(out var block))
+        {
+            block.Dispose();
+        }
+    }
 }

@@ -44,4 +44,14 @@ public static class KurrentDBGrainStorageSiloBuilderExtensions
     {
         return builder.ConfigureServices(services => services.AddKurrentDBGrainStorage(name, configureOptions));
     }
+
+    /// <summary>
+    ///     Configures KurrentDB as a grain storage provider with separate storage per tenant.
+    /// </summary>
+    public static ISiloBuilder AddMultitenantKurrentDBGrainStorage(this ISiloBuilder builder, string name,
+        Action<string, KurrentDBGrainStorageOptions> configureTenantOptions,
+        Action<OptionsBuilder<KurrentDBGrainStorageOptions>>? configureOptions = null)
+    {
+        return builder.ConfigureServices(services => services.AddMultitenantKurrentDBGrainStorage(name, configureTenantOptions, configureOptions));
+    }
 }

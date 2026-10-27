@@ -41,7 +41,30 @@ A grain type that itself contains `-`, such as `[GrainType("snack-grain")]`, wou
 
 Remove the `-` from the grain type. If a journaled grain with `-` in its grain type is stored by a different log-consistency provider, suppress `CKDB001` for that grain with `[SuppressMessage("Continuum.EventSourcing.KurrentDB", "CKDB001")]`, or lower the rule in `.editorconfig` with `dotnet_diagnostic.CKDB001.severity = none`.
 
-`StreamNameFormatter` is for adding identity to the stream name, such as a tenant: `{GrainType}-{TenantId}_{GrainKey}`. A custom formatter must keep the grain type before the first `-` so it remains the category. It is not a way around the grain type rule above. The default name does not include the ServiceId, so services sharing one KurrentDB instance can use a formatter to keep their streams apart in the same way.
+`StreamNameFormatter` can add identity to the stream name, for example the ServiceId when services share one KurrentDB instance. A custom formatter must keep the grain type before the first `-` so it remains the category. It is not a way around the grain type rule above. Tenants do not need a custom formatter; see below.
+
+## Multi-tenancy
+
+Tenant grains use Orleans.Multitenant keys, `{TenantId}|{Key}`, so their streams are named `{GrainType}-{TenantId}|{Key}`. The category is still the grain type, so one `$ce-{GrainType}` subscription covers every tenant. Tenant IDs must not be empty or contain `|`.
+
+To give tenants their own connection, register the provider with `AddMultitenantKurrentDBBasedLogConsistencyProvider`:
+
+```csharp
+services.AddMultitenantKurrentDBBasedLogConsistencyProvider("Default",
+    (tenantId, options) =>
+    {
+        if (dedicatedTenants.Contains(tenantId))
+        {
+            options.ConnectionName = $"kurrentdb-{tenantId}";
+        }
+    },
+    ob => ob.Configure(options => options.ConnectionName = "kurrentdb"));
+```
+
+- A tenant's options start from a copy of the provider's options, then the callback runs. Grains without a tenant use the provider's own storage.
+- When the callback changes `ConnectionName`, the serializer and type mapper are resolved again for that connection, so register a keyed `KurrentDBClient`, serializer and type mapper for every connection name. Tenants that share a connection share one client.
+- A tenant's storage is created and validated on first use. If that fails, the caller gets the exception, the next call retries, and the failure is logged as an error. Logging is throttled to once a minute only after a tenant has been failing for 5 minutes.
+- Orleans.Multitenant's `AddMultitenantGrainStorage` cannot be used with this provider.
 
 ## Grain storage
 

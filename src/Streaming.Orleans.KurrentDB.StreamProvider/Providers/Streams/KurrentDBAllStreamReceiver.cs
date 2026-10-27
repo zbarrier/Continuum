@@ -32,7 +32,6 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 /// </remarks>
 public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
 {
-    private const int ReconnectDelayMilliseconds = 1000;
 
     private readonly KurrentDBReceiverSettings _settings;
     private readonly KurrentDBAllStreamReceiverOptions _receiverOptions;
@@ -50,6 +49,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     // Positions handed to Orleans and not yet reported as delivered. The cache reports only the newest purged
     // position, so these let the checkpoint monitor count every purged event toward its event limit.
     private readonly ConcurrentQueue<ulong> _pendingPositions = new();
+    private readonly object _pendingPositionsLock = new();
 
     // NOTE: this client is a keyed singleton owned by the container and shared by every queue of this connection.
     // It must never be disposed by this receiver.
@@ -64,18 +64,12 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     /// </summary>
     /// <param name="client">The shared KurrentDB client for this connection.</param>
     /// <param name="settings">The per-queue receiver settings.</param>
-    /// <param name="position">
-    ///     The Orleans queue checkpointer position. Unused by this strategy, see the remarks.
-    /// </param>
     /// <param name="logger">The logger.</param>
     /// <remarks>
-    ///     <paramref name="position" /> is deliberately ignored. The Orleans queue checkpointer stores an
-    ///     <c>EventNumber</c>, which is a per-stream revision, not a global log position. Interpreting it as a
-    ///     <see cref="Position" /> would resume <c>$all</c> from near the start of the log and replay almost
-    ///     everything. The read position for this strategy comes from
-    ///     <see cref="KurrentDBAllStreamReceiverOptions.CheckpointStore" /> instead, which holds real commit positions.
+    ///     The read position comes from <see cref="KurrentDBAllStreamReceiverOptions.CheckpointStore" />, which holds
+    ///     <c>$all</c> commit positions.
     /// </remarks>
-    public KurrentDBAllStreamReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings, string position, ILogger logger)
+    public KurrentDBAllStreamReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(client, nameof(client));
         ArgumentNullException.ThrowIfNull(settings, nameof(settings));
@@ -95,9 +89,11 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
         _credentials = settings.Options.Credentials?.ToUserCredentials();
         _logger = logger;
 
-        // The $all subscription is validated to be the only queue of this provider, so the queue name uniquely
-        // identifies the checkpoint stream of this stream provider.
-        _subscriptionName = $"{settings.Options.Name}-{settings.QueueName}";
+        // A $all provider has exactly one queue, so the checkpoint belongs to the provider. The consumer group is the
+        // service id and provider name, which Orleans keeps unique, so several $all providers on the same connection,
+        // and other services sharing the checkpoint store, never share a checkpoint. The connection name comes first
+        // because positions are only meaningful for the database they were read from.
+        _subscriptionName = $"{settings.Options.ConnectionName}-{settings.ConsumerGroup}";
         _checkpointMonitor = new KurrentDBCheckpointMonitor(logger, receiverOptions.CheckpointMonitorOptions, receiverOptions.CheckpointStore, _subscriptionName, KurrentDBStreams.All);
     }
 
@@ -109,10 +105,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
         var timer = Stopwatch.StartNew();
         try
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("KurrentDBAllStreamReceiver for queue {QueueName} is initializing.", _settings.QueueName);
-            }
+            _logger.ReceiverInitializing(_settings.QueueName);
             var startPosition = await GetStartPositionAsync().ConfigureAwait(false);
             _cancellation = new CancellationTokenSource();
             _pump = Task.Run(() => PumpAsync(startPosition, _cancellation.Token));
@@ -120,13 +113,13 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 timer.Stop();
-                _logger.LogDebug("InitAsync: QueueName={QueueName}, initialized in {ElapsedMilliseconds} ms", _settings.QueueName, timer.Elapsed.TotalMilliseconds.ToString("0.00"));
+                _logger.ReceiverInitialized(_settings.QueueName, timer.Elapsed.TotalMilliseconds);
             }
         }
         catch (Exception ex)
         {
             timer.Stop();
-            _logger.LogError(ex, "InitAsync: QueueName={QueueName}, errored in {ElapsedMilliseconds} ms.", _settings.QueueName, timer.Elapsed.TotalMilliseconds.ToString("0.00"));
+            _logger.ReceiverInitializationFailed(ex, _settings.QueueName, timer.Elapsed.TotalMilliseconds);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to init KurrentDB all-stream subscription, {ex.GetType()}: {ex.Message}"));
         }
     }
@@ -155,7 +148,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "CloseAsync: QueueName={QueueName}", _settings.QueueName);
+            _logger.ReceiverCloseFailed(ex, _settings.QueueName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to close KurrentDB all-stream subscription, {ex.GetType()}: {ex.Message}"));
         }
         finally
@@ -166,6 +159,9 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
             _cancellation = null;
             _pump = null;
             _pendingPositions.Clear();
+            // Buffered events were never handed to Orleans, so the next subscription rereads them from the checkpoint.
+            _queue.Clear();
+            _hashSet.Clear();
             _initialized = false;
         }
     }
@@ -181,10 +177,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     /// </remarks>
     public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
     {
-        if (_logger.IsEnabled(LogLevel.Trace))
-        {
-            _logger.LogTrace("Receiving events from internal queue: {QueueName}", _settings.QueueName);
-        }
+        _logger.ReceivingEvents(_settings.QueueName);
         if (_initialized == false)
         {
             return new List<StreamedEvent<KurrentDBRawEvent>>();
@@ -206,7 +199,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to receive events from internal queue for queue {QueueName}.", _settings.QueueName);
+            _logger.ReceiveEventsFailed(ex, _settings.QueueName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to receive events from internal queue for queue {_settings.QueueName}. {ex.GetType()}: {ex.Message}"));
         }
     }
@@ -220,11 +213,16 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
         }
         // This is the only safe point to advance the checkpoint. The monitor throttles the actual write and ignores
         // positions that do not move forward. $all positions are monotonic, so every pending position up to this one
-        // has been purged too.
+        // has been purged too. The peek and dequeue run under a lock so overlapping calls cannot dequeue each other's
+        // entries.
         var eventCount = 0;
-        while (_pendingPositions.TryPeek(out var pending) && pending <= commitPosition && _pendingPositions.TryDequeue(out _))
+        lock (_pendingPositionsLock)
         {
-            eventCount++;
+            while (_pendingPositions.TryPeek(out var pending) && pending <= commitPosition)
+            {
+                _pendingPositions.TryDequeue(out _);
+                eventCount++;
+            }
         }
         await _checkpointMonitor.TryCheckpointAsync(commitPosition, eventCount).ConfigureAwait(false);
     }
@@ -233,20 +231,19 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
 
     private async Task<FromAll> GetStartPositionAsync()
     {
-        // Only the checkpoint store holds genuine $all commit positions; see the constructor remarks for why the
-        // Orleans queue checkpointer position is not usable here.
+        // Only the checkpoint store holds $all commit positions.
         var lastCheckpoint = await _checkpointMonitor.GetLastCheckpointAsync().ConfigureAwait(false);
         if (lastCheckpoint.HasValue)
         {
-            _logger.LogInformation("Resuming KurrentDB $all subscription {SubscriptionName} after checkpointed position {Position}.", _subscriptionName, lastCheckpoint.Value);
+            _logger.ResumingSubscription(_subscriptionName, lastCheckpoint.Value);
             return FromAll.After(new Position(lastCheckpoint.Value, lastCheckpoint.Value));
         }
         if (_receiverOptions.StartFromNow)
         {
-            _logger.LogInformation("Starting to read latest messages from KurrentDB $all for queue {ConnectionName}-{QueueName}.", _settings.Options.Name, _settings.QueueName);
+            _logger.StartingFromLatest(_settings.Options.Name, _settings.QueueName);
             return FromAll.End;
         }
-        _logger.LogInformation("Starting to read messages from beginning of KurrentDB $all for queue {ConnectionName}-{QueueName}.", _settings.Options.Name, _settings.QueueName);
+        _logger.StartingFromBeginning(_settings.Options.Name, _settings.QueueName);
         return FromAll.Start;
     }
 
@@ -264,6 +261,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     private async Task PumpAsync(FromAll startPosition, CancellationToken cancellationToken)
     {
         var filterOptions = GetFilterOptions();
+        var reconnectAttempt = 0;
         while (cancellationToken.IsCancellationRequested == false)
         {
             try
@@ -281,13 +279,13 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
                             if (allStreamPosition is null)
                             {
                                 // A $all subscription always reports a position. Skipping is safer than guessing one.
-                                _logger.LogWarning("KurrentDB $all subscription {SubscriptionName} received event {EventId} without an original position. Skipping it.", _subscriptionName, resolvedEvent.Event.EventId);
+                                _logger.EventWithoutPosition(_subscriptionName, resolvedEvent.Event.EventId);
                                 break;
                             }
                             // Check duplication
                             if (_hashSet.TryAdd(resolvedEvent.Event.EventId, true))
                             {
-                                _queue.Enqueue(KurrentDBStreamedEventFactory.FromAllStream(resolvedEvent, _settings.StreamNameParser));
+                                _queue.Enqueue(KurrentDBStreamedEventFactory.FromAllStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser));
                             }
                             // Resuming a dropped subscription must continue from the last event seen by the pump,
                             // otherwise the buffered but undelivered events would be received twice.
@@ -295,15 +293,16 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
                             break;
 
                         case StreamMessage.SubscriptionConfirmation:
-                            _logger.LogInformation("KurrentDB $all subscription {SubscriptionName} confirmed.", _subscriptionName);
+                            reconnectAttempt = 0;
+                            _logger.SubscriptionConfirmed(_subscriptionName);
                             break;
 
                         case StreamMessage.CaughtUp:
-                            _logger.LogInformation("KurrentDB $all subscription {SubscriptionName} has caught up to the head of the stream.", _subscriptionName);
+                            _logger.SubscriptionCaughtUp(_subscriptionName);
                             break;
 
                         case StreamMessage.FellBehind:
-                            _logger.LogWarning("KurrentDB $all subscription {SubscriptionName} has fallen behind.", _subscriptionName);
+                            _logger.SubscriptionFellBehind(_subscriptionName);
                             break;
                     }
                 }
@@ -314,7 +313,12 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "KurrentDB $all subscription {SubscriptionName} was dropped. Resubscribing.", _subscriptionName);
+                reconnectAttempt++;
+                var level = KurrentDBReconnectPolicy.GetLogLevel(reconnectAttempt);
+                if (level is { } logLevel)
+                {
+                    _logger.SubscriptionDropped(logLevel, ex, _subscriptionName, reconnectAttempt);
+                }
             }
             if (cancellationToken.IsCancellationRequested)
             {
@@ -322,7 +326,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
             }
             try
             {
-                await Task.Delay(ReconnectDelayMilliseconds, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(KurrentDBReconnectPolicy.GetDelay(Math.Max(reconnectAttempt, 1), Random.Shared.NextDouble()), cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -332,4 +336,49 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     }
 
     #endregion
+}
+
+internal static partial class KurrentDBAllStreamReceiverLog
+{
+    [LoggerMessage(Level = LogLevel.Debug, Message = "KurrentDBAllStreamReceiver for queue {QueueName} is initializing.")]
+    public static partial void ReceiverInitializing(this ILogger logger, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "InitAsync: QueueName={QueueName}, initialized in {ElapsedMilliseconds} ms")]
+    public static partial void ReceiverInitialized(this ILogger logger, string queueName, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "InitAsync: QueueName={QueueName}, errored in {ElapsedMilliseconds} ms.")]
+    public static partial void ReceiverInitializationFailed(this ILogger logger, Exception exception, string queueName, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "CloseAsync: QueueName={QueueName}")]
+    public static partial void ReceiverCloseFailed(this ILogger logger, Exception exception, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Receiving events from internal queue: {QueueName}")]
+    public static partial void ReceivingEvents(this ILogger logger, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to receive events from internal queue for queue {QueueName}.")]
+    public static partial void ReceiveEventsFailed(this ILogger logger, Exception exception, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Resuming KurrentDB $all subscription {SubscriptionName} after checkpointed position {Position}.")]
+    public static partial void ResumingSubscription(this ILogger logger, string subscriptionName, ulong position);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting to read latest messages from KurrentDB $all for queue {ConnectionName}-{QueueName}.")]
+    public static partial void StartingFromLatest(this ILogger logger, string connectionName, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting to read messages from beginning of KurrentDB $all for queue {ConnectionName}-{QueueName}.")]
+    public static partial void StartingFromBeginning(this ILogger logger, string connectionName, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "KurrentDB $all subscription {SubscriptionName} received event {EventId} without an original position. Skipping it.")]
+    public static partial void EventWithoutPosition(this ILogger logger, string subscriptionName, Uuid eventId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "KurrentDB $all subscription {SubscriptionName} confirmed.")]
+    public static partial void SubscriptionConfirmed(this ILogger logger, string subscriptionName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "KurrentDB $all subscription {SubscriptionName} has caught up to the head of the stream.")]
+    public static partial void SubscriptionCaughtUp(this ILogger logger, string subscriptionName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "KurrentDB $all subscription {SubscriptionName} has fallen behind.")]
+    public static partial void SubscriptionFellBehind(this ILogger logger, string subscriptionName);
+
+    [LoggerMessage(Message = "KurrentDB $all subscription {SubscriptionName} was dropped. Reconnect attempt {Attempt}.")]
+    public static partial void SubscriptionDropped(this ILogger logger, LogLevel level, Exception exception, string subscriptionName, int attempt);
 }

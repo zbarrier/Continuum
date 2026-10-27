@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
@@ -11,5 +10,5 @@ public interface IKurrentDBQueueCacheFactory
     /// <summary>
     ///     Function used to create a IKurrentDBQueueCache
     /// </summary>
-    IKurrentDBQueueCache CreateCache(string queue, IStreamQueueCheckpointer<string> checkpointer, ILoggerFactory loggerFactory);
+    IKurrentDBQueueCache CreateCache(string queue, ILoggerFactory loggerFactory);
 }

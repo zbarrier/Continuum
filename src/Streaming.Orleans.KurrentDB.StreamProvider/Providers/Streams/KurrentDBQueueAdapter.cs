@@ -23,15 +23,13 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     private readonly KurrentDBOptions _options;
     private readonly KurrentDBReceiverOptionsBase _receiverOptions;
     private readonly HashRingBasedPartitionedStreamQueueMapper _streamQueueMapper;
-    private readonly Func<string, IStreamQueueCheckpointer<string>, ILoggerFactory, IKurrentDBQueueCache> _cacheFactory;
+    private readonly Func<string, ILoggerFactory, IKurrentDBQueueCache> _cacheFactory;
     private readonly Func<KurrentDBReceiverMonitorDimensions, ILoggerFactory, IQueueAdapterReceiverMonitor> _receiverMonitorFactory;
     private readonly IKurrentDBDataAdapter _dataAdapter;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IEnvironmentStatisticsProvider? _environmentStatisticsProvider;
-    private readonly Func<KurrentDBReceiverSettings, string, ILogger, IKurrentDBReceiver> _receiverFactory;
-
-    private IStreamQueueCheckpointerFactory? _checkpointerFactory;
+    private readonly Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> _receiverFactory;
 
     private readonly ConcurrentDictionary<QueueId, KurrentDBProducer> _producers = new();
     private readonly ConcurrentDictionary<QueueId, KurrentDBQueueAdapterReceiver> _receivers = new();
@@ -50,7 +48,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="loggerFactory">The logger factory.</param>
     /// <param name="environmentStatisticsProvider">The environment statistics provider.</param>
-    public KurrentDBQueueAdapter(string name, KurrentDBOptions options, KurrentDBReceiverOptionsBase receiverOptions, HashRingBasedPartitionedStreamQueueMapper streamQueueMapper, Func<string, IStreamQueueCheckpointer<string>, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, Func<KurrentDBReceiverMonitorDimensions, ILoggerFactory, IQueueAdapterReceiverMonitor> receiverMonitorFactory, Func<KurrentDBReceiverSettings, string, ILogger, IKurrentDBReceiver> receiverFactory, IKurrentDBDataAdapter dataAdapter, IServiceProvider serviceProvider, ILoggerFactory loggerFactory, IEnvironmentStatisticsProvider? environmentStatisticsProvider)
+    public KurrentDBQueueAdapter(string name, KurrentDBOptions options, KurrentDBReceiverOptionsBase receiverOptions, HashRingBasedPartitionedStreamQueueMapper streamQueueMapper, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, Func<KurrentDBReceiverMonitorDimensions, ILoggerFactory, IQueueAdapterReceiverMonitor> receiverMonitorFactory, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> receiverFactory, IKurrentDBDataAdapter dataAdapter, IServiceProvider serviceProvider, ILoggerFactory loggerFactory, IEnvironmentStatisticsProvider? environmentStatisticsProvider)
     {
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
@@ -164,12 +162,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
                                             QueueName = receiverSettings.QueueName,
                                             Name = receiverSettings.Options.Name
                                         };
-        // Should only need checkpointer on silo side, so move its init logic when it is used.
-        if (_checkpointerFactory == null)
-        {
-            _checkpointerFactory = _serviceProvider.GetRequiredKeyedService<IStreamQueueCheckpointerFactory>(Name);
-        }
-        return new KurrentDBQueueAdapterReceiver(receiverSettings, _cacheFactory, queue => _checkpointerFactory.Create(queue, CancellationToken.None), _loggerFactory, _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory), _serviceProvider.GetRequiredService<IOptions<LoadSheddingOptions>>().Value, _environmentStatisticsProvider, _receiverFactory);
+        return new KurrentDBQueueAdapterReceiver(receiverSettings, _cacheFactory, _loggerFactory, _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory), _serviceProvider.GetRequiredService<IOptions<LoadSheddingOptions>>().Value, _environmentStatisticsProvider, _receiverFactory);
     }
 
     #endregion

@@ -40,6 +40,8 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
     // It must never be disposed by this receiver.
     private readonly KurrentDBPersistentSubscriptionsClient _subscriptionClient;
     private PersistentSubscription? _subscription;
+    private CancellationTokenSource? _cancellation;
+    private readonly SemaphoreSlim _resubscribeLock = new(1, 1);
     private bool _initialized;
 
     /// <summary>
@@ -47,9 +49,13 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
     /// </summary>
     /// <param name="subscriptionClient">The shared persistent subscriptions client for this connection.</param>
     /// <param name="settings">The per-queue receiver settings.</param>
-    /// <param name="position">The last checkpointed position, if any.</param>
     /// <param name="logger">The logger.</param>
-    public KurrentDBPersistentSubscriptionReceiver(KurrentDBPersistentSubscriptionsClient subscriptionClient, KurrentDBReceiverSettings settings, string position, ILogger logger)
+    /// <remarks>
+    ///     The read position is kept by the KurrentDB server for the consumer group. The configured start position is
+    ///     only used when the consumer group is created, or when it is updated with
+    ///     <see cref="KurrentDBPersistentSubscriptionReceiverOptions.UpdateExistingSubscription" />.
+    /// </remarks>
+    public KurrentDBPersistentSubscriptionReceiver(KurrentDBPersistentSubscriptionsClient subscriptionClient, KurrentDBReceiverSettings settings, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(subscriptionClient, nameof(subscriptionClient));
         ArgumentNullException.ThrowIfNull(settings, nameof(settings));
@@ -76,24 +82,13 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
         _logger = logger;
         StreamPosition GetEventPosition()
         {
-            // If we have a position, read from position
-            if (position.TryToStreamPosition(out var streamPosition))
+            if (receiverOptions.StartFromNow)
             {
-                logger.LogInformation("Starting to read from KurrentDB queue {0}-{1} at position {2}", settings.Options.Name, settings.QueueName, position);
+                logger.PersistentStartingFromLatest(settings.Options.Name, settings.QueueName);
+                return StreamPosition.End;
             }
-            // else, if configured to start from now, start reading from most recent 
-            else if (receiverOptions.StartFromNow)
-            {
-                logger.LogInformation("Starting to read latest messages from KurrentDB queue {0}-{1}.", settings.Options.Name, settings.QueueName);
-                streamPosition = StreamPosition.End;
-            }
-            // else, start reading from begining of the queue
-            else
-            {
-                logger.LogInformation("Starting to read messages from begining of KurrentDB queue {0}-{1}.", settings.Options.Name, settings.QueueName);
-                streamPosition = StreamPosition.Start;
-            }
-            return streamPosition;
+            logger.PersistentStartingFromBeginning(settings.Options.Name, settings.QueueName);
+            return StreamPosition.Start;
         }
     }
 
@@ -105,10 +100,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
         var timer = Stopwatch.StartNew();
         try
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("KurrentDBPersistentSubscriptionReceiver for stream {QueueName} is initializing.", _settings.QueueName);
-            }
+            _logger.PersistentReceiverInitializing(_settings.QueueName);
             // The subscriptions client is injected and shared; the consumer group is created if it does not exist.
             try
             {
@@ -120,26 +112,31 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
                 // server side checkpoint and replay/skip events, so it is only done when explicitly requested.
                 if (_receiverOptions.UpdateExistingSubscription)
                 {
-                    _logger.LogInformation("Updating existing persistent subscription {ConsumerGroup} on KurrentDB stream {QueueName}. This resets its start position.", _settings.ConsumerGroup, _settings.QueueName);
+                    _logger.UpdatingSubscription(_settings.ConsumerGroup, _settings.QueueName);
                     await _subscriptionClient.UpdateToStreamAsync(_settings.QueueName, _settings.ConsumerGroup, _subscriptionSettings, null, _credentials).ConfigureAwait(false);
                 }
-                else if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug("Persistent subscription {ConsumerGroup} already exists on KurrentDB stream {QueueName}; resuming from its existing position.", _settings.ConsumerGroup, _settings.QueueName);
-                }
+                else _logger.SubscriptionExists(_settings.ConsumerGroup, _settings.QueueName);
             }
-            _subscription = await _subscriptionClient.SubscribeToStreamAsync(_settings.QueueName, _settings.ConsumerGroup, OnEventAppeared, OnSubscriptionDropped, _credentials, _receiverOptions.PrefetchCount).ConfigureAwait(false);
+            _cancellation = new CancellationTokenSource();
+            var cancellationToken = _cancellation.Token;
+            var subscription = await _subscriptionClient.SubscribeToStreamAsync(_settings.QueueName, _settings.ConsumerGroup, OnEventAppeared, OnSubscriptionDropped, _credentials, _receiverOptions.PrefetchCount, cancellationToken).ConfigureAwait(false);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                subscription.Dispose();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            _subscription = subscription;
             _initialized = true;
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 timer.Stop();
-                _logger.LogDebug("InitAsync: QueueName={QueueName}, initialized in {ElapsedMilliseconds} ms", _settings.QueueName, timer.Elapsed.TotalMilliseconds.ToString("0.00"));
+                _logger.PersistentReceiverInitialized(_settings.QueueName, timer.Elapsed.TotalMilliseconds);
             }
         }
         catch (Exception ex)
         {
             timer.Stop();
-            _logger.LogError(ex, "InitAsync: QueueName={QueueName}, errored in {ElapsedMilliseconds} ms.", _settings.QueueName, timer.Elapsed.TotalMilliseconds.ToString("0.00"));
+            _logger.PersistentReceiverInitializationFailed(ex, _settings.QueueName, timer.Elapsed.TotalMilliseconds);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to init KurrentDB persistent subscriptions client, {ex.GetType()}: {ex.Message}"));
         }
     }
@@ -157,16 +154,28 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
         {
             // NOTE: only the subscription is disposed. The subscriptions client is a container owned keyed singleton
             // shared by every queue of this connection; disposing it here would break the other receivers.
-            _subscription?.Dispose();
-            await Task.CompletedTask.ConfigureAwait(false);
+            // Cancelling first stops any reconnect in progress from installing a new subscription.
+            // Taking the reconnect lock waits for a cancelled reconnect to exit, so no subscription it creates leaks.
+            _cancellation?.Cancel();
+            await _resubscribeLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                _subscription?.Dispose();
+            }
+            finally
+            {
+                _resubscribeLock.Release();
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "CloseAsync: QueueName={QueueName}", _settings.QueueName);
+            _logger.PersistentReceiverCloseFailed(ex, _settings.QueueName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to close KurrentDB persistent subscription, {ex.GetType()}: {ex.Message}"));
         }
         finally
         {
+            _cancellation?.Dispose();
+            _cancellation = null;
             _subscription = null;
             _initialized = false;
         }
@@ -179,10 +188,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
     /// <returns></returns>
     public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
     {
-        if (_logger.IsEnabled(LogLevel.Trace))
-        {
-            _logger.LogTrace("Receiving events from internal queue: {QueueName}", _settings.QueueName);
-        }
+        _logger.PersistentReceivingEvents(_settings.QueueName);
         if (_initialized == false || _subscription == null)
         {
             return new List<StreamedEvent<KurrentDBRawEvent>>();
@@ -210,7 +216,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to receive events from internal queue for stream {QueueName}.", _settings.QueueName);
+            _logger.PersistentReceiveEventsFailed(ex, _settings.QueueName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to receive events from internal queue for stream {_settings.QueueName}. {ex.GetType()}: {ex.Message}"));
         }
     }
@@ -229,21 +235,18 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
 
     private Task OnEventAppeared(PersistentSubscription subscription, ResolvedEvent resolvedEvent, int? retryCount, CancellationToken cancellationToken)
     {
-        if (_logger.IsEnabled(LogLevel.Trace))
-        {
-            _logger.LogTrace("EventAppeared from subscription: {Subscription} for stream: {QueueName}", subscription.SubscriptionId, _settings.QueueName);
-        }
+        _logger.EventAppeared(subscription.SubscriptionId, _settings.QueueName);
         try
         {
             // Check duplication
             if (_hashSet.TryAdd(resolvedEvent.Event.EventId, true))
             {
-                _queue.Enqueue(KurrentDBStreamedEventFactory.FromPersistentSubscription(resolvedEvent, _settings.StreamNameParser));
+                _queue.Enqueue(KurrentDBStreamedEventFactory.FromPersistentSubscription(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser));
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to handle event from subscription for stream {QueueName}.", _settings.QueueName);
+            _logger.HandleEventFailed(ex, _settings.QueueName);
         }
         return Task.CompletedTask;
     }
@@ -255,50 +258,165 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
             switch (reason)
             {
                 case SubscriptionDroppedReason.ServerError:
-                    _logger.LogWarning("SubscriptionDropped from subscription: {Subscription} for stream: {QueueName} with server error: {Error}", subscription.SubscriptionId, _settings.QueueName, exception?.Message);
-                    await ResubscribeAsync(1000);
+                    _logger.SubscriptionDroppedServerError(exception, subscription.SubscriptionId, _settings.QueueName);
+                    await ResubscribeAsync(subscription).ConfigureAwait(false);
                     break;
                 case SubscriptionDroppedReason.SubscriberError:
-                    _logger.LogWarning("SubscriptionDropped from subscription: {Subscription} for stream: {QueueName} with client error: {Error}", subscription.SubscriptionId, _settings.QueueName, exception?.Message);
-                    await ResubscribeAsync(10);
+                    _logger.SubscriptionDroppedClientError(exception, subscription.SubscriptionId, _settings.QueueName);
+                    await ResubscribeAsync(subscription).ConfigureAwait(false);
                     break;
                 case SubscriptionDroppedReason.Disposed:
-                    _logger.LogInformation("SubscriptionDropped from subscription: {Subscription} for stream: {QueueName} successfully", subscription.SubscriptionId, _settings.QueueName);
+                    _logger.SubscriptionDisposed(subscription.SubscriptionId, _settings.QueueName);
                     break;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to handle subscription dropped for stream {QueueName}.", _settings.QueueName);
+            _logger.HandleSubscriptionDroppedFailed(ex, _settings.QueueName);
         }
     }
 
-    private async Task ResubscribeAsync(int retryCount)
+    /// <summary>
+    ///     Replaces a dropped subscription, retrying with a capped exponential backoff until it succeeds or the
+    ///     receiver is closed.
+    /// </summary>
+    private async Task ResubscribeAsync(PersistentSubscription dropped)
     {
-        if (_initialized == false || _subscriptionClient == null)
+        CancellationToken cancellationToken;
+        try
+        {
+            var cancellation = _cancellation;
+            if (_initialized == false || cancellation == null)
+            {
+                return;
+            }
+            cancellationToken = cancellation.Token;
+        }
+        catch (ObjectDisposedException)
         {
             return;
         }
-        for (var i = 0; i < retryCount; i++)
+
+        // Drops are queued rather than discarded, so a drop of a freshly installed subscription is never lost.
+        try
         {
-            try
+            await _resubscribeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        try
+        {
+            // The dropped subscription no longer delivers or acknowledges, so it is released.
+            dropped.Dispose();
+
+            // Only the current subscription is replaced; a stale drop must not tear down its replacement.
+            if (cancellationToken.IsCancellationRequested || ReferenceEquals(_subscription, dropped) == false)
             {
-                _subscription = await _subscriptionClient.SubscribeToStreamAsync(_settings.QueueName, _settings.ConsumerGroup, OnEventAppeared, OnSubscriptionDropped, _credentials, _receiverOptions.PrefetchCount).ConfigureAwait(false);
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug("Successfully reconnected to the stream {QueueName}.", _settings.QueueName);
-                }
                 return;
             }
-            catch (Exception ex)
+            _subscription = null;
+
+            for (var attempt = 1; ; attempt++)
             {
-                _logger.LogError(ex, "Failed to reconnect to the stream {QueueName}. Retrying... Attempt: {Attempt}", _settings.QueueName, i + 1);
-                await Task.Delay(TimeSpan.FromSeconds(i));
+                try
+                {
+                    var subscription = await _subscriptionClient.SubscribeToStreamAsync(_settings.QueueName, _settings.ConsumerGroup, OnEventAppeared, OnSubscriptionDropped, _credentials, _receiverOptions.PrefetchCount, cancellationToken).ConfigureAwait(false);
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        subscription.Dispose();
+                        return;
+                    }
+                    _subscription = subscription;
+                    _logger.Reconnected(_settings.QueueName, attempt);
+                    return;
+                }
+                catch (Exception) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    var delay = KurrentDBReconnectPolicy.GetDelay(attempt, Random.Shared.NextDouble());
+                    if (KurrentDBReconnectPolicy.GetLogLevel(attempt) is { } logLevel)
+                    {
+                        _logger.ReconnectFailed(logLevel, ex, _settings.QueueName, attempt, delay);
+                    }
+                    try
+                    {
+                        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                }
             }
         }
-        _logger.LogError("Failed to reconnect to the stream {QueueName} after {Retries} attempts. Aborting...", _settings.QueueName, retryCount);
+        finally
+        {
+            _resubscribeLock.Release();
+        }
     }
 
     #endregion
 
+}
+
+internal static partial class KurrentDBPersistentSubscriptionReceiverLog
+{
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting to read latest messages from KurrentDB queue {ConnectionName}-{QueueName}.")]
+    public static partial void PersistentStartingFromLatest(this ILogger logger, string connectionName, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting to read messages from beginning of KurrentDB queue {ConnectionName}-{QueueName}.")]
+    public static partial void PersistentStartingFromBeginning(this ILogger logger, string connectionName, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "KurrentDBPersistentSubscriptionReceiver for stream {QueueName} is initializing.")]
+    public static partial void PersistentReceiverInitializing(this ILogger logger, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Updating existing persistent subscription {ConsumerGroup} on KurrentDB stream {QueueName}. This resets its start position.")]
+    public static partial void UpdatingSubscription(this ILogger logger, string consumerGroup, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Persistent subscription {ConsumerGroup} already exists on KurrentDB stream {QueueName}; resuming from its existing position.")]
+    public static partial void SubscriptionExists(this ILogger logger, string consumerGroup, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "InitAsync: QueueName={QueueName}, initialized in {ElapsedMilliseconds} ms")]
+    public static partial void PersistentReceiverInitialized(this ILogger logger, string queueName, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "InitAsync: QueueName={QueueName}, errored in {ElapsedMilliseconds} ms.")]
+    public static partial void PersistentReceiverInitializationFailed(this ILogger logger, Exception exception, string queueName, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "CloseAsync: QueueName={QueueName}")]
+    public static partial void PersistentReceiverCloseFailed(this ILogger logger, Exception exception, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Receiving events from internal queue: {QueueName}")]
+    public static partial void PersistentReceivingEvents(this ILogger logger, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to receive events from internal queue for stream {QueueName}.")]
+    public static partial void PersistentReceiveEventsFailed(this ILogger logger, Exception exception, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "EventAppeared from subscription: {Subscription} for stream: {QueueName}")]
+    public static partial void EventAppeared(this ILogger logger, string? subscription, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to handle event from subscription for stream {QueueName}.")]
+    public static partial void HandleEventFailed(this ILogger logger, Exception exception, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "SubscriptionDropped from subscription: {Subscription} for stream: {QueueName} with a server error.")]
+    public static partial void SubscriptionDroppedServerError(this ILogger logger, Exception? exception, string? subscription, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "SubscriptionDropped from subscription: {Subscription} for stream: {QueueName} with a client error.")]
+    public static partial void SubscriptionDroppedClientError(this ILogger logger, Exception? exception, string? subscription, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "SubscriptionDropped from subscription: {Subscription} for stream: {QueueName} successfully")]
+    public static partial void SubscriptionDisposed(this ILogger logger, string? subscription, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to handle subscription dropped for stream {QueueName}.")]
+    public static partial void HandleSubscriptionDroppedFailed(this ILogger logger, Exception exception, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Reconnected to the stream {QueueName} after {Attempts} attempt(s).")]
+    public static partial void Reconnected(this ILogger logger, string queueName, int attempts);
+
+    [LoggerMessage(Message = "Failed to reconnect to the stream {QueueName} on attempt {Attempt}. Retrying in {Delay}.")]
+    public static partial void ReconnectFailed(this ILogger logger, LogLevel level, Exception exception, string queueName, int attempt, TimeSpan delay);
 }

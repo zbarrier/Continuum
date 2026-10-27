@@ -14,6 +14,11 @@ dotnet add package Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions
 
 Derive from `KurrentDBCatchupSubscription<TSubscription, TOptions>`, supply the stream to read (`KurrentDBStreams.All` for `$all`) and an optional filter, and handle each batch in `OnNextBatchAsync`. Register it as a hosted service with `AddKurrentDBCatchupSubscription`, and register a checkpoint store such as `AddKurrentDBCheckpointStore`.
 
+## Event size
+
+- **Events must not exceed 1 MB**, data and metadata combined. This is KurrentDB's default maximum append size.
+- **Keep metadata under 16 KB.** Metadata is carried with every event, so use it for small values such as correlation and causation ids, tenant and user details and tracing headers, and keep the payload in the event data.
+
 ## Monitor
 
 Add a worker-wide health check with `builder.Services.AddHealthChecks().AddKurrentDBCatchupSubscriptions()`. It reports Unhealthy when any subscription has stopped on a batch it could not process (it stays stopped until the worker is fixed and restarted), Degraded while any subscription is reconnecting or retrying a batch, and Healthy otherwise.

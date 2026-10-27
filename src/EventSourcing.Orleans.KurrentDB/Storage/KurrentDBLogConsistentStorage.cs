@@ -86,6 +86,11 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         lifecycle.Subscribe(name, _storageOptions.InitStage, Init, Close);
     }
 
+    /// <summary>
+    ///     Initializes a storage created after silo startup, such as one for a tenant.
+    /// </summary>
+    internal Task InitializeAsync(CancellationToken cancellationToken) => Init(cancellationToken);
+
     private Task Init(CancellationToken cancellationToken)
     {
         var startTimestamp = Stopwatch.GetTimestamp();
@@ -94,14 +99,11 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
             // The client is resolved from the container in the constructor, so there is nothing to connect or
             // create here. This is where startup work such as a connectivity check would go.
             _initialized = true;
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Init: Name={Name} ServiceId={ServiceId}, initialized in {ElapsedMilliseconds} ms", _name, _serviceId, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
-            }
+            _logger.StorageInitialized(_name, _serviceId, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms", _name, _serviceId, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
+            _logger.StorageInitializationFailed(ex, _name, _serviceId, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
             throw new KurrentDBStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
         }
         return Task.CompletedTask;
@@ -121,7 +123,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Close: Name={Name} ServiceId={ServiceId}", _name, _serviceId);
+            _logger.StorageCloseFailed(ex, _name, _serviceId);
             throw new KurrentDBStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -158,7 +160,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         catch (Exception ex)
         {
             operation.Fail(ex);
-            _logger.LogError(ex, "Failed to read log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}", grainTypeName, grainId, streamName);
+            _logger.ReadLogEntriesFailed(ex, grainTypeName, grainId, streamName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to read log entries for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -187,7 +189,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         catch (Exception ex)
         {
             operation.Fail(ex);
-            _logger.LogError(ex, "Failed to read last log entry for {GrainType} grain with ID {GrainId} and stream {StreamName}", grainTypeName, grainId, streamName);
+            _logger.ReadLastLogEntryFailed(ex, grainTypeName, grainId, streamName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to read last log entry for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -242,7 +244,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
         catch (Exception ex) when (ex is not InconsistentStateException)
         {
             operation.Fail(ex);
-            _logger.LogError(ex, "Failed to write log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}", grainTypeName, grainId, streamName);
+            _logger.WriteLogEntriesFailed(ex, grainTypeName, grainId, streamName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to write log entries for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -290,4 +292,25 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
     }
 
     #endregion
+}
+
+internal static partial class KurrentDBLogConsistentStorageLog
+{
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Init: Name={Name} ServiceId={ServiceId}, initialized in {ElapsedMilliseconds} ms")]
+    public static partial void StorageInitialized(this ILogger logger, string name, string serviceId, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms")]
+    public static partial void StorageInitializationFailed(this ILogger logger, Exception exception, string name, string serviceId, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Close: Name={Name} ServiceId={ServiceId}")]
+    public static partial void StorageCloseFailed(this ILogger logger, Exception exception, string name, string serviceId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
+    public static partial void ReadLogEntriesFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read last log entry for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
+    public static partial void ReadLastLogEntryFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to write log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
+    public static partial void WriteLogEntriesFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName);
 }

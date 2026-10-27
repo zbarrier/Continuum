@@ -13,6 +13,8 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
 {
     private readonly KurrentDBStreamCachePressureOptions _pressureOptions;
+    private readonly KurrentDBStreamCacheBufferPoolOptions _bufferPoolOptions;
+    private readonly TimeProvider _timeProvider;
     private readonly StreamCacheEvictionOptions _evictionOptions;
     private readonly StreamStatisticOptions _statisticOptions;
     private readonly IKurrentDBDataAdapter _dataAdater;
@@ -27,21 +29,27 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     ///     Initializes a new instance of the <see cref="KurrentDBQueueCacheFactory" /> class.
     /// </summary>
     public KurrentDBQueueCacheFactory(KurrentDBStreamCachePressureOptions pressureOptions,
+                                       KurrentDBStreamCacheBufferPoolOptions bufferPoolOptions,
                                        StreamCacheEvictionOptions evictionOptions,
                                        StreamStatisticOptions statisticOptions,
                                        IKurrentDBDataAdapter dataAdater,
                                        KurrentDBMonitorAggregationDimensions sharedDimensions,
                                        OrleansInstruments instruments,
+                                       TimeProvider timeProvider,
                                        Func<KurrentDBCacheMonitorDimensions, ILoggerFactory, ICacheMonitor>? cacheMonitorFactory = null,
                                        Func<KurrentDBBlockPoolMonitorDimensions, ILoggerFactory, IBlockPoolMonitor>? blockPoolMonitorFactory = null)
     {
         ArgumentNullException.ThrowIfNull(pressureOptions, nameof(pressureOptions));
+        ArgumentNullException.ThrowIfNull(bufferPoolOptions, nameof(bufferPoolOptions));
         ArgumentNullException.ThrowIfNull(evictionOptions, nameof(evictionOptions));
         ArgumentNullException.ThrowIfNull(statisticOptions, nameof(statisticOptions));
         ArgumentNullException.ThrowIfNull(dataAdater, nameof(dataAdater));
         ArgumentNullException.ThrowIfNull(sharedDimensions, nameof(sharedDimensions));
         ArgumentNullException.ThrowIfNull(instruments, nameof(instruments));
+        ArgumentNullException.ThrowIfNull(timeProvider, nameof(timeProvider));
         _pressureOptions = pressureOptions;
+        _bufferPoolOptions = bufferPoolOptions;
+        _timeProvider = timeProvider;
         _evictionOptions = evictionOptions;
         _statisticOptions = statisticOptions;
         _dataAdater = dataAdater;
@@ -69,10 +77,10 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     ///     and AddCachePressureMonitors function.
     /// </summary>
     /// <returns></returns>
-    public IKurrentDBQueueCache CreateCache(string queue, IStreamQueueCheckpointer<string> checkpointer, ILoggerFactory loggerFactory)
+    public IKurrentDBQueueCache CreateCache(string queue, ILoggerFactory loggerFactory)
     {
         var blockPool = CreateBufferPool(_statisticOptions, loggerFactory, _sharedDimensions, out var blockPoolId);
-        var cache = CreateCache(queue, _dataAdater, _statisticOptions, _evictionOptions, checkpointer, loggerFactory, blockPool, blockPoolId, _timePurge, _sharedDimensions);
+        var cache = CreateCache(queue, _dataAdater, _statisticOptions, _evictionOptions, loggerFactory, blockPool, blockPoolId, _timePurge, _sharedDimensions);
         AddCachePressureMonitors(cache, _pressureOptions, loggerFactory.CreateLogger($"{typeof(KurrentDBQueueCache).FullName}.{_sharedDimensions.Name}.{queue}"));
         return cache;
     }
@@ -85,11 +93,13 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     {
         if (_bufferPool == null)
         {
-            var bufferSize = 1 << 20;
-            _bufferPoolId = $"BlockPool-{new Guid().ToString()}-BlockSize-{bufferSize}";
+            // KurrentDB accepts events up to 1 MB of data and metadata. The cache stores strings, including metadata,
+            // as UTF-16, so blocks are 2 MB to leave room for that and the other encoded fields.
+            var bufferSize = 1 << 21;
+            _bufferPoolId = $"BlockPool-{Guid.NewGuid()}-BlockSize-{bufferSize}";
             var monitorDimensions = new KurrentDBBlockPoolMonitorDimensions(sharedDimensions, _bufferPoolId);
             var objectPoolMonitor = new ObjectPoolMonitorBridge(BlockPoolMonitorFactory(monitorDimensions, loggerFactory), bufferSize);
-            _bufferPool = new ObjectPool<FixedSizeBuffer>(() => new FixedSizeBuffer(bufferSize), objectPoolMonitor, statisticOptions.StatisticMonitorWriteInterval);
+            _bufferPool = new KurrentDBQueueCacheBufferPool(() => new FixedSizeBuffer(bufferSize), _bufferPoolOptions, _timeProvider, objectPoolMonitor, statisticOptions.StatisticMonitorWriteInterval);
         }
         blockPoolId = _bufferPoolId!;
         return _bufferPool;
@@ -133,7 +143,6 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
                                                         IKurrentDBDataAdapter dataAdatper,
                                                         StreamStatisticOptions statisticOptions,
                                                         StreamCacheEvictionOptions cacheEvictionOptions,
-                                                        IStreamQueueCheckpointer<string> checkpointer,
                                                         ILoggerFactory loggerFactory,
                                                         IObjectPool<FixedSizeBuffer> bufferPool,
                                                         string blockPoolId,
@@ -145,7 +154,7 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
         var logger = loggerFactory.CreateLogger($"{typeof(KurrentDBQueueCache).FullName}.{sharedDimensions.Name}.{queue}");
         var cursorTracker = new KurrentDBCursorTracker();
         var evictionStrategy = new KurrentDBEvictionStrategy(logger, timePurge, cacheMonitor, statisticOptions.StatisticMonitorWriteInterval, dataAdatper, cursorTracker);
-        return new KurrentDBQueueCache(queue, KurrentDBQueueAdapterReceiver.MaxMessagesPerRead, bufferPool, dataAdatper, evictionStrategy, checkpointer, cursorTracker, logger, cacheMonitor, statisticOptions.StatisticMonitorWriteInterval, cacheEvictionOptions.MetadataMinTimeInCache);
+        return new KurrentDBQueueCache(queue, KurrentDBQueueAdapterReceiver.MaxMessagesPerRead, bufferPool, dataAdatper, evictionStrategy, cursorTracker, logger, cacheMonitor, statisticOptions.StatisticMonitorWriteInterval, cacheEvictionOptions.MetadataMinTimeInCache);
     }
 
 }

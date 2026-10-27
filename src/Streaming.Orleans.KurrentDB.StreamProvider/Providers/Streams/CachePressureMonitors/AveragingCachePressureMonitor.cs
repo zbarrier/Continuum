@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
 
@@ -99,14 +99,25 @@ public class AveragingCachePressureMonitor : ICachePressureMonitor
         if (_isUnderPressure != wasUnderPressure)
         {
             _monitor?.TrackCachePressureMonitorStatusChange(GetType().Name, _isUnderPressure, _cachePressureContributionCount, pressure, _flowControlThreshold);
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (_isUnderPressure)
             {
-                _logger.LogDebug(_isUnderPressure ?
-                                     $"Ingesting messages too fast. Throttling message reading. AccumulatedCachePressure: {_accumulatedCachePressure}, Contributions: {_cachePressureContributionCount}, AverageCachePressure: {pressure}, Threshold: {_flowControlThreshold}" :
-                                     $"Message ingestion is healthy. AccumulatedCachePressure: {_accumulatedCachePressure}, Contributions: {_cachePressureContributionCount}, AverageCachePressure: {pressure}, Threshold: {_flowControlThreshold}");
+                _logger.IngestionThrottled(_accumulatedCachePressure, _cachePressureContributionCount, pressure, _flowControlThreshold);
+            }
+            else
+            {
+                _logger.IngestionHealthy(_accumulatedCachePressure, _cachePressureContributionCount, pressure, _flowControlThreshold);
             }
         }
         _cachePressureContributionCount = 0.0;
         _accumulatedCachePressure = 0.0;
     }
+}
+
+internal static partial class AveragingCachePressureMonitorLog
+{
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Ingesting messages too fast. Throttling message reading. AccumulatedCachePressure: {AccumulatedCachePressure}, Contributions: {Contributions}, AverageCachePressure: {AverageCachePressure}, Threshold: {Threshold}")]
+    public static partial void IngestionThrottled(this ILogger logger, double accumulatedCachePressure, double contributions, double averageCachePressure, double threshold);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Message ingestion is healthy. AccumulatedCachePressure: {AccumulatedCachePressure}, Contributions: {Contributions}, AverageCachePressure: {AverageCachePressure}, Threshold: {Threshold}")]
+    public static partial void IngestionHealthy(this ILogger logger, double accumulatedCachePressure, double contributions, double averageCachePressure, double threshold);
 }

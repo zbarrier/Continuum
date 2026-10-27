@@ -86,10 +86,19 @@ internal sealed class StreamSubscriptionManager<TGrain>
         IEnumerable<StreamSubscriptionSource> sources,
         Func<StreamSubscriptionSource, Task<StreamSequenceToken?>> getResumeTokenAsync)
     {
+        // Subscriptions are independent, so they are established concurrently rather than one round-trip at a time.
+        // Duplicate sources are removed first, because concurrent subscribes would not see each other's handles.
+        var seen = new HashSet<(string, StreamId)>();
+        var tasks = new List<Task>();
         foreach (var source in sources)
         {
-            await SubscribeAsync(source, getResumeTokenAsync);
+            if (seen.Add((source.ProviderName, source.StreamId)))
+            {
+                tasks.Add(SubscribeAsync(source, getResumeTokenAsync));
+            }
         }
+
+        await Task.WhenAll(tasks);
     }
 
     /// <summary>
@@ -171,9 +180,7 @@ internal sealed class StreamSubscriptionManager<TGrain>
     {
         if (IsImplicit(source.StreamId))
         {
-            _logger.LogDebug(
-                "Skipping explicit subscribe for implicitly subscribed stream {StreamId}.",
-                source.StreamId);
+            _logger.SkippingExplicitSubscribe(source.StreamId);
             return Task.CompletedTask;
         }
 
@@ -196,9 +203,7 @@ internal sealed class StreamSubscriptionManager<TGrain>
 
             if (subscription.IsImplicit)
             {
-                _logger.LogWarning(
-                    "Ignoring unsubscribe for implicitly subscribed stream {StreamId}; remove [ImplicitStreamSubscription] to stop consuming it.",
-                    subscription.Handle.StreamId);
+                _logger.IgnoringImplicitUnsubscribe(subscription.Handle.StreamId);
                 continue;
             }
 
@@ -208,11 +213,7 @@ internal sealed class StreamSubscriptionManager<TGrain>
             }
             catch (Exception exception)
             {
-                _logger.LogWarning(
-                    exception,
-                    "Failed to unsubscribe from {Provider}/{StreamId}.",
-                    subscription.Handle.ProviderName,
-                    subscription.Handle.StreamId);
+                _logger.UnsubscribeFailed(exception, subscription.Handle.ProviderName, subscription.Handle.StreamId);
             }
             finally
             {
@@ -247,8 +248,12 @@ internal sealed class StreamSubscriptionManager<TGrain>
 
         // Resume an existing handle when the runtime already has one for this consumer, so that
         // reactivation does not create a duplicate subscription to the same stream.
-        var handles = await stream.GetAllSubscriptionHandles();
-        var resumeToken = await getResumeTokenAsync(source);
+        // Both lookups are independent, so they run concurrently to avoid an extra sequential round-trip.
+        var handlesTask = stream.GetAllSubscriptionHandles();
+        var resumeTokenTask = getResumeTokenAsync(source);
+        await Task.WhenAll(handlesTask, resumeTokenTask);
+        var handles = await handlesTask;
+        var resumeToken = await resumeTokenTask;
 
         var handle = handles.Count > 0
             ? await handles[0].ResumeAsync(_onNextAsync, _onErrorAsync, _onCompletedAsync, resumeToken)
@@ -257,5 +262,34 @@ internal sealed class StreamSubscriptionManager<TGrain>
                 : await stream.SubscribeAsync(_onNextAsync, _onErrorAsync, _onCompletedAsync, resumeToken);
 
         _subscriptions[handle.HandleId] = new Subscription(handle, IsImplicit: false);
+
+        // Extra handles are duplicates left by an earlier activation; left alone they would keep delivering every
+        // event a second time to this grain, so they are ended.
+        for (var i = 1; i < handles.Count; i++)
+        {
+            try
+            {
+                await handles[i].UnsubscribeAsync();
+            }
+            catch (Exception exception)
+            {
+                _logger.DuplicateUnsubscribeFailed(exception, handles[i].HandleId, source.ProviderName, source.StreamId);
+            }
+        }
     }
+}
+
+internal static partial class StreamSubscriptionManagerLog
+{
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Skipping explicit subscribe for implicitly subscribed stream {StreamId}.")]
+    public static partial void SkippingExplicitSubscribe(this ILogger logger, StreamId streamId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Ignoring unsubscribe for implicitly subscribed stream {StreamId}; remove [ImplicitStreamSubscription] to stop consuming it.")]
+    public static partial void IgnoringImplicitUnsubscribe(this ILogger logger, StreamId streamId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to unsubscribe from {Provider}/{StreamId}.")]
+    public static partial void UnsubscribeFailed(this ILogger logger, Exception exception, string provider, StreamId streamId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to unsubscribe duplicate handle {HandleId} from {Provider}/{StreamId}.")]
+    public static partial void DuplicateUnsubscribeFailed(this ILogger logger, Exception exception, Guid handleId, string provider, StreamId streamId);
 }

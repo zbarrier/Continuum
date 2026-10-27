@@ -1,13 +1,16 @@
 using Continuum;
 using Continuum.Streaming;
 using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB;
 using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 using KurrentDB.Client;
 
 
 using Orleans.Configuration;
+using Orleans.Providers.Streams.Common;
 using Orleans.Runtime;
+using Orleans.Serialization;
 using Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
@@ -41,7 +44,7 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
         Payload = materialization.Event;
         Fault = materialization.Fault;
         IsSuppressed = materialization.IsSuppressed;
-        Token = new KurrentDBSequenceToken(kurrentDBMessage.Position, kurrentDBMessage.SequenceNumber, 0);
+        Token = new EventSequenceToken(kurrentDBMessage.SequenceNumber, 0);
     }
 
     [Id(0)]
@@ -79,7 +82,7 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     ///     Ges the stream sequence token for the start of this batch.
     /// </summary>
     [Id(1)]
-    private KurrentDBSequenceToken Token { get; set; } = new();
+    private EventSequenceToken Token { get; set; } = new();
 
     /// <summary>
     ///     Ges the stream sequence token for the start of this batch.
@@ -88,6 +91,10 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
 
     /// <inheritdoc />
     public ulong CommitPosition => KurrentDBMessage.CommitPosition;
+
+    // Built on first delivery and reused, so the tenant qualified partition is not rebuilt for every consumer.
+    [NonSerialized]
+    private StreamedEventCursor? _cursor;
 
     #region IBatchContainer Implementation
 
@@ -124,21 +131,24 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
             // advancing the consumer past an event it never received.
             throw new InvalidOperationException(Fault);
         }
-        return [Tuple.Create((T)(object)ToStreamedEvent(Payload ?? throw new InvalidOperationException("A resolved KurrentDB record has no event.")), (StreamSequenceToken)new KurrentDBSequenceToken(Token.Position, Token.SequenceNumber, 0))];
+        return [Tuple.Create((T)(object)ToStreamedEvent(Payload ?? throw new InvalidOperationException("A resolved KurrentDB record has no event.")), (StreamSequenceToken)new EventSequenceToken(Token.SequenceNumber, 0))];
     }
 
+    /// <summary>
+    ///     Rebuilds the streamed event envelope for one event in the batch.
+    /// </summary>
     /// <summary>
     ///     Rebuilds the streamed event envelope for the event this record holds.
     /// </summary>
     private StreamedEvent<object> ToStreamedEvent(object @event)
     {
-        var streamName = KurrentDBMessage.ToStreamName();
+        var streamName = KurrentDBMessage.StreamName;
         return new StreamedEvent<object>(
-            Guid.Parse(KurrentDBMessage.EventId),
+            KurrentDBMessage.EventId,
             KurrentDBMessage.EventType,
             streamName,
             KurrentDBMessage.StreamVersion,
-            KurrentDBStreamedEventConversions.ToCursor(streamName, KurrentDBMessage.CommitPosition),
+            _cursor ??= KurrentDBStreamedEventConversions.ToCursor(KurrentDBMessage.SourceConnectionName, streamName, KurrentDBMessage.CommitPosition),
             KurrentDBMessage.Timestamp,
             @event,
             KurrentDBMessage.Metadata);
@@ -150,7 +160,9 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     /// </summary>
     /// <returns><see langword="true" /> if the <see cref="global::Orleans.Runtime.RequestContext" /> was indeed modified, <see langword="false" /> otherwise.</returns>
     /// <remarks>
-    ///     Only tracing is restored; see <see cref="KurrentDBBatchContainerV2.ImportRequestContext" />.
+    ///     Only tracing is restored, rebuilt as a W3C traceparent from the ids the event carried. The rest of the
+    ///     producer's request context is ambient call-chain state that belonged to the grain call that produced the
+    ///     event, not information about the event, so replaying it onto an unrelated consumer call would be wrong.
     /// </remarks>
     public bool ImportRequestContext()
     {

@@ -23,6 +23,12 @@ internal sealed class KurrentDBCatchupBatchReceiver
     private readonly ResiliencePipeline _resiliencePipeline;
     private readonly ILogger _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly TimeSpan _incompleteTransactionTimeout;
+
+    /// <summary>
+    ///     The default time to wait for the rest of an open transaction before handing it off incomplete.
+    /// </summary>
+    public static readonly TimeSpan DefaultIncompleteTransactionTimeout = TimeSpan.FromSeconds(60);
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="KurrentDBCatchupBatchReceiver" /> class.
@@ -33,14 +39,16 @@ internal sealed class KurrentDBCatchupBatchReceiver
     /// <param name="maxBatchSize">The number of events at which a batch is considered full.</param>
     /// <param name="resiliencePipeline">The pipeline each handler call runs through, or <see langword="null" /> for none.</param>
     /// <param name="logger">The logger recovery from failed batches is reported to.</param>
-    /// <param name="timeProvider">The time provider used to measure how long a batch has been failing.</param>
+    /// <param name="timeProvider">The time provider used to measure how long a batch has been failing and how long a transaction has been waiting.</param>
+    /// <param name="incompleteTransactionTimeout">How long to wait for the rest of an open transaction before handing it off incomplete, or <see langword="null" /> for <see cref="DefaultIncompleteTransactionTimeout" />.</param>
     public KurrentDBCatchupBatchReceiver(ChannelReader<StreamedEvent<object>> reader,
         KurrentDBCheckpointMonitor checkpointMonitor,
         Func<List<IStreamedEvent<object>>, Task> onNextBatchAsync,
         int maxBatchSize,
         ResiliencePipeline? resiliencePipeline = null,
         ILogger? logger = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        TimeSpan? incompleteTransactionTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentNullException.ThrowIfNull(checkpointMonitor);
@@ -54,6 +62,8 @@ internal sealed class KurrentDBCatchupBatchReceiver
         _resiliencePipeline = resiliencePipeline ?? ResiliencePipeline.Empty;
         _logger = logger ?? NullLogger.Instance;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _incompleteTransactionTimeout = incompleteTransactionTimeout ?? DefaultIncompleteTransactionTimeout;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_incompleteTransactionTimeout, TimeSpan.Zero, nameof(incompleteTransactionTimeout));
     }
 
     /// <summary>
@@ -64,7 +74,9 @@ internal sealed class KurrentDBCatchupBatchReceiver
     /// <remarks>
     ///     A batch is never handed off while it ends part way through a transaction, even when that means exceeding the
     ///     maximum batch size or waiting for more events. Completion is tracked per stream, because a consumer only ever
-    ///     receives a stream's partition of a transaction. A failed batch is retried by the resilience pipeline; when it
+    ///     receives a stream's partition of a transaction. Events of a transaction are contiguous in <c>$all</c>, so an open
+    ///     transaction is handed off incomplete, with a warning, when an event from outside it arrives or when nothing
+    ///     arrives within the incomplete transaction timeout; its remaining events were filtered out. A failed batch
     ///     gives up a <see cref="KurrentDBBatchProcessingException" /> escapes without recording the position, so no
     ///     event is skipped.
     /// </remarks>
@@ -73,9 +85,41 @@ internal sealed class KurrentDBCatchupBatchReceiver
         ulong lastStreamPosition = 0;
         var eventBatch = new List<IStreamedEvent<object>>();
         // Streams whose current transaction has started but not yet delivered its last event.
-        var openTransactions = new Dictionary<string, Guid>(StringComparer.Ordinal);
-        while (await _reader.WaitToReadAsync(cancellationToken))
+        var openTransactions = new Dictionary<string, OpenTransaction>(StringComparer.Ordinal);
+        while (true)
         {
+            var timedOut = false;
+            if (openTransactions.Count == 0)
+            {
+                if (!await _reader.WaitToReadAsync(cancellationToken))
+                {
+                    break;
+                }
+            }
+            else
+            {
+                using var timeout = new CancellationTokenSource(_incompleteTransactionTimeout, _timeProvider);
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+                try
+                {
+                    if (!await _reader.WaitToReadAsync(linked.Token))
+                    {
+                        break;
+                    }
+                }
+                catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+                {
+                    timedOut = true;
+                }
+            }
+
+            if (timedOut)
+            {
+                // A transaction is committed in one go, so its events sit together in $all. Nothing arriving for this
+                // long means the rest of it was filtered out and will never come.
+                AbandonOpenTransactions(openTransactions, $"no event arrived within {_incompleteTransactionTimeout}");
+            }
+
             while (_reader.TryRead(out var streamedEvent))
             {
                 lastStreamPosition = streamedEvent.Cursor.ToKurrentDBPosition(streamedEvent.StreamName.Value);
@@ -83,6 +127,13 @@ internal sealed class KurrentDBCatchupBatchReceiver
                 if (ReferenceEquals(streamedEvent.Event, KurrentDBStreamedEventConversions.CheckpointMarker))
                 {
                     continue;
+                }
+
+                if (openTransactions.Count > 0 && !IsPartOfOpenTransaction(openTransactions, streamedEvent))
+                {
+                    // Events of a transaction are contiguous in $all, so an event from outside it means the rest of the
+                    // open transaction was filtered out and will never come.
+                    AbandonOpenTransactions(openTransactions, "an event from outside the transaction arrived");
                 }
 
                 eventBatch.Add(streamedEvent);
@@ -145,12 +196,36 @@ internal sealed class KurrentDBCatchupBatchReceiver
 
         if (state.FailedAttempts > 0)
         {
-            _logger.LogInformation("Recovered processing a batch of {EventCount} events from position {FirstPosition} to {LastPosition} after {FailedAttempts} failed attempts over {Elapsed}.",
-                state.EventCount, state.FirstPosition, state.LastPosition, state.FailedAttempts, state.Elapsed);
+            _logger.BatchRecovered(state.EventCount, state.FirstPosition, state.LastPosition, state.FailedAttempts, state.Elapsed);
         }
     }
 
-    private static void TrackTransaction(Dictionary<string, Guid> openTransactions, StreamedEvent<object> streamedEvent)
+    private static bool IsPartOfOpenTransaction(Dictionary<string, OpenTransaction> openTransactions, StreamedEvent<object> streamedEvent)
+    {
+        if (streamedEvent.Metadata.TransactionId is not { } transactionId)
+        {
+            return false;
+        }
+        foreach (var open in openTransactions.Values)
+        {
+            if (open.TransactionId == transactionId)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void AbandonOpenTransactions(Dictionary<string, OpenTransaction> openTransactions, string reason)
+    {
+        foreach (var (streamName, open) in openTransactions)
+        {
+            _logger.HandingOffIncompleteTransaction(open.TransactionId, streamName, open.ReceivedCount, open.PartitionSize, reason);
+        }
+        openTransactions.Clear();
+    }
+
+    private static void TrackTransaction(Dictionary<string, OpenTransaction> openTransactions, StreamedEvent<object> streamedEvent)
     {
         var metadata = streamedEvent.Metadata;
         var streamName = streamedEvent.StreamName.Value;
@@ -160,11 +235,25 @@ internal sealed class KurrentDBCatchupBatchReceiver
             partitionIndex < partitionSize - 1;
         if (isOpen)
         {
-            openTransactions[streamName] = metadata.TransactionId!.Value;
+            var receivedCount = openTransactions.TryGetValue(streamName, out var existing) && existing.TransactionId == metadata.TransactionId!.Value
+                ? existing.ReceivedCount + 1
+                : 1;
+            openTransactions[streamName] = new OpenTransaction(metadata.TransactionId!.Value, metadata.TransactionPartitionSize!.Value, receivedCount);
         }
         else
         {
             openTransactions.Remove(streamName);
         }
     }
+
+    private readonly record struct OpenTransaction(Guid TransactionId, int PartitionSize, int ReceivedCount);
+}
+
+internal static partial class KurrentDBCatchupBatchReceiverLog
+{
+	[LoggerMessage(Level = LogLevel.Information, Message = "Recovered processing a batch of {EventCount} events from position {FirstPosition} to {LastPosition} after {FailedAttempts} failed attempts over {Elapsed}.")]
+	public static partial void BatchRecovered(this ILogger logger, int eventCount, ulong firstPosition, ulong lastPosition, int failedAttempts, TimeSpan elapsed);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Handing off incomplete transaction {TransactionId} in stream {StreamName} with {ReceivedCount} of {PartitionSize} events because {Reason}; the rest were most likely filtered out.")]
+	public static partial void HandingOffIncompleteTransaction(this ILogger logger, Guid transactionId, string streamName, int receivedCount, int partitionSize, string reason);
 }

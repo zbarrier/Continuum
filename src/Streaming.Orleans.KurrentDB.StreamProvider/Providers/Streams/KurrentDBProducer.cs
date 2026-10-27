@@ -1,4 +1,4 @@
-﻿using KurrentDB.Client;
+using KurrentDB.Client;
 
 using Microsoft.Extensions.Logging;
 
@@ -43,10 +43,7 @@ public class KurrentDBProducer : IKurrentDBProducer
     /// </summary>
     public void Init()
     {
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug("KurrentDBProducer for stream {QueueName} is initializing.", _settings.QueueName);
-        }
+        _logger.ProducerInitializing(_settings.QueueName);
         _initialized = true;
     }
 
@@ -68,10 +65,7 @@ public class KurrentDBProducer : IKurrentDBProducer
     /// <returns></returns>
     public async Task AppendAsync(params EventData[] events)
     {
-        if (_logger.IsEnabled(LogLevel.Trace))
-        {
-            _logger.LogTrace("Appending events to stream: {QueueName}", _settings.QueueName);
-        }
+        _logger.AppendingEvents(_settings.QueueName);
         if (_initialized == false || events == null)
         {
             return;
@@ -82,8 +76,20 @@ public class KurrentDBProducer : IKurrentDBProducer
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to append events for the the stream {QueueName}.", _settings.QueueName);
+            _logger.AppendEventsFailed(ex, _settings.QueueName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to append events for stream {_settings.QueueName}. {ex.GetType()}: {ex.Message}"));
         }
     }
+}
+
+internal static partial class KurrentDBProducerLog
+{
+    [LoggerMessage(Level = LogLevel.Debug, Message = "KurrentDBProducer for stream {QueueName} is initializing.")]
+    public static partial void ProducerInitializing(this ILogger logger, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Appending events to stream: {QueueName}")]
+    public static partial void AppendingEvents(this ILogger logger, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to append events for the the stream {QueueName}.")]
+    public static partial void AppendEventsFailed(this ILogger logger, Exception exception, string queueName);
 }

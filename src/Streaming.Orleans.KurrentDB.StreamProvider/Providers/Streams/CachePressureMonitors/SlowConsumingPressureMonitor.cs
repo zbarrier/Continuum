@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers.Streams.Common;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
@@ -121,10 +121,7 @@ public class SlowConsumingPressureMonitor : ICachePressureMonitor
             _isUnderPressure = underPressure;
             _nextCheckedTime = utcNow + PressureWindowSize;
             _monitor?.TrackCachePressureMonitorStatusChange(GetType().Name, underPressure, null, _biggestPressureInCurrentWindow, FlowControlThreshold);
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Ingesting messages too fast. Throttling message reading. BiggestPressureInCurrentPeriod: {BiggestPressureInCurrentWindow}, Threshold: {FlowControlThreshold}", _biggestPressureInCurrentWindow, FlowControlThreshold);
-            }
+            _logger.IngestionThrottled(_biggestPressureInCurrentWindow, FlowControlThreshold);
             _biggestPressureInCurrentWindow = 0;
         }
         if (_nextCheckedTime < utcNow)
@@ -136,13 +133,19 @@ public class SlowConsumingPressureMonitor : ICachePressureMonitor
             if (_isUnderPressure && !underPressure)
             {
                 _monitor?.TrackCachePressureMonitorStatusChange(GetType().Name, underPressure, null, _biggestPressureInCurrentWindow, FlowControlThreshold);
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug("Message ingestion is healthy. BiggestPressureInCurrentPeriod: {BiggestPressureInCurrentWindow}, Threshold: {FlowControlThreshold}", _biggestPressureInCurrentWindow, FlowControlThreshold);
-                }
+                _logger.IngestionHealthy(_biggestPressureInCurrentWindow, FlowControlThreshold);
             }
             _isUnderPressure = underPressure;
         }
         return _isUnderPressure;
     }
+}
+
+internal static partial class SlowConsumingPressureMonitorLog
+{
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Ingesting messages too fast. Throttling message reading. BiggestPressureInCurrentPeriod: {BiggestPressureInCurrentWindow}, Threshold: {FlowControlThreshold}")]
+    public static partial void IngestionThrottled(this ILogger logger, double biggestPressureInCurrentWindow, double flowControlThreshold);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Message ingestion is healthy. BiggestPressureInCurrentPeriod: {BiggestPressureInCurrentWindow}, Threshold: {FlowControlThreshold}")]
+    public static partial void IngestionHealthy(this ILogger logger, double biggestPressureInCurrentWindow, double flowControlThreshold);
 }

@@ -63,7 +63,7 @@ public class MultiStreamProjectionGrainTests
         // Deactivation drops the activation but not the subscriptions, which are durable. Resuming has to restore
         // every stream: restoring only one would leave the grain silently deaf to the other.
         await _fixture.Cluster.Client.GetGrain<IManagementGrain>(0)
-            .ForceActivationCollection(TimeSpan.Zero);
+            .ForceActivationCollection(TimeSpan.Zero, TestContext.Current.CancellationToken);
 
         await AppendAsync(client, StreamNameFor(MultiStreamProjectionGrain.SecondStreamKey(key)), new ChatMessage("Grace", "second", DateTimeOffset.UtcNow));
 

@@ -41,7 +41,7 @@ public class KurrentDBCatchupBatchReceiverTests
     private readonly List<List<IStreamedEvent<object>>> _batches = [];
 
     private KurrentDBCatchupBatchReceiver CreateReceiver(Func<List<IStreamedEvent<object>>, Task>? onNextBatchAsync = null, ulong maxEventsBeforeCommit = 1,
-        int maxBatchSize = 100, ResiliencePipeline? resiliencePipeline = null)
+        int maxBatchSize = 100, ResiliencePipeline? resiliencePipeline = null, TimeSpan? incompleteTransactionTimeout = null)
     {
         var monitor = new KurrentDBCheckpointMonitor(NullLogger.Instance,
             new KurrentDBCheckpointMonitorOptions { MaxEventsBeforeCommit = maxEventsBeforeCommit },
@@ -50,14 +50,14 @@ public class KurrentDBCatchupBatchReceiverTests
         {
             _batches.Add([.. batch]);
             return Task.CompletedTask;
-        }), maxBatchSize, resiliencePipeline);
+        }), maxBatchSize, resiliencePipeline, incompleteTransactionTimeout: incompleteTransactionTimeout);
     }
 
     private static StreamedEvent<object> Event(string streamName, ulong position, int number, TransactionInfo? transaction = null)
     {
         var name = new DefaultKurrentDBStreamNameParser().Parse(streamName);
         return new StreamedEvent<object>(Guid.NewGuid(), nameof(OrderPlaced), name, 0,
-            KurrentDBStreamedEventConversions.ToCursor(name, position), DateTime.UtcNow, new OrderPlaced(number),
+            KurrentDBStreamedEventConversions.ToCursor("store", name, position), DateTime.UtcNow, new OrderPlaced(number),
             transaction is null ? null : EventMetadata.Create(null, null, null, transaction));
     }
 
@@ -93,7 +93,7 @@ public class KurrentDBCatchupBatchReceiverTests
     [Fact]
     public async Task Keeps_checkpoint_markers_out_of_batches_but_records_their_position()
     {
-        await RunToCompletionAsync(CreateReceiver(), Event("order-1", 10, 1), new Position(50, 50).ToAllStreamCheckpointEvent());
+        await RunToCompletionAsync(CreateReceiver(), Event("order-1", 10, 1), new Position(50, 50).ToAllStreamCheckpointEvent("store"));
 
         var batch = Assert.Single(_batches);
         Assert.Equal([1], batch.Select(e => ((OrderPlaced)e.Event).Number));
@@ -103,7 +103,7 @@ public class KurrentDBCatchupBatchReceiverTests
     [Fact]
     public async Task Records_the_position_of_a_checkpoint_marker_without_calling_the_handler()
     {
-        await RunToCompletionAsync(CreateReceiver(), new Position(50, 50).ToAllStreamCheckpointEvent());
+        await RunToCompletionAsync(CreateReceiver(), new Position(50, 50).ToAllStreamCheckpointEvent("store"));
 
         Assert.Empty(_batches);
         Assert.Equal([50UL], _store.Stored);
@@ -210,6 +210,83 @@ public class KurrentDBCatchupBatchReceiverTests
     {
         await RunToCompletionAsync(CreateReceiver(), Event("order-1", 10, 1, new(Guid.NewGuid(), 2, 2, 0)));
 
+        Assert.Empty(_batches);
+        Assert.Empty(_store.Stored);
+    }
+
+    [Fact]
+    public async Task An_event_from_outside_an_open_transaction_hands_it_off_incomplete()
+    {
+        var id = Guid.NewGuid();
+        var receiver = CreateReceiver(maxBatchSize: 1);
+
+        await RunToCompletionAsync(receiver,
+            Event("order-1", 10, 1, new(id, 3, 3, 0)),
+            Event("order-1", 20, 2, new(id, 3, 3, 1)),
+            Event("order-2", 40, 3));
+
+        Assert.Equal([[1, 2, 3]], _batches.Select(b => b.Select(e => ((OrderPlaced)e.Event).Number).ToArray()));
+        Assert.Equal([40UL], _store.Stored);
+    }
+
+    [Fact]
+    public async Task An_event_from_another_transaction_hands_off_the_open_one_and_waits_for_its_own()
+    {
+        var first = Guid.NewGuid();
+        var second = Guid.NewGuid();
+        var receiver = CreateReceiver(maxBatchSize: 1);
+
+        await RunToCompletionAsync(receiver,
+            Event("order-1", 10, 1, new(first, 2, 2, 0)),
+            Event("order-2", 20, 2, new(second, 2, 2, 0)),
+            Event("order-2", 30, 3, new(second, 2, 2, 1)),
+            Event("order-1", 40, 4));
+
+        Assert.Equal([[1, 2, 3], [4]], _batches.Select(b => b.Select(e => ((OrderPlaced)e.Event).Number).ToArray()));
+    }
+
+    [Fact]
+    public async Task A_checkpoint_marker_does_not_end_an_open_transaction()
+    {
+        var id = Guid.NewGuid();
+        var receiver = CreateReceiver(maxBatchSize: 1);
+
+        await RunToCompletionAsync(receiver,
+            Event("order-1", 10, 1, new(id, 2, 2, 0)),
+            new Position(15, 15).ToAllStreamCheckpointEvent("store"),
+            Event("order-1", 20, 2, new(id, 2, 2, 1)));
+
+        Assert.Equal([[1, 2]], _batches.Select(b => b.Select(e => ((OrderPlaced)e.Event).Number).ToArray()));
+        Assert.Equal([20UL], _store.Stored);
+    }
+
+    [Fact]
+    public async Task Hands_off_an_incomplete_transaction_when_nothing_arrives_within_the_timeout()
+    {
+        var receiver = CreateReceiver(incompleteTransactionTimeout: TimeSpan.FromMilliseconds(200));
+        var run = receiver.RunAsync(TestContext.Current.CancellationToken);
+
+        await _channel.Writer.WriteAsync(Event("order-1", 10, 1, new(Guid.NewGuid(), 2, 2, 0)), TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => _batches.Count == 1);
+        _channel.Writer.Complete();
+        await run;
+
+        Assert.Equal([[1]], _batches.Select(b => b.Select(e => ((OrderPlaced)e.Event).Number).ToArray()));
+        Assert.Equal([10UL], _store.Stored);
+    }
+
+    [Fact]
+    public async Task Cancellation_while_waiting_for_a_transaction_does_not_hand_it_off()
+    {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var receiver = CreateReceiver(incompleteTransactionTimeout: TimeSpan.FromMinutes(5));
+        await _channel.Writer.WriteAsync(Event("order-1", 10, 1, new(Guid.NewGuid(), 2, 2, 0)), TestContext.Current.CancellationToken);
+        var run = receiver.RunAsync(cancellation.Token);
+
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
         Assert.Empty(_batches);
         Assert.Empty(_store.Stored);
     }

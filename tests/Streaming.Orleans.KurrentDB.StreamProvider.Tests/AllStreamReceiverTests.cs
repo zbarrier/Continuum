@@ -111,7 +111,7 @@ public class AllStreamReceiverTests
 
         await AppendAsync(client, streamName, "one", "two", "three");
 
-        var receiver = new KurrentDBAllStreamReceiver(client, settings, string.Empty, new TestOutputLogger(_output));
+        var receiver = new KurrentDBAllStreamReceiver(client, settings, new TestOutputLogger(_output));
         try
         {
             await receiver.InitAsync();
@@ -159,8 +159,6 @@ public class AllStreamReceiverTests
         {
             Options = new KurrentDBOptions
             {
-                // The subscription name, and therefore the checkpoint stream, is derived from these two values, so
-                // they are what ties the two receivers of a test to the same checkpoint.
                 Name = $"alltest-{queueName}",
                 ConnectionName = Constants.StreamProviderName,
                 Queues = new List<string> { queueName },
@@ -182,7 +180,9 @@ public class AllStreamReceiverTests
                     MaxTimeBeforeCommit = TimeSpan.FromSeconds(1),
                 },
             },
-            ConsumerGroup = "unused-for-all-stream",
+            // The checkpoint key is derived from the connection name and consumer group, so this is what ties the
+            // two receivers of a test to the same checkpoint.
+            ConsumerGroup = $"alltest-{queueName}",
             QueueName = queueName,
         };
     }
@@ -199,7 +199,7 @@ public class AllStreamReceiverTests
         // has to come back from KurrentDB.
         receiverOptions.CheckpointStore = new KurrentDBCheckpointStore(client);
 
-        var receiver = new KurrentDBAllStreamReceiver(client, settings, string.Empty, new TestOutputLogger(_output));
+        var receiver = new KurrentDBAllStreamReceiver(client, settings, new TestOutputLogger(_output));
         var payloads = new List<string>();
         try
         {

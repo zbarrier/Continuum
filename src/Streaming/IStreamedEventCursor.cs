@@ -3,8 +3,8 @@ using System.Numerics;
 namespace Continuum.Streaming;
 
 /// <summary>
-/// Where a streamed event was delivered from: the topic and partition of the source and the event's position within
-/// that partition.
+/// Where a streamed event was delivered from: the source connection, the topic and partition within it, and the event's
+/// position within that partition.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -19,13 +19,25 @@ namespace Continuum.Streaming;
 /// </list>
 /// <para>
 ///     <see cref="SequenceNumber"/> is a <see cref="BigInteger"/> because providers do not agree on a width; a Kinesis
-///     sequence number does not fit in 64 bits. Positions are only comparable within the same topic and partition.
+///     sequence number does not fit in 64 bits. Positions are only comparable within the same source connection, topic
+///     and partition.
+/// </para>
+/// <para>
+///     <see cref="SourceConnectionName"/> names the database or broker the event was read from. Positions are local to
+///     it: two databases can hand out the same position for unrelated events, so cursors from different sources have
+///     no order relative to each other.
 /// </para>
 /// </remarks>
 public interface IStreamedEventCursor
 {
     /// <summary>
-    /// The source the event was read from.
+    /// The logical connection the event was read from. It is a permanent identifier: renaming it makes every position
+    /// recorded under the old name unreachable.
+    /// </summary>
+    string SourceConnectionName { get; }
+
+    /// <summary>
+    /// The topic within <see cref="SourceConnectionName"/> the event was read from.
     /// </summary>
     string Topic { get; }
 

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Continuum.Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions.Configuration;
 using Continuum.Streams;
 using Continuum.TypeMapping;
@@ -27,6 +29,8 @@ public class CosmosDBCatchupSubscriptionOptionsValidatorTests
     private sealed class FakeStreamNameParser : IStreamNameParser
     {
         public IStreamName Parse(string streamName) => throw new NotSupportedException();
+
+        public bool TryParse(string streamName, [NotNullWhen(true)] out IStreamName? result) => throw new NotSupportedException();
     }
 
     private static CosmosDBCatchupSubscriptionOptions ValidOptions() => new()

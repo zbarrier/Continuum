@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Continuum.Streams;
 using Continuum.Orleans.Streams;
 
@@ -29,5 +31,18 @@ public sealed class DefaultCosmosDBStreamNameParser : IStreamNameParser
         }
 
         return StreamNameParsing.Create(streamName, streamName[..separatorIndex], streamName[(separatorIndex + 1)..]);
+    }
+
+    /// <inheritdoc />
+    public bool TryParse(string streamName, [NotNullWhen(true)] out IStreamName? result)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(streamName);
+
+        var separatorIndex = streamName.LastIndexOf(Separator);
+        var parsed = separatorIndex < 0
+            ? StreamNameParsing.TryCreate(streamName, string.Empty, streamName, out var name)
+            : StreamNameParsing.TryCreate(streamName, streamName[..separatorIndex], streamName[(separatorIndex + 1)..], out name);
+        result = name;
+        return parsed;
     }
 }

@@ -153,6 +153,7 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
             throw new JsonException("Expected 'cursor' to be an object.");
         }
 
+        string? sourceConnectionName = null;
         string? topic = null;
         string? partition = null;
         BigInteger? sequenceNumber = null;
@@ -163,6 +164,9 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
             reader.Read();
             switch (name)
             {
+                case "sourceConnectionName":
+                    sourceConnectionName = reader.GetString();
+                    break;
                 case "topic":
                     topic = reader.GetString();
                     break;
@@ -182,6 +186,7 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
         }
 
         return new StreamedEventCursor(
+            Required(sourceConnectionName, "cursor.sourceConnectionName"),
             Required(topic, "cursor.topic"),
             Required(partition, "cursor.partition"),
             Required(sequenceNumber, "cursor.sequenceNumber"),
@@ -211,6 +216,7 @@ public sealed class StreamedEventJsonConverter(ITypeMapper typeMapper) : JsonCon
         writer.WriteEndObject();
         writer.WriteNumber("streamVersion", value.StreamVersion);
         writer.WriteStartObject("cursor");
+        writer.WriteString("sourceConnectionName", value.Cursor.SourceConnectionName);
         writer.WriteString("topic", value.Cursor.Topic);
         writer.WriteString("partition", value.Cursor.Partition);
         writer.WriteString("sequenceNumber", value.Cursor.SequenceNumber.ToString(CultureInfo.InvariantCulture));

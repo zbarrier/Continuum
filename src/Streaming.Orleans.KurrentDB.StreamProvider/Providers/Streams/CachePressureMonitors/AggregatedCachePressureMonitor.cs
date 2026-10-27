@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers.Streams.Common;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
@@ -39,7 +39,10 @@ public class AggregatedCachePressureMonitor : List<ICachePressureMonitor>, ICach
     /// <param name="cachePressureContribution"></param>
     public void RecordCachePressureContribution(double cachePressureContribution)
     {
-        ForEach(monitor => monitor.RecordCachePressureContribution(cachePressureContribution));
+        foreach (var monitor in this)
+        {
+            monitor.RecordCachePressureContribution(cachePressureContribution);
+        }
     }
 
     /// <summary>
@@ -49,12 +52,27 @@ public class AggregatedCachePressureMonitor : List<ICachePressureMonitor>, ICach
     /// <returns></returns>
     public bool IsUnderPressure(DateTime utcNow)
     {
-        var underPressure = this.Any(monitor => monitor.IsUnderPressure(utcNow));
+        var underPressure = false;
+        foreach (var monitor in this)
+        {
+            if (monitor.IsUnderPressure(utcNow))
+            {
+                underPressure = true;
+                break;
+            }
+        }
         if (_isUnderPressure != underPressure)
         {
             _isUnderPressure = underPressure;
             _monitor?.TrackCachePressureMonitorStatusChange(GetType().Name, _isUnderPressure, null, null, null);
-            _logger.LogInformation(_isUnderPressure ? "Ingesting messages too fast. Throttling message reading." : "Message ingestion is healthy.");
+            if (_isUnderPressure)
+            {
+                _logger.IngestionThrottled();
+            }
+            else
+            {
+                _logger.IngestionHealthy();
+            }
         }
         return underPressure;
     }
@@ -67,4 +85,13 @@ public class AggregatedCachePressureMonitor : List<ICachePressureMonitor>, ICach
     {
         Add(monitor);
     }
+}
+
+internal static partial class AggregatedCachePressureMonitorLog
+{
+    [LoggerMessage(Level = LogLevel.Information, Message = "Ingesting messages too fast. Throttling message reading.")]
+    public static partial void IngestionThrottled(this ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Message ingestion is healthy.")]
+    public static partial void IngestionHealthy(this ILogger logger);
 }

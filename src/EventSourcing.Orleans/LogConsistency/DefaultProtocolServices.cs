@@ -44,26 +44,24 @@ internal class DefaultProtocolServices : ILogConsistencyProtocolServices
     /// <inheritdoc />
     public void ProtocolError(string msg, bool throwException)
     {
-        var errorCode = (int)(throwException ? ErrorCode.LogConsistency_ProtocolFatalError : ErrorCode.LogConsistency_ProtocolError);
-        _logger.LogError(errorCode, "{GrainId} Protocol Error: {Message}", _grainContext.GrainId, msg);
         if (throwException)
         {
+            _logger.ProtocolFatalError(_grainContext.GrainId, msg);
             throw new OrleansException($"{msg} (grain={_grainContext.GrainId}, cluster={MyClusterId})");
         }
+        _logger.ProtocolError(_grainContext.GrainId, msg);
     }
 
     /// <inheritdoc />
     public void CaughtException(string where, Exception ex)
     {
-        const int errorCode = (int)ErrorCode.LogConsistency_CaughtException;
-        _logger.LogError(errorCode, ex, "{GrainId} exception caught at {Location}", _grainContext.GrainId, where);
+        _logger.CaughtException(ex, _grainContext.GrainId, where);
     }
 
     /// <inheritdoc />
     public void CaughtUserCodeException(string callback, string where, Exception ex)
     {
-        const int errorCode = (int)ErrorCode.LogConsistency_UserCodeException;
-        _logger.LogWarning(errorCode, ex, "{GrainId} exception caught in user code for {Callback}, called from {Location}", _grainContext.GrainId, callback, where);
+        _logger.CaughtUserCodeException(ex, _grainContext.GrainId, callback, where);
     }
 
     /// <inheritdoc />
@@ -75,4 +73,19 @@ internal class DefaultProtocolServices : ILogConsistencyProtocolServices
             _logger.Log(level, 0, msg, null, (m, _) => $"{m}");
         }
     }
+}
+
+internal static partial class DefaultProtocolServicesLog
+{
+    [LoggerMessage(EventId = (int)ErrorCode.LogConsistency_ProtocolError, Level = LogLevel.Error, Message = "{GrainId} Protocol Error: {Message}")]
+    public static partial void ProtocolError(this ILogger logger, GrainId grainId, string message);
+
+    [LoggerMessage(EventId = (int)ErrorCode.LogConsistency_ProtocolFatalError, Level = LogLevel.Error, Message = "{GrainId} Protocol Error: {Message}")]
+    public static partial void ProtocolFatalError(this ILogger logger, GrainId grainId, string message);
+
+    [LoggerMessage(EventId = (int)ErrorCode.LogConsistency_CaughtException, Level = LogLevel.Error, Message = "{GrainId} exception caught at {Location}")]
+    public static partial void CaughtException(this ILogger logger, Exception exception, GrainId grainId, string location);
+
+    [LoggerMessage(EventId = (int)ErrorCode.LogConsistency_UserCodeException, Level = LogLevel.Warning, Message = "{GrainId} exception caught in user code for {Callback}, called from {Location}")]
+    public static partial void CaughtUserCodeException(this ILogger logger, Exception exception, GrainId grainId, string callback, string location);
 }

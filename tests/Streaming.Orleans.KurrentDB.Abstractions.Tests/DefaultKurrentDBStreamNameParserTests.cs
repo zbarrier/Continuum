@@ -71,4 +71,25 @@ public class DefaultKurrentDBStreamNameParserTests
     {
         Assert.ThrowsAny<ArgumentException>(() => _parser.Parse(streamName!));
     }
+
+    [Fact]
+    public void TryParse_Splits_A_Tenant_Qualified_Name()
+    {
+        Assert.True(_parser.TryParse("snack-acme|123", out var parsed));
+
+        Assert.Equal("snack", parsed.Category);
+        Assert.Equal("acme", parsed.TenantId);
+        Assert.Equal("123", parsed.Key);
+    }
+
+    [Theory]
+    [InlineData("snack")]
+    [InlineData("snack-|123")]
+    [InlineData("snack-acme|")]
+    [InlineData("snack-")]
+    public void TryParse_Returns_False_For_A_Name_Parse_Rejects(string streamName)
+    {
+        Assert.False(_parser.TryParse(streamName, out var parsed));
+        Assert.Null(parsed);
+    }
 }

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Continuum.Streams;
 
 /// <summary>
@@ -21,4 +23,10 @@ public interface IStreamNameParser
     /// Splits <paramref name="streamName"/> into its category, tenant and key.
     /// </summary>
     IStreamName Parse(string streamName);
+
+    /// <summary>
+    /// Attempts to split <paramref name="streamName"/> into its category, tenant and key without throwing when the name
+    /// is not in the expected form.
+    /// </summary>
+    bool TryParse(string streamName, [NotNullWhen(true)] out IStreamName? result);
 }

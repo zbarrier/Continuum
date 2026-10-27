@@ -19,8 +19,12 @@ public class KurrentDBReceiverSettings
     public KurrentDBReceiverOptionsBase ReceiverOptions { get; set; } = null!;
 
     /// <summary>
-    ///     Consumer group name.
+    ///     Consumer group name, made of the Orleans service id and the stream provider name.
     /// </summary>
+    /// <remarks>
+    ///     Persistent subscriptions use it as the KurrentDB consumer group. <c>$all</c> subscriptions use it, with the
+    ///     connection name, as the checkpoint key.
+    /// </remarks>
     public string ConsumerGroup { get; set; } = null!;
 
     /// <summary>

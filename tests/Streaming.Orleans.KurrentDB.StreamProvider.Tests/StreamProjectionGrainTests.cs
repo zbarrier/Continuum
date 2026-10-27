@@ -66,7 +66,7 @@ public class StreamProjectionGrainTests
         // A fresh subscription may replay from an earlier position. The persisted watermark is what keeps the
         // already applied event from being counted a second time.
         await _fixture.Cluster.Client.GetGrain<IManagementGrain>(0)
-            .ForceActivationCollection(TimeSpan.Zero);
+            .ForceActivationCollection(TimeSpan.Zero, TestContext.Current.CancellationToken);
 
         await AppendAsync(client, streamName, new ChatMessage("Grace", "second", DateTimeOffset.UtcNow));
 

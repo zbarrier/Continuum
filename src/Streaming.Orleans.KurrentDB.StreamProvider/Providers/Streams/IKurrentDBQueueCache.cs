@@ -26,7 +26,25 @@ public interface IKurrentDBQueueCache : IQueueFlowController, IDisposable
     /// <param name="streamId"></param>
     /// <param name="sequenceToken"></param>
     /// <returns></returns>
+    /// <remarks>
+    ///     A null token starts at the newest event. A token older than the oldest cached event starts at the oldest
+    ///     cached event only when nothing for the stream was purged after that token; otherwise events would be skipped,
+    ///     so a <see cref="QueueCacheMissException" /> is thrown and the consumer must catch up from KurrentDB itself.
+    /// </remarks>
     object GetCursor(StreamId streamId, StreamSequenceToken? sequenceToken);
+
+    /// <summary>
+    ///     Get a cursor into the cache at a subscription start position.
+    /// </summary>
+    /// <param name="streamId"></param>
+    /// <param name="startPosition"></param>
+    /// <returns></returns>
+    /// <remarks>
+    ///     <see cref="StreamSubscriptionStartPosition.EarliestAvailable" /> starts at the oldest cached event for the
+    ///     stream and never reports a cache miss, so it covers the gap around the time of subscribing without requiring
+    ///     the consumer to know a position.
+    /// </remarks>
+    object GetCursorAtPosition(StreamId streamId, StreamSubscriptionStartPosition startPosition);
 
     /// <summary>
     ///     Stop tracking a cursor that is no longer reading, so it no longer holds back purging.
@@ -45,6 +63,13 @@ public interface IKurrentDBQueueCache : IQueueFlowController, IDisposable
     /// <param name="cursorObj"></param>
     /// <param name="commitPosition"></param>
     void RecordDelivered(object cursorObj, ulong commitPosition);
+
+    /// <summary>
+    ///     Records that a cursor has no pending events for its stream, so it has read everything currently cached that it
+    ///     could ever need and no longer holds back purging of other streams.
+    /// </summary>
+    /// <param name="cursorObj"></param>
+    void RecordCaughtUp(object cursorObj);
 
     /// <summary>
     ///     Raised with the <c>$all</c> commit position of the newest event that has been purged, and is therefore

@@ -1,4 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Continuum.Streams;
+using Continuum.Orleans.KurrentDB;
 using Continuum.Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.KurrentDB;
@@ -15,7 +18,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB;
 /// </remarks>
 public sealed class DefaultKurrentDBStreamNameParser : IStreamNameParser
 {
-    private const char CategorySeparator = '-';
+    private const char CategorySeparator = KurrentDBStreamName.CategorySeparator;
 
     /// <inheritdoc />
     public IStreamName Parse(string streamName)
@@ -30,5 +33,22 @@ public sealed class DefaultKurrentDBStreamNameParser : IStreamNameParser
         }
 
         return StreamNameParsing.Create(streamName, streamName[..separatorIndex], streamName[(separatorIndex + 1)..]);
+    }
+
+    /// <inheritdoc />
+    public bool TryParse(string streamName, [NotNullWhen(true)] out IStreamName? result)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(streamName);
+
+        var separatorIndex = streamName.IndexOf(CategorySeparator);
+        if (separatorIndex >= 0 &&
+            StreamNameParsing.TryCreate(streamName, streamName[..separatorIndex], streamName[(separatorIndex + 1)..], out var parsed))
+        {
+            result = parsed;
+            return true;
+        }
+
+        result = null;
+        return false;
     }
 }

@@ -25,31 +25,33 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
     public const int MaxMessagesPerRead = 1000;
 
     private readonly KurrentDBReceiverSettings _settings;
-    private readonly Func<string, IStreamQueueCheckpointer<string>, ILoggerFactory, IKurrentDBQueueCache> _cacheFactory;
-    private readonly Func<string, Task<IStreamQueueCheckpointer<string>>> _checkpointerFactory;
+    private readonly Func<string, ILoggerFactory, IKurrentDBQueueCache> _cacheFactory;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<KurrentDBQueueAdapterReceiver> _logger;
     private readonly IQueueAdapterReceiverMonitor _receiverMonitor;
     private readonly LoadSheddingOptions _loadSheddingOptions;
     private readonly IEnvironmentStatisticsProvider? _environmentStatisticsProvider;
-    private readonly Func<KurrentDBReceiverSettings, string, ILogger, IKurrentDBReceiver> _kurrentDBReceiverFactory;
+    private readonly Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> _kurrentDBReceiverFactory;
 
     private IKurrentDBQueueCache? _cache;
     private IKurrentDBReceiver? _receiver;
-    private IStreamQueueCheckpointer<string>? _checkpointer;
     private AggregatedQueueFlowController? _flowController;
+    private readonly object _notifyLock = new();
+    private ulong? _pendingNotifyPosition;
+    private ulong? _highestNotifyPosition;
+    private bool _notifyRunning;
 
     // Receiver life cycle
     private int _receiverState = ReceiverShutdown;
+    private int _initializing;
 
     private const int ReceiverShutdown = 0;
     private const int ReceiverRunning = 1;
 
-    public KurrentDBQueueAdapterReceiver(KurrentDBReceiverSettings settings, Func<string, IStreamQueueCheckpointer<string>, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, Func<string, Task<IStreamQueueCheckpointer<string>>> checkpointerFactory, ILoggerFactory loggerFactory, IQueueAdapterReceiverMonitor receiverMonitor, LoadSheddingOptions loadSheddingOptions, IEnvironmentStatisticsProvider? environmentStatisticsProvider, Func<KurrentDBReceiverSettings, string, ILogger, IKurrentDBReceiver> kurrentDBReceiverFactory)
+    public KurrentDBQueueAdapterReceiver(KurrentDBReceiverSettings settings, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, ILoggerFactory loggerFactory, IQueueAdapterReceiverMonitor receiverMonitor, LoadSheddingOptions loadSheddingOptions, IEnvironmentStatisticsProvider? environmentStatisticsProvider, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> kurrentDBReceiverFactory)
     {
         ArgumentNullException.ThrowIfNull(settings, nameof(settings));
         ArgumentNullException.ThrowIfNull(cacheFactory, nameof(cacheFactory));
-        ArgumentNullException.ThrowIfNull(checkpointerFactory, nameof(checkpointerFactory));
         ArgumentNullException.ThrowIfNull(loggerFactory, nameof(loggerFactory));
         ArgumentNullException.ThrowIfNull(receiverMonitor, nameof(receiverMonitor));
         ArgumentNullException.ThrowIfNull(loadSheddingOptions, nameof(loadSheddingOptions));
@@ -58,7 +60,6 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         ArgumentNullException.ThrowIfNull(kurrentDBReceiverFactory, nameof(kurrentDBReceiverFactory));
         _settings = settings;
         _cacheFactory = cacheFactory;
-        _checkpointerFactory = checkpointerFactory;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<KurrentDBQueueAdapterReceiver>();
         _receiverMonitor = receiverMonitor;
@@ -72,7 +73,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
     /// <inheritdoc />
     public Task Initialize(TimeSpan timeout)
     {
-        _logger.LogInformation("Initializing KurrentDB persistent subscriptions from {ConsumerGroup}-{StreamName}.", _settings.ConsumerGroup, _settings.QueueName);
+        _logger.AdapterReceiverInitializing(_settings.QueueName);
         // if receiver was already running, do nothing
         return ReceiverRunning == Interlocked.Exchange(ref _receiverState, ReceiverRunning) ? Task.CompletedTask : Initialize();
     }
@@ -87,13 +88,12 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         var watch = Stopwatch.StartNew();
         try
         {
-            _checkpointer = await _checkpointerFactory(_settings.QueueName);
             if (_cache != null)
             {
                 _cache.Dispose();
                 _cache = null;
             }
-            _cache = _cacheFactory(_settings.QueueName, _checkpointer, _loggerFactory);
+            _cache = _cacheFactory(_settings.QueueName, _loggerFactory);
             // Purge is the point at which events are provably behind every cursor, so it is what drives the receiver's
             // checkpoint. Receive() is too early, since events there have only been buffered.
             _cache.OnCheckpointablePosition = commitPosition => NotifyDelivered(commitPosition);
@@ -103,8 +103,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
             {
                 _flowController.Add(LoadShedQueueFlowController.CreateAsPercentOfLoadSheddingLimit(_loadSheddingOptions, _environmentStatisticsProvider));
             }
-            var position = await _checkpointer.Load(CancellationToken.None);
-            _receiver = _kurrentDBReceiverFactory(_settings, position, _logger);
+            _receiver = _kurrentDBReceiverFactory(_settings, _logger);
             await _receiver.InitAsync();
             watch.Stop();
             _receiverMonitor.TrackInitialization(true, watch.Elapsed, null);
@@ -128,7 +127,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
             {
                 return;
             }
-            _logger.LogInformation("Stopping reading from KurrentDB persistent subscriptions from {ConsumerGroup}-{StreamName}.", _settings.ConsumerGroup, _settings.QueueName);
+            _logger.ReceiverStopping(_settings.QueueName);
             // clear cache and receiver
             var localCache = Interlocked.Exchange(ref _cache, null);
             var localReceiver = Interlocked.Exchange(ref _receiver, null);
@@ -163,8 +162,23 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         // if receiver initialization failed, retry
         if (_receiver == null)
         {
-            _logger.LogWarning(KurrentDBErrorCodes.CannotInitializeSubscriptionClient, "Retrying initialization of KurrentDB persistent subscriptions from {ConsumerGroup}-{StreamName}.", _settings.ConsumerGroup, _settings.QueueName);
-            await Initialize();
+            // Only one retry may rebuild the cache and receiver at a time.
+            if (Interlocked.CompareExchange(ref _initializing, 1, 0) != 0)
+            {
+                return new List<IBatchContainer>();
+            }
+            try
+            {
+                if (_receiver == null && _receiverState == ReceiverRunning)
+                {
+                    _logger.ReceiverInitializationRetrying(_settings.QueueName);
+                    await Initialize();
+                }
+            }
+            finally
+            {
+                Volatile.Write(ref _initializing, 0);
+            }
             if (_receiver == null)
             {
                 // should not get here, should throw instead, but just incase.
@@ -183,7 +197,7 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         {
             watch.Stop();
             _receiverMonitor.TrackRead(false, watch.Elapsed, ex);
-            _logger.LogWarning(KurrentDBErrorCodes.CannotReadFromSubscription, "Failed to read from KurrentDB persistent subscriptions from {ConsumerGroup}-{StreamName}. Exception: {Exception}", _settings.ConsumerGroup, _settings.QueueName, ex);
+            _logger.ReceiverReadFailed(ex, _settings.QueueName);
             throw;
         }
         var batches = new List<IBatchContainer>();
@@ -202,12 +216,6 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
             var messageStreamPositions = _cache.Add(messages, dequeueTimeUtc);
             batches.AddRange(messageStreamPositions.Select(streamPosition => new StreamActivityNotificationBatch(streamPosition)));
         }
-        if (_checkpointer is { CheckpointExists: false })
-        {
-            // Seed the checkpoint with the commit position of the first event so a restart before the first purge
-            // resumes from the start of this batch rather than from the beginning of the log.
-            _checkpointer.Update(messages[0].Cursor.SequenceNumber.ToString(), DateTime.UtcNow, CancellationToken.None);
-        }
         return batches;
     }
 
@@ -221,6 +229,10 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
     ///     Forwards a purged position to the receiver. Purging happens on the cache's synchronous path, so failures
     ///     are logged rather than surfaced; a missed checkpoint only causes a replay, never a loss.
     /// </summary>
+    /// <remarks>
+    ///     Notifications are handled by a single worker so they never overlap. Positions that arrive while the worker
+    ///     is busy are coalesced into the highest one, because checkpointing a later position covers every earlier one.
+    /// </remarks>
     private void NotifyDelivered(ulong commitPosition)
     {
         var receiver = _receiver;
@@ -228,17 +240,49 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         {
             return;
         }
-        _ = Task.Run(async () =>
+        lock (_notifyLock)
         {
+            // Purge notifications are not guaranteed to arrive in order. A position at or below the highest one already
+            // queued is covered by it, so it is dropped rather than sent behind the newer one.
+            if (commitPosition <= _highestNotifyPosition)
+            {
+                return;
+            }
+            _highestNotifyPosition = commitPosition;
+            _pendingNotifyPosition = commitPosition;
+            if (_notifyRunning)
+            {
+                return;
+            }
+            _notifyRunning = true;
+        }
+        _ = Task.Run(() => DrainDeliveredNotificationsAsync(receiver));
+    }
+
+    private async Task DrainDeliveredNotificationsAsync(IKurrentDBReceiver receiver)
+    {
+        while (true)
+        {
+            ulong commitPosition;
+            lock (_notifyLock)
+            {
+                if (_pendingNotifyPosition is not { } pending)
+                {
+                    _notifyRunning = false;
+                    return;
+                }
+                commitPosition = pending;
+                _pendingNotifyPosition = null;
+            }
             try
             {
-                await receiver.MessagesDeliveredAsync(commitPosition);
+                await receiver.MessagesDeliveredAsync(commitPosition).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to checkpoint delivered position {CommitPosition} for queue {QueueName}.", commitPosition, _settings.QueueName);
+                _logger.CheckpointDeliveredFailed(ex, commitPosition, _settings.QueueName);
             }
-        });
+        }
     }
 
     #endregion
@@ -273,7 +317,13 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
     /// <inheritdoc />
     public IQueueCacheCursor GetCacheCursor(StreamId streamId, StreamSequenceToken? token)
     {
-        return new Cursor(_cache!, streamId, token);
+        return new Cursor(_cache!, _cache!.GetCursor(streamId, token));
+    }
+
+    /// <inheritdoc />
+    public QueueCacheCursorResult<IQueueCacheCursor> TryGetCacheCursorAtPosition(StreamId streamId, StreamSubscriptionStartPosition startPosition)
+    {
+        return QueueCacheCursorResult<IQueueCacheCursor>.FromCursor(new Cursor(_cache!, _cache!.GetCursorAtPosition(streamId, startPosition)));
     }
 
     /// <inheritdoc />
@@ -328,10 +378,10 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
         private IBatchContainer _current;
         private bool _deliveryFailed;
 
-        public Cursor(IKurrentDBQueueCache cache, StreamId streamId, StreamSequenceToken? token)
+        public Cursor(IKurrentDBQueueCache cache, object cursor)
         {
             _cache = cache;
-            _cursor = cache.GetCursor(streamId, token);
+            _cursor = cursor;
             _current = null!;
         }
 
@@ -352,22 +402,29 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
             // Asking for the next event is the only signal the agent gives that it is finished with the current one,
             // so the watermark advances here rather than when the event was handed out. An event whose delivery failed
             // keeps the watermark where it is, so it is not purged or checkpointed away and survives a restart.
-            CommitCurrent();
+            var committed = CommitCurrent();
             if (!_cache.TryGetNextMessage(_cursor, out var next))
             {
+                if (committed)
+                {
+                    // Nothing is pending for this stream, so an idle cursor must not hold back purging of other streams.
+                    _cache.RecordCaughtUp(_cursor);
+                }
                 return false;
             }
             _current = next;
             return true;
         }
 
-        private void CommitCurrent()
+        private bool CommitCurrent()
         {
-            if (!_deliveryFailed && _current is IKurrentDBCommitPositionBatch delivered)
+            var failed = _deliveryFailed;
+            if (!failed && _current is IKurrentDBCommitPositionBatch delivered)
             {
                 _cache.RecordDelivered(_cursor, delivered.CommitPosition);
             }
             _deliveryFailed = false;
+            return !failed;
         }
 
         public void Refresh(StreamSequenceToken token)
@@ -383,4 +440,17 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
 
     #endregion
 
+}
+
+internal static partial class KurrentDBQueueAdapterReceiverLog
+{
+    [LoggerMessage(Level = LogLevel.Information, Message = "Initializing KurrentDB receiver for queue {QueueName}.")] public static partial void AdapterReceiverInitializing(this ILogger logger, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Stopping KurrentDB receiver for queue {QueueName}.")] public static partial void ReceiverStopping(this ILogger logger, string queueName);
+
+    [LoggerMessage(EventId = 100201, EventName = "CannotInitializeSubscriptionClient", Level = LogLevel.Warning, Message = "Retrying initialization of KurrentDB receiver for queue {QueueName}.")] public static partial void ReceiverInitializationRetrying(this ILogger logger, string queueName);
+
+    [LoggerMessage(EventId = 100204, EventName = "CannotReadFromSubscription", Level = LogLevel.Warning, Message = "Failed to read from KurrentDB receiver for queue {QueueName}.")] public static partial void ReceiverReadFailed(this ILogger logger, Exception exception, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to checkpoint delivered position {CommitPosition} for queue {QueueName}.")] public static partial void CheckpointDeliveredFailed(this ILogger logger, Exception exception, ulong commitPosition, string queueName);
 }

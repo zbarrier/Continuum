@@ -20,8 +20,7 @@ internal static class KurrentDBCatchupEventDeserializer
         deserializedEvent = null;
         if (data.IsEmpty)
         {
-            logger.LogWarning("Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it has no payload.",
-                eventType, streamId, subscriptionName);
+            logger.EventHasNoPayload(eventType, streamId, subscriptionName);
             return false;
         }
         try
@@ -30,16 +29,26 @@ internal static class KurrentDBCatchupEventDeserializer
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it could not be deserialized.",
-                eventType, streamId, subscriptionName);
+            logger.EventDeserializationFailed(ex, eventType, streamId, subscriptionName);
             return false;
         }
         if (deserializedEvent is null)
         {
-            logger.LogWarning("Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it deserialized to null.",
-                eventType, streamId, subscriptionName);
+            logger.EventDeserializedToNull(eventType, streamId, subscriptionName);
             return false;
         }
         return true;
     }
+}
+
+internal static partial class KurrentDBCatchupEventDeserializerLog
+{
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it has no payload.")]
+	public static partial void EventHasNoPayload(this ILogger logger, string eventType, string streamName, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it could not be deserialized.")]
+	public static partial void EventDeserializationFailed(this ILogger logger, Exception exception, string eventType, string streamName, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Skipping event of type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}' because it deserialized to null.")]
+	public static partial void EventDeserializedToNull(this ILogger logger, string eventType, string streamName, string subscriptionName);
 }

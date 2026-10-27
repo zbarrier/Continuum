@@ -1,8 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
+
 using Orleans.Configuration;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
-using Orleans.Streams;
 
 namespace Orleans.Hosting;
 
@@ -11,19 +9,6 @@ namespace Orleans.Hosting;
 /// </summary>
 public static class SiloKurrentDBStreamConfiguratorExtensions
 {
-    /// <summary>
-    ///     Configures a checkpointer for the KurrentDB stream.
-    /// </summary>
-    /// <typeparam name="TOptions">The options type for the checkpointer.</typeparam>
-    /// <param name="configurator">The stream configurator.</param>
-    /// <param name="checkpointerFactoryBuilder">A delegate that creates the checkpointer factory.</param>
-    /// <param name="configureOptions">An action to configure the options for the checkpointer.</param>
-    public static void ConfigureCheckpointer<TOptions>(this ISiloKurrentDBStreamConfigurator configurator, Func<IServiceProvider, string, IStreamQueueCheckpointerFactory> checkpointerFactoryBuilder, Action<OptionsBuilder<TOptions>> configureOptions)
-        where TOptions : class, new()
-    {
-        configurator.ConfigureComponent(checkpointerFactoryBuilder, configureOptions);
-    }
-
     /// <summary>
     ///     Configures the cache pressure options for the KurrentDB stream.
     /// </summary>
@@ -35,18 +20,12 @@ public static class SiloKurrentDBStreamConfiguratorExtensions
     }
 
     /// <summary>
-    ///     Configures KurrentDB as backend storage of checkpointer state.
+    ///     Configures how the KurrentDB stream cache's block pool is trimmed after demand drops.
     /// </summary>
     /// <param name="configurator">The stream configurator.</param>
-    /// <param name="configureOptions">An action to configure the options for the checkpointer.</param>
-    public static void UseKurrentDBCheckpointer(this ISiloKurrentDBStreamConfigurator configurator, Action<OptionsBuilder<KurrentDBStreamCheckpointerOptions>> configureOptions)
+    /// <param name="configureOptions">An action to configure the block pool trimming options.</param>
+    public static void ConfigureCacheBufferPool(this ISiloKurrentDBStreamConfigurator configurator, Action<OptionsBuilder<KurrentDBStreamCacheBufferPoolOptions>> configureOptions)
     {
-        configurator.ConfigureCheckpointer(KurrentDBCheckpointerFactory.CreateFactory, configureOptions);
-        var name = configurator.Name;
-        configurator.ConfigureDelegate(services =>
-        {
-            services.ConfigureNamedOptionForLogging<KurrentDBStreamCheckpointerOptions>(name)
-                    .AddTransient<IConfigurationValidator>(sp => new KurrentDBOperationOptionsValidator<KurrentDBStreamCheckpointerOptions>(sp.GetOptionsByName<KurrentDBStreamCheckpointerOptions>(name), name));
-        });
+        configurator.Configure(configureOptions);
     }
 }

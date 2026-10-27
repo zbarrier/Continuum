@@ -85,7 +85,7 @@ internal sealed class DoorClosed() : DoorEvent(DoorCommand.Close);
 [GenerateSerializer]
 internal sealed class DoorState : EventDrivenStateMachineState<DoorState, DoorEvent, DoorStatus, DoorCommand>
 {
-    public DoorState() : base(() => new StateMachine<DoorStatus, DoorCommand>(DoorStatus.Closed)) { }
+    public DoorState() : base(DoorStatus.Closed) { }
 
     [Id(0)] public int OpenCount { get; set; }
 

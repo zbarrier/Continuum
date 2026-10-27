@@ -30,8 +30,11 @@ public sealed class ClusterFixture : IAsyncLifetime
         .Build();
 
     private TestCluster? _cluster;
+    private string? _connectionString;
 
     public TestCluster Cluster => _cluster ?? throw new InvalidOperationException("The cluster has not been deployed.");
+
+    public string ConnectionString => _connectionString ?? throw new InvalidOperationException("The KurrentDB container has not been started.");
 
     public async ValueTask InitializeAsync()
     {
@@ -40,6 +43,7 @@ public sealed class ClusterFixture : IAsyncLifetime
         var connectionString = FormattableString.Invariant(
             $"kurrentdb://{_container.Hostname}:{_container.GetMappedPublicPort(KurrentDBPort)}?tls=false");
         await WaitUntilReadyAsync(connectionString);
+        _connectionString = connectionString;
 
         var builder = new TestClusterBuilder(1);
         builder.Properties[ConnectionStringKey] = connectionString;

@@ -29,8 +29,6 @@ public sealed class EventDrivenStateMachineSession<TState, TEventBase, TStatus, 
         _uncommittedEventsView = _uncommittedEvents.AsReadOnly();
 
         State = CopyState(state);
-        // Deep copies restore only the current status; transitions must be configured again.
-        State.ConfigureStateMachine();
     }
 
     /// <inheritdoc/>

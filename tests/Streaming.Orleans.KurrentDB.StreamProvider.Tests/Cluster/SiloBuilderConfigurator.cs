@@ -51,13 +51,6 @@ public class TestSiloConfigurations : ISiloConfigurator
               {
                   "test-v2-43210",
               };
-          },
-          checkpointOptions =>
-          {
-              // Resolves the same container owned keyed client the rest of the stream provider uses, instead of
-              // creating and disposing a private client for the checkpointer.
-              checkpointOptions.ConnectionName = Constants.StreamProviderName;
-              checkpointOptions.PersistInterval = TimeSpan.FromSeconds(10);
           })
           // Orleans persists streaming pub/sub subscription state through the store named "PubSubStore".
           // AddKurrentDBPubSubStore bundles the grain storage, Orleans serializer and explicit type mapping
@@ -102,11 +95,6 @@ public class TestSiloConfigurations : ISiloConfigurator
                 // removes any dependence on the subscription being established before the test appends its event.
                 options.StartFromNow = false;
             }));
-            configurator.UseKurrentDBCheckpointer(ob => ob.Configure(options =>
-            {
-                options.ConnectionName = Constants.AllStreamProviderName;
-                options.PersistInterval = TimeSpan.FromSeconds(10);
-            }));
         });
 
         // A third provider reading $all, used by the implicit subscription tests. It is separate from the provider
@@ -126,11 +114,6 @@ public class TestSiloConfigurations : ISiloConfigurator
                 options.CheckpointConnectionName = Constants.ImplicitProviderName;
                 options.StreamFilterPrefix = Constants.ImplicitStreamPrefix;
                 options.StartFromNow = false;
-            }));
-            configurator.UseKurrentDBCheckpointer(ob => ob.Configure(options =>
-            {
-                options.ConnectionName = Constants.ImplicitProviderName;
-                options.PersistInterval = TimeSpan.FromSeconds(10);
             }));
         });
 

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,7 +13,11 @@ public sealed class KurrentDBCheckpointStore : ICheckpointStore<ulong>
 {
     private const string CheckpointStreamPrefix = "checkpoint";
 
+    // Only the latest checkpoint is read; a few older ones are kept for diagnostics and the rest are scavenged.
+    private const int MaxCheckpointsRetained = 5;
+
     private readonly KurrentDBClient _client;
+    private readonly ConcurrentDictionary<string, bool> _configuredStreams = new();
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="KurrentDBCheckpointStore" /> class.
@@ -27,38 +32,34 @@ public sealed class KurrentDBCheckpointStore : ICheckpointStore<ulong>
     public async Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
     {
         var streamName = ForCheckpoint(subscriptionName, partitionId);
-        var result = _client.ReadStreamAsync(Direction.Backwards, streamName, StreamPosition.End, 1);
-        if (await result.ReadState == ReadState.StreamNotFound)
+        var result = _client.ReadStreamAsync(Direction.Backwards, streamName, StreamPosition.End, 1, cancellationToken: cancellationToken);
+        if (await result.ReadState.ConfigureAwait(false) == ReadState.StreamNotFound)
         {
             return default(ulong);
         }
 
-        var resolvedEvent = await result.FirstAsync();
-        if (resolvedEvent.Equals(default(ResolvedEvent)))
+        await foreach (var resolvedEvent in result.ConfigureAwait(false))
         {
-            // StoreCheckpointAsync derives the stream name itself, so pass the subscription name and not the
-            // already prefixed stream name, otherwise the checkpoint lands in 'checkpoint-checkpoint-{name}'.
-            await StoreCheckpointAsync(subscriptionName, partitionId, Position.Start.CommitPosition, cancellationToken);
-            return default(ulong);
+            var checkpoint = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, CheckpointJsonContext.Default.Checkpoint);
+            return checkpoint?.Position ?? default(ulong);
         }
 
-        var checkpoint = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, CheckpointJsonContext.Default.Checkpoint);
-        if (checkpoint is null)
-        {
-            return default(ulong);
-        }
-
-        return checkpoint.Position;
+        return default(ulong);
     }
 
     /// <inheritdoc />
-    public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong position, CancellationToken cancellationToken = default)
+    public async Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong position, CancellationToken cancellationToken = default)
     {
         var streamName = ForCheckpoint(subscriptionName, partitionId);
+        if (!_configuredStreams.ContainsKey(streamName))
+        {
+            await _client.SetStreamMetadataAsync(streamName, StreamState.Any, new StreamMetadata(maxCount: MaxCheckpointsRetained), cancellationToken: cancellationToken).ConfigureAwait(false);
+            _configuredStreams.TryAdd(streamName, true);
+        }
         Checkpoint checkpoint = new(streamName, position);
         EventData checkpointEventData = new(Uuid.NewUuid(), "$checkpoint", JsonSerializer.SerializeToUtf8Bytes(checkpoint, CheckpointJsonContext.Default.Checkpoint));
-        return _client.AppendToStreamAsync(streamName, StreamState.Any, new List<EventData>() { checkpointEventData },
-            null, null, null, cancellationToken);
+        await _client.AppendToStreamAsync(streamName, StreamState.Any, new List<EventData>() { checkpointEventData },
+            null, null, null, cancellationToken).ConfigureAwait(false);
     }
 
     private static string ForCheckpoint(string subscriptionName, string partitionId)

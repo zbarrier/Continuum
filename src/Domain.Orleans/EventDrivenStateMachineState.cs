@@ -17,18 +17,22 @@ public abstract class EventDrivenStateMachineState<TState, TEventBase, TStatus, 
 {
     [NonSerialized] private readonly Dictionary<Type, Action<IStateMachineEvent<TCommand>>> _handlers = new();
 
-    [Id(0)] private readonly StateMachine<TStatus, TCommand> _stateMachine;
+    [NonSerialized] private readonly StateMachine<TStatus, TCommand> _stateMachine;
+
+    [Id(0)] private TStatus _status;
 
     /// <summary>Initializes a new instance, registering event handlers and creating and configuring the state machine.</summary>
-    /// <param name="createStateMachine">Creates the state machine in its initial status.</param>
-    protected EventDrivenStateMachineState(Func<StateMachine<TStatus, TCommand>> createStateMachine)
+    /// <param name="initialStatus">The initial status of the state machine.</param>
+    /// <remarks>The status is stored on the state, so copies and deserialized states keep it while the state machine and its transitions are created by this constructor.</remarks>
+    protected EventDrivenStateMachineState(TStatus initialStatus)
     {
-        ConfigureEventHandlers();
-        if (_stateMachine is null)
+        _status = initialStatus;
+        _stateMachine = new StateMachine<TStatus, TCommand>(() => _status, status => _status = status, FiringMode.Queued)
         {
-            _stateMachine = createStateMachine();
-            ConfigureStateMachine();
-        }
+            RetainSynchronizationContext = true // Always retain for Orleans
+        };
+        ConfigureEventHandlers();
+        ConfigureStateMachine();
     }
 
     /// <summary>Gets the state machine that tracks the status of the state.</summary>
@@ -68,6 +72,6 @@ public abstract class EventDrivenStateMachineState<TState, TEventBase, TStatus, 
     protected abstract void ConfigureEventHandlers();
 
     /// <summary>Configures the permitted transitions of <see cref="StateMachine"/>.</summary>
-    /// <remarks>Deep copies restore only the current status, not transitions, so this is called again on every copied state.</remarks>
-    protected internal abstract void ConfigureStateMachine();
+    /// <remarks>Called from the base constructor before derived constructors run; configuration must not depend on fields set in a derived constructor.</remarks>
+    protected abstract void ConfigureStateMachine();
 }

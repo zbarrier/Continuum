@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Orleans.Configuration;
@@ -12,7 +12,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 /// <summary>
 ///     Adapter factory. This should create an adapter from the stream provider configuration.
 /// </summary>
-public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory
+public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory, IDisposable
 {
     private readonly string _name;
     private readonly KurrentDBOptions _options;
@@ -26,6 +26,7 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory
 
     private HashRingBasedPartitionedStreamQueueMapper? _streamQueueMapper;
     private KurrentDBQueueAdapter? _queueAdapter;
+    private bool _ownsDataAdapter;
 
     /// <summary>
     ///     Creates an instance of the <see cref="KurrentDBQueueAdapterFactory" /> using the provided IServiceProvider and name.
@@ -42,8 +43,13 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory
         var cachePressureOptions = serviceProvider.GetOptionsByName<KurrentDBStreamCachePressureOptions>(name);
         var cacheEvictionOptions = serviceProvider.GetOptionsByName<StreamCacheEvictionOptions>(name);
         var statisticOptions = serviceProvider.GetOptionsByName<StreamStatisticOptions>(name);
-        var dataAdapter = serviceProvider.GetKeyedService<IKurrentDBDataAdapter>(name) ?? serviceProvider.GetService<IKurrentDBDataAdapter>() ?? CreateDefaultDataAdapter(serviceProvider, name);
-        return ActivatorUtilities.CreateInstance<KurrentDBQueueAdapterFactory>(serviceProvider, name, options, receiverFactory, cachePressureOptions, cacheEvictionOptions, statisticOptions, dataAdapter);
+        var dataAdapter = serviceProvider.GetKeyedService<IKurrentDBDataAdapter>(name) ?? serviceProvider.GetService<IKurrentDBDataAdapter>();
+        var ownsDataAdapter = dataAdapter is null;
+        dataAdapter ??= CreateDefaultDataAdapter(serviceProvider, name);
+        var factory = ActivatorUtilities.CreateInstance<KurrentDBQueueAdapterFactory>(serviceProvider, name, options, receiverFactory, cachePressureOptions, cacheEvictionOptions, statisticOptions, dataAdapter);
+        // An adapter resolved from the container is disposed by the container; only the default one is owned here.
+        factory._ownsDataAdapter = ownsDataAdapter;
+        return factory;
     }
 
     /// <summary>
@@ -57,7 +63,7 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory
     private static IKurrentDBDataAdapter CreateDefaultDataAdapter(IServiceProvider serviceProvider, string name)
     {
         var adapterOptions = serviceProvider.GetOptionsByName<KurrentDBDataAdapterOptions>(name);
-        return ActivatorUtilities.CreateInstance<KurrentDBQueueDataAdapterV2>(serviceProvider, adapterOptions);
+        return ActivatorUtilities.CreateInstance<KurrentDBQueueDataAdapter>(serviceProvider, adapterOptions);
     }
 
     /// <summary>
@@ -102,7 +108,7 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory
     /// <summary>
     ///     Creates a message cache for a KurrentDB queue.
     /// </summary>
-    protected Func<string, IStreamQueueCheckpointer<string>, ILoggerFactory, IKurrentDBQueueCache> CacheFactory { get; set; }
+    protected Func<string, ILoggerFactory, IKurrentDBQueueCache> CacheFactory { get; set; }
 
     /// <summary>
     ///     Creates a failure handler for a queue.
@@ -124,7 +130,7 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory
     ///     Factory to create a IKurrentDBReceiver.
     ///     for testing purpose, used in KurrentDBGeneratorStreamProvider
     /// </summary>
-    protected Func<KurrentDBReceiverSettings, string, ILogger, IKurrentDBReceiver> ReceiverFactory { get; set; }
+    protected Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> ReceiverFactory { get; set; }
 
     /// <summary>
     ///     Create a IKurrentDBQueueCacheFactory. It will create a KurrentDBQueueCacheFactory by default.
@@ -135,7 +141,8 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory
     protected virtual IKurrentDBQueueCacheFactory CreateCacheFactory(KurrentDBStreamCachePressureOptions cachePressureOptions)
     {
         var sharedDimensions = new KurrentDBMonitorAggregationDimensions(_options.Name);
-        return new KurrentDBQueueCacheFactory(cachePressureOptions, _cacheEvictionOptions, _statisticOptions, _dataAdapter, sharedDimensions, _serviceProvider.GetRequiredService<OrleansInstruments>());
+        var bufferPoolOptions = _serviceProvider.GetOptionsByName<KurrentDBStreamCacheBufferPoolOptions>(_name);
+        return new KurrentDBQueueCacheFactory(cachePressureOptions, bufferPoolOptions, _cacheEvictionOptions, _statisticOptions, _dataAdapter, sharedDimensions, _serviceProvider.GetRequiredService<OrleansInstruments>(), _serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System);
     }
 
     /// <summary>
@@ -212,4 +219,22 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory
 
     #endregion
 
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    ///     Releases the data adapter when this factory created it.
+    /// </summary>
+    /// <param name="disposing"><see langword="true" /> when called from <see cref="Dispose()" />.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing && _ownsDataAdapter && _dataAdapter is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+    }
 }

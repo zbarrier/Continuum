@@ -85,21 +85,15 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
         var timer = Stopwatch.StartNew();
         try
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("KurrentDBGrainStorage {Name} is initializing: ServiceId={ServiceId}", _name, _serviceId);
-            }
+            _logger.StorageInitializing(_name, _serviceId);
             _initialized = true;
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                timer.Stop();
-                _logger.LogDebug("Init: Name={Name} ServiceId={ServiceId}, initialized in {ElapsedMilliseconds} ms", _name, _serviceId, timer.Elapsed.TotalMilliseconds.ToString("0.00"));
-            }
+            timer.Stop();
+            _logger.StorageInitialized(_name, _serviceId, timer.Elapsed.TotalMilliseconds);
         }
         catch (Exception ex)
         {
             timer.Stop();
-            _logger.LogError(ex, "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms", _name, _serviceId, timer.Elapsed.TotalMilliseconds.ToString("0.00"));
+            _logger.StorageInitializationFailed(ex, _name, _serviceId, timer.Elapsed.TotalMilliseconds);
             throw new KurrentDBStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
         }
         return Task.CompletedTask;
@@ -111,6 +105,11 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
         // other providers and will be disposed by the container.
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    ///     Initializes a storage that is created after the silo has started, such as a tenant's storage.
+    /// </summary>
+    internal Task InitializeAsync(CancellationToken cancellationToken) => Init(cancellationToken);
 
     private void EnsureInitialized()
     {
@@ -155,7 +154,7 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to read grain state for {GrainType} grain with ID {GrainId} and stream key {Key}", grainTypeName, grainId, streamName);
+            _logger.ReadStateFailed(ex, grainTypeName, grainId, streamName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to read grain state for {grainTypeName} with ID {grainId} and stream key {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -184,12 +183,12 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
         }
         catch (WrongExpectedVersionException ex)
         {
-            _logger.LogWarning("Version conflict for {GrainType} grain with ID {GrainId} and stream key {Key} on WriteStateAsync", grainTypeName, grainId, streamName);
+            _logger.WriteStateVersionConflict(grainTypeName, grainId, streamName);
             throw CreateVersionConflict(nameof(WriteStateAsync), grainTypeName, grainId, grainState.ETag, ToETag(ex.ActualStreamState), ex);
         }
         catch (Exception ex) when (ex is not InconsistentStateException)
         {
-            _logger.LogError(ex, "Failed to write grain state for {GrainType} grain with ID {GrainId} and stream key {Key}", grainTypeName, grainId, streamName);
+            _logger.WriteStateFailed(ex, grainTypeName, grainId, streamName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to write grain state for {grainTypeName} with ID {grainId} and stream key {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -209,7 +208,7 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
                 var storedETag = await ReadCurrentETagAsync(streamName);
                 if (storedETag is not null)
                 {
-                    _logger.LogWarning("Version conflict for {GrainType} grain with ID {GrainId} and stream key {Key} on ClearStateAsync", grainTypeName, grainId, streamName);
+                    _logger.ClearStateVersionConflict(grainTypeName, grainId, streamName);
                     throw CreateVersionConflict(nameof(ClearStateAsync), grainTypeName, grainId, grainState.ETag, storedETag, null);
                 }
             }
@@ -242,12 +241,12 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
         }
         catch (WrongExpectedVersionException ex)
         {
-            _logger.LogWarning("Version conflict for {GrainType} grain with ID {GrainId} and stream key {Key} on ClearStateAsync", grainTypeName, grainId, streamName);
+            _logger.ClearStateVersionConflict(grainTypeName, grainId, streamName);
             throw CreateVersionConflict(nameof(ClearStateAsync), grainTypeName, grainId, grainState.ETag, ToETag(ex.ActualStreamState), ex);
         }
         catch (Exception ex) when (ex is not InconsistentStateException)
         {
-            _logger.LogError(ex, "Failed to clear grain state for {GrainType} grain with ID {GrainId} and stream key {Key}", grainTypeName, grainId, streamName);
+            _logger.ClearStateFailed(ex, grainTypeName, grainId, streamName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to clear grain state for {grainTypeName} with ID {grainId} and stream key {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
@@ -357,4 +356,31 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
 
     #endregion
 
+}
+
+internal static partial class KurrentDBGrainStorageLog
+{
+    [LoggerMessage(Level = LogLevel.Debug, Message = "KurrentDBGrainStorage {Name} is initializing: ServiceId={ServiceId}")]
+    public static partial void StorageInitializing(this ILogger logger, string name, string serviceId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Init: Name={Name} ServiceId={ServiceId}, initialized in {ElapsedMilliseconds} ms")]
+    public static partial void StorageInitialized(this ILogger logger, string name, string serviceId, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms")]
+    public static partial void StorageInitializationFailed(this ILogger logger, Exception exception, string name, string serviceId, double elapsedMilliseconds);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read grain state for {GrainType} grain with ID {GrainId} and stream key {Key}")]
+    public static partial void ReadStateFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string key);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Version conflict for {GrainType} grain with ID {GrainId} and stream key {Key} on WriteStateAsync")]
+    public static partial void WriteStateVersionConflict(this ILogger logger, string grainType, GrainId grainId, string key);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to write grain state for {GrainType} grain with ID {GrainId} and stream key {Key}")]
+    public static partial void WriteStateFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string key);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Version conflict for {GrainType} grain with ID {GrainId} and stream key {Key} on ClearStateAsync")]
+    public static partial void ClearStateVersionConflict(this ILogger logger, string grainType, GrainId grainId, string key);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to clear grain state for {GrainType} grain with ID {GrainId} and stream key {Key}")]
+    public static partial void ClearStateFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string key);
 }

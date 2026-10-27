@@ -38,11 +38,11 @@ public sealed class KurrentDBAllStreamReceiverFactory : IKurrentDBReceiverFactor
     public KurrentDBReceiverOptionsBase ReceiverOptions => _receiverOptions;
 
     /// <inheritdoc />
-    public IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, string position, ILogger logger)
+    public IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, ILogger logger)
     {
         // The client is a keyed singleton shared by every queue of this connection. It is owned by the container, so
         // receivers must not dispose it.
         var client = _serviceProvider.GetRequiredKeyedService<KurrentDBClient>(_connectionName);
-        return new KurrentDBAllStreamReceiver(client, settings, position, logger);
+        return new KurrentDBAllStreamReceiver(client, settings, logger);
     }
 }

@@ -35,13 +35,6 @@ public interface IKurrentDBDataAdapter : IQueueDataAdapter<EventData[]>, ICacheD
     StreamPosition GetStreamPosition(StreamedEvent<KurrentDBRawEvent> queueMessage);
 
     /// <summary>
-    ///     Get KurrentDB event position from cached message.
-    /// </summary>
-    /// <param name="cachedMessage"></param>
-    /// <returns></returns>
-    string GetPosition(CachedMessage cachedMessage);
-
-    /// <summary>
     ///     Get the log position a checkpoint should be written from, for a cached message.
     /// </summary>
     /// <param name="cachedMessage">The cached message.</param>

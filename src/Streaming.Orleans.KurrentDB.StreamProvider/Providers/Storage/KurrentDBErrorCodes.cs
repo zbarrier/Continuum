@@ -14,7 +14,6 @@ internal static class KurrentDBErrorCodes
 
     internal static readonly EventId SlowAccessToStream = new(100115, nameof(SlowAccessToStream));
     internal static readonly EventId FailCreatingClient = new(100118, nameof(FailCreatingClient));
-    internal static readonly EventId FailDisposingClient = new(100118, nameof(FailDisposingClient));
     
     internal static readonly EventId CannotInitializeSubscriptionClient = new(100201, nameof(CannotInitializeSubscriptionClient));
     internal static readonly EventId CannotReadFromSubscription = new(100204, nameof(CannotReadFromSubscription));

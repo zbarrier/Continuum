@@ -1,3 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
+
+using Continuum.Orleans.Tenancy;
 using Continuum.Streams;
 
 namespace Continuum.Orleans.Streams;
@@ -10,7 +13,7 @@ public static class StreamNameParsing
     /// <summary>
     /// The separator between a tenant id and the key in a tenant qualified stream name.
     /// </summary>
-    public const char TenantSeparator = '|';
+    public const char TenantSeparator = TenantKey.Separator;
 
     /// <summary>
     /// Builds a <see cref="StreamName"/> from a name already split into its category and the remainder, splitting the
@@ -22,27 +25,48 @@ public static class StreamNameParsing
     /// <exception cref="FormatException">The tenant id or key is empty.</exception>
     public static StreamName Create(string value, string category, string remainder)
     {
+        var error = TryCreateCore(value, category, remainder, out var result);
+        return error is null ? result! : throw new FormatException(error);
+    }
+
+    /// <summary>
+    /// Attempts to build a <see cref="StreamName"/> as <see cref="Create"/> does, returning <see langword="false"/>
+    /// instead of throwing when the tenant id or key is empty.
+    /// </summary>
+    /// <param name="value">The raw stream name.</param>
+    /// <param name="category">The category part of the name.</param>
+    /// <param name="remainder">Everything after the category, either <c>key</c> or <c>tenantId|key</c>.</param>
+    /// <param name="result">The stream name, when successful.</param>
+    public static bool TryCreate(string value, string category, string remainder, [NotNullWhen(true)] out StreamName? result) =>
+        TryCreateCore(value, category, remainder, out result) is null;
+
+    private static string? TryCreateCore(string value, string category, string remainder, out StreamName? result)
+    {
+        result = null;
         var separatorIndex = remainder.IndexOf(TenantSeparator);
         if (separatorIndex < 0)
         {
             if (remainder.Length == 0)
             {
-                throw new FormatException($"Stream name '{value}' has an empty key.");
+                return $"Stream name '{value}' has an empty key.";
             }
 
-            return new StreamName(value, category, null, remainder);
+            result = new StreamName(value, category, null, remainder);
+            return null;
         }
 
         if (separatorIndex == 0)
         {
-            throw new FormatException($"Stream name '{value}' has an empty tenant id.");
+            return $"Stream name '{value}' has an empty tenant id.";
         }
 
         if (separatorIndex == remainder.Length - 1)
         {
-            throw new FormatException($"Stream name '{value}' has an empty key.");
+            return $"Stream name '{value}' has an empty key.";
         }
 
-        return new StreamName(value, category, remainder[..separatorIndex], remainder[(separatorIndex + 1)..]);
+        TenantKey.Split(remainder, out var tenantId, out var key);
+        result = new StreamName(value, category, tenantId, key);
+        return null;
     }
 }

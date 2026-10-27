@@ -45,7 +45,7 @@ public static class SubscriptionCheckpointGrain
 /// </para>
 /// </remarks>
 [Reentrant]
-public sealed class SubscriptionCheckpointGrain<TPosition> : Grain, ISubscriptionCheckpointGrain<TPosition>
+public sealed class SubscriptionCheckpointGrain<TPosition> : Grain, ISubscriptionCheckpointGrain<TPosition>, IDisposable
     where TPosition : IComparable<TPosition>
 {
     private readonly IPersistentState<SubscriptionCheckpointState<TPosition>> _storage;
@@ -84,8 +84,7 @@ public sealed class SubscriptionCheckpointGrain<TPosition> : Grain, ISubscriptio
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to write checkpoint {Position} for subscription {Subscription} on deactivation.",
-                State.Position, this.GetPrimaryKeyString());
+            _logger.CheckpointWriteOnDeactivationFailed(ex, State.Position, this.GetPrimaryKeyString());
         }
     }
 
@@ -102,6 +101,9 @@ public sealed class SubscriptionCheckpointGrain<TPosition> : Grain, ISubscriptio
         }
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => _writeLock.Dispose();
 
     private async Task FlushAsync(CancellationToken cancellationToken)
     {
@@ -144,4 +146,10 @@ public sealed class SubscriptionCheckpointState<TPosition>
     /// </summary>
     [Id(0)]
     public TPosition Position { get; set; } = default!;
+}
+
+internal static partial class SubscriptionCheckpointGrainLog
+{
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to write checkpoint {Position} for subscription {Subscription} on deactivation.")]
+    public static partial void CheckpointWriteOnDeactivationFailed(this ILogger logger, Exception exception, object? position, string subscription);
 }

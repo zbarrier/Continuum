@@ -42,6 +42,10 @@ public class KurrentDBCatchupSubscriptionOptionsValidator : IConfigurationValida
         {
             throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBChannelBufferOptions)}.{nameof(KurrentDBChannelBufferOptions.MaxUnprocessedEventsBeforeStop)} must be between 1 and 1,000,000.");
         }
+        if (_options.BufferOptions.IncompleteTransactionTimeout <= TimeSpan.Zero)
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBChannelBufferOptions)}.{nameof(KurrentDBChannelBufferOptions.IncompleteTransactionTimeout)} must be greater than zero.");
+        }
         if (_options.CheckpointMonitorOptions is null)
         {
             throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCatchupSubscriptionOptions)}.{nameof(_options.CheckpointMonitorOptions)} is required.");

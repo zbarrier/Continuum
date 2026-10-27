@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 using Orleans.Concurrency;
 using Orleans.Runtime;
@@ -143,11 +143,7 @@ public abstract class ProjectionGrain<TGrain, TState> : Grain, IProjectionGrain,
     /// </remarks>
     protected virtual Task OnErrorAsync(Exception exception)
     {
-        Logger.LogError(
-            exception,
-            "Stream subscription faulted for {Grain}; currently subscribed to {Streams}.",
-            typeof(TGrain).Name,
-            SubscriptionManager.DescribeSubscriptions());
+        Logger.StreamSubscriptionFaulted(exception, typeof(TGrain).Name, SubscriptionManager.DescribeSubscriptions());
 
         return Task.FromException(exception);
     }
@@ -233,4 +229,10 @@ public abstract class ProjectionGrain<TGrain, TState> : Grain, IProjectionGrain,
             await Storage.WriteStateAsync();
         }
     }
+}
+
+internal static partial class ProjectionGrainLog
+{
+    [LoggerMessage(Level = LogLevel.Error, Message = "Stream subscription faulted for {Grain}; currently subscribed to {Streams}.")]
+    public static partial void StreamSubscriptionFaulted(this ILogger logger, Exception exception, string grain, string streams);
 }

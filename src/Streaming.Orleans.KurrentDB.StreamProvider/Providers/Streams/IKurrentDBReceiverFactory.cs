@@ -28,9 +28,8 @@ public interface IKurrentDBReceiverFactory
     ///     Creates a receiver for a single queue.
     /// </summary>
     /// <param name="settings">The per-queue receiver settings.</param>
-    /// <param name="position">The last checkpointed position, if any.</param>
     /// <param name="logger">The logger.</param>
-    IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, string position, ILogger logger);
+    IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, ILogger logger);
 }
 
 /// <summary>
@@ -60,11 +59,11 @@ public sealed class KurrentDBPersistentSubscriptionReceiverFactory : IKurrentDBR
     public KurrentDBReceiverOptionsBase ReceiverOptions => _receiverOptions;
 
     /// <inheritdoc />
-    public IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, string position, ILogger logger)
+    public IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, ILogger logger)
     {
         // The subscriptions client is a keyed singleton shared by every queue of this connection. It is owned by the
         // container, so receivers must not dispose it.
         var client = _serviceProvider.GetRequiredKeyedService<KurrentDBPersistentSubscriptionsClient>(_connectionName);
-        return new KurrentDBPersistentSubscriptionReceiver(client, settings, position, logger);
+        return new KurrentDBPersistentSubscriptionReceiver(client, settings, logger);
     }
 }

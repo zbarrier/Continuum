@@ -17,16 +17,25 @@ public static class GlobalHttpErrorHandler
         {
             case TimeoutException:
             case TaskCanceledException:
-                logger.LogError(ex, "Http request timed out.");
+                logger.HttpRequestTimedOut(ex);
                 error = RequestErrors.NewDeadlineExceeded("The operation timed out before it could complete.");
                 break;
 
             case HttpRequestException:
             default:
-                logger.LogError(ex, "Http request failed with an exception.");
+                logger.HttpRequestFailed(ex);
                 error = RequestErrors.NewUnknown("An unexpected request error occurred.");
                 break;
         }
         return error;
     };
+}
+
+internal static partial class GlobalHttpErrorHandlerLog
+{
+    [LoggerMessage(Level = LogLevel.Error, Message = "Http request timed out.")]
+    public static partial void HttpRequestTimedOut(this ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Http request failed with an exception.")]
+    public static partial void HttpRequestFailed(this ILogger logger, Exception exception);
 }

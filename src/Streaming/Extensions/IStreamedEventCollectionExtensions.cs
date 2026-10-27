@@ -37,32 +37,4 @@ public static class IStreamedEventCollectionExtensions
 
         return streamEventsByStreamName;
     }
-
-    /// <summary>
-    /// Groups the events by <see cref="IStreamName.Key"/>, preserving their order within each group.
-    /// </summary>
-    /// <param name="streamEvents">The events to group.</param>
-    /// <returns>The events keyed by stream key.</returns>
-    public static Dictionary<string, List<IStreamedEvent<object>>> GroupByStreamKey(this List<IStreamedEvent<object>> streamEvents)
-    {
-        var streamEventsByStreamKey = new Dictionary<string, List<IStreamedEvent<object>>>();
-
-        var listAsSpan = CollectionsMarshal.AsSpan(streamEvents);
-        ref var searchSpace = ref MemoryMarshal.GetReference(listAsSpan);
-        for (int i = 0; i < listAsSpan.Length; i++)
-        {
-            var streamEvent = Unsafe.Add(ref searchSpace, i);
-            ref var valueOrNew = ref CollectionsMarshal.GetValueRefOrAddDefault(streamEventsByStreamKey, streamEvent.StreamName.Key, out bool exists);
-            if (exists)
-            {
-                valueOrNew!.Add(streamEvent);
-            }
-            else
-            {
-                valueOrNew = [streamEvent];
-            }
-        }
-
-        return streamEventsByStreamKey;
-    }
 }

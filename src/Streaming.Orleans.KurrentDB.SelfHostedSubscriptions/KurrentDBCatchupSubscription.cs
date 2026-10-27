@@ -145,7 +145,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
     {
         if (!_options.Enabled)
         {
-            _logger.LogWarning("Subscription '{SubscriptionName}' is disabled.", SubscriptionName);
+            _logger.SubscriptionDisabled(SubscriptionName);
             return;
         }
 
@@ -211,7 +211,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Subscription '{SubscriptionName}' failed to flush its checkpoint on shutdown. Already processed events may be redelivered.", SubscriptionName);
+            _logger.CheckpointFlushFailed(ex, SubscriptionName);
         }
     }
 
@@ -223,7 +223,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         var level = KurrentDBBatchRetryState.GetRetryLogLevel(attempt);
         if (level is { } logLevel)
         {
-            _logger.Log(logLevel, ex, "Subscription '{SubscriptionName}' was dropped. Reconnect attempt {Attempt} in {Delay}.", SubscriptionName, attempt, delay);
+            _logger.SubscriptionDropped(logLevel, ex, SubscriptionName, attempt, delay);
         }
         try
         {
@@ -241,7 +241,8 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         try
         {
             var receiver = new KurrentDBCatchupBatchReceiver(_channel.Reader, _checkpointMonitor, HandleBatchAsync,
-                _options.BufferOptions.MaxEventsPerProcessLoop, CreateBatchResiliencePipeline(), _logger);
+                _options.BufferOptions.MaxEventsPerProcessLoop, CreateBatchResiliencePipeline(), _logger,
+                                incompleteTransactionTimeout: _options.BufferOptions.IncompleteTransactionTimeout);
             await receiver.RunAsync(stopping.Token);
         }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested)
@@ -252,8 +253,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             // The failed batch was not checkpointed, so stopping here guarantees it is redelivered when the
             // subscription next starts rather than being skipped.
             var state = ex.State;
-            _logger.LogCritical(ex.InnerException, "Subscription '{SubscriptionName}' stopped because a batch of {EventCount} events from position {FirstPosition} to {LastPosition} could not be processed after {FailedAttempts} attempts over {Elapsed}. No checkpoint was recorded for the failed batch.",
-                SubscriptionName, state.EventCount, state.FirstPosition, state.LastPosition, state.FailedAttempts, state.Elapsed);
+            _logger.SubscriptionStoppedAfterRetries(ex.InnerException, SubscriptionName, state.EventCount, state.FirstPosition, state.LastPosition, state.FailedAttempts, state.Elapsed);
             SetState(KurrentDBCatchupSubscriptionState.Faulted,
                 $"A batch of {state.EventCount} events from position {state.FirstPosition} to {state.LastPosition} could not be processed after {state.FailedAttempts} attempts. No checkpoint was recorded for the failed batch.",
                 ex.InnerException);
@@ -262,7 +262,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         }
         catch (Exception ex)
         {
-            _logger.LogCritical(ex, "Subscription '{SubscriptionName}' stopped because a batch could not be processed. No checkpoint was recorded for the failed batch.", SubscriptionName);
+            _logger.SubscriptionStopped(ex, SubscriptionName);
             SetState(KurrentDBCatchupSubscriptionState.Faulted, "A batch could not be processed. No checkpoint was recorded for the failed batch.", ex);
             _metrics.Failed(SubscriptionName);
             await stopping.CancelAsync();
@@ -304,15 +304,14 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
     {
         if (!context.Properties.TryGetValue(KurrentDBBatchRetryState.Key, out var state))
         {
-            _logger.LogWarning(exception, "Subscription '{SubscriptionName}' failed to process a batch. Retrying in {Delay}.", SubscriptionName, retryDelay);
+            _logger.BatchRetrying(exception, SubscriptionName, retryDelay);
             return;
         }
         if (KurrentDBBatchRetryState.GetRetryLogLevel(state.FailedAttempts) is not { } level)
         {
             return;
         }
-        _logger.Log(level, exception, "Subscription '{SubscriptionName}' failed to process a batch of {EventCount} events from position {FirstPosition} to {LastPosition}. Attempt {FailedAttempts} failed, {Elapsed} since the first failure. Retrying in {Delay}.",
-            SubscriptionName, state.EventCount, state.FirstPosition, state.LastPosition, state.FailedAttempts, state.Elapsed, retryDelay);
+        _logger.BatchAttemptFailed(level, exception, SubscriptionName, state.EventCount, state.FirstPosition, state.LastPosition, state.FailedAttempts, state.Elapsed, retryDelay);
     }
 
     /// <summary>
@@ -346,11 +345,20 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
     private async Task SubscribeToAll(CancellationToken cancellationToken)
     {
         var reconnectAttempt = 0;
+        var checkpointLoaded = false;
+        ulong? lastReceivedPosition = null;
         Subscribe:
         try
         {
-            var lastCheckpoint = await _checkpointMonitor.GetLastCheckpointAsync();
-            var startPosition = !lastCheckpoint.HasValue ? FromAll.Start : FromAll.After(new Position(lastCheckpoint.Value, lastCheckpoint.Value));
+            // The stored checkpoint is only read before the first connect, while nothing is buffered. Reconnects resume
+            // after the last position written to the channel, because events still buffered or being handled are not
+            // reflected in the checkpoint yet and would otherwise be read and handled twice.
+            if (!checkpointLoaded)
+            {
+                lastReceivedPosition = await _checkpointMonitor.GetLastCheckpointAsync(cancellationToken);
+                checkpointLoaded = true;
+            }
+            var startPosition = !lastReceivedPosition.HasValue ? FromAll.Start : FromAll.After(new Position(lastReceivedPosition.Value, lastReceivedPosition.Value));
             var subscriptionFilterOptions = FilterOptions != null 
                 ? new SubscriptionFilterOptions(FilterOptions, _options.CheckpointMonitorOptions.KurrentDBCheckpointInterval)
                 : null;
@@ -368,13 +376,18 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                             SetState(KurrentDBCatchupSubscriptionState.Running);
                         }
                         await EventAppearedFromAllStream(e, cancellationToken);
+                        if (e.OriginalPosition is { } eventPosition)
+                        {
+                            lastReceivedPosition = eventPosition.CommitPosition;
+                        }
                         break;
 
                     case StreamMessage.AllStreamCheckpointReached(Position position):
                         {
-                            _logger.LogInformation("Checkpoint reached at position {Position} for subscription '{SubscriptionName}'.", position, SubscriptionName);
-                            var checkpointEvent = position.ToAllStreamCheckpointEvent();
+                            _logger.AllStreamCheckpointReached(position, SubscriptionName);
+                            var checkpointEvent = position.ToAllStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
+                            lastReceivedPosition = position.CommitPosition;
                         }
                         break;
 
@@ -384,46 +397,46 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                         {
                             SetState(KurrentDBCatchupSubscriptionState.Running);
                         }
-                        _logger.LogInformation("Subscription '{SubscriptionName}' confirmed. Starting from position {Position}.", SubscriptionName, startPosition);
+                        _logger.AllStreamSubscriptionConfirmed(SubscriptionName, startPosition);
                         break;
 
                     case StreamMessage.CaughtUp:
-                        _logger.LogInformation("Subscription '{SubscriptionName}' has caught up to the head of the stream.", SubscriptionName);
+                        _logger.SubscriptionCaughtUp(SubscriptionName);
                         break;
 
                     case StreamMessage.FellBehind:
-                        _logger.LogWarning("Subscription '{SubscriptionName}' has fallen behind. This means the subscription is processing events slower than they are being produced. Consider scaling up the processing or increasing the buffer size.", SubscriptionName);
+                        _logger.SubscriptionFellBehind(SubscriptionName);
                         break;
 
                     case StreamMessage.LastAllStreamPosition(var position):
                         {
-                            _logger.LogInformation("Subscription '{SubscriptionName}' reached last position of the stream at {Position}.", SubscriptionName, position);
-                            var checkpointEvent = position.ToAllStreamCheckpointEvent();
+                            _logger.AllStreamLastPositionReached(SubscriptionName, position);
+                            var checkpointEvent = position.ToAllStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
                         }
                         break;
 
                     case StreamMessage.Unknown:
-                        _logger.LogError("Received unknown message type in subscription '{SubscriptionName}'.", SubscriptionName);
+                        _logger.AllStreamUnknownMessage(SubscriptionName);
                         break;
 
                     default:
-                        _logger.LogWarning("Received unhandled message type '{MessageType}' in subscription '{SubscriptionName}'.", message.GetType().Name, SubscriptionName);
+                        _logger.UnhandledMessageType(message.GetType().Name, SubscriptionName);
                         break;
                 }
             }
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogInformation(ex, "Subscription '{SubscriptionName}' was cancelled.", SubscriptionName);
+            _logger.SubscriptionCancelled(ex, SubscriptionName);
         }
         catch (ObjectDisposedException ex)
         {
-            _logger.LogInformation(ex, "Subscription '{SubscriptionName}' was cancelled by the user.", SubscriptionName);
+            _logger.SubscriptionCancelledByUser(ex, SubscriptionName);
         }
         catch (Exception) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogInformation("Subscription '{SubscriptionName}' was cancelled.", SubscriptionName);
+            _logger.SubscriptionCancelled(null, SubscriptionName);
         }
         catch (Exception ex)
         {
@@ -444,8 +457,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         var eventTypeNotMapped = !_typeMapper.TryGetType(resolvedEvent.Event!.EventType, out var eventType);
         if (eventTypeNotMapped)
         {
-            _logger.LogWarning("Failed to map event type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'.",
-                resolvedEvent.Event.EventType, StreamName, SubscriptionName);
+            _logger.EventTypeNotMapped(resolvedEvent.Event.EventType, StreamName, SubscriptionName);
             return;
         }
         if (!TryDeserialize(resolvedEvent, eventType!, out var deserializedEvent))
@@ -453,7 +465,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             return;
         }
 
-        var streamEvent = resolvedEvent.ToAllStreamEvent(deserializedEvent, _options.StreamNameParser);
+        var streamEvent = resolvedEvent.ToAllStreamEvent(_options.ConnectionName, deserializedEvent, _options.StreamNameParser);
 
         await _channel.Writer.WriteAsync(streamEvent, cancellationToken);
     }
@@ -465,11 +477,18 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
     private async Task SubscribeToStream(CancellationToken cancellationToken)
     {
         var reconnectAttempt = 0;
+        var checkpointLoaded = false;
+        ulong? lastReceivedPosition = null;
         Subscribe:
         try
         {
-            var lastCheckpoint = await _checkpointMonitor.GetLastCheckpointAsync();
-            var startPosition = !lastCheckpoint.HasValue ? FromStream.Start : FromStream.After(new StreamPosition(lastCheckpoint.Value));
+            // See SubscribeToAll: reconnects resume after the last position written to the channel.
+            if (!checkpointLoaded)
+            {
+                lastReceivedPosition = await _checkpointMonitor.GetLastCheckpointAsync(cancellationToken);
+                checkpointLoaded = true;
+            }
+            var startPosition = !lastReceivedPosition.HasValue ? FromStream.Start : FromStream.After(new StreamPosition(lastReceivedPosition.Value));
 
             await using var subscription = _client.SubscribeToStream(StreamName, startPosition, false, null, cancellationToken);
 
@@ -484,13 +503,15 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                             SetState(KurrentDBCatchupSubscriptionState.Running);
                         }
                         await EventAppearedFromStream(e, cancellationToken);
+                        lastReceivedPosition = e.OriginalEventNumber.ToUInt64();
                         break;
 
                     case StreamMessage.StreamCheckpointReached(StreamPosition position):
                         {
-                            _logger.LogInformation("Checkpoint reached at position {Position} for subscription '{SubscriptionName}'.", position, SubscriptionName);
-                            var checkpointEvent = position.ToStreamCheckpointEvent();
+                            _logger.StreamCheckpointReached(position, SubscriptionName);
+                            var checkpointEvent = position.ToStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
+                            lastReceivedPosition = position.ToUInt64();
                         }
                         break;
 
@@ -500,54 +521,54 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                         {
                             SetState(KurrentDBCatchupSubscriptionState.Running);
                         }
-                        _logger.LogInformation("Subscription '{SubscriptionName}' confirmed. Starting from position {Position}.", SubscriptionName, startPosition);
+                        _logger.StreamSubscriptionConfirmed(SubscriptionName, startPosition);
                         break;
 
                     case StreamMessage.CaughtUp:
-                        _logger.LogInformation("Subscription '{SubscriptionName}' has caught up to the head of the stream.", SubscriptionName);
+                        _logger.SubscriptionCaughtUp(SubscriptionName);
                         break;
 
                     case StreamMessage.FellBehind:
-                        _logger.LogWarning("Subscription '{SubscriptionName}' has fallen behind. This means the subscription is processing events slower than they are being produced. Consider scaling up the processing or increasing the buffer size.", SubscriptionName);
+                        _logger.SubscriptionFellBehind(SubscriptionName);
                         break;
 
                     case StreamMessage.FirstStreamPosition(StreamPosition position):
                         {
-                            _logger.LogInformation("Subscription '{SubscriptionName}' reached first position of the stream at {Position}.", SubscriptionName, position);
-                            var checkpointEvent = position.ToStreamCheckpointEvent();
+                            _logger.StreamFirstPositionReached(SubscriptionName, position);
+                            var checkpointEvent = position.ToStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
                         }
                         break;
 
                     case StreamMessage.LastStreamPosition(StreamPosition position):
                         {
-                            _logger.LogInformation("Subscription '{SubscriptionName}' reached last position of the stream at {Position}.", SubscriptionName, position);
-                            var checkpointEvent = position.ToStreamCheckpointEvent();
+                            _logger.StreamLastPositionReached(SubscriptionName, position);
+                            var checkpointEvent = position.ToStreamCheckpointEvent(_options.ConnectionName);
                             await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
                         }
                         break;
 
                     case StreamMessage.Unknown:
-                        _logger.LogWarning("Received unknown message type in subscription '{SubscriptionName}'.", SubscriptionName);
+                        _logger.StreamUnknownMessage(SubscriptionName);
                         break;
 
                     default:
-                        _logger.LogWarning("Received unhandled message type '{MessageType}' in subscription '{SubscriptionName}'.", message.GetType().Name, SubscriptionName);
+                        _logger.UnhandledMessageType(message.GetType().Name, SubscriptionName);
                         break;
                 }
             }
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogInformation(ex, "Subscription '{SubscriptionName}' was cancelled.", SubscriptionName);
+            _logger.SubscriptionCancelled(ex, SubscriptionName);
         }
         catch (ObjectDisposedException ex)
         {
-            _logger.LogInformation(ex, "Subscription '{SubscriptionName}' was cancelled by the user.", SubscriptionName);
+            _logger.SubscriptionCancelledByUser(ex, SubscriptionName);
         }
         catch (Exception) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogInformation("Subscription '{SubscriptionName}' was cancelled.", SubscriptionName);
+            _logger.SubscriptionCancelled(null, SubscriptionName);
         }
         catch (Exception ex)
         {
@@ -568,8 +589,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         var eventTypeNotMapped = !_typeMapper.TryGetType(resolvedEvent.Event!.EventType, out var eventType);
         if (eventTypeNotMapped)
         {
-            _logger.LogWarning("Failed to map event type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'.",
-                resolvedEvent.Event.EventType, StreamName, SubscriptionName);
+            _logger.EventTypeNotMapped(resolvedEvent.Event.EventType, StreamName, SubscriptionName);
             return;
         }
         if (!TryDeserialize(resolvedEvent, eventType!, out var deserializedEvent))
@@ -577,7 +597,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             return;
         }
 
-        var streamEvent = resolvedEvent.ToStreamEvent(deserializedEvent, _options.StreamNameParser);
+        var streamEvent = resolvedEvent.ToStreamEvent(_options.ConnectionName, deserializedEvent, _options.StreamNameParser);
 
         await _channel.Writer.WriteAsync(streamEvent, cancellationToken);
     }
@@ -613,4 +633,73 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
     ///     </list>
     /// </remarks>
     protected abstract Task OnNextBatchAsync(List<IStreamedEvent<object>> streamEvents);
+}
+
+internal static partial class KurrentDBCatchupSubscriptionLog
+{
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Subscription '{SubscriptionName}' is disabled.")]
+	public static partial void SubscriptionDisabled(this ILogger logger, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Subscription '{SubscriptionName}' failed to flush its checkpoint on shutdown. Already processed events may be redelivered.")]
+	public static partial void CheckpointFlushFailed(this ILogger logger, Exception exception, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Critical, Message = "Subscription '{SubscriptionName}' stopped because a batch of {EventCount} events from position {FirstPosition} to {LastPosition} could not be processed after {FailedAttempts} attempts over {Elapsed}. No checkpoint was recorded for the failed batch.")]
+	public static partial void SubscriptionStoppedAfterRetries(this ILogger logger, Exception? exception, string subscriptionName, int eventCount, ulong firstPosition, ulong lastPosition, int failedAttempts, TimeSpan elapsed);
+
+	[LoggerMessage(Level = LogLevel.Critical, Message = "Subscription '{SubscriptionName}' stopped because a batch could not be processed. No checkpoint was recorded for the failed batch.")]
+	public static partial void SubscriptionStopped(this ILogger logger, Exception exception, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Subscription '{SubscriptionName}' failed to process a batch. Retrying in {Delay}.")]
+	public static partial void BatchRetrying(this ILogger logger, Exception? exception, string subscriptionName, TimeSpan delay);
+
+	[LoggerMessage(Message = "Subscription '{SubscriptionName}' failed to process a batch of {EventCount} events from position {FirstPosition} to {LastPosition}. Attempt {FailedAttempts} failed, {Elapsed} since the first failure. Retrying in {Delay}.")]
+	public static partial void BatchAttemptFailed(this ILogger logger, LogLevel level, Exception? exception, string subscriptionName, int eventCount, ulong firstPosition, ulong lastPosition, int failedAttempts, TimeSpan elapsed, TimeSpan delay);
+
+	[LoggerMessage(Message = "Subscription '{SubscriptionName}' was dropped. Reconnect attempt {Attempt} in {Delay}.")]
+	public static partial void SubscriptionDropped(this ILogger logger, LogLevel level, Exception exception, string subscriptionName, int attempt, TimeSpan delay);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Checkpoint reached at position {Position} for subscription '{SubscriptionName}'.")]
+	public static partial void AllStreamCheckpointReached(this ILogger logger, Position position, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Checkpoint reached at position {Position} for subscription '{SubscriptionName}'.")]
+	public static partial void StreamCheckpointReached(this ILogger logger, StreamPosition position, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' confirmed. Starting from position {Position}.")]
+	public static partial void AllStreamSubscriptionConfirmed(this ILogger logger, string subscriptionName, FromAll position);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' confirmed. Starting from position {Position}.")]
+	public static partial void StreamSubscriptionConfirmed(this ILogger logger, string subscriptionName, FromStream position);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' has caught up to the head of the stream.")]
+	public static partial void SubscriptionCaughtUp(this ILogger logger, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Subscription '{SubscriptionName}' has fallen behind. This means the subscription is processing events slower than they are being produced. Consider scaling up the processing or increasing the buffer size.")]
+	public static partial void SubscriptionFellBehind(this ILogger logger, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' reached first position of the stream at {Position}.")]
+	public static partial void StreamFirstPositionReached(this ILogger logger, string subscriptionName, StreamPosition position);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' reached last position of the stream at {Position}.")]
+	public static partial void AllStreamLastPositionReached(this ILogger logger, string subscriptionName, Position position);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' reached last position of the stream at {Position}.")]
+	public static partial void StreamLastPositionReached(this ILogger logger, string subscriptionName, StreamPosition position);
+
+	[LoggerMessage(Level = LogLevel.Error, Message = "Received unknown message type in subscription '{SubscriptionName}'.")]
+	public static partial void AllStreamUnknownMessage(this ILogger logger, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Received unknown message type in subscription '{SubscriptionName}'.")]
+	public static partial void StreamUnknownMessage(this ILogger logger, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Received unhandled message type '{MessageType}' in subscription '{SubscriptionName}'.")]
+	public static partial void UnhandledMessageType(this ILogger logger, string messageType, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' was cancelled.")]
+	public static partial void SubscriptionCancelled(this ILogger logger, Exception? exception, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' was cancelled by the user.")]
+	public static partial void SubscriptionCancelledByUser(this ILogger logger, Exception exception, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Failed to map event type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'.")]
+	public static partial void EventTypeNotMapped(this ILogger logger, string eventType, string streamName, string subscriptionName);
 }

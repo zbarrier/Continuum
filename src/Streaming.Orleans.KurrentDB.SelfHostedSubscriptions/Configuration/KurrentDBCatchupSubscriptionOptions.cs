@@ -62,6 +62,12 @@ public class KurrentDBChannelBufferOptions
 
     /// <summary>The number of buffered events at which reading pauses.</summary>
     public int MaxUnprocessedEventsBeforeStop { get; set; } = 1_000;
+
+    /// <summary>
+    ///     How long to wait for the rest of an open transaction when no event arrives before handing it off incomplete.
+    ///     A transaction is committed in one go, so a gap this long means its remaining events were filtered out.
+    /// </summary>
+    public TimeSpan IncompleteTransactionTimeout { get; set; } = TimeSpan.FromSeconds(60);
 }
 
 /// <summary>

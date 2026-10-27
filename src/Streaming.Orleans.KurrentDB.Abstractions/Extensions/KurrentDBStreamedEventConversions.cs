@@ -1,4 +1,5 @@
 using Continuum.Orleans.KurrentDB;
+using Continuum.Orleans.Tenancy;
 using KurrentDB.Client;
 using Continuum.Streams;
 
@@ -39,6 +40,7 @@ public static class KurrentDBStreamedEventConversions
     /// <summary>
     ///     Creates the cursor for an event read from KurrentDB.
     /// </summary>
+    /// <param name="sourceConnectionName">The logical connection the event was read from.</param>
     /// <param name="streamName">The stream the event was written to.</param>
     /// <param name="sequenceNumber">The position the event was read at.</param>
     /// <returns>A cursor whose topic is the stream category and whose partition is the individual stream.</returns>
@@ -49,26 +51,30 @@ public static class KurrentDBStreamedEventConversions
     ///     from discarding an event of one stream because a later event of another stream arrived first. The tenant
     ///     is part of the partition so that the same key under two tenants is never treated as one stream.
     /// </remarks>
-    public static StreamedEventCursor ToCursor(IStreamName streamName, System.Numerics.BigInteger sequenceNumber)
+    public static StreamedEventCursor ToCursor(string sourceConnectionName, IStreamName streamName, System.Numerics.BigInteger sequenceNumber)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         ArgumentNullException.ThrowIfNull(streamName);
-        var partition = streamName.TenantId is null ? streamName.Key : $"{streamName.TenantId}|{streamName.Key}";
-        return new StreamedEventCursor(streamName.Category, partition, sequenceNumber, 0);
+        // Built the same way as a tenant qualified grain key, so the partition matches the stream's Orleans key.
+        var partition = streamName.TenantId is null ? streamName.Key : TenantKey.Create(streamName.TenantId, streamName.Key);
+        return new StreamedEventCursor(sourceConnectionName, streamName.Category, partition, sequenceNumber, 0);
     }
 
     /// <summary>
     ///     Creates a checkpoint event for a position in the <c>$all</c> stream.
     /// </summary>
     /// <param name="position">The <c>$all</c> position.</param>
+    /// <param name="sourceConnectionName">The logical connection the position belongs to.</param>
     /// <returns>An event carrying <see cref="CheckpointMarker" /> as its payload.</returns>
-    public static StreamedEvent<object> ToAllStreamCheckpointEvent(this Position position)
+    public static StreamedEvent<object> ToAllStreamCheckpointEvent(this Position position, string sourceConnectionName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         var streamEvent = new StreamedEvent<object>(
             Guid.CreateVersion7(),
             "AllStreamCheckpointEventType",
             CheckpointStreamName,
             0,
-            new StreamedEventCursor(AllStreamCheckpointTopic, DefaultPartitionId, position.CommitPosition, 0),
+            new StreamedEventCursor(sourceConnectionName, AllStreamCheckpointTopic, DefaultPartitionId, position.CommitPosition, 0),
             DateTime.UtcNow,
             CheckpointMarker);
         return streamEvent;
@@ -78,6 +84,7 @@ public static class KurrentDBStreamedEventConversions
     ///     Creates a streamed event from an event read from the <c>$all</c> stream.
     /// </summary>
     /// <param name="resolvedEvent">The KurrentDB event.</param>
+    /// <param name="sourceConnectionName">The logical connection the event was read from.</param>
     /// <param name="deserializedEvent">The deserialized payload.</param>
     /// <param name="nameParser">The parser for the event's stream name, or <see langword="null" /> for <see cref="DefaultKurrentDBStreamNameParser" />.</param>
     /// <returns>The streamed event.</returns>
@@ -93,8 +100,9 @@ public static class KurrentDBStreamedEventConversions
     ///         subscription. An event that arrives after a later one is treated as already applied and skipped.
     ///     </para>
     /// </remarks>
-    public static StreamedEvent<object> ToAllStreamEvent(this ResolvedEvent resolvedEvent, object deserializedEvent, IStreamNameParser? nameParser = null)
+    public static StreamedEvent<object> ToAllStreamEvent(this ResolvedEvent resolvedEvent, string sourceConnectionName, object deserializedEvent, IStreamNameParser? nameParser = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         var streamName = (nameParser ?? DefaultNameParser).Parse(resolvedEvent.Event.EventStreamId);
         var metadata = KurrentDBEventMetadataCodec.Read(resolvedEvent.Event.Metadata.Span);
         var streamEvent = new StreamedEvent<object>(
@@ -102,10 +110,10 @@ public static class KurrentDBStreamedEventConversions
             resolvedEvent.Event.EventType,
             streamName,
             resolvedEvent.Event.EventNumber,
-            // When link resolution is enabled the $all position of the link is carried by OriginalPosition;
+            // When link
             // Event.Position is the position of the linked-to event, which lives elsewhere in the log and
             // would resume the subscription from the wrong place.
-            new StreamedEventCursor(AllStreamCheckpointTopic, DefaultPartitionId, (resolvedEvent.OriginalPosition ?? resolvedEvent.Event.Position).CommitPosition, 0),
+            new StreamedEventCursor(sourceConnectionName, AllStreamCheckpointTopic, DefaultPartitionId, (resolvedEvent.OriginalPosition ?? resolvedEvent.Event.Position).CommitPosition, 0),
             resolvedEvent.Event.Created,
             deserializedEvent,
             metadata);
@@ -116,15 +124,17 @@ public static class KurrentDBStreamedEventConversions
     ///     Creates a checkpoint event for a position in a single stream.
     /// </summary>
     /// <param name="position">The stream position.</param>
+    /// <param name="sourceConnectionName">The logical connection the position belongs to.</param>
     /// <returns>An event carrying <see cref="CheckpointMarker" /> as its payload.</returns>
-    public static StreamedEvent<object> ToStreamCheckpointEvent(this StreamPosition position)
+    public static StreamedEvent<object> ToStreamCheckpointEvent(this StreamPosition position, string sourceConnectionName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         var streamEvent = new StreamedEvent<object>(
             Guid.CreateVersion7(),
             "StreamCheckpointEventType",
             CheckpointStreamName,
             0,
-            new StreamedEventCursor(StreamCheckpointTopic, DefaultPartitionId, position.ToUInt64(), 0),
+            new StreamedEventCursor(sourceConnectionName, StreamCheckpointTopic, DefaultPartitionId, position.ToUInt64(), 0),
             DateTime.UtcNow,
             CheckpointMarker);
         return streamEvent;
@@ -134,11 +144,13 @@ public static class KurrentDBStreamedEventConversions
     ///     Creates a streamed event from an event read from a single stream.
     /// </summary>
     /// <param name="resolvedEvent">The KurrentDB event.</param>
+    /// <param name="sourceConnectionName">The logical connection the event was read from.</param>
     /// <param name="deserializedEvent">The deserialized payload.</param>
     /// <param name="nameParser">The parser for the event's stream name, or <see langword="null" /> for <see cref="DefaultKurrentDBStreamNameParser" />.</param>
     /// <returns>The streamed event.</returns>
-    public static StreamedEvent<object> ToStreamEvent(this ResolvedEvent resolvedEvent, object deserializedEvent, IStreamNameParser? nameParser = null)
+    public static StreamedEvent<object> ToStreamEvent(this ResolvedEvent resolvedEvent, string sourceConnectionName, object deserializedEvent, IStreamNameParser? nameParser = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         var streamName = (nameParser ?? DefaultNameParser).Parse(resolvedEvent.Event.EventStreamId);
         var metadata = KurrentDBEventMetadataCodec.Read(resolvedEvent.Event.Metadata.Span);
         var streamEvent = new StreamedEvent<object>(
@@ -146,9 +158,9 @@ public static class KurrentDBStreamedEventConversions
             resolvedEvent.Event.EventType,
             streamName,
             resolvedEvent.Event.EventNumber,
-            // A single-stream subscription is positioned by the event number within the subscribed stream, which
+            // A single-stream
             // differs from the linked-to event's own version when link resolution is enabled.
-            ToCursor(streamName, resolvedEvent.OriginalEventNumber.ToUInt64()),
+            ToCursor(sourceConnectionName, streamName, resolvedEvent.OriginalEventNumber.ToUInt64()),
             resolvedEvent.Event.Created,
             deserializedEvent,
             metadata);
