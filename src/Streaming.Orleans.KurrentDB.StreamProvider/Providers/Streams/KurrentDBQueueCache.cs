@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Continuum.Streaming.Orleans;
 
 using KurrentDB.Client;
@@ -129,6 +129,12 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
             {
                 // Same as an oversized event: failing the batch would lose every other event in it.
                 _logger.InvalidStreamNamespace(queueMessage.EventId, queueMessage.EventType, queueMessage.StreamName.Value, queueMessage.Cursor.SequenceNumber, ex.StreamNamespace);
+                continue;
+            }
+            catch (InvalidOrleansStreamIdException ex)
+            {
+                // Same as an invalid namespace: failing the batch would lose every other event in it.
+                _logger.InvalidOrleansStreamId(ex, queueMessage.EventId, queueMessage.EventType, queueMessage.StreamName.Value, queueMessage.Cursor.SequenceNumber, ex.OrleansStreamId);
                 continue;
             }
             CachedMessage cachedMessage;
@@ -369,4 +375,6 @@ internal static partial class KurrentDBQueueCacheLog
     [LoggerMessage(Level = LogLevel.Error, Message = "Skipped event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition}: its cached size of {Size} bytes exceeds the cache block size of {BlockSize} bytes.")] public static partial void EventTooLargeForCache(this ILogger logger, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, int size, int blockSize);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Skipped event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition}: its stream namespace '{StreamNamespace}' contains the reserved separator ':'.")] public static partial void InvalidStreamNamespace(this ILogger logger, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, string streamNamespace);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Skipped event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition}: its metadata Orleans stream id '{OrleansStreamId}' is not a valid stream id.")] public static partial void InvalidOrleansStreamId(this ILogger logger, Exception exception, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, string orleansStreamId);
 }

@@ -252,7 +252,14 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
         var orleansStreamId = queueMessage.Metadata.GetValueOrDefault(KurrentDBEventMetadataCodec.OrleansStreamIdName);
         if (orleansStreamId is { Length: > 0 })
         {
-            return ParseStreamId(orleansStreamId);
+            try
+            {
+                return ParseStreamId(orleansStreamId);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOrleansStreamIdException(orleansStreamId, ex);
+            }
         }
         return _options.StreamIdMapper(queueMessage.StreamName.Value);
     }

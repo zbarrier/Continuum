@@ -98,6 +98,57 @@ public class KurrentDBQueueCacheCursorTrackingTests
     }
 
     [Fact]
+    public void A_Cursor_With_Unread_Events_Blocks_Purging_No_Matter_How_Old_They_Are()
+    {
+        var cache = CreateCache(CreateAdapter());
+        var checkpoints = new List<ulong>();
+        cache.OnCheckpointablePosition = checkpoints.Add;
+        var start = DateTime.UtcNow.AddDays(-30);
+        var positions = cache.Add(
+        [
+            CreateEvent(0, 100, start),
+            CreateEvent(1, 200, start.AddDays(1)),
+            CreateEvent(2, 300, start.AddDays(2)),
+        ], start.AddDays(2));
+        var streamId = positions[0].StreamId;
+        cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+
+        for (var i = 0; i < 5; i++)
+        {
+            cache.SignalPurge();
+        }
+
+        Assert.Empty(checkpoints);
+        Assert.Equal(100, OldestAvailable(cache, streamId));
+    }
+
+    [Fact]
+    public void A_Partly_Read_Cursor_Keeps_Its_Unread_Events_No_Matter_How_Old_They_Are()
+    {
+        var cache = CreateCache(CreateAdapter());
+        var checkpoints = new List<ulong>();
+        cache.OnCheckpointablePosition = checkpoints.Add;
+        var start = DateTime.UtcNow.AddDays(-30);
+        var positions = cache.Add(
+        [
+            CreateEvent(0, 100, start),
+            CreateEvent(1, 200, start.AddDays(1)),
+            CreateEvent(2, 300, start.AddDays(2)),
+        ], start.AddDays(2));
+        var streamId = positions[0].StreamId;
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        cache.RecordDelivered(cursor, 100);
+
+        for (var i = 0; i < 5; i++)
+        {
+            cache.SignalPurge();
+        }
+
+        Assert.Equal([100UL], checkpoints);
+        Assert.Equal(200, OldestAvailable(cache, streamId));
+    }
+
+    [Fact]
     public void A_Slow_Cursor_Keeps_The_Checkpoint_At_Its_Last_Delivered_Position()
     {
         var (cache, streamId, checkpoints) = CreateFilledCache();
