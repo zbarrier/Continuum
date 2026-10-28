@@ -40,7 +40,7 @@ public class DynamicSubscriptionProjectionGrain
     public Task<string[]> GetAuthors() => Task.FromResult(State.Authors.ToArray());
 
     private static StreamSubscriptionSource SourceFor(string streamKey)
-        => new(Constants.AllStreamProviderName, StreamId.Create(Constants.EventSourcedStreamPrefix, streamKey));
+        => new(Constants.AllStreamProviderName, StreamId.Create(Constants.EventSourcedStreamNamespace, streamKey));
 }
 
 [GenerateSerializer]

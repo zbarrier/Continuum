@@ -15,7 +15,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests.Grains;
 ///     subscription: the provider and stream are both chosen by the runtime, so overriding
 ///     <see cref="ProjectionGrain{TGrain, TState}.Subscriptions" /> would create a second, duplicate subscription.
 /// </remarks>
-[ImplicitStreamSubscription(Constants.ImplicitStreamPrefix)]
+[ImplicitStreamSubscription(Constants.ImplicitStreamNamespace)]
 public class ImplicitChatProjectionGrain
     : ProjectionGrain<ImplicitChatProjectionGrain, ImplicitChatProjectionState>, IImplicitChatProjectionGrain
 {

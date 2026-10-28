@@ -1,10 +1,11 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Continuum.Streaming.Orleans;
 
 using KurrentDB.Client;
 
 using Microsoft.Extensions.Logging;
 
+using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 
@@ -119,7 +120,17 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
         var cachedMessages = new List<CachedMessage>(queueMessages.Count);
         foreach (var queueMessage in queueMessages)
         {
-            var streamPosition = _dataAdapter.GetStreamPosition(queueMessage);
+            StreamPosition streamPosition;
+            try
+            {
+                streamPosition = _dataAdapter.GetStreamPosition(queueMessage);
+            }
+            catch (InvalidStreamNamespaceException ex)
+            {
+                // Same as an oversized event: failing the batch would lose every other event in it.
+                _logger.InvalidStreamNamespace(queueMessage.EventId, queueMessage.EventType, queueMessage.StreamName.Value, queueMessage.Cursor.SequenceNumber, ex.StreamNamespace);
+                continue;
+            }
             CachedMessage cachedMessage;
             try
             {
@@ -356,4 +367,6 @@ internal static partial class KurrentDBQueueCacheLog
     [LoggerMessage(Level = LogLevel.Debug, Message = "CachePeriod: EnqueueTimeUtc: {OldestEnqueueTimeUtc} to {NewestEnqueueTimeUtc}, DequeueTimeUtc: {OldestDequeueTimeUtc} to {NewestDequeueTimeUtc}")] public static partial void CachePeriod(this ILogger logger, string oldestEnqueueTimeUtc, string newestEnqueueTimeUtc, string oldestDequeueTimeUtc, string newestDequeueTimeUtc);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Skipped event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition}: its cached size of {Size} bytes exceeds the cache block size of {BlockSize} bytes.")] public static partial void EventTooLargeForCache(this ILogger logger, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, int size, int blockSize);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Skipped event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition}: its stream namespace '{StreamNamespace}' contains the reserved separator ':'.")] public static partial void InvalidStreamNamespace(this ILogger logger, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, string streamNamespace);
 }

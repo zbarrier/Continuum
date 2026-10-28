@@ -38,6 +38,7 @@ public class KurrentDBQueueCacheOversizedEventTests
         var adapter = new KurrentDBQueueDataAdapter(OrleansSerializer, new KurrentDBDataAdapterOptions
         {
             ConnectionName = "test",
+            ProviderName = "test",
             TypeMapper = new FakeTypeMapper(),
             GrainStorageSerializer = new FakeSerializer(),
         });

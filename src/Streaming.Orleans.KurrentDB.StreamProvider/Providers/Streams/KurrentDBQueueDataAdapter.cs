@@ -163,6 +163,12 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
     public virtual EventData[] ToQueueMessage<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken? sequenceToken, Dictionary<string, object>? requestContext)
     {
         ArgumentNullException.ThrowIfNull(events, nameof(events));
+        // Delivery qualifies the namespace as {provider}:{namespace}, so a namespace that already contains the
+        // separator would be ambiguous and is rejected before anything is written.
+        if (streamId.GetNamespace() is { } streamNamespace && streamNamespace.Contains(KurrentDBStreamNamespace.Separator))
+        {
+            throw new ArgumentException($"Stream namespace '{streamNamespace}' must not contain '{KurrentDBStreamNamespace.Separator}'.", nameof(streamId));
+        }
         return KurrentDBEventDataFactory.ToEventData(streamId, events, _options);
     }
 
@@ -220,8 +226,24 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
     ///     Get the <see cref="IStreamIdentity" /> for an event message.
     /// </summary>
     /// <param name="queueMessage">The event message.</param>
-    /// <returns>The stream identity.</returns>
+    /// <returns>The stream identity, with its namespace qualified by the provider name.</returns>
+    /// <exception cref="InvalidStreamNamespaceException">The unqualified namespace contains <see cref="KurrentDBStreamNamespace.Separator" />.</exception>
+    /// <remarks>
+    ///     Orleans matches implicit subscribers by namespace only, so the namespace is qualified with the provider name to
+    ///     keep providers reading the same database from delivering to each other's implicit subscribers.
+    /// </remarks>
     public virtual StreamId GetStreamId(StreamedEvent<KurrentDBRawEvent> queueMessage)
+    {
+        var streamId = GetUnqualifiedStreamId(queueMessage);
+        var streamNamespace = streamId.GetNamespace() ?? string.Empty;
+        if (streamNamespace.Contains(KurrentDBStreamNamespace.Separator))
+        {
+            throw new InvalidStreamNamespaceException(streamNamespace);
+        }
+        return StreamId.Create(KurrentDBStreamNamespace.Qualify(_options.ProviderName, streamNamespace), streamId.GetKeyAsString());
+    }
+
+    private StreamId GetUnqualifiedStreamId(StreamedEvent<KurrentDBRawEvent> queueMessage)
     {
         ArgumentNullException.ThrowIfNull(queueMessage, nameof(queueMessage));
         // Events written by this provider record the Orleans stream id in their metadata, because every stream shares

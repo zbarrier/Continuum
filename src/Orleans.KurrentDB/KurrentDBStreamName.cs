@@ -18,12 +18,17 @@ public static class KurrentDBStreamName
     public const char CategorySeparator = '-';
 
     /// <summary>
+    /// Reserved: the KurrentDB stream provider qualifies delivered namespaces as <c>{provider}:{category}</c>.
+    /// </summary>
+    public const char NamespaceSeparator = ':';
+
+    /// <summary>
     /// Builds a KurrentDB stream name from a category and an Orleans key.
     /// </summary>
     /// <param name="category">The category, normally the grain type.</param>
     /// <param name="orleansKey">The Orleans grain or stream key.</param>
     /// <exception cref="ArgumentException">
-    /// <paramref name="category"/> is empty or contains <see cref="CategorySeparator"/> or <see cref="TenantKey.Separator"/>,
+    /// <paramref name="category"/> is empty or contains <see cref="CategorySeparator"/>, <see cref="TenantKey.Separator"/> or <see cref="NamespaceSeparator"/>,
     /// or <paramref name="orleansKey"/> is empty.
     /// </exception>
     public static string Format(string category, string orleansKey)
@@ -34,15 +39,15 @@ public static class KurrentDBStreamName
     }
 
     /// <summary>
-    /// Validates that <paramref name="category"/> is non-empty and contains neither <see cref="CategorySeparator"/> nor <see cref="TenantKey.Separator"/>.
+    /// Validates that <paramref name="category"/> is non-empty and contains none of <see cref="CategorySeparator"/>, <see cref="TenantKey.Separator"/> or <see cref="NamespaceSeparator"/>.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="category"/> is empty or contains a separator.</exception>
     public static void ValidateCategory(string category)
     {
         ArgumentException.ThrowIfNullOrEmpty(category);
-        if (category.Contains(CategorySeparator) || category.Contains(TenantKey.Separator))
+        if (category.Contains(CategorySeparator) || category.Contains(TenantKey.Separator) || category.Contains(NamespaceSeparator))
         {
-            throw new ArgumentException($"Category '{category}' must not contain '{CategorySeparator}' or '{TenantKey.Separator}'.", nameof(category));
+            throw new ArgumentException($"Category '{category}' must not contain '{CategorySeparator}', '{TenantKey.Separator}' or '{NamespaceSeparator}'.", nameof(category));
         }
     }
 }

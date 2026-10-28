@@ -30,6 +30,14 @@ public class KurrentDBDataAdapterOptions
     public string ConnectionName { get; set; } = default!;
 
     /// <summary>
+    ///     The Orleans stream provider name that qualifies every delivered stream namespace.
+    /// </summary>
+    /// <remarks>
+    ///     Defaults to the name of the stream provider these options belong to. See <see cref="KurrentDBStreamNamespace" />.
+    /// </remarks>
+    public string ProviderName { get; set; } = default!;
+
+    /// <summary>
     ///     The kinds of type map entries used when resolving event type names.
     /// </summary>
     /// <remarks>
@@ -124,6 +132,10 @@ public class DefaultKurrentDBDataAdapterOptionsConfigurator : IPostConfigureOpti
     /// <inheritdoc />
     public void PostConfigure(string? name, KurrentDBDataAdapterOptions options)
     {
+        if (string.IsNullOrWhiteSpace(options.ProviderName) && !string.IsNullOrWhiteSpace(name))
+        {
+            options.ProviderName = name;
+        }
         if (string.IsNullOrWhiteSpace(options.ConnectionName) && !string.IsNullOrWhiteSpace(name))
         {
             // Fall back to the connection name configured on the matching stream provider.
@@ -171,6 +183,14 @@ public class KurrentDBDataAdapterOptionsValidator : IConfigurationValidator
         if (string.IsNullOrWhiteSpace(_options.ConnectionName))
         {
             throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.ConnectionName)} is required.");
+        }
+        if (string.IsNullOrWhiteSpace(_options.ProviderName))
+        {
+            throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.ProviderName)} is required.");
+        }
+        if (_options.ProviderName.Contains(KurrentDBStreamNamespace.Separator))
+        {
+            throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.ProviderName)} \"{_options.ProviderName}\" must not contain '{KurrentDBStreamNamespace.Separator}'.");
         }
         if (_options.StreamIdMapper is null)
         {

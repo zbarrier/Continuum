@@ -31,11 +31,12 @@ public class QueueDataAdapterStreamIdTests
         public T Deserialize<T>(BinaryData input) => throw new NotSupportedException();
     }
 
-    private static KurrentDBQueueDataAdapter CreateAdapter(Func<string, StreamId>? streamIdMapper = null)
+    private static KurrentDBQueueDataAdapter CreateAdapter(Func<string, StreamId>? streamIdMapper = null, string providerName = "test")
     {
         var options = new KurrentDBDataAdapterOptions
         {
             ConnectionName = "test",
+            ProviderName = providerName,
             TypeMapper = new FakeTypeMapper(),
             GrainStorageSerializer = new FakeSerializer(),
         };
@@ -59,7 +60,7 @@ public class QueueDataAdapterStreamIdTests
         var adapter = CreateAdapter();
         var queueMessage = CreateEvent(new StreamName("snack-acme|123", "snack", "acme", "123"));
 
-        Assert.Equal(StreamId.Create("snack", "acme|123"), adapter.GetStreamId(queueMessage));
+        Assert.Equal(StreamId.Create("test:snack", "acme|123"), adapter.GetStreamId(queueMessage));
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class QueueDataAdapterStreamIdTests
         // The producer appends every stream to one shared queue stream, so its name says nothing about the Orleans stream.
         var queueMessage = CreateEvent(new StreamName("queue-0", "queue", null, "0"), WithOrleansStreamId(producerStreamId));
 
-        Assert.Equal(producerStreamId, adapter.GetStreamId(queueMessage));
+        Assert.Equal(StreamId.Create("test:chat", producerStreamId.GetKeyAsString()), adapter.GetStreamId(queueMessage));
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public class QueueDataAdapterStreamIdTests
         var producerStreamId = StreamId.Create("chat", "room-7");
         var queueMessage = CreateEvent(new StreamName("queue-0", "queue", null, "0"), WithOrleansStreamId(producerStreamId));
 
-        Assert.Equal(producerStreamId, adapter.GetStreamId(queueMessage));
+        Assert.Equal(StreamId.Create("test:chat", producerStreamId.GetKeyAsString()), adapter.GetStreamId(queueMessage));
     }
 
     [Fact]
@@ -90,7 +91,7 @@ public class QueueDataAdapterStreamIdTests
         var adapter = CreateAdapter(_ => mapped);
         var queueMessage = CreateEvent(new StreamName("snack-123", "snack", null, "123"));
 
-        Assert.Equal(mapped, adapter.GetStreamId(queueMessage));
+        Assert.Equal(StreamId.Create("test:custom", "mapped"), adapter.GetStreamId(queueMessage));
     }
 
     [Fact]
@@ -99,6 +100,32 @@ public class QueueDataAdapterStreamIdTests
         var adapter = CreateAdapter();
         var queueMessage = CreateEvent(new StreamName("snack-acme|123", "snack", "acme", "123"));
 
-        Assert.Equal(StreamId.Create("snack", "acme|123"), adapter.GetStreamPosition(queueMessage).StreamId);
+        Assert.Equal(StreamId.Create("test:snack", "acme|123"), adapter.GetStreamPosition(queueMessage).StreamId);
+    }
+
+    [Fact]
+    public void Qualifies_The_Namespace_With_The_Provider_Name()
+    {
+        var queueMessage = CreateEvent(new StreamName("snack-123", "snack", null, "123"));
+
+        Assert.Equal(StreamId.Create("v1:snack", "123"), CreateAdapter(providerName: "v1").GetStreamId(queueMessage));
+        Assert.Equal(StreamId.Create("v2:snack", "123"), CreateAdapter(providerName: "v2").GetStreamId(queueMessage));
+    }
+
+    [Fact]
+    public void Rejects_A_Namespace_Containing_The_Separator()
+    {
+        var adapter = CreateAdapter(_ => StreamId.Create("bad:category", "123"));
+        var queueMessage = CreateEvent(new StreamName("bad:category-123", "bad:category", null, "123"));
+
+        Assert.Throws<InvalidStreamNamespaceException>(() => adapter.GetStreamId(queueMessage));
+    }
+
+    [Fact]
+    public void Producer_Rejects_A_Namespace_Containing_The_Separator()
+    {
+        var adapter = CreateAdapter();
+
+        Assert.Throws<ArgumentException>(() => adapter.ToQueueMessage(StreamId.Create("bad:ns", "1"), new[] { "event" }, null, null));
     }
 }

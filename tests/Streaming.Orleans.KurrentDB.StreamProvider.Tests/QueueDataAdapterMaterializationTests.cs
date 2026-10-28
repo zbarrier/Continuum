@@ -43,6 +43,7 @@ public class QueueDataAdapterMaterializationTests
         var options = new KurrentDBDataAdapterOptions
         {
             ConnectionName = "test",
+            ProviderName = "test",
             TypeMapper = typeMapper,
             GrainStorageSerializer = new FakeSerializer(deserialize),
             UnknownEventTypeBehavior = unknownBehavior,

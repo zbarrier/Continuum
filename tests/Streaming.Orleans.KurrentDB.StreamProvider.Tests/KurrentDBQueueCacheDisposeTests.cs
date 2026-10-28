@@ -37,6 +37,7 @@ public class KurrentDBQueueCacheDisposeTests
 		var adapter = new KurrentDBQueueDataAdapter(OrleansSerializer, new KurrentDBDataAdapterOptions
 		{
 			ConnectionName = "test",
+			ProviderName = "test",
 			TypeMapper = new FakeTypeMapper(),
 			GrainStorageSerializer = new FakeSerializer(),
 		});

@@ -27,8 +27,8 @@ public class MultiStreamProjectionGrain
 
     protected override IEnumerable<StreamSubscriptionSource> Subscriptions =>
     [
-        new(Constants.AllStreamProviderName, StreamId.Create(Constants.EventSourcedStreamPrefix, FirstStreamKey(this.GetPrimaryKeyString()))),
-        new(Constants.AllStreamProviderName, StreamId.Create(Constants.EventSourcedStreamPrefix, SecondStreamKey(this.GetPrimaryKeyString())))
+        new(Constants.AllStreamProviderName, StreamId.Create(Constants.EventSourcedStreamNamespace, FirstStreamKey(this.GetPrimaryKeyString()))),
+        new(Constants.AllStreamProviderName, StreamId.Create(Constants.EventSourcedStreamNamespace, SecondStreamKey(this.GetPrimaryKeyString())))
     ];
 
     public static string FirstStreamKey(string key) => $"{key}.first";

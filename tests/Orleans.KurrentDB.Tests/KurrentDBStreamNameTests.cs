@@ -24,6 +24,7 @@ public class KurrentDBStreamNameTests
     [InlineData("")]
     [InlineData("Order-Line")]
     [InlineData("Order|x")]
+    [InlineData("Order:x")]
     public void Format_InvalidCategory_Throws(string category)
     {
         Assert.ThrowsAny<ArgumentException>(() => KurrentDBStreamName.Format(category, "key"));

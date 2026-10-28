@@ -56,6 +56,16 @@ public static class Constants
     public const string ImplicitStreamPrefix = "implicitprojection";
 
     /// <summary>
+    ///     The provider-qualified namespace the implicit subscription provider delivers <see cref="ImplicitStreamPrefix" /> on.
+    /// </summary>
+    public const string ImplicitStreamNamespace = ImplicitProviderName + ":" + ImplicitStreamPrefix;
+
+    /// <summary>
+    ///     The provider-qualified namespace the <c>$all</c> provider delivers <see cref="EventSourcedStreamPrefix" /> on.
+    /// </summary>
+    public static readonly string EventSourcedStreamNamespace = $"{AllStreamProviderName}:{EventSourcedStreamPrefix}";
+
+    /// <summary>
     ///     The queue name of the implicit subscription provider, made unique per process.
     /// </summary>
     public static readonly string ImplicitQueueName = $"implicit-queue-{Guid.NewGuid():N}";

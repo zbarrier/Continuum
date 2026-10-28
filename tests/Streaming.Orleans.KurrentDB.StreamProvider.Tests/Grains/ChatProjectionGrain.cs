@@ -26,7 +26,7 @@ public class ChatProjectionGrain : ProjectionGrain<ChatProjectionGrain, ChatProj
 
     protected override IEnumerable<StreamSubscriptionSource> Subscriptions =>
     [
-        new(Constants.AllStreamProviderName, StreamIdFromKey(Constants.EventSourcedStreamPrefix))
+        new(Constants.AllStreamProviderName, StreamIdFromKey(Constants.EventSourcedStreamNamespace))
     ];
 
     public Task<string[]> GetAuthors() => Task.FromResult(State.Authors.ToArray());

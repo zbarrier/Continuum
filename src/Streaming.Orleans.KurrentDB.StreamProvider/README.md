@@ -75,15 +75,38 @@ siloBuilder.AddKurrentDBStreams("Reporting", configurator =>
 
 Each subscription has its own filter, cache and checkpoint. The checkpoint is keyed by the connection name, the Orleans service id and the stream provider name, so subscriptions never share a position.
 
-A consumer chooses a subscription by its stream provider name, then a stream by namespace and key:
+A consumer chooses a subscription by its stream provider name, then a stream by namespace and key. The namespace is always qualified with the provider name (see [Stream namespaces](#stream-namespaces)):
 
 ```csharp
-var stream = this.GetStreamProvider("Snacks").GetStream<IStreamedEvent<object>>(StreamId.Create("snack", "123"));
+var stream = this.GetStreamProvider("Snacks").GetStream<IStreamedEvent<object>>(StreamId.Create("Snacks:snack", "123"));
 ```
 
-When two subscriptions both match a KurrentDB stream, each delivers its events on its own provider. Explicit subscribers only receive them from the provider they subscribed through. Implicit subscriptions (`[ImplicitStreamSubscription]`) match on namespace across every provider, so a grain with an implicit subscription receives the event once from each provider that carries it. Use filters that do not overlap for namespaces with implicit subscribers, or subscribe explicitly.
+When two subscriptions both match a KurrentDB stream, each delivers its events on its own provider and namespace, so subscribers of one never receive the other's deliveries. This also holds for implicit subscriptions.
 
 Each subscription reads `$all` and keeps its own cache, so use `StreamFilterPrefix` to keep each one to the streams it needs.
+
+## Stream namespaces
+
+Events are delivered on the Orleans stream namespace `{ProviderName}:{Category}`, where the category is the text before the first `-` of the KurrentDB stream name and the key is the rest. The KurrentDB stream `snack-123` read by the provider `Snacks` is delivered as `StreamId.Create("Snacks:snack", "123")`. Events written through the provider are delivered the same way: a producer writes to `StreamId.Create("chat", key)` and subscribers read `StreamId.Create("{ProviderName}:chat", key)`.
+
+Orleans matches implicit subscriptions by namespace only, so the provider name in the namespace keeps providers apart. This lets two versions of a projection read the same database side by side, for example while a new version rebuilds from the beginning:
+
+```csharp
+[ImplicitStreamSubscription("ProjectionsV1:snack")]
+public class SnackProjectionV1 : ProjectionGrain<SnackProjectionV1, SnackStateV1> { }
+
+[ImplicitStreamSubscription("ProjectionsV2:snack")]
+public class SnackProjectionV2 : ProjectionGrain<SnackProjectionV2, SnackStateV2> { }
+```
+
+Each provider has its own checkpoint, so `ProjectionsV2` can start from the beginning of `$all` while `ProjectionsV1` carries on from where it is.
+
+`:` is reserved:
+
+- A stream provider name containing `:` fails validation at startup.
+- Writing through the provider to a namespace containing `:` throws.
+- Event-sourcing storage rejects a stream category containing `:`, and analyzer `CKDB002` warns about a `[GrainType]` containing it.
+- An event read from a KurrentDB stream whose category contains `:` is logged as an error and skipped. It is not delivered or retried, and the checkpoint moves past it.
 
 ## Persistent subscriptions
 
