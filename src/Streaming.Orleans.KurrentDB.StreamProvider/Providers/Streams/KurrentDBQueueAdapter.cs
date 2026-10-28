@@ -30,6 +30,8 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     private readonly ILoggerFactory _loggerFactory;
     private readonly IEnvironmentStatisticsProvider? _environmentStatisticsProvider;
     private readonly Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> _receiverFactory;
+    private readonly LoadSheddingOptions _loadSheddingOptions;
+    private readonly string _consumerGroup;
 
     private readonly ConcurrentDictionary<QueueId, KurrentDBProducer> _producers = new();
     private readonly ConcurrentDictionary<QueueId, KurrentDBQueueAdapterReceiver> _receivers = new();
@@ -71,6 +73,9 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
         _serviceProvider = serviceProvider;
         _loggerFactory = loggerFactory;
         _environmentStatisticsProvider = environmentStatisticsProvider;
+        // Resolved once here rather than per receiver, so missing configuration fails when the adapter is built.
+        _loadSheddingOptions = serviceProvider.GetRequiredService<IOptions<LoadSheddingOptions>>().Value;
+        _consumerGroup = $"{serviceProvider.GetProviderClusterOptions(name).Value.ServiceId}-{name}";
     }
 
     #region IQueueAdapter Implementation
@@ -148,12 +153,11 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
 
     private KurrentDBQueueAdapterReceiver MakeReceiver(QueueId queueId)
     {
-        var clusterOptions = _serviceProvider.GetProviderClusterOptions(Name);
         var receiverSettings = new KurrentDBReceiverSettings
                                {
                                    Options = _options,
                                    ReceiverOptions = _receiverOptions,
-                                   ConsumerGroup = $"{clusterOptions.Value.ServiceId}-{Name}",
+                                   ConsumerGroup = _consumerGroup,
                                    QueueName = _streamQueueMapper.QueueToPartition(queueId),
                                    StreamNameParser = _serviceProvider.GetKeyedService<Continuum.Streams.IStreamNameParser>(_options.ConnectionName)
                                };
@@ -162,7 +166,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
                                             QueueName = receiverSettings.QueueName,
                                             Name = receiverSettings.Options.Name
                                         };
-        return new KurrentDBQueueAdapterReceiver(receiverSettings, _cacheFactory, _loggerFactory, _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory), _serviceProvider.GetRequiredService<IOptions<LoadSheddingOptions>>().Value, _environmentStatisticsProvider, _receiverFactory);
+        return new KurrentDBQueueAdapterReceiver(receiverSettings, _cacheFactory, _loggerFactory, _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory), _loadSheddingOptions, _environmentStatisticsProvider, _receiverFactory);
     }
 
     #endregion
