@@ -66,9 +66,11 @@ public class KurrentDBProducer : IKurrentDBProducer
     public async Task AppendAsync(params EventData[] events)
     {
         _logger.AppendingEvents(_settings.QueueName);
-        if (_initialized == false || events == null)
+        ArgumentNullException.ThrowIfNull(events);
+        if (!_initialized)
         {
-            return;
+            // Returning here would drop the events without the caller knowing they were never written.
+            throw new InvalidOperationException(FormattableString.Invariant($"KurrentDBProducer for stream {_settings.QueueName} is not initialized."));
         }
         try
         {
