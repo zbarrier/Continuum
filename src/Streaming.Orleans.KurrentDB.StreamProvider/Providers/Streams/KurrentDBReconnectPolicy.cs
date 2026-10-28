@@ -17,7 +17,7 @@ internal static class KurrentDBReconnectPolicy
     /// <param name="jitter">A value in [0, 1) used to spread the delay.</param>
     public static TimeSpan GetDelay(int attempt, double jitter)
     {
-        var exponent = Math.Min(Math.Max(attempt - 1, 0), 30);
+        var exponent = Math.Min(Math.Max(attempt, 1) - 1, 30);
         var delay = Math.Min(InitialDelay.TotalMilliseconds * Math.Pow(2, exponent), MaxDelay.TotalMilliseconds);
 
         // Half fixed, half random, so the delay never collapses to zero.
