@@ -213,6 +213,71 @@ public class KurrentDBCheckpointMonitorTests
         Assert.Equal(2, store.Reads);
     }
 
+    private sealed class FailingCheckpointStore : ICheckpointStore<ulong>
+    {
+        public int FailuresRemaining { get; set; }
+
+        public List<ulong> Stored { get; } = [];
+
+        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(0UL);
+
+        public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong streamPosition, CancellationToken cancellationToken = default)
+        {
+            if (FailuresRemaining > 0)
+            {
+                FailuresRemaining--;
+                throw new InvalidOperationException("store unavailable");
+            }
+
+            Stored.Add(streamPosition);
+            return Task.CompletedTask;
+        }
+    }
+
+    private static KurrentDBCheckpointMonitor CreateMonitor(FailingCheckpointStore store, ulong maxEventsBeforeCommit = 3) =>
+        new(NullLogger.Instance,
+            new KurrentDBCheckpointMonitorOptions { MaxEventsBeforeCommit = maxEventsBeforeCommit, MaxTimeBeforeCommit = TimeSpan.FromSeconds(20) },
+            store, SubscriptionName, KurrentDBStreams.All, new ManualTimeProvider());
+
+    [Fact]
+    public async Task A_failed_commit_propagates_and_the_next_event_retries_with_the_latest_position()
+    {
+        var store = new FailingCheckpointStore { FailuresRemaining = 1 };
+        var monitor = CreateMonitor(store, maxEventsBeforeCommit: 1);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => monitor.TryCheckpointAsync(1, TestContext.Current.CancellationToken).AsTask());
+
+        Assert.True(await monitor.TryCheckpointAsync(2, TestContext.Current.CancellationToken));
+        Assert.Equal([2UL], store.Stored);
+    }
+
+    [Fact]
+    public async Task A_failed_commit_keeps_the_position_pending_so_close_flushes_it()
+    {
+        var store = new FailingCheckpointStore { FailuresRemaining = 1 };
+        var monitor = CreateMonitor(store, maxEventsBeforeCommit: 1);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => monitor.TryCheckpointAsync(5, TestContext.Current.CancellationToken).AsTask());
+        await monitor.CloseAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([5UL], store.Stored);
+    }
+
+    [Fact]
+    public async Task A_failed_commit_on_close_propagates_and_clears_tracking()
+    {
+        var store = new FailingCheckpointStore { FailuresRemaining = 1 };
+        var monitor = CreateMonitor(store);
+
+        Assert.False(await monitor.TryCheckpointAsync(7, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => monitor.CloseAsync(TestContext.Current.CancellationToken));
+
+        await monitor.CloseAsync(TestContext.Current.CancellationToken);
+        Assert.Empty(store.Stored);
+        Assert.Null(await monitor.GetLastCheckpointAsync(TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public void Rejects_missing_dependencies()
     {
