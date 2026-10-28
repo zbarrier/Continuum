@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading.Channels;
 
 using Continuum.Streaming.Orleans;
 using Continuum.Streaming.Orleans.KurrentDB;
@@ -43,8 +44,16 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     private readonly ConcurrentDictionary<Uuid, bool> _hashSet = new();
 
     // The carrier holds the $all position in SequenceNumber because it cannot be recovered from the event record
-    // itself once link resolution is enabled.
-    private readonly ConcurrentQueue<StreamedEvent<KurrentDBRawEvent>> _queue = new();
+    // itself once link resolution is enabled. The buffer is bounded so a catch-up from the start of $all waits for
+    // Orleans to drain it instead of reading the whole log into memory.
+    private Channel<StreamedEvent<KurrentDBRawEvent>> _queue = CreateBuffer();
+
+    internal const int BufferCapacity = 10 * KurrentDBQueueAdapterReceiver.MaxMessagesPerRead;
+
+    internal int BufferedCount => _queue.Reader.Count;
+
+    private static Channel<StreamedEvent<KurrentDBRawEvent>> CreateBuffer() =>
+        Channel.CreateBounded<StreamedEvent<KurrentDBRawEvent>>(new BoundedChannelOptions(BufferCapacity) { SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait });
 
     // Positions handed to Orleans and not yet reported as delivered. The cache reports only the newest purged
     // position, so these let the checkpoint monitor count every purged event toward its event limit.
@@ -108,6 +117,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
             _logger.ReceiverInitializing(_settings.QueueName);
             var startPosition = await GetStartPositionAsync().ConfigureAwait(false);
             _cancellation = new CancellationTokenSource();
+            _queue = CreateBuffer();
             _pump = Task.Run(() => PumpAsync(startPosition, _cancellation.Token));
             _initialized = true;
             if (_logger.IsEnabled(LogLevel.Debug))
@@ -160,7 +170,10 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
             _pump = null;
             _pendingPositions.Clear();
             // Buffered events were never handed to Orleans, so the next subscription rereads them from the checkpoint.
-            _queue.Clear();
+            _queue.Writer.TryComplete();
+            while (_queue.Reader.TryRead(out _))
+            {
+            }
             _hashSet.Clear();
             _initialized = false;
         }
@@ -187,7 +200,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
             var streamedEvents = new List<StreamedEvent<KurrentDBRawEvent>>();
             for (var i = 0; i < maxCount; i++)
             {
-                if (!_queue.TryDequeue(out var streamedEvent))
+                if (!_queue.Reader.TryRead(out var streamedEvent))
                 {
                     break;
                 }
@@ -285,7 +298,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
                             // Check duplication
                             if (_hashSet.TryAdd(resolvedEvent.Event.EventId, true))
                             {
-                                _queue.Enqueue(KurrentDBStreamedEventFactory.FromAllStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser));
+                                await _queue.Writer.WriteAsync(KurrentDBStreamedEventFactory.FromAllStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser), cancellationToken).ConfigureAwait(false);
                             }
                             // Resuming a dropped subscription must continue from the last event seen by the pump,
                             // otherwise the buffered but undelivered events would be received twice.

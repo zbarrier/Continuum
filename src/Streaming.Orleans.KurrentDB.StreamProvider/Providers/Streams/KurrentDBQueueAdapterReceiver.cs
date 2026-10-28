@@ -103,8 +103,10 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
             {
                 _flowController.Add(LoadShedQueueFlowController.CreateAsPercentOfLoadSheddingLimit(_loadSheddingOptions, _environmentStatisticsProvider));
             }
-            _receiver = _kurrentDBReceiverFactory(_settings, _logger);
-            await _receiver.InitAsync();
+            // Only published once initialized, so a failed init leaves _receiver null and the next read retries it.
+            var receiver = _kurrentDBReceiverFactory(_settings, _logger);
+            await receiver.InitAsync();
+            _receiver = receiver;
             watch.Stop();
             _receiverMonitor.TrackInitialization(true, watch.Elapsed, null);
         }

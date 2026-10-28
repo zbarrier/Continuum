@@ -136,6 +136,57 @@ public class AllStreamReceiverTests
         }
     }
 
+    [Fact]
+    public async Task Buffers_At_Most_The_Capacity_Until_Orleans_Drains_It()
+    {
+        // Arrange: more events than the buffer holds, so an unbounded pump would buffer every one of them.
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
+        var streamName = "allstream-bounded-" + Guid.NewGuid().ToString("N");
+        var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
+        var receiverOptions = (KurrentDBAllStreamReceiverOptions)settings.ReceiverOptions;
+        receiverOptions.CheckpointStore = new RecordingCheckpointStore();
+        var total = KurrentDBAllStreamReceiver.BufferCapacity + 500;
+        foreach (var chunk in Enumerable.Range(0, total).Chunk(1000))
+        {
+            await AppendAsync(client, streamName, chunk.Select(i => i.ToString()).ToArray());
+        }
+
+        var receiver = new KurrentDBAllStreamReceiver(client, settings, new TestOutputLogger(_output));
+        try
+        {
+            await receiver.InitAsync();
+
+            // Act: wait for the pump to fill the buffer, then give it time to overrun it if it could.
+            var deadline = DateTime.UtcNow.AddSeconds(30);
+            while (receiver.BufferedCount < KurrentDBAllStreamReceiver.BufferCapacity && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(50, TestContext.Current.CancellationToken);
+            }
+            await Task.Delay(500, TestContext.Current.CancellationToken);
+
+            // Assert: the pump waits at capacity instead of reading the rest of the log into memory.
+            Assert.Equal(KurrentDBAllStreamReceiver.BufferCapacity, receiver.BufferedCount);
+
+            // Draining the buffer lets the pump read the remaining events, in order and without loss.
+            var received = new List<string>();
+            deadline = DateTime.UtcNow.AddSeconds(30);
+            while (received.Count < total && DateTime.UtcNow < deadline)
+            {
+                var batch = receiver.Receive(KurrentDBQueueAdapterReceiver.MaxMessagesPerRead);
+                received.AddRange(batch.Select(record => Encoding.UTF8.GetString(record.Event!.Data)));
+                if (batch.Count == 0)
+                {
+                    await Task.Delay(50, TestContext.Current.CancellationToken);
+                }
+            }
+            Assert.Equal(Enumerable.Range(0, total).Select(i => i.ToString()), received);
+        }
+        finally
+        {
+            await receiver.CloseAsync();
+        }
+    }
+
     private sealed class RecordingCheckpointStore : ICheckpointStore<ulong>
     {
         public List<ulong> Stored { get; } = new();
