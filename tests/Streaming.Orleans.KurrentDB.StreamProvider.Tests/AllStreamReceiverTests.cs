@@ -10,6 +10,11 @@ using Microsoft.Extensions.Logging;
 
 using Orleans.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+using Continuum.Orleans.Events;
+using Continuum.Streaming.Orleans.KurrentDB.Extensions;
+using Continuum.TypeMapping;
+
+using Orleans.Storage;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
@@ -111,7 +116,7 @@ public class AllStreamReceiverTests
 
         await AppendAsync(client, streamName, "one", "two", "three");
 
-        var receiver = new KurrentDBAllStreamReceiver(client, settings, new TestOutputLogger(_output));
+        var receiver = CreateReceiver(client, settings);
         try
         {
             await receiver.InitAsync();
@@ -119,7 +124,7 @@ public class AllStreamReceiverTests
             var deadline = DateTime.UtcNow.AddSeconds(30);
             while (received.Count < 3 && DateTime.UtcNow < deadline)
             {
-                received.AddRange(receiver.Receive(10).Select(record => (ulong)record.Cursor.SequenceNumber));
+                received.AddRange(receiver.Receive(10).Where(IsEvent).Select(record => (ulong)record.Cursor.SequenceNumber));
                 await Task.Delay(50, TestContext.Current.CancellationToken);
             }
             Assert.Equal(3, received.Count);
@@ -151,12 +156,12 @@ public class AllStreamReceiverTests
             await AppendAsync(client, streamName, chunk.Select(i => i.ToString()).ToArray());
         }
 
-        var receiver = new KurrentDBAllStreamReceiver(client, settings, new TestOutputLogger(_output));
+        var receiver = CreateReceiver(client, settings);
         try
         {
             await receiver.InitAsync();
 
-            // Act: wait for the pump to fill the buffer, then give it time to overrun it if it could.
+            // Act: wait for the pump
             var deadline = DateTime.UtcNow.AddSeconds(30);
             while (receiver.BufferedCount < KurrentDBAllStreamReceiver.BufferCapacity && DateTime.UtcNow < deadline)
             {
@@ -173,7 +178,7 @@ public class AllStreamReceiverTests
             while (received.Count < total && DateTime.UtcNow < deadline)
             {
                 var batch = receiver.Receive(KurrentDBQueueAdapterReceiver.MaxMessagesPerRead);
-                received.AddRange(batch.Select(record => Encoding.UTF8.GetString(record.Event!.Data)));
+                received.AddRange(batch.Where(IsEvent).Select(record => Encoding.UTF8.GetString(record.Event!.Data)));
                 if (batch.Count == 0)
                 {
                     await Task.Delay(50, TestContext.Current.CancellationToken);
@@ -250,7 +255,7 @@ public class AllStreamReceiverTests
         // has to come back from KurrentDB.
         receiverOptions.CheckpointStore = new KurrentDBCheckpointStore(client);
 
-        var receiver = new KurrentDBAllStreamReceiver(client, settings, new TestOutputLogger(_output));
+        var receiver = CreateReceiver(client, settings);
         var payloads = new List<string>();
         try
         {
@@ -264,7 +269,10 @@ public class AllStreamReceiverTests
                 var received = receiver.Receive(10);
                 foreach (var record in received)
                 {
-                    payloads.Add(Encoding.UTF8.GetString(record.Event!.Data));
+                    if (IsEvent(record))
+                    {
+                        payloads.Add(Encoding.UTF8.GetString(record.Event!.Data));
+                    }
                     // In a silo the cache raises this once the event has been purged behind every cursor. Here the
                     // test is the consumer, so it reports delivery itself; without it nothing would ever checkpoint.
                     await receiver.MessagesDeliveredAsync((ulong)record.Cursor.SequenceNumber);
@@ -275,7 +283,10 @@ public class AllStreamReceiverTests
                     await Task.Delay(500);
                     foreach (var record in receiver.Receive(10))
                     {
-                        payloads.Add(Encoding.UTF8.GetString(record.Event!.Data));
+                        if (IsEvent(record))
+                        {
+                            payloads.Add(Encoding.UTF8.GetString(record.Event!.Data));
+                        }
                         await receiver.MessagesDeliveredAsync((ulong)record.Cursor.SequenceNumber);
                     }
                     break;
@@ -289,6 +300,35 @@ public class AllStreamReceiverTests
         }
         _output.WriteLine($"Received {payloads.Count} event(s): {string.Join(", ", payloads)}");
         return payloads;
+    }
+
+    private KurrentDBAllStreamReceiver CreateReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings) =>
+        new(client, settings, new TestOutputLogger(_output), CheckpointMarkerData);
+
+    private static readonly KurrentDBCheckpointMarkerData CheckpointMarkerData = KurrentDBCheckpointMarkerData.Create(new KurrentDBDataAdapterOptions
+    {
+        TypeMapper = CreateMarkerTypeMapper(),
+        GrainStorageSerializer = new EmptySerializer(),
+    });
+
+    private static TypeMapper CreateMarkerTypeMapper()
+    {
+        var typeMapper = new MarkerTypeMapper();
+        typeMapper.AddType(typeof(CheckpointMarker), "Continuum.CheckpointMarker.V1");
+        return typeMapper;
+    }
+
+    // Filtered subscriptions interleave checkpoint markers with the events, which these tests do not assert on.
+    private static bool IsEvent(StreamedEvent<KurrentDBRawEvent> record) =>
+        record.StreamName.Value != KurrentDBStreamedEventConversions.CheckpointStreamName.Value;
+
+    private sealed class MarkerTypeMapper : TypeMapper;
+
+    private sealed class EmptySerializer : IGrainStorageSerializer
+    {
+        public BinaryData Serialize<T>(T? input) => BinaryData.FromBytes(Array.Empty<byte>());
+
+        public T Deserialize<T>(BinaryData input) => throw new NotSupportedException();
     }
 
     private static Task AppendAsync(KurrentDBClient client, string streamName, params string[] payloads)

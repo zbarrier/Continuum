@@ -40,7 +40,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     private readonly UserCredentials? _credentials;
     private readonly ILogger _logger;
     private readonly string _subscriptionName;
-    private readonly KurrentDBCheckpointMarkerData? _checkpointMarker;
+    private readonly KurrentDBCheckpointMarkerData _checkpointMarker;
 
     private readonly ConcurrentDictionary<Uuid, bool> _hashSet = new();
 
@@ -75,26 +75,14 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     /// <param name="client">The shared KurrentDB client for this connection.</param>
     /// <param name="settings">The per-queue receiver settings.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="checkpointMarker">
+    ///     The serialized checkpoint marker enqueued when a filtered subscription reaches a checkpoint.
+    /// </param>
     /// <remarks>
     ///     The read position comes from <see cref="KurrentDBAllStreamReceiverOptions.CheckpointStore" />, which holds
     ///     <c>$all</c> commit positions.
     /// </remarks>
-    public KurrentDBAllStreamReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings, ILogger logger)
-        : this(client, settings, logger, null)
-    {
-    }
-
-    /// <summary>
-    ///     Creates a new <see cref="KurrentDBAllStreamReceiver" /> that turns checkpoints reached by a filtered
-    ///     subscription into checkpoint markers.
-    /// </summary>
-    /// <param name="client">The shared KurrentDB client for this connection.</param>
-    /// <param name="settings">The per-queue receiver settings.</param>
-    /// <param name="logger">The logger.</param>
-    /// <param name="checkpointMarker">
-    ///     The serialized checkpoint marker, or <see langword="null" /> to ignore checkpoints reached by the server.
-    /// </param>
-    internal KurrentDBAllStreamReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings, ILogger logger, KurrentDBCheckpointMarkerData? checkpointMarker)
+    internal KurrentDBAllStreamReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings, ILogger logger, KurrentDBCheckpointMarkerData checkpointMarker)
     {
         ArgumentNullException.ThrowIfNull(client, nameof(client));
         ArgumentNullException.ThrowIfNull(settings, nameof(settings));
@@ -102,6 +90,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
         ArgumentNullException.ThrowIfNull(settings.ReceiverOptions, nameof(settings.ReceiverOptions));
         ArgumentException.ThrowIfNullOrEmpty(settings.QueueName, nameof(settings.QueueName));
         ArgumentNullException.ThrowIfNull(logger, nameof(logger));
+        ArgumentNullException.ThrowIfNull(checkpointMarker, nameof(checkpointMarker));
         if (settings.ReceiverOptions is not KurrentDBAllStreamReceiverOptions receiverOptions)
         {
             throw new ArgumentException($"{nameof(KurrentDBAllStreamReceiver)} requires {nameof(KurrentDBAllStreamReceiverOptions)}, but received {settings.ReceiverOptions.GetType().Name}.", nameof(settings));
@@ -326,10 +315,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
                             // A filtered subscription reports progress through events it did not deliver. The
                             // position is enqueued as a marker behind the events already buffered, so it is only
                             // checkpointed once the cache purges it, after every event before it was delivered.
-                            if (_checkpointMarker is not null)
-                            {
-                                await _queue.Writer.WriteAsync(KurrentDBStreamedEventFactory.CheckpointMarker(checkpointPosition.CommitPosition, _settings.Options.ConnectionName, _checkpointMarker), cancellationToken).ConfigureAwait(false);
-                            }
+                            await _queue.Writer.WriteAsync(KurrentDBStreamedEventFactory.CheckpointMarker(checkpointPosition.CommitPosition, _settings.Options.ConnectionName, _checkpointMarker), cancellationToken).ConfigureAwait(false);
                             startPosition = FromAll.After(checkpointPosition);
                             break;
 
