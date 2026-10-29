@@ -68,7 +68,7 @@ public static class KurrentDBStreamedEventConversions
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         var streamEvent = new StreamedEvent<object>(
             Guid.CreateVersion7(),
-            "AllStreamCheckpointEventType",
+            CheckpointMarker.TypeName,
             CheckpointStreamName,
             0,
             new StreamedEventCursor(sourceConnectionName, AllStreamCheckpointTopic, DefaultPartitionId, position.CommitPosition, 0),
@@ -128,7 +128,7 @@ public static class KurrentDBStreamedEventConversions
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         var streamEvent = new StreamedEvent<object>(
             Guid.CreateVersion7(),
-            "StreamCheckpointEventType",
+            CheckpointMarker.TypeName,
             CheckpointStreamName,
             0,
             new StreamedEventCursor(sourceConnectionName, StreamCheckpointTopic, DefaultPartitionId, position.ToUInt64(), 0),

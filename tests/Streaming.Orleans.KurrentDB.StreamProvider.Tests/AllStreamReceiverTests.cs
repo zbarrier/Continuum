@@ -314,7 +314,7 @@ public class AllStreamReceiverTests
     private static TypeMapper CreateMarkerTypeMapper()
     {
         var typeMapper = new MarkerTypeMapper();
-        typeMapper.AddType(typeof(CheckpointMarker), "Continuum.CheckpointMarker.V1");
+        typeMapper.AddType(typeof(CheckpointMarker), CheckpointMarker.TypeName);
         return typeMapper;
     }
 
