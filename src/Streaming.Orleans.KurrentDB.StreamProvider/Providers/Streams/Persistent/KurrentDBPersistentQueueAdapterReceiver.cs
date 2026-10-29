@@ -318,7 +318,6 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
         private readonly IKurrentDBQueueCache _cache;
         private readonly object _cursor;
         private IBatchContainer _current;
-        private bool _deliveryFailed;
 
         public Cursor(IKurrentDBQueueCache cache, object cursor)
         {
@@ -329,8 +328,7 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
 
         public void Dispose()
         {
-            // Releasing the cursor lets the cache purge, and therefore checkpoint, past what this cursor had read.
-            _cache.ReleaseCursor(_cursor);
+            // Cursors are not tracked, since the cache purges on age alone and the server owns the checkpoint.
         }
 
         public IBatchContainer GetCurrent(out Exception? exception)
@@ -341,32 +339,12 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
 
         public bool MoveNext()
         {
-            // Asking for the next event is the only signal the agent gives that it is finished with the current one,
-            // so the watermark advances here rather than when the event was handed out. An event whose delivery failed
-            // keeps the watermark where it is, so it is not purged or checkpointed away and survives a restart.
-            var committed = CommitCurrent();
             if (!_cache.TryGetNextMessage(_cursor, out var next))
             {
-                if (committed)
-                {
-                    // Nothing is pending for this stream, so an idle cursor must not hold back purging of other streams.
-                    _cache.RecordCaughtUp(_cursor);
-                }
                 return false;
             }
             _current = next;
             return true;
-        }
-
-        private bool CommitCurrent()
-        {
-            var failed = _deliveryFailed;
-            if (!failed && _current is IKurrentDBCommitPositionBatch delivered)
-            {
-                _cache.RecordDelivered(_cursor, delivered.CommitPosition);
-            }
-            _deliveryFailed = false;
-            return !failed;
         }
 
         public void Refresh(StreamSequenceToken token)
@@ -375,8 +353,7 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
 
         public void RecordDeliveryFailure()
         {
-            // Holds the watermark at the last successfully delivered event so this one is retained for redelivery.
-            _deliveryFailed = true;
+            // The event was acknowledged when it was received, so there is no watermark to hold back.
         }
     }
 

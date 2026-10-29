@@ -33,7 +33,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     private readonly IEnvironmentStatisticsProvider? _environmentStatisticsProvider;
     private readonly Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> _kurrentDBReceiverFactory;
 
-    private IKurrentDBQueueCache? _cache;
+    private IKurrentDBCatchUpQueueCache? _cache;
     private IKurrentDBReceiver? _receiver;
     private AggregatedQueueFlowController? _flowController;
     private readonly object _notifyLock = new();
@@ -98,7 +98,9 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
                 _cache.Dispose();
                 _cache = null;
             }
-            _cache = _cacheFactory(_settings.QueueName, _loggerFactory);
+            // The catch-up strategy creates both this receiver and its cache, so the cache always tracks cursors.
+            _cache = _cacheFactory(_settings.QueueName, _loggerFactory) as IKurrentDBCatchUpQueueCache
+                ?? throw new InvalidOperationException($"A catch-up receiver requires an {nameof(IKurrentDBCatchUpQueueCache)}.");
             // Purge is the point at which events are provably behind every cursor, so it is what drives the receiver's
             // checkpoint. Receive() is too early, since events there have only been buffered.
             _cache.OnCheckpointablePosition = commitPosition => NotifyDelivered(commitPosition);
@@ -380,12 +382,12 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
 
     private class Cursor : IQueueCacheCursor
     {
-        private readonly IKurrentDBQueueCache _cache;
+        private readonly IKurrentDBCatchUpQueueCache _cache;
         private readonly object _cursor;
         private IBatchContainer _current;
         private bool _deliveryFailed;
 
-        public Cursor(IKurrentDBQueueCache cache, object cursor)
+        public Cursor(IKurrentDBCatchUpQueueCache cache, object cursor)
         {
             _cache = cache;
             _cursor = cursor;

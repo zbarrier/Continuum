@@ -16,7 +16,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 /// <summary>
 ///     KurrentDB queue cache.
 /// </summary>
-public class KurrentDBCatchUpQueueCache : IKurrentDBQueueCache
+public class KurrentDBCatchUpQueueCache : IKurrentDBCatchUpQueueCache
 {
     private readonly int _defaultMaxAddCount;
     private readonly IObjectPool<FixedSizeBuffer> _bufferPool;

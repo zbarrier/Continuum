@@ -3,10 +3,10 @@ using Orleans.Runtime;
 namespace Orleans.Configuration;
 
 /// <summary>
-///     Rejects pulling agent settings this provider cannot deliver safely.
+///     Rejects pulling agent settings a catch-up subscription cannot deliver safely.
 /// </summary>
 /// <remarks>
-///     This provider tracks how far each cursor has read so the <c>$all</c> checkpoint never advances past an event a
+///     A catch-up subscription tracks how far each cursor has read so the <c>$all</c> checkpoint never advances past an event a
 ///     consumer has not received. That watermark moves when the pulling agent asks the cursor for its next event, which
 ///     is the only signal the agent gives that it is finished with the current one.
 ///
@@ -16,15 +16,15 @@ namespace Orleans.Configuration;
 ///     failures become ambiguous too, because one failure report covers a batch the cursor has already advanced
 ///     through. Failing at start up turns silent event loss after a restart into a configuration error.
 /// </remarks>
-public class KurrentDBStreamPullingAgentOptionsValidator : IConfigurationValidator
+public class KurrentDBCatchUpPullingAgentOptionsValidator : IConfigurationValidator
 {
     private readonly StreamPullingAgentOptions _options;
     private readonly string _name;
 
     /// <summary>
-    ///     Creates a new <see cref="KurrentDBStreamPullingAgentOptionsValidator" />.
+    ///     Creates a new <see cref="KurrentDBCatchUpPullingAgentOptionsValidator" />.
     /// </summary>
-    public KurrentDBStreamPullingAgentOptionsValidator(StreamPullingAgentOptions options, string name)
+    public KurrentDBCatchUpPullingAgentOptionsValidator(StreamPullingAgentOptions options, string name)
     {
         _options = options;
         _name = name;
@@ -35,7 +35,7 @@ public class KurrentDBStreamPullingAgentOptionsValidator : IConfigurationValidat
     {
         if (_options.BatchContainerBatchSize > 1)
         {
-            throw new OrleansConfigurationException($"{nameof(StreamPullingAgentOptions)} on stream provider {_name} is invalid. {nameof(StreamPullingAgentOptions.BatchContainerBatchSize)} must be 1 for the KurrentDB stream provider, but was {_options.BatchContainerBatchSize}. A larger size lets the pulling agent advance the cursor past events before they are delivered, which would checkpoint the $all position beyond events no consumer received.");
+            throw new OrleansConfigurationException($"{nameof(StreamPullingAgentOptions)} on stream provider {_name} is invalid. {nameof(StreamPullingAgentOptions.BatchContainerBatchSize)} must be 1 for a KurrentDB catch-up subscription, but was {_options.BatchContainerBatchSize}. A larger size lets the pulling agent advance the cursor past events before they are delivered, which would checkpoint the $all position beyond events no consumer received.");
         }
     }
 }

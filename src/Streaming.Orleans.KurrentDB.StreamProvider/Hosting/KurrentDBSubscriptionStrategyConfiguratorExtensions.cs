@@ -63,6 +63,7 @@ public static class KurrentDBSubscriptionStrategyConfiguratorExtensions
         {
             services.ConfigureNamedOptionForLogging<KurrentDBCatchUpSubscriptionReceiverOptions>(name)
                     .AddTransient<IConfigurationValidator>(sp => new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(sp.GetOptionsByName<KurrentDBCatchUpSubscriptionReceiverOptions>(name), sp.GetOptionsByName<KurrentDBOptions>(name), name))
+                    .AddTransient<IConfigurationValidator>(sp => new KurrentDBCatchUpPullingAgentOptionsValidator(sp.GetOptionsByName<StreamPullingAgentOptions>(name), name))
                     .AddKeyedSingleton<IKurrentDBReceiverFactory>(name, (sp, _) => new KurrentDBCatchUpSubscriptionReceiverFactory(sp, name));
         });
         return configurator;

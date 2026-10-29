@@ -85,11 +85,6 @@ public class KurrentDBPersistentQueueCache : IKurrentDBQueueCache
         }
     }
 
-    /// <summary>
-    ///     Never raised. The persistent subscription owns its checkpoint on the server.
-    /// </summary>
-    public Action<ulong>? OnCheckpointablePosition { get; set; }
-
     #region IKurrentDBQueueCache Implementation
 
     /// <inheritdoc />
@@ -172,24 +167,6 @@ public class KurrentDBPersistentQueueCache : IKurrentDBQueueCache
             throw cacheMiss.ToException();
         }
         return result.Cursor!;
-    }
-
-    /// <inheritdoc />
-    public void ReleaseCursor(object cursorObj)
-    {
-        // Cursors are not tracked, so they never hold back purging.
-    }
-
-    /// <inheritdoc />
-    public void RecordDelivered(object cursorObj, ulong commitPosition)
-    {
-        // Purging does not wait for delivery, since the server owns the checkpoint.
-    }
-
-    /// <inheritdoc />
-    public void RecordCaughtUp(object cursorObj)
-    {
-        // Cursors are not tracked, so there is nothing to release.
     }
 
     /// <inheritdoc />

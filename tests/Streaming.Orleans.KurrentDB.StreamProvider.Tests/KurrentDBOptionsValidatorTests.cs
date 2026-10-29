@@ -303,7 +303,7 @@ public class KurrentDBOptionsValidatorTests
     [Fact]
     public void PullingAgentOptions_Accepts_a_batch_size_of_one()
     {
-        new KurrentDBStreamPullingAgentOptionsValidator(new StreamPullingAgentOptions { BatchContainerBatchSize = 1 }, ProviderName).ValidateConfiguration();
+        new KurrentDBCatchUpPullingAgentOptionsValidator(new StreamPullingAgentOptions { BatchContainerBatchSize = 1 }, ProviderName).ValidateConfiguration();
     }
 
     [Theory]
@@ -313,7 +313,7 @@ public class KurrentDBOptionsValidatorTests
     {
         var options = new StreamPullingAgentOptions { BatchContainerBatchSize = batchSize };
 
-        AssertInvalid(new KurrentDBStreamPullingAgentOptionsValidator(options, ProviderName), nameof(StreamPullingAgentOptions.BatchContainerBatchSize));
+        AssertInvalid(new KurrentDBCatchUpPullingAgentOptionsValidator(options, ProviderName), nameof(StreamPullingAgentOptions.BatchContainerBatchSize));
     }
 
     #endregion
