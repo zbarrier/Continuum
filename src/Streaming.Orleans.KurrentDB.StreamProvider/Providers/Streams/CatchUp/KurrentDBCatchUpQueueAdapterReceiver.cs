@@ -80,7 +80,27 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     {
         _logger.AdapterReceiverInitializing(_settings.QueueName);
         // if receiver was already running, do nothing
-        return ReceiverRunning == Interlocked.Exchange(ref _receiverState, ReceiverRunning) ? Task.CompletedTask : Initialize();
+        return ReceiverRunning == Interlocked.Exchange(ref _receiverState, ReceiverRunning) ? Task.CompletedTask : InitializeExclusive();
+    }
+
+    /// <summary>
+    ///     Runs initialization unless a retry from <see cref="GetQueueMessagesAsync" /> is already running it, so only one
+    ///     cache and receiver are ever built at a time.
+    /// </summary>
+    private async Task InitializeExclusive()
+    {
+        if (Interlocked.CompareExchange(ref _initializing, 1, 0) != 0)
+        {
+            return;
+        }
+        try
+        {
+            await Initialize();
+        }
+        finally
+        {
+            Volatile.Write(ref _initializing, 0);
+        }
     }
 
     /// <summary>

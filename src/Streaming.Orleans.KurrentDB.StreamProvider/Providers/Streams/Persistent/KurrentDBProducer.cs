@@ -79,7 +79,7 @@ public class KurrentDBProducer : IKurrentDBProducer
         catch (Exception ex)
         {
             _logger.AppendEventsFailed(ex, _settings.QueueName);
-            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to append events for stream {_settings.QueueName}. {ex.GetType()}: {ex.Message}"));
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to append events for stream {_settings.QueueName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
 }

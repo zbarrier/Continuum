@@ -137,7 +137,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
         {
             timer.Stop();
             _logger.PersistentReceiverInitializationFailed(ex, _settings.QueueName, timer.Elapsed.TotalMilliseconds);
-            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to init KurrentDB persistent subscriptions client, {ex.GetType()}: {ex.Message}"));
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to init KurrentDB persistent subscriptions client, {ex.GetType()}: {ex.Message}"), ex);
         }
     }
 
@@ -170,7 +170,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
         catch (Exception ex)
         {
             _logger.PersistentReceiverCloseFailed(ex, _settings.QueueName);
-            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to close KurrentDB persistent subscription, {ex.GetType()}: {ex.Message}"));
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to close KurrentDB persistent subscription, {ex.GetType()}: {ex.Message}"), ex);
         }
         finally
         {
@@ -217,7 +217,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
         catch (Exception ex)
         {
             _logger.PersistentReceiveEventsFailed(ex, _settings.QueueName);
-            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to receive events from internal queue for stream {_settings.QueueName}. {ex.GetType()}: {ex.Message}"));
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to receive events from internal queue for stream {_settings.QueueName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
 
