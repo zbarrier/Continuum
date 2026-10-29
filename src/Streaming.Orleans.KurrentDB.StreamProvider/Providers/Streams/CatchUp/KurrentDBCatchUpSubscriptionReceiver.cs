@@ -136,7 +136,7 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
         {
             timer.Stop();
             _logger.ReceiverInitializationFailed(ex, _settings.QueueName, timer.Elapsed.TotalMilliseconds);
-            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to init KurrentDB all-stream subscription, {ex.GetType()}: {ex.Message}"));
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to init KurrentDB catch-up subscription, {ex.GetType()}: {ex.Message}"));
         }
     }
 
@@ -165,7 +165,7 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
         catch (Exception ex)
         {
             _logger.ReceiverCloseFailed(ex, _settings.QueueName);
-            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to close KurrentDB all-stream subscription, {ex.GetType()}: {ex.Message}"));
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to close KurrentDB catch-up subscription, {ex.GetType()}: {ex.Message}"));
         }
         finally
         {

@@ -59,7 +59,7 @@ public class KurrentDBCatchUpSubscriptionReceiverOptionsValidator : IConfigurati
         // every event once per queue and have every receiver contend over the same checkpoint stream.
         if (_kurrentDBOptions.Queues is null || _kurrentDBOptions.Queues.Count != 1)
         {
-            throw new OrleansConfigurationException($"{nameof(KurrentDBCatchUpSubscriptionReceiverOptions)} on stream provider {_name} is invalid. An all-stream subscription requires exactly one entry in {nameof(KurrentDBOptions)}.{nameof(KurrentDBOptions.Queues)}, but {_kurrentDBOptions.Queues?.Count ?? 0} were configured.");
+            throw new OrleansConfigurationException($"{nameof(KurrentDBCatchUpSubscriptionReceiverOptions)} on stream provider {_name} is invalid. A catch-up subscription requires exactly one entry in {nameof(KurrentDBOptions)}.{nameof(KurrentDBOptions.Queues)}, but {_kurrentDBOptions.Queues?.Count ?? 0} were configured.");
         }
         if (_options.CheckpointStore is null)
         {

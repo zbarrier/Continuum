@@ -133,7 +133,7 @@ public class TestSiloConfigurations : ISiloConfigurator
             services.AddKeyedSingleton<KurrentDBClient>(Constants.CatchUpProviderName, kurrentDBClient);
             services.AddTypeMappedJsonGrainStorageSerializer(Constants.CatchUpProviderName);
             services.AddDefaultTypeMapAttributeMappers(Constants.CatchUpProviderName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
-            // The $all strategy owns its read position, so it needs a checkpoint store keyed by the same name.
+            // The catch-up strategy owns its read position, so it needs a checkpoint store keyed by the same name.
             services.AddKeyedSingleton<ICheckpointStore<ulong>>(Constants.CatchUpProviderName, (provider, key) =>
             {
                 return new KurrentDBCheckpointStore(provider.GetRequiredKeyedService<KurrentDBClient>(Constants.CatchUpProviderName));

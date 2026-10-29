@@ -34,7 +34,7 @@ public static class Constants
     ///     reused between runs, so a fixed name would let one run resume from the position another run checkpointed
     ///     and skip the events under test.
     /// </remarks>
-    public static readonly string CatchUpQueueName = $"all-stream-queue-{Guid.NewGuid():N}";
+    public static readonly string CatchUpQueueName = $"catch-up-queue-{Guid.NewGuid():N}";
 
     /// <summary>
     ///     A third stream provider consuming <c>$all</c>, used by the implicit subscription tests.

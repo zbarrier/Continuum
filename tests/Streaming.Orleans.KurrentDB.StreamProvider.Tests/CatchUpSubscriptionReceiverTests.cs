@@ -32,7 +32,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 public class CatchUpSubscriptionReceiverTests
 {
     private readonly string _connectionString;
-    private const string EventType = "all-stream-test-event";
+    private const string EventType = "catch-up-test-event";
 
     private readonly ITestOutputHelper _output;
 
@@ -49,7 +49,7 @@ public class CatchUpSubscriptionReceiverTests
     {
         // Arrange
         await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
-        var streamName = $"allstream-resume-{Guid.NewGuid():N}";
+        var streamName = $"catchup-resume-{Guid.NewGuid():N}";
         var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
 
         await AppendAsync(client, streamName, "first-1", "first-2", "first-3");
@@ -78,8 +78,8 @@ public class CatchUpSubscriptionReceiverTests
         // points at, which is the divergence this test needs.
         await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         var suffix = Guid.NewGuid().ToString("N");
-        var originStream = $"allstream-link-origin-{suffix}";
-        var linkStream = $"allstream-link-{suffix}";
+        var originStream = $"catchup-link-origin-{suffix}";
+        var linkStream = $"catchup-link-{suffix}";
         var settings = CreateSettings(linkStream, streamFilterPrefix: linkStream, resolveLinkTos: true);
 
         // The origin events are written first, so every link points backwards to a lower position in the log. A
@@ -107,7 +107,7 @@ public class CatchUpSubscriptionReceiverTests
     {
         // Arrange
         await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
-        var streamName = "allstream-purge-count-" + Guid.NewGuid().ToString("N");
+        var streamName = "catchup-purge-count-" + Guid.NewGuid().ToString("N");
         var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
         var receiverOptions = (KurrentDBCatchUpSubscriptionReceiverOptions)settings.ReceiverOptions;
         receiverOptions.CheckpointMonitorOptions.MaxEventsBeforeCommit = 3;
@@ -147,7 +147,7 @@ public class CatchUpSubscriptionReceiverTests
     {
         // Arrange: more events than the buffer holds, so an unbounded pump would buffer every one of them.
         await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
-        var streamName = "allstream-bounded-" + Guid.NewGuid().ToString("N");
+        var streamName = "catchup-bounded-" + Guid.NewGuid().ToString("N");
         var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
         var receiverOptions = (KurrentDBCatchUpSubscriptionReceiverOptions)settings.ReceiverOptions;
         receiverOptions.CheckpointStore = new RecordingCheckpointStore();

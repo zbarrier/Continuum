@@ -12,7 +12,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
 /// <summary>
 ///     Verifies that selecting the persistent subscription strategy registers its receiver factory, options and
-///     validator, and nothing belonging to the $all strategy.
+///     validator, and nothing belonging to the catch-up strategy.
 /// </summary>
 public class UsePersistentSubscriptionsTests
 {
