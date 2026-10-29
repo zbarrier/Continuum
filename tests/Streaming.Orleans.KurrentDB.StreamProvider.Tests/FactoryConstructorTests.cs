@@ -113,7 +113,7 @@ public class FactoryConstructorTests
     }
 
     [Fact]
-    public void The_All_Stream_Receiver_Factory_Rejects_A_Missing_Service_Provider()
+    public void The_Catch_Up_Subscription_Receiver_Factory_Rejects_A_Missing_Service_Provider()
     {
         var exception = Assert.Throws<ArgumentNullException>(() => new KurrentDBCatchUpSubscriptionReceiverFactory(null!, "test"));
 
@@ -124,7 +124,7 @@ public class FactoryConstructorTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public void The_All_Stream_Receiver_Factory_Rejects_A_Missing_Name(string? name)
+    public void The_Catch_Up_Subscription_Receiver_Factory_Rejects_A_Missing_Name(string? name)
     {
         using var services = new ServiceCollection().BuildServiceProvider();
 

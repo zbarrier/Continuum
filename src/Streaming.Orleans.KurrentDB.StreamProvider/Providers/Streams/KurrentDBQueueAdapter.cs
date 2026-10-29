@@ -9,7 +9,6 @@ using Microsoft.Extensions.Options;
 using Orleans.Configuration;
 using Orleans.Configuration.Overrides;
 using Orleans.Providers.Streams.Common;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.StatisticMonitors;
 using Orleans.Statistics;
 using Orleans.Streams;
@@ -36,7 +35,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     private readonly LoadSheddingOptions _loadSheddingOptions;
     private readonly string _consumerGroup;
 
-    private readonly ConcurrentDictionary<QueueId, KurrentDBProducer> _producers = new();
+    private readonly ConcurrentDictionary<QueueId, IKurrentDBProducer> _producers = new();
     private readonly ConcurrentDictionary<QueueId, IKurrentDBQueueAdapterReceiver> _receivers = new();
 
     /// <summary>
@@ -128,22 +127,8 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
             return Task.CompletedTask;
         }
         var queueId = _streamQueueMapper.GetQueueForStream(streamId);
-        var producer = _producers.GetOrAdd(queueId, static (qid, instance) => instance.MakeProducer(qid), this);
+        var producer = _producers.GetOrAdd(queueId, static (qid, instance) => instance._strategy.CreateProducer(instance._streamQueueMapper.QueueToPartition(qid), instance._loggerFactory), this);
         return producer.AppendAsync(records);
-    }
-
-    private KurrentDBProducer MakeProducer(QueueId queueId)
-    {
-        var producerSettings = new KurrentProducerSettings
-                               {
-                                   Options = _options,
-                                   QueueName = _streamQueueMapper.QueueToPartition(queueId)
-                               };
-        // The client is a keyed singleton shared by every queue of this connection.
-        var client = _serviceProvider.GetRequiredKeyedService<KurrentDBClient>(_options.ConnectionName);
-        var producer = new KurrentDBProducer(client, producerSettings, _loggerFactory.CreateLogger<KurrentDBProducer>());
-        producer.Init();
-        return producer;
     }
 
     /// <summary>

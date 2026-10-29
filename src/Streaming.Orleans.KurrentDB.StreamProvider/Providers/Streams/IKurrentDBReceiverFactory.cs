@@ -46,4 +46,13 @@ public interface IKurrentDBReceiverFactory
     /// </summary>
     /// <param name="context">What the queue adapter supplies for the queue.</param>
     IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context);
+
+    /// <summary>
+    ///     Creates the producer that appends events to a single queue stream. Only called when
+    ///     <see cref="Direction" /> allows writes.
+    /// </summary>
+    /// <param name="queueName">The KurrentDB stream backing the queue.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <exception cref="NotSupportedException">The strategy is read only.</exception>
+    IKurrentDBProducer CreateProducer(string queueName, ILoggerFactory loggerFactory);
 }

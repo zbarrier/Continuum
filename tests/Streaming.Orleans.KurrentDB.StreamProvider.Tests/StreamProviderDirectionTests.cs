@@ -1,4 +1,4 @@
-using Continuum.Orleans.Events;
+﻿using Continuum.Orleans.Events;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 using Continuum.TypeMapping;
@@ -63,6 +63,16 @@ public class StreamProviderDirectionTests
 
         Assert.IsType<KurrentDBCatchUpSubscriptionReceiverFactory>(strategy);
         Assert.Equal(StreamProviderDirection.ReadOnly, strategy.Direction);
+    }
+
+    [Fact]
+    public void The_Catch_Up_Strategy_Refuses_To_Create_A_Producer()
+    {
+        using var services = BuildServices(configurator => configurator.UseCatchUpSubscription());
+
+        var strategy = services.GetRequiredKeyedService<IKurrentDBReceiverFactory>(ProviderName);
+
+        Assert.Throws<NotSupportedException>(() => strategy.CreateProducer("queue-0", NullLoggerFactory.Instance));
     }
 
     [Fact]

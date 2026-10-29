@@ -57,4 +57,8 @@ public sealed class KurrentDBCatchUpSubscriptionReceiverFactory : IKurrentDBRece
 
     /// <inheritdoc />
     public IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context) => new KurrentDBQueueAdapterReceiver(context);
+
+    /// <inheritdoc />
+    public IKurrentDBProducer CreateProducer(string queueName, ILoggerFactory loggerFactory) =>
+        throw new NotSupportedException("Catch-up subscriptions are read only. Their events are produced by event sourced grains, not by the stream provider.");
 }
