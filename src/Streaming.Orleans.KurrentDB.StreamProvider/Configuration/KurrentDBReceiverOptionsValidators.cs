@@ -34,18 +34,18 @@ public class KurrentDBPersistentSubscriptionReceiverOptionsValidator : IConfigur
         }
 
 /// <summary>
-///     Validates <see cref="KurrentDBAllStreamReceiverOptions" /> for a named stream provider.
+///     Validates <see cref="KurrentDBCatchUpSubscriptionReceiverOptions" /> for a named stream provider.
 /// </summary>
-public class KurrentDBAllStreamReceiverOptionsValidator : IConfigurationValidator
+public class KurrentDBCatchUpSubscriptionReceiverOptionsValidator : IConfigurationValidator
 {
-    private readonly KurrentDBAllStreamReceiverOptions _options;
+    private readonly KurrentDBCatchUpSubscriptionReceiverOptions _options;
     private readonly KurrentDBOptions _kurrentDBOptions;
     private readonly string _name;
 
     /// <summary>
-    ///     Creates a new <see cref="KurrentDBAllStreamReceiverOptionsValidator" />.
+    ///     Creates a new <see cref="KurrentDBCatchUpSubscriptionReceiverOptionsValidator" />.
     /// </summary>
-    public KurrentDBAllStreamReceiverOptionsValidator(KurrentDBAllStreamReceiverOptions options, KurrentDBOptions kurrentDBOptions, string name)
+    public KurrentDBCatchUpSubscriptionReceiverOptionsValidator(KurrentDBCatchUpSubscriptionReceiverOptions options, KurrentDBOptions kurrentDBOptions, string name)
     {
         _options = options;
         _kurrentDBOptions = kurrentDBOptions;
@@ -59,15 +59,15 @@ public class KurrentDBAllStreamReceiverOptionsValidator : IConfigurationValidato
         // every event once per queue and have every receiver contend over the same checkpoint stream.
         if (_kurrentDBOptions.Queues is null || _kurrentDBOptions.Queues.Count != 1)
         {
-            throw new OrleansConfigurationException($"{nameof(KurrentDBAllStreamReceiverOptions)} on stream provider {_name} is invalid. An all-stream subscription requires exactly one entry in {nameof(KurrentDBOptions)}.{nameof(KurrentDBOptions.Queues)}, but {_kurrentDBOptions.Queues?.Count ?? 0} were configured.");
+            throw new OrleansConfigurationException($"{nameof(KurrentDBCatchUpSubscriptionReceiverOptions)} on stream provider {_name} is invalid. An all-stream subscription requires exactly one entry in {nameof(KurrentDBOptions)}.{nameof(KurrentDBOptions.Queues)}, but {_kurrentDBOptions.Queues?.Count ?? 0} were configured.");
         }
         if (_options.CheckpointStore is null)
         {
-            throw new OrleansConfigurationException($"{nameof(KurrentDBAllStreamReceiverOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBAllStreamReceiverOptions.CheckpointStore)} could not be resolved. Register an ICheckpointStore<ulong> for the configured {nameof(KurrentDBAllStreamReceiverOptions.CheckpointConnectionName)} or set it explicitly.");
+            throw new OrleansConfigurationException($"{nameof(KurrentDBCatchUpSubscriptionReceiverOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointStore)} could not be resolved. Register an ICheckpointStore<ulong> for the configured {nameof(KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointConnectionName)} or set it explicitly.");
         }
         if (_options.CheckpointMonitorOptions is null)
         {
-                        throw new OrleansConfigurationException($"{nameof(KurrentDBAllStreamReceiverOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBAllStreamReceiverOptions.CheckpointMonitorOptions)} is required.");
+                        throw new OrleansConfigurationException($"{nameof(KurrentDBCatchUpSubscriptionReceiverOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointMonitorOptions)} is required.");
                 }
             }
 }

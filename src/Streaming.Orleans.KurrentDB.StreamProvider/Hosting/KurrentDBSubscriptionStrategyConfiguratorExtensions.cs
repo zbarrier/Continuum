@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Orleans.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 namespace Orleans.Hosting;
 
@@ -47,22 +48,22 @@ public static class KurrentDBSubscriptionStrategyConfiguratorExtensions
     /// <param name="configureOptions">An action to configure the receiver options.</param>
     /// <remarks>
     ///     Requires exactly one entry in <see cref="KurrentDBOptions.Queues" />; see
-    ///     <see cref="KurrentDBAllStreamReceiverOptions" />.
+    ///     <see cref="KurrentDBCatchUpSubscriptionReceiverOptions" />.
     /// </remarks>
-    public static ISiloKurrentDBStreamConfigurator UseAllStreamSubscription(this ISiloKurrentDBStreamConfigurator configurator, Action<OptionsBuilder<KurrentDBAllStreamReceiverOptions>>? configureOptions = null)
+    public static ISiloKurrentDBStreamConfigurator UseCatchUpSubscription(this ISiloKurrentDBStreamConfigurator configurator, Action<OptionsBuilder<KurrentDBCatchUpSubscriptionReceiverOptions>>? configureOptions = null)
     {
         ArgumentNullException.ThrowIfNull(configurator, nameof(configurator));
         var name = configurator.Name;
-        configurator.Configure<KurrentDBAllStreamReceiverOptions>(ob =>
+        configurator.Configure<KurrentDBCatchUpSubscriptionReceiverOptions>(ob =>
         {
             configureOptions?.Invoke(ob);
-            ob.Services.AddTransient<IPostConfigureOptions<KurrentDBAllStreamReceiverOptions>, DefaultKurrentDBAllStreamReceiverOptionsConfigurator>();
+            ob.Services.AddTransient<IPostConfigureOptions<KurrentDBCatchUpSubscriptionReceiverOptions>, DefaultKurrentDBCatchUpSubscriptionReceiverOptionsConfigurator>();
         });
         configurator.ConfigureDelegate(services =>
         {
-            services.ConfigureNamedOptionForLogging<KurrentDBAllStreamReceiverOptions>(name)
-                    .AddTransient<IConfigurationValidator>(sp => new KurrentDBAllStreamReceiverOptionsValidator(sp.GetOptionsByName<KurrentDBAllStreamReceiverOptions>(name), sp.GetOptionsByName<KurrentDBOptions>(name), name))
-                    .AddKeyedSingleton<IKurrentDBReceiverFactory>(name, (sp, _) => new KurrentDBAllStreamReceiverFactory(sp, name));
+            services.ConfigureNamedOptionForLogging<KurrentDBCatchUpSubscriptionReceiverOptions>(name)
+                    .AddTransient<IConfigurationValidator>(sp => new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(sp.GetOptionsByName<KurrentDBCatchUpSubscriptionReceiverOptions>(name), sp.GetOptionsByName<KurrentDBOptions>(name), name))
+                    .AddKeyedSingleton<IKurrentDBReceiverFactory>(name, (sp, _) => new KurrentDBCatchUpSubscriptionReceiverFactory(sp, name));
         });
         return configurator;
     }

@@ -1,4 +1,4 @@
-﻿using Orleans.Configuration;
+using Orleans.Configuration;
 
 namespace Orleans.Hosting;
 
@@ -22,7 +22,7 @@ public static class KurrentDBSiloBuilderExtensions
     /// <remarks>
     ///     This overload selects the persistent subscription strategy. Use the
     ///     <see cref="AddKurrentDBStreams(ISiloBuilder, string, Action{ISiloKurrentDBStreamConfigurator})" /> overload
-    ///     with <c>UseAllStreamSubscription</c> to consume <c>$all</c> instead.
+    ///     with <c>UseCatchUpSubscription</c> to consume <c>$all</c> instead.
     /// </remarks>
     public static ISiloBuilder AddKurrentDBStreams(this ISiloBuilder builder, string name, Action<KurrentDBOptions> configureKurrentDB)
     {

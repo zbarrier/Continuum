@@ -23,20 +23,20 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     Tests for the <c>$all</c> catch-up subscription strategy.
 /// </summary>
 /// <remarks>
-///     These drive <see cref="KurrentDBAllStreamReceiver" /> directly rather than through a silo. The defects this
+///     These drive <see cref="KurrentDBCatchUpSubscriptionReceiver" /> directly rather than through a silo. The defects this
 ///     strategy is prone to (resuming from the wrong log position) only appear across a receiver restart, which a
 ///     shared long lived <see cref="ClusterFixture" /> cluster cannot express. Constructing the receiver directly also
 ///     avoids the one-queue-per-provider constraint that a second stream provider would impose on the shared cluster.
 /// </remarks>
 [Collection(ClusterCollection.Name)]
-public class AllStreamReceiverTests
+public class CatchUpSubscriptionReceiverTests
 {
     private readonly string _connectionString;
     private const string EventType = "all-stream-test-event";
 
     private readonly ITestOutputHelper _output;
 
-    public AllStreamReceiverTests(ClusterFixture fixture, ITestOutputHelper output)
+    public CatchUpSubscriptionReceiverTests(ClusterFixture fixture, ITestOutputHelper output)
     {
         // The fixture is depended upon so the KurrentDB container is started, even though the cluster is not used.
         ArgumentNullException.ThrowIfNull(fixture);
@@ -109,7 +109,7 @@ public class AllStreamReceiverTests
         await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         var streamName = "allstream-purge-count-" + Guid.NewGuid().ToString("N");
         var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
-        var receiverOptions = (KurrentDBAllStreamReceiverOptions)settings.ReceiverOptions;
+        var receiverOptions = (KurrentDBCatchUpSubscriptionReceiverOptions)settings.ReceiverOptions;
         receiverOptions.CheckpointMonitorOptions.MaxEventsBeforeCommit = 3;
         receiverOptions.CheckpointMonitorOptions.MaxTimeBeforeCommit = TimeSpan.FromHours(1);
         var store = new RecordingCheckpointStore();
@@ -149,9 +149,9 @@ public class AllStreamReceiverTests
         await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
         var streamName = "allstream-bounded-" + Guid.NewGuid().ToString("N");
         var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
-        var receiverOptions = (KurrentDBAllStreamReceiverOptions)settings.ReceiverOptions;
+        var receiverOptions = (KurrentDBCatchUpSubscriptionReceiverOptions)settings.ReceiverOptions;
         receiverOptions.CheckpointStore = new RecordingCheckpointStore();
-        var total = KurrentDBAllStreamReceiver.BufferCapacity + 500;
+        var total = KurrentDBCatchUpSubscriptionReceiver.BufferCapacity + 500;
         foreach (var chunk in Enumerable.Range(0, total).Chunk(1000))
         {
             await AppendAsync(client, streamName, chunk.Select(i => i.ToString()).ToArray());
@@ -164,14 +164,14 @@ public class AllStreamReceiverTests
 
             // Act: wait for the pump
             var deadline = DateTime.UtcNow.AddSeconds(30);
-            while (receiver.BufferedCount < KurrentDBAllStreamReceiver.BufferCapacity && DateTime.UtcNow < deadline)
+            while (receiver.BufferedCount < KurrentDBCatchUpSubscriptionReceiver.BufferCapacity && DateTime.UtcNow < deadline)
             {
                 await Task.Delay(50, TestContext.Current.CancellationToken);
             }
             await Task.Delay(500, TestContext.Current.CancellationToken);
 
             // Assert: the pump waits at capacity instead of reading the rest of the log into memory.
-            Assert.Equal(KurrentDBAllStreamReceiver.BufferCapacity, receiver.BufferedCount);
+            Assert.Equal(KurrentDBCatchUpSubscriptionReceiver.BufferCapacity, receiver.BufferedCount);
 
             // Draining the buffer lets the pump read the remaining events, in order and without loss.
             var received = new List<string>();
@@ -221,7 +221,7 @@ public class AllStreamReceiverTests
                 Queues = new List<string> { queueName },
                 Credentials = new KurrentDBStreamCredentialsOptions { UseDefault = true },
             },
-            ReceiverOptions = new KurrentDBAllStreamReceiverOptions
+            ReceiverOptions = new KurrentDBCatchUpSubscriptionReceiverOptions
             {
                 // Defaults to true, which would skip everything appended before the first receiver started. These
                 // tests append first and subscribe afterwards, so the first run must read from the beginning; the
@@ -250,7 +250,7 @@ public class AllStreamReceiverTests
     /// </summary>
     private async Task<List<string>> ReceiveAllAsync(KurrentDBClient client, KurrentDBReceiverSettings settings, int expectedCount)
     {
-        var receiverOptions = (KurrentDBAllStreamReceiverOptions)settings.ReceiverOptions;
+        var receiverOptions = (KurrentDBCatchUpSubscriptionReceiverOptions)settings.ReceiverOptions;
 
         // A fresh checkpoint store per receiver mirrors a process restart: nothing is carried in memory, the position
         // has to come back from KurrentDB.
@@ -303,7 +303,7 @@ public class AllStreamReceiverTests
         return payloads;
     }
 
-    private KurrentDBAllStreamReceiver CreateReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings) =>
+    private KurrentDBCatchUpSubscriptionReceiver CreateReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings) =>
         new(client, settings, new TestOutputLogger(_output), CheckpointMarkerData);
 
     private static readonly KurrentDBCheckpointMarkerData CheckpointMarkerData = KurrentDBCheckpointMarkerData.Create(new KurrentDBDataAdapterOptions

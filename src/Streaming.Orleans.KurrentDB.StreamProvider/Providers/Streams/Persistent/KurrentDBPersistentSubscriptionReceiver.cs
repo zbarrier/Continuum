@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Storage;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 /// <summary>
 ///     Subscribe from KurrentDB persistent subscriptions and receive data from internal queue.

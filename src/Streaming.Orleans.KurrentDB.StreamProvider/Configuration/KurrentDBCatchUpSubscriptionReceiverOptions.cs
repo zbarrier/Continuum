@@ -19,7 +19,7 @@ namespace Orleans.Configuration;
 ///         exactly one entry when this strategy is selected.
 ///     </para>
 /// </remarks>
-public sealed class KurrentDBAllStreamReceiverOptions : KurrentDBReceiverOptionsBase
+public sealed class KurrentDBCatchUpSubscriptionReceiverOptions : KurrentDBReceiverOptionsBase
 {
     /// <summary>
     ///     Indicates whether link events should be resolved to the events they point at.

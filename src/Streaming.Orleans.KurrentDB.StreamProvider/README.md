@@ -21,7 +21,7 @@ dotnet add package Continuum.Streaming.Orleans.KurrentDB.StreamProvider
 siloBuilder.AddKurrentDBStreams("KurrentDB", configurator =>
 {
 	configurator.ConfigureKurrentDB(ob => ob.Configure(options => options.Queues = ["all"]));
-	configurator.UseAllStreamSubscription(ob => ob.Configure(options =>
+	configurator.UseCatchUpSubscription(ob => ob.Configure(options =>
 	{
 		options.StreamFilterPrefix = "snack-";
 		options.StartFromNow = false;
@@ -58,7 +58,7 @@ siloBuilder.AddKurrentDBStreams("Snacks", configurator =>
         options.Name = "Snacks";
         options.Queues = ["all"];
     }));
-    configurator.UseAllStreamSubscription(ob => ob.Configure(options => options.StreamFilterPrefix = "snack-"));
+    configurator.UseCatchUpSubscription(ob => ob.Configure(options => options.StreamFilterPrefix = "snack-"));
 });
 
 siloBuilder.AddKurrentDBStreams("Reporting", configurator =>
@@ -69,7 +69,7 @@ siloBuilder.AddKurrentDBStreams("Reporting", configurator =>
         options.Name = "Reporting";
         options.Queues = ["all"];
     }));
-    configurator.UseAllStreamSubscription();
+    configurator.UseCatchUpSubscription();
 });
 ```
 

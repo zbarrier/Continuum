@@ -20,7 +20,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     while a negative result is only evidence for this server version under this level of contention.
 /// </remarks>
 [Collection(ClusterCollection.Name)]
-public class AllStreamTransactionContiguityTests
+public class CatchUpTransactionContiguityTests
 {
     private readonly string _connectionString;
     private const string EventType = "contiguity-probe-event";
@@ -39,7 +39,7 @@ public class AllStreamTransactionContiguityTests
 
     private readonly ITestOutputHelper _output;
 
-    public AllStreamTransactionContiguityTests(ClusterFixture fixture, ITestOutputHelper output)
+    public CatchUpTransactionContiguityTests(ClusterFixture fixture, ITestOutputHelper output)
     {
         // The fixture is depended upon so the KurrentDB container is started, even though the cluster is not used.
         ArgumentNullException.ThrowIfNull(fixture);

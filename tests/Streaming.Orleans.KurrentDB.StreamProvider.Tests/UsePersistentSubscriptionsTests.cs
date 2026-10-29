@@ -1,4 +1,5 @@
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -72,7 +73,7 @@ public class UsePersistentSubscriptionsTests
         var validators = services.GetServices<IConfigurationValidator>().ToList();
 
         Assert.Contains(validators, validator => validator is KurrentDBPersistentSubscriptionReceiverOptionsValidator);
-        Assert.DoesNotContain(validators, validator => validator is KurrentDBAllStreamReceiverOptionsValidator);
+        Assert.DoesNotContain(validators, validator => validator is KurrentDBCatchUpSubscriptionReceiverOptionsValidator);
     }
 
     [Fact]

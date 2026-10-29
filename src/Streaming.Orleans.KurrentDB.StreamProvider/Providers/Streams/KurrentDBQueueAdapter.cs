@@ -16,7 +16,8 @@ using Orleans.Streams;
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
 /// <summary>
-///     Queue adapter factory which allows the PersistentStreamProvider to use KurrentDB as its backend persistent event queue.
+///     Queue adapter that lets the Orleans PersistentStreamProvider use KurrentDB as its event queue, for both the
+///     catch-up and persistent subscription strategies.
 /// </summary>
 public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
 {

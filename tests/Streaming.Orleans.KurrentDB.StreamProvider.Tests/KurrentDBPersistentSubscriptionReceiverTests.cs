@@ -4,6 +4,8 @@ using KurrentDB.Client;
 
 using Microsoft.Extensions.Logging;
 
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
+
 using Orleans.Configuration;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;

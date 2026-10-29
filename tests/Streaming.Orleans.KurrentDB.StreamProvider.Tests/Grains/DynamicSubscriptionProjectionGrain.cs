@@ -1,4 +1,4 @@
-﻿using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans;
 
 using Microsoft.Extensions.Logging;
 
@@ -40,7 +40,7 @@ public class DynamicSubscriptionProjectionGrain
     public Task<string[]> GetAuthors() => Task.FromResult(State.Authors.ToArray());
 
     private static StreamSubscriptionSource SourceFor(string streamKey)
-        => new(Constants.AllStreamProviderName, StreamId.Create(Constants.EventSourcedStreamNamespace, streamKey));
+        => new(Constants.CatchUpProviderName, StreamId.Create(Constants.EventSourcedStreamNamespace, streamKey));
 }
 
 [GenerateSerializer]

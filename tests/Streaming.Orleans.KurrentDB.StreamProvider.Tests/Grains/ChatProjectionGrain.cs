@@ -1,4 +1,4 @@
-﻿using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans;
 
 using Microsoft.Extensions.Logging;
 
@@ -26,7 +26,7 @@ public class ChatProjectionGrain : ProjectionGrain<ChatProjectionGrain, ChatProj
 
     protected override IEnumerable<StreamSubscriptionSource> Subscriptions =>
     [
-        new(Constants.AllStreamProviderName, StreamIdFromKey(Constants.EventSourcedStreamNamespace))
+        new(Constants.CatchUpProviderName, StreamIdFromKey(Constants.EventSourcedStreamNamespace))
     ];
 
     public Task<string[]> GetAuthors() => Task.FromResult(State.Authors.ToArray());

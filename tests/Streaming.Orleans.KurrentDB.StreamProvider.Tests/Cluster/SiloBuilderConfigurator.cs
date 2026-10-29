@@ -74,19 +74,19 @@ public class TestSiloConfigurations : ISiloConfigurator
 
         // A second provider reading $all. This is the shape the event sourcing storage is consumed through: the
         // events on those streams were not written by a stream provider, so they carry no Orleans metadata.
-        sb.AddKurrentDBStreams(Constants.AllStreamProviderName, configurator =>
+        sb.AddKurrentDBStreams(Constants.CatchUpProviderName, configurator =>
         {
             configurator.ConfigureKurrentDB(ob => ob.Configure(options =>
             {
-                options.ConnectionName = Constants.AllStreamProviderName;
+                options.ConnectionName = Constants.CatchUpProviderName;
                 options.Credentials = new KurrentDBStreamCredentialsOptions { UseDefault = true };
-                options.Name = Constants.AllStreamProviderName;
+                options.Name = Constants.CatchUpProviderName;
                 // A $all subscription is global, so this strategy allows exactly one queue.
-                options.Queues = new List<string> { Constants.AllStreamQueueName };
+                options.Queues = new List<string> { Constants.CatchUpQueueName };
             }));
-            configurator.UseAllStreamSubscription(ob => ob.Configure(options =>
+            configurator.UseCatchUpSubscription(ob => ob.Configure(options =>
             {
-                options.CheckpointConnectionName = Constants.AllStreamProviderName;
+                options.CheckpointConnectionName = Constants.CatchUpProviderName;
                 // Without a filter the subscription would also see the events the other provider and the pub/sub
                 // store write to the same container, which are unrelated to what these tests assert on. The prefix
                 // is unique per process, so a run only ever reads events it appended itself.
@@ -109,7 +109,7 @@ public class TestSiloConfigurations : ISiloConfigurator
                 options.Name = Constants.ImplicitProviderName;
                 options.Queues = new List<string> { Constants.ImplicitQueueName };
             }));
-            configurator.UseAllStreamSubscription(ob => ob.Configure(options =>
+            configurator.UseCatchUpSubscription(ob => ob.Configure(options =>
             {
                 options.CheckpointConnectionName = Constants.ImplicitProviderName;
                 options.StreamFilterPrefix = Constants.ImplicitStreamPrefix;
@@ -130,13 +130,13 @@ public class TestSiloConfigurations : ISiloConfigurator
 
             // The $all provider needs the same client, serializer and type mapper so it can convert events written
             // by the event sourcing storage into the Orleans cache format.
-            services.AddKeyedSingleton<KurrentDBClient>(Constants.AllStreamProviderName, kurrentDBClient);
-            services.AddTypeMappedJsonGrainStorageSerializer(Constants.AllStreamProviderName);
-            services.AddDefaultTypeMapAttributeMappers(Constants.AllStreamProviderName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
+            services.AddKeyedSingleton<KurrentDBClient>(Constants.CatchUpProviderName, kurrentDBClient);
+            services.AddTypeMappedJsonGrainStorageSerializer(Constants.CatchUpProviderName);
+            services.AddDefaultTypeMapAttributeMappers(Constants.CatchUpProviderName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
             // The $all strategy owns its read position, so it needs a checkpoint store keyed by the same name.
-            services.AddKeyedSingleton<ICheckpointStore<ulong>>(Constants.AllStreamProviderName, (provider, key) =>
+            services.AddKeyedSingleton<ICheckpointStore<ulong>>(Constants.CatchUpProviderName, (provider, key) =>
             {
-                return new KurrentDBCheckpointStore(provider.GetRequiredKeyedService<KurrentDBClient>(Constants.AllStreamProviderName));
+                return new KurrentDBCheckpointStore(provider.GetRequiredKeyedService<KurrentDBClient>(Constants.CatchUpProviderName));
             });
 
             // The implicit subscription provider needs the same set of keyed services.

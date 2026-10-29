@@ -22,8 +22,8 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 /// <remarks>
 ///     <para>
 ///         Unlike a persistent subscription, the server keeps no state for this strategy. The read position is owned by
-///         the client, persisted through <see cref="KurrentDBAllStreamReceiverOptions.CheckpointStore" /> and throttled
-///         by <see cref="KurrentDBAllStreamReceiverOptions.CheckpointMonitorOptions" />.
+///         the client, persisted through <see cref="KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointStore" /> and throttled
+///         by <see cref="KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointMonitorOptions" />.
 ///     </para>
 ///     <para>
 ///         The subscription is pumped by a background task that buffers events, and <see cref="Receive" /> drains that
@@ -31,11 +31,11 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 ///         from the last delivered event rather than from the last event the server pushed.
 ///     </para>
 /// </remarks>
-public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
+public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
 {
 
     private readonly KurrentDBReceiverSettings _settings;
-    private readonly KurrentDBAllStreamReceiverOptions _receiverOptions;
+    private readonly KurrentDBCatchUpSubscriptionReceiverOptions _receiverOptions;
     private readonly KurrentDBCheckpointMonitor _checkpointMonitor;
     private readonly UserCredentials? _credentials;
     private readonly ILogger _logger;
@@ -70,7 +70,7 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     private bool _initialized;
 
     /// <summary>
-    ///     Creates a new <see cref="KurrentDBAllStreamReceiver" />.
+    ///     Creates a new <see cref="KurrentDBCatchUpSubscriptionReceiver" />.
     /// </summary>
     /// <param name="client">The shared KurrentDB client for this connection.</param>
     /// <param name="settings">The per-queue receiver settings.</param>
@@ -79,10 +79,10 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     ///     The serialized checkpoint marker enqueued when a filtered subscription reaches a checkpoint.
     /// </param>
     /// <remarks>
-    ///     The read position comes from <see cref="KurrentDBAllStreamReceiverOptions.CheckpointStore" />, which holds
+    ///     The read position comes from <see cref="KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointStore" />, which holds
     ///     <c>$all</c> commit positions.
     /// </remarks>
-    internal KurrentDBAllStreamReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings, ILogger logger, KurrentDBCheckpointMarkerData checkpointMarker)
+    internal KurrentDBCatchUpSubscriptionReceiver(KurrentDBClient client, KurrentDBReceiverSettings settings, ILogger logger, KurrentDBCheckpointMarkerData checkpointMarker)
     {
         ArgumentNullException.ThrowIfNull(client, nameof(client));
         ArgumentNullException.ThrowIfNull(settings, nameof(settings));
@@ -91,9 +91,9 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
         ArgumentException.ThrowIfNullOrEmpty(settings.QueueName, nameof(settings.QueueName));
         ArgumentNullException.ThrowIfNull(logger, nameof(logger));
         ArgumentNullException.ThrowIfNull(checkpointMarker, nameof(checkpointMarker));
-        if (settings.ReceiverOptions is not KurrentDBAllStreamReceiverOptions receiverOptions)
+        if (settings.ReceiverOptions is not KurrentDBCatchUpSubscriptionReceiverOptions receiverOptions)
         {
-            throw new ArgumentException($"{nameof(KurrentDBAllStreamReceiver)} requires {nameof(KurrentDBAllStreamReceiverOptions)}, but received {settings.ReceiverOptions.GetType().Name}.", nameof(settings));
+            throw new ArgumentException($"{nameof(KurrentDBCatchUpSubscriptionReceiver)} requires {nameof(KurrentDBCatchUpSubscriptionReceiverOptions)}, but received {settings.ReceiverOptions.GetType().Name}.", nameof(settings));
         }
         ArgumentNullException.ThrowIfNull(receiverOptions.CheckpointStore, nameof(receiverOptions.CheckpointStore));
         ArgumentNullException.ThrowIfNull(receiverOptions.CheckpointMonitorOptions, nameof(receiverOptions.CheckpointMonitorOptions));
@@ -365,9 +365,9 @@ public class KurrentDBAllStreamReceiver : IKurrentDBReceiver
     #endregion
 }
 
-internal static partial class KurrentDBAllStreamReceiverLog
+internal static partial class KurrentDBCatchUpSubscriptionReceiverLog
 {
-    [LoggerMessage(Level = LogLevel.Debug, Message = "KurrentDBAllStreamReceiver for queue {QueueName} is initializing.")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "KurrentDBCatchUpSubscriptionReceiver for queue {QueueName} is initializing.")]
     public static partial void ReceiverInitializing(this ILogger logger, string queueName);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "InitAsync: QueueName={QueueName}, initialized in {ElapsedMilliseconds} ms")]
