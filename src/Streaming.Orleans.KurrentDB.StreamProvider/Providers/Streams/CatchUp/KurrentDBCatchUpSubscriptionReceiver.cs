@@ -304,7 +304,7 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
                             // Check duplication
                             if (_hashSet.TryAdd(resolvedEvent.Event.EventId, true))
                             {
-                                await _queue.Writer.WriteAsync(KurrentDBStreamedEventFactory.FromAllStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser), cancellationToken).ConfigureAwait(false);
+                                await _queue.Writer.WriteAsync(KurrentDBCatchUpStreamedEventFactory.FromAllStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser), cancellationToken).ConfigureAwait(false);
                             }
                             // Resuming a dropped subscription must continue from the last event seen by the pump,
                             // otherwise the buffered but undelivered events would be received twice.
@@ -315,7 +315,7 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
                             // A filtered subscription reports progress through events it did not deliver. The
                             // position is enqueued as a marker behind the events already buffered, so it is only
                             // checkpointed once the cache purges it, after every event before it was delivered.
-                            await _queue.Writer.WriteAsync(KurrentDBStreamedEventFactory.CheckpointMarker(checkpointPosition.CommitPosition, _settings.Options.ConnectionName, _checkpointMarker), cancellationToken).ConfigureAwait(false);
+                            await _queue.Writer.WriteAsync(KurrentDBCatchUpStreamedEventFactory.CheckpointMarker(checkpointPosition.CommitPosition, _settings.Options.ConnectionName, _checkpointMarker), cancellationToken).ConfigureAwait(false);
                             startPosition = FromAll.After(checkpointPosition);
                             break;
 

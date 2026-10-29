@@ -71,7 +71,7 @@ public class CheckpointMarkerTests
     {
         var marker = KurrentDBCheckpointMarkerData.Create(CreateOptions());
 
-        var carrier = KurrentDBStreamedEventFactory.CheckpointMarker(42, "test", marker);
+        var carrier = KurrentDBCatchUpStreamedEventFactory.CheckpointMarker(42, "test", marker);
 
         Assert.Equal(CheckpointMarker.TypeName, carrier.EventType);
         Assert.Equal(KurrentDBStreamedEventConversions.CheckpointStreamName.Value, carrier.StreamName.Value);
@@ -82,7 +82,7 @@ public class CheckpointMarkerTests
     public void Marker_bypasses_custom_stream_id_mapper()
     {
         var options = CreateOptions();
-        var carrier = KurrentDBStreamedEventFactory.CheckpointMarker(42, "test", KurrentDBCheckpointMarkerData.Create(options));
+        var carrier = KurrentDBCatchUpStreamedEventFactory.CheckpointMarker(42, "test", KurrentDBCheckpointMarkerData.Create(options));
 
         var streamId = new TestAdapter(options).GetStreamId(carrier);
 
