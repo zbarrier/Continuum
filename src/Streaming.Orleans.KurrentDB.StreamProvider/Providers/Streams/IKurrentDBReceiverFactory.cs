@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Orleans.Configuration;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 

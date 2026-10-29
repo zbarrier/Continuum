@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 using Orleans.Configuration;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 /// <summary>
 ///     Creates receivers backed by a client checkpointed KurrentDB <c>$all</c> subscription.

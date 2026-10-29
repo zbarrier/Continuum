@@ -1,9 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.StatisticMonitors;
 using Orleans.Runtime;
 using Orleans.Streams;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 

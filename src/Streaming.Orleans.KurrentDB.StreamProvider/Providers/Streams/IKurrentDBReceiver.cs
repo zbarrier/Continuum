@@ -1,4 +1,5 @@
 using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 

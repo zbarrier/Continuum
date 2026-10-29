@@ -15,7 +15,7 @@ using Orleans.Streams;
 
 using StreamPosition = Orleans.Streams.StreamPosition;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 /// <summary>
 ///     Receives batches of messages from a single queue of a message queue.

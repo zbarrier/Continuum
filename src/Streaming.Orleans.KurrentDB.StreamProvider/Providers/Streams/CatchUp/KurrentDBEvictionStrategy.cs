@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 using Orleans.Providers.Streams.Common;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 /// <summary>
 ///     A <see cref="ChronologicalEvictionStrategy" /> that additionally refuses to purge events which have not been

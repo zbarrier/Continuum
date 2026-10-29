@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Storage;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 /// <summary>
 ///     Subscribes to the KurrentDB <c>$all</c> stream with a client managed read position and receives data from an

@@ -7,6 +7,7 @@ using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 using KurrentDB.Client;
 using Continuum.Streams;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 

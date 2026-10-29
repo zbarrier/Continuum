@@ -1,6 +1,6 @@
 using Orleans.Runtime;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 /// <summary>
 ///     Tracks how far each reading cache cursor has read so the cache never purges, and therefore never checkpoints,

@@ -11,7 +11,7 @@ using Orleans.Streams;
 
 using StreamPosition = Orleans.Streams.StreamPosition;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 /// <summary>
 ///     KurrentDB queue cache.

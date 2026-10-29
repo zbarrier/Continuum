@@ -15,6 +15,7 @@ using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 using Continuum.TypeMapping;
 
 using Orleans.Storage;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 

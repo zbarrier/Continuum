@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 
 using Orleans.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 namespace Orleans.Hosting;
 
