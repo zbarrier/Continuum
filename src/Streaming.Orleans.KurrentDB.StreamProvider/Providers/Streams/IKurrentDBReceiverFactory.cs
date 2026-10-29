@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 
 using Orleans.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
@@ -75,5 +76,5 @@ public sealed class KurrentDBPersistentSubscriptionReceiverFactory : IKurrentDBR
     }
 
     /// <inheritdoc />
-    public IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context) => new KurrentDBQueueAdapterReceiver(context);
+    public IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context) => new KurrentDBPersistentQueueAdapterReceiver(context);
 }
