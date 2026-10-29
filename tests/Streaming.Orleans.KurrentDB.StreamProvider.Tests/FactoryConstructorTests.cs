@@ -9,6 +9,7 @@ using Orleans.Configuration;
 using Orleans.Runtime;
 using Orleans.Serialization;
 using Orleans.Storage;
+using Orleans.Streams;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
@@ -23,6 +24,21 @@ public class FactoryConstructorTests
     private static readonly Serializer OrleansSerializer = new ServiceCollection().AddSerializer().BuildServiceProvider().GetRequiredService<Serializer>();
 
     private sealed class FakeTypeMapper : TypeMapper;
+
+    private sealed class StubStrategy : IKurrentDBReceiverFactory
+    {
+        public KurrentDBReceiverOptionsBase ReceiverOptions => throw new NotSupportedException();
+
+        public StreamProviderDirection Direction => StreamProviderDirection.ReadOnly;
+
+        public IKurrentDBQueueCache CreateQueueCache(KurrentDBQueueCacheContext context) => throw new NotSupportedException();
+
+        public IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, Microsoft.Extensions.Logging.ILogger logger) => throw new NotSupportedException();
+
+        public IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context) => throw new NotSupportedException();
+
+        public IKurrentDBProducer CreateProducer(string queueName, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory) => throw new NotSupportedException();
+    }
 
     private sealed class FakeSerializer : IGrainStorageSerializer
     {
@@ -50,9 +66,10 @@ public class FactoryConstructorTests
         KurrentDBMonitorAggregationDimensions? sharedDimensions = null,
         OrleansInstruments? instruments = null,
         TimeProvider? timeProvider = null,
-        bool nullPressure = false, bool nullBufferPool = false, bool nullEviction = false, bool nullStatistic = false,
+        bool nullStrategy = false, bool nullPressure = false, bool nullBufferPool = false, bool nullEviction = false, bool nullStatistic = false,
         bool nullAdapter = false, bool nullDimensions = false, bool nullInstruments = false, bool nullTimeProvider = false) =>
-        new(nullPressure ? null! : pressureOptions ?? new KurrentDBStreamCachePressureOptions(),
+        new(nullStrategy ? null! : new StubStrategy(),
+            nullPressure ? null! : pressureOptions ?? new KurrentDBStreamCachePressureOptions(),
             nullBufferPool ? null! : bufferPoolOptions ?? new KurrentDBStreamCacheBufferPoolOptions(),
             nullEviction ? null! : evictionOptions ?? new StreamCacheEvictionOptions(),
             nullStatistic ? null! : statisticOptions ?? new StreamStatisticOptions(),
@@ -68,6 +85,7 @@ public class FactoryConstructorTests
     }
 
     [Theory]
+    [InlineData("strategy")]
     [InlineData("pressureOptions")]
     [InlineData("bufferPoolOptions")]
     [InlineData("evictionOptions")]
@@ -79,6 +97,7 @@ public class FactoryConstructorTests
     public void The_Cache_Factory_Rejects_A_Missing_Dependency(string parameterName)
     {
         var exception = Assert.Throws<ArgumentNullException>(() => CreateCacheFactory(
+            nullStrategy: parameterName == "strategy",
             nullPressure: parameterName == "pressureOptions",
             nullBufferPool: parameterName == "bufferPoolOptions",
             nullEviction: parameterName == "evictionOptions",

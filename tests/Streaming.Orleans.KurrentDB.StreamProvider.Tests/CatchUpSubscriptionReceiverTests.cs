@@ -178,7 +178,7 @@ public class CatchUpSubscriptionReceiverTests
             deadline = DateTime.UtcNow.AddSeconds(30);
             while (received.Count < total && DateTime.UtcNow < deadline)
             {
-                var batch = receiver.Receive(KurrentDBQueueAdapterReceiver.MaxMessagesPerRead);
+                var batch = receiver.Receive(KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead);
                 received.AddRange(batch.Where(IsEvent).Select(record => Encoding.UTF8.GetString(record.Event!.Data)));
                 if (batch.Count == 0)
                 {

@@ -20,14 +20,14 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 /// <summary>
 ///     Receives batches of messages from a single queue of a message queue.
 /// </summary>
-internal class KurrentDBQueueAdapterReceiver : IKurrentDBQueueAdapterReceiver
+internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterReceiver
 {
     public const int MaxMessagesPerRead = 1000;
 
     private readonly KurrentDBReceiverSettings _settings;
     private readonly Func<string, ILoggerFactory, IKurrentDBQueueCache> _cacheFactory;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly ILogger<KurrentDBQueueAdapterReceiver> _logger;
+    private readonly ILogger<KurrentDBCatchUpQueueAdapterReceiver> _logger;
     private readonly IQueueAdapterReceiverMonitor _receiverMonitor;
     private readonly LoadSheddingOptions _loadSheddingOptions;
     private readonly IEnvironmentStatisticsProvider? _environmentStatisticsProvider;
@@ -48,12 +48,12 @@ internal class KurrentDBQueueAdapterReceiver : IKurrentDBQueueAdapterReceiver
     private const int ReceiverShutdown = 0;
     private const int ReceiverRunning = 1;
 
-    public KurrentDBQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context)
+    public KurrentDBCatchUpQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context)
         : this(context.Settings, context.CacheFactory, context.LoggerFactory, context.ReceiverMonitor, context.LoadSheddingOptions, context.EnvironmentStatisticsProvider, context.ReceiverFactory)
     {
     }
 
-    public KurrentDBQueueAdapterReceiver(KurrentDBReceiverSettings settings, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, ILoggerFactory loggerFactory, IQueueAdapterReceiverMonitor receiverMonitor, LoadSheddingOptions loadSheddingOptions, IEnvironmentStatisticsProvider? environmentStatisticsProvider, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> kurrentDBReceiverFactory)
+    public KurrentDBCatchUpQueueAdapterReceiver(KurrentDBReceiverSettings settings, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, ILoggerFactory loggerFactory, IQueueAdapterReceiverMonitor receiverMonitor, LoadSheddingOptions loadSheddingOptions, IEnvironmentStatisticsProvider? environmentStatisticsProvider, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> kurrentDBReceiverFactory)
     {
         ArgumentNullException.ThrowIfNull(settings, nameof(settings));
         ArgumentNullException.ThrowIfNull(cacheFactory, nameof(cacheFactory));
@@ -66,7 +66,7 @@ internal class KurrentDBQueueAdapterReceiver : IKurrentDBQueueAdapterReceiver
         _settings = settings;
         _cacheFactory = cacheFactory;
         _loggerFactory = loggerFactory;
-        _logger = loggerFactory.CreateLogger<KurrentDBQueueAdapterReceiver>();
+        _logger = loggerFactory.CreateLogger<KurrentDBCatchUpQueueAdapterReceiver>();
         _receiverMonitor = receiverMonitor;
         _loadSheddingOptions = loadSheddingOptions;
         _environmentStatisticsProvider = environmentStatisticsProvider;
@@ -449,7 +449,7 @@ internal class KurrentDBQueueAdapterReceiver : IKurrentDBQueueAdapterReceiver
 
 }
 
-internal static partial class KurrentDBQueueAdapterReceiverLog
+internal static partial class KurrentDBCatchUpQueueAdapterReceiverLog
 {
     [LoggerMessage(Level = LogLevel.Information, Message = "Initializing KurrentDB receiver for queue {QueueName}.")] public static partial void AdapterReceiverInitializing(this ILogger logger, string queueName);
 

@@ -17,7 +17,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     Verifies that a receiver whose initialization fails is retried on the next read rather than left in place
 ///     half-initialized.
 /// </summary>
-public class KurrentDBQueueAdapterReceiverInitializationTests
+public class KurrentDBCatchUpQueueAdapterReceiverInitializationTests
 {
     private static readonly Serializer OrleansSerializer = new ServiceCollection().AddSerializer().BuildServiceProvider().GetRequiredService<Serializer>();
 
@@ -93,8 +93,8 @@ public class KurrentDBQueueAdapterReceiverInitializationTests
         var logger = NullLogger.Instance;
         var pool = new KurrentDBQueueCacheBufferPool(() => new FixedSizeBuffer(4096), new KurrentDBStreamCacheBufferPoolOptions(), TimeProvider.System);
         var cursorTracker = new KurrentDBCursorTracker();
-        var evictionStrategy = new KurrentDBEvictionStrategy(logger, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
-        return new KurrentDBQueueCache(queue, 100, pool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
+        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
+        return new KurrentDBCatchUpQueueCache(queue, 100, pool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class KurrentDBQueueAdapterReceiverInitializationTests
         // Arrange
         var created = new List<FlakyReceiver>();
         var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
-        var adapterReceiver = new KurrentDBQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
+        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
             (_, _) =>
             {
                 var receiver = new FlakyReceiver(failInit: created.Count == 0);

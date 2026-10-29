@@ -41,7 +41,15 @@ public sealed class KurrentDBCatchUpSubscriptionReceiverFactory : IKurrentDBRece
     public KurrentDBReceiverOptionsBase ReceiverOptions => _receiverOptions;
 
     /// <inheritdoc />
-    public bool ClientCheckpointed => true;
+    public IKurrentDBQueueCache CreateQueueCache(KurrentDBQueueCacheContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context, nameof(context));
+        var logger = context.CreateLogger<KurrentDBCatchUpQueueCache>();
+        // The client owns the checkpoint, so only events every cursor has finished with may be purged and checkpointed.
+        var cursorTracker = new KurrentDBCursorTracker();
+        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, context.TimePurge, context.CacheMonitor, context.StatisticMonitorWriteInterval, context.DataAdapter, cursorTracker);
+        return new KurrentDBCatchUpQueueCache(context.Queue, KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead, context.BufferPool, context.DataAdapter, evictionStrategy, cursorTracker, logger, context.CacheMonitor, context.StatisticMonitorWriteInterval, context.MetadataMinTimeInCache);
+    }
 
     /// <inheritdoc />
     public StreamProviderDirection Direction => StreamProviderDirection.ReadOnly;
@@ -56,7 +64,7 @@ public sealed class KurrentDBCatchUpSubscriptionReceiverFactory : IKurrentDBRece
     }
 
     /// <inheritdoc />
-    public IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context) => new KurrentDBQueueAdapterReceiver(context);
+    public IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context) => new KurrentDBCatchUpQueueAdapterReceiver(context);
 
     /// <inheritdoc />
     public IKurrentDBProducer CreateProducer(string queueName, ILoggerFactory loggerFactory) =>

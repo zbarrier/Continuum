@@ -17,7 +17,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     Verifies that an event too large for a cache block is skipped on its own, and the rest of its batch is still
 ///     cached and delivered.
 /// </summary>
-public class KurrentDBQueueCacheOversizedEventTests
+public class KurrentDBCatchUpQueueCacheOversizedEventTests
 {
     private const int BlockSize = 4096;
 
@@ -34,7 +34,7 @@ public class KurrentDBQueueCacheOversizedEventTests
         public T Deserialize<T>(BinaryData input) => throw new NotSupportedException();
     }
 
-    private static KurrentDBQueueCache CreateCache()
+    private static KurrentDBCatchUpQueueCache CreateCache()
     {
         var adapter = new KurrentDBQueueDataAdapter(OrleansSerializer, new KurrentDBDataAdapterOptions
         {
@@ -47,8 +47,8 @@ public class KurrentDBQueueCacheOversizedEventTests
         var bufferPool = new ObjectPool<FixedSizeBuffer>(() => new FixedSizeBuffer(BlockSize));
         var cursorTracker = new KurrentDBCursorTracker();
         var timePurge = new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2));
-        var evictionStrategy = new KurrentDBEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
-        return new KurrentDBQueueCache("queue", 100, bufferPool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
+        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
+        return new KurrentDBCatchUpQueueCache("queue", 100, bufferPool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
     }
 
     private static StreamedEvent<KurrentDBRawEvent> CreateEvent(ulong streamVersion, ulong commitPosition, int dataSize) =>

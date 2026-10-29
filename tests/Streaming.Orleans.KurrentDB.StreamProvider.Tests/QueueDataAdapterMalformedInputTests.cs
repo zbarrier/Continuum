@@ -105,8 +105,8 @@ public class QueueDataAdapterMalformedInputTests
     {
         var adapter = CreateAdapter();
         var cursorTracker = new KurrentDBCursorTracker();
-        var evictionStrategy = new KurrentDBEvictionStrategy(NullLogger.Instance, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
-        var cache = new KurrentDBQueueCache("queue", 100, new ObjectPool<FixedSizeBuffer>(() => new FixedSizeBuffer(1 << 20)), adapter, evictionStrategy, cursorTracker, NullLogger.Instance, null!, null, null);
+        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(NullLogger.Instance, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
+        var cache = new KurrentDBCatchUpQueueCache("queue", 100, new ObjectPool<FixedSizeBuffer>(() => new FixedSizeBuffer(1 << 20)), adapter, evictionStrategy, cursorTracker, NullLogger.Instance, null!, null, null);
 
         var positions = cache.Add([CreateEvent(null, 100), CreateEvent("no-namespace", 200), CreateEvent(null, 300)], DateTime.UtcNow);
 

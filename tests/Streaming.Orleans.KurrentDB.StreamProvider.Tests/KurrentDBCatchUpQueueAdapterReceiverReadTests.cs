@@ -18,7 +18,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     Verifies how the adapter receiver sheds load when the silo is under pressure and how it reports failures while
 ///     reading from KurrentDB.
 /// </summary>
-public class KurrentDBQueueAdapterReceiverReadTests
+public class KurrentDBCatchUpQueueAdapterReceiverReadTests
 {
     private static readonly Serializer OrleansSerializer = new ServiceCollection().AddSerializer().BuildServiceProvider().GetRequiredService<Serializer>();
 
@@ -78,14 +78,14 @@ public class KurrentDBQueueAdapterReceiverReadTests
         var logger = NullLogger.Instance;
         var pool = new KurrentDBQueueCacheBufferPool(() => new FixedSizeBuffer(4096), new KurrentDBStreamCacheBufferPoolOptions(), TimeProvider.System);
         var cursorTracker = new KurrentDBCursorTracker();
-        var evictionStrategy = new KurrentDBEvictionStrategy(logger, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
-        return new KurrentDBQueueCache(queue, 100, pool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
+        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
+        return new KurrentDBCatchUpQueueCache(queue, 100, pool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
     }
 
     private static StreamedEvent<KurrentDBRawEvent> CreateEvent(ulong commitPosition) =>
         new(Guid.NewGuid(), "test-event", Stream, 0, new StreamedEventCursor("test", Stream.Category, Stream.Value, commitPosition, 0), DateTime.UtcNow, new KurrentDBRawEvent(new byte[16]));
 
-    private static KurrentDBQueueAdapterReceiver CreateReceiver(IKurrentDBReceiver receiver, IQueueAdapterReceiverMonitor? monitor = null, LoadSheddingOptions? loadSheddingOptions = null, IEnvironmentStatisticsProvider? statistics = null) =>
+    private static KurrentDBCatchUpQueueAdapterReceiver CreateReceiver(IKurrentDBReceiver receiver, IQueueAdapterReceiverMonitor? monitor = null, LoadSheddingOptions? loadSheddingOptions = null, IEnvironmentStatisticsProvider? statistics = null) =>
         new(new KurrentDBReceiverSettings { QueueName = "queue" }, CreateCache, NullLoggerFactory.Instance, monitor ?? new RecordingReceiverMonitor(),
             loadSheddingOptions ?? new LoadSheddingOptions(), statistics, (_, _) => receiver);
 

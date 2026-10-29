@@ -23,10 +23,11 @@ public interface IKurrentDBReceiverFactory
     KurrentDBReceiverOptionsBase ReceiverOptions { get; }
 
     /// <summary>
-    ///     Whether the client owns the subscription checkpoint, so the queue cache must track cursors and only purge,
-    ///     and therefore checkpoint, events every cursor has finished with.
+    ///     Creates the message cache for a single queue. Each strategy decides how its cache purges, since that is
+    ///     tied to who owns the checkpoint.
     /// </summary>
-    bool ClientCheckpointed { get; }
+    /// <param name="context">What the cache factory supplies for the queue.</param>
+    IKurrentDBQueueCache CreateQueueCache(KurrentDBQueueCacheContext context);
 
     /// <summary>
     ///     Whether the stream provider may write events. Catch-up subscriptions read streams owned by event sourced

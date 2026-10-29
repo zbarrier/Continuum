@@ -16,7 +16,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 /// <summary>
 ///     KurrentDB queue cache.
 /// </summary>
-public class KurrentDBQueueCache : IKurrentDBQueueCache
+public class KurrentDBCatchUpQueueCache : IKurrentDBQueueCache
 {
     private readonly int _defaultMaxAddCount;
     private readonly IObjectPool<FixedSizeBuffer> _bufferPool;
@@ -33,7 +33,7 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
     private readonly PooledQueueCache _cache;
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="KurrentDBQueueCache" /> class.
+    ///     Initializes a new instance of the <see cref="KurrentDBCatchUpQueueCache" /> class.
     /// </summary>
     /// <param name="queue">Queue this instance is caching.</param>
     /// <param name="defaultMaxAddCount">Default max number of items that can be added to the cache between purge calls.</param>
@@ -45,7 +45,7 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
     /// <param name="cacheMonitor"></param>
     /// <param name="cacheMonitorWriteInterval"></param>
     /// <param name="purgeMetadataInterval"></param>
-    public KurrentDBQueueCache(string queue,
+    public KurrentDBCatchUpQueueCache(string queue,
                                 int defaultMaxAddCount,
                                 IObjectPool<FixedSizeBuffer> bufferPool,
                                 IKurrentDBDataAdapter dataAdapter,
@@ -364,7 +364,7 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
         _evictionStrategy.OnPurged = null;
         // The queue is leaving this silo, so the blocks it still holds go back to the shared pool rather than being
         // stranded, where they would also count as in use and stop the pool from trimming.
-        (_evictionStrategy as KurrentDBEvictionStrategy)?.ReleaseBlocks();
+        (_evictionStrategy as KurrentDBCatchUpEvictionStrategy)?.ReleaseBlocks();
         _buffer = null;
         (_bufferPool as KurrentDBQueueCacheBufferPool)?.UnregisterCache();
     }
@@ -373,7 +373,7 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
 
 }
 
-internal static partial class KurrentDBQueueCacheLog
+internal static partial class KurrentDBCatchUpQueueCacheLog
 {
     [LoggerMessage(Level = LogLevel.Debug, Message = "CachePeriod: EnqueueTimeUtc: {OldestEnqueueTimeUtc} to {NewestEnqueueTimeUtc}, DequeueTimeUtc: {OldestDequeueTimeUtc} to {NewestDequeueTimeUtc}")] public static partial void CachePeriod(this ILogger logger, string oldestEnqueueTimeUtc, string newestEnqueueTimeUtc, string oldestDequeueTimeUtc, string newestDequeueTimeUtc);
 

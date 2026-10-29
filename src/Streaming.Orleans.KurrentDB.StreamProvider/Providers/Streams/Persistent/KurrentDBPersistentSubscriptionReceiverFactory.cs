@@ -35,7 +35,14 @@ public sealed class KurrentDBPersistentSubscriptionReceiverFactory : IKurrentDBR
     public KurrentDBReceiverOptionsBase ReceiverOptions => _receiverOptions;
 
     /// <inheritdoc />
-    public bool ClientCheckpointed => false;
+    public IKurrentDBQueueCache CreateQueueCache(KurrentDBQueueCacheContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context, nameof(context));
+        var logger = context.CreateLogger<KurrentDBPersistentQueueCache>();
+        // The server owns the checkpoint, so purging is on age alone and does not track cursors.
+        var evictionStrategy = new KurrentDBPersistentEvictionStrategy(logger, context.TimePurge, context.CacheMonitor, context.StatisticMonitorWriteInterval);
+        return new KurrentDBPersistentQueueCache(context.Queue, KurrentDBPersistentQueueAdapterReceiver.MaxMessagesPerRead, context.BufferPool, context.DataAdapter, evictionStrategy, logger, context.CacheMonitor, context.StatisticMonitorWriteInterval, context.MetadataMinTimeInCache);
+    }
 
     /// <inheritdoc />
     public StreamProviderDirection Direction => StreamProviderDirection.ReadWrite;

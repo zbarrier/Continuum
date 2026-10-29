@@ -14,12 +14,12 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 ///     unread events be checkpointed away and lost on restart. Adding the cursor watermark makes purge, and therefore
 ///     the checkpoint, delivery safe while leaving the age based limits intact.
 /// </remarks>
-internal sealed class KurrentDBEvictionStrategy : ChronologicalEvictionStrategy
+internal sealed class KurrentDBCatchUpEvictionStrategy : ChronologicalEvictionStrategy
 {
     private readonly IKurrentDBDataAdapter _dataAdapter;
     private readonly KurrentDBCursorTracker _cursorTracker;
 
-    public KurrentDBEvictionStrategy(ILogger logger, TimePurgePredicate timePurge, ICacheMonitor? cacheMonitor, TimeSpan? monitorWriteInterval,
+    public KurrentDBCatchUpEvictionStrategy(ILogger logger, TimePurgePredicate timePurge, ICacheMonitor? cacheMonitor, TimeSpan? monitorWriteInterval,
         IKurrentDBDataAdapter dataAdapter, KurrentDBCursorTracker cursorTracker)
         : base(logger, timePurge, cacheMonitor, monitorWriteInterval)
     {

@@ -19,7 +19,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     Verifies how a cursor is positioned once older events have been purged: an earliest available subscription
 ///     starts at the oldest cached event, while an exact position that was purged reports a cache miss.
 /// </summary>
-public class KurrentDBQueueCacheStartPositionTests
+public class KurrentDBCatchUpQueueCacheStartPositionTests
 {
     private static readonly Serializer OrleansSerializer = new ServiceCollection().AddSerializer().BuildServiceProvider().GetRequiredService<Serializer>();
 
@@ -42,22 +42,22 @@ public class KurrentDBQueueCacheStartPositionTests
         GrainStorageSerializer = new FakeSerializer(),
     });
 
-    private static KurrentDBQueueCache CreateCache(KurrentDBQueueDataAdapter adapter)
+    private static KurrentDBCatchUpQueueCache CreateCache(KurrentDBQueueDataAdapter adapter)
     {
         var logger = NullLogger.Instance;
         var bufferPool = new ObjectPool<FixedSizeBuffer>(() => new FixedSizeBuffer(1 << 20));
         var cursorTracker = new KurrentDBCursorTracker();
         // Zero limits purge every event that is older than the newest one, once nothing is still reading it.
         var timePurge = new TimePurgePredicate(TimeSpan.Zero, TimeSpan.Zero);
-        var evictionStrategy = new KurrentDBEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
-        return new KurrentDBQueueCache("queue", 100, bufferPool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
+        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
+        return new KurrentDBCatchUpQueueCache("queue", 100, bufferPool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
     }
 
     private static StreamedEvent<KurrentDBRawEvent> CreateEvent(ulong streamVersion, ulong commitPosition, DateTime timestamp) =>
         new(Guid.NewGuid(), "test-event", Stream, streamVersion, new StreamedEventCursor("test", Stream.Category, Stream.Value, commitPosition, 0),
             timestamp, new KurrentDBRawEvent([1]));
 
-    private static (KurrentDBQueueCache Cache, StreamId StreamId) CreateCacheWithOldestEventsPurged()
+    private static (KurrentDBCatchUpQueueCache Cache, StreamId StreamId) CreateCacheWithOldestEventsPurged()
     {
         var adapter = CreateAdapter();
         var cache = CreateCache(adapter);

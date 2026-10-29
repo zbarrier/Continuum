@@ -49,7 +49,7 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
     // Orleans to drain it instead of reading the whole log into memory.
     private Channel<StreamedEvent<KurrentDBRawEvent>> _queue = CreateBuffer();
 
-    internal const int BufferCapacity = 10 * KurrentDBQueueAdapterReceiver.MaxMessagesPerRead;
+    internal const int BufferCapacity = 10 * KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead;
 
     internal int BufferedCount => _queue.Reader.Count;
 
