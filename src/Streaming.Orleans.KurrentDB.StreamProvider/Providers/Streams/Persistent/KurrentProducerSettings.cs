@@ -1,6 +1,6 @@
 ﻿using Orleans.Configuration;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 /// <summary>
 ///     KurrentDB client settings for stream producer.

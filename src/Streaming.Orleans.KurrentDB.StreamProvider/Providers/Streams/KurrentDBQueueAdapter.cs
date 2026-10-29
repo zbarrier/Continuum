@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Orleans.Configuration;
 using Orleans.Configuration.Overrides;
 using Orleans.Providers.Streams.Common;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.StatisticMonitors;
 using Orleans.Statistics;
 using Orleans.Streams;
@@ -68,6 +69,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
         _options = options;
         _strategy = strategy;
         _receiverOptions = strategy.ReceiverOptions;
+        Direction = strategy.Direction;
         _streamQueueMapper = streamQueueMapper;
         _cacheFactory = cacheFactory;
         _receiverMonitorFactory = receiverMonitorFactory;
@@ -98,7 +100,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     ///     Direction of this queue adapter: Read, Write or ReadWrite.
     /// </summary>
     /// <returns>The direction in which this adapter provides data.</returns>
-    public StreamProviderDirection Direction { get; protected set; } = StreamProviderDirection.ReadWrite;
+    public StreamProviderDirection Direction { get; }
 
     /// <summary>
     ///     Writes a set of events to the queue as a single batch associated with the provided streamId.
@@ -115,6 +117,11 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     /// </remarks>
     public Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken? token, Dictionary<string, object>? requestContext)
     {
+        if (Direction == StreamProviderDirection.ReadOnly)
+        {
+            // Catch-up subscriptions read streams owned by event sourced grains. Writing here would bypass those grains.
+            throw new InvalidOperationException(FormattableString.Invariant($"Stream provider {Name} is read only. Its events are produced by event sourced grains, not by the stream provider."));
+        }
         var records = _dataAdapter.ToQueueMessage(streamId, events, token, requestContext);
         if (records.Length == 0)
         {

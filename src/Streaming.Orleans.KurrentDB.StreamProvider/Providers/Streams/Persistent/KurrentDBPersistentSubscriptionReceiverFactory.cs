@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Orleans.Configuration;
+using Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
@@ -35,6 +36,9 @@ public sealed class KurrentDBPersistentSubscriptionReceiverFactory : IKurrentDBR
 
     /// <inheritdoc />
     public bool ClientCheckpointed => false;
+
+    /// <inheritdoc />
+    public StreamProviderDirection Direction => StreamProviderDirection.ReadWrite;
 
     /// <inheritdoc />
     public IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, ILogger logger)

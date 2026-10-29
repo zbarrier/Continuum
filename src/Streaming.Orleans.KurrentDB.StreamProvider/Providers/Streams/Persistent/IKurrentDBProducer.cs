@@ -1,6 +1,6 @@
 ﻿using KurrentDB.Client;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 /// <summary>
 ///     Abstraction on KurrentDBProducer class, used to configure KurrentDBProducer class in KurrentDBQueueAdapter,

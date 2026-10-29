@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Orleans.Configuration;
+using Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
@@ -41,6 +42,9 @@ public sealed class KurrentDBCatchUpSubscriptionReceiverFactory : IKurrentDBRece
 
     /// <inheritdoc />
     public bool ClientCheckpointed => true;
+
+    /// <inheritdoc />
+    public StreamProviderDirection Direction => StreamProviderDirection.ReadOnly;
 
     /// <inheritdoc />
     public IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, ILogger logger)

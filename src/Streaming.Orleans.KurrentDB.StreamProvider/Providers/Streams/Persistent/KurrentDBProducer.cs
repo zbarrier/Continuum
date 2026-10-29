@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Storage;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 /// <summary>
 ///     Append events data to KurrentDB stream.

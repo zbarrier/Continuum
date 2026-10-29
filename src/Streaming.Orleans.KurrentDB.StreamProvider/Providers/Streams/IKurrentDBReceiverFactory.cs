@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using Orleans.Configuration;
+using Orleans.Streams;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
@@ -26,6 +27,12 @@ public interface IKurrentDBReceiverFactory
     ///     and therefore checkpoint, events every cursor has finished with.
     /// </summary>
     bool ClientCheckpointed { get; }
+
+    /// <summary>
+    ///     Whether the stream provider may write events. Catch-up subscriptions read streams owned by event sourced
+    ///     grains, so they are read only; writing would bypass the grain that owns the stream.
+    /// </summary>
+    StreamProviderDirection Direction { get; }
 
     /// <summary>
     ///     Creates a receiver for a single queue.
