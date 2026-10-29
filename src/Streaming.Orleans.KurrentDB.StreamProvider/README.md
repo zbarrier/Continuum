@@ -45,6 +45,10 @@ The checkpoint only moves past an event once every active subscriber has read it
 
 Writes to the checkpoint store are batched by `CheckpointMonitorOptions`. By default, a checkpoint is written after 10,000 events or 20 seconds, whichever comes first, and once more on shutdown.
 
+`StreamPullingAgentOptions.BatchContainerBatchSize` must stay at 1 (the Orleans default). A larger size lets the pulling agent read past events before delivering them, so the checkpoint could move past events no subscriber received. A larger size fails validation at startup.
+
+A catch-up subscription is read only. Events are written by event sourcing, so writing to the provider throws.
+
 ### Multiple `$all` subscriptions
 
 You can run as many `$all` subscriptions against the same database as you need. Each one is its own stream provider with no filter, the same filter, or a different filter. Providers that use the same `ConnectionName` share one `KurrentDBClient`, and each subscription runs as a separate call on that client's connection.
@@ -87,7 +91,7 @@ Each subscription reads `$all` and keeps its own cache, so use `StreamFilterPref
 
 ## Stream namespaces
 
-Events are delivered on the Orleans stream namespace `{ProviderName}:{Category}`, where the category is the text before the first `-` of the KurrentDB stream name and the key is the rest. The KurrentDB stream `snack-123` read by the provider `Snacks` is delivered as `StreamId.Create("Snacks:snack", "123")`. Events written through the provider are delivered the same way: a producer writes to `StreamId.Create("chat", key)` and subscribers read `StreamId.Create("{ProviderName}:chat", key)`.
+Events are delivered on the Orleans stream namespace `{ProviderName}:{Category}`, where the category is the text before the first `-` of the KurrentDB stream name and the key is the rest. The KurrentDB stream `snack-123` read by the provider `Snacks` is delivered as `StreamId.Create("Snacks:snack", "123")`. With persistent subscriptions, events written through the provider are delivered the same way: a producer writes to `StreamId.Create("chat", key)` and subscribers read `StreamId.Create("{ProviderName}:chat", key)`.
 
 Orleans matches implicit subscriptions by namespace only, so the provider name in the namespace keeps providers apart. This lets two versions of a projection read the same database side by side, for example while a new version rebuilds from the beginning:
 
@@ -141,7 +145,7 @@ An existing persistent subscription is not changed on startup. Setting `UpdateEx
 - **Events must not exceed 1 MB**, data and metadata combined. This is KurrentDB's default maximum append size.
 - **Keep metadata under 16 KB.** Metadata is carried with every event and copied on every delivery, so use it for small values such as correlation and causation ids, tenant and user details and tracing headers, and keep the payload in the event data.
 
-Events are cached in 2 MB blocks, which leaves room for a 1 MB event and the extra space the cache needs to store it. An event that does not fit in a block is logged as an error and skipped. It is not delivered or retried, and the checkpoint moves past it.
+Events are cached in 2 MB blocks, which leaves room for a 1 MB event and the extra space the cache needs to store it. An event that does not fit in a block is logged as an error and skipped. It is not delivered or retried. A catch-up subscription's checkpoint moves past it, and a persistent subscription has already acknowledged it.
 
 ## Cache memory after a catch-up
 
@@ -153,12 +157,12 @@ Change these values with `ConfigureCacheBufferPool`, or set `TrimWindow` to `Tim
 
 Events are only delivered to streams that have an active subscriber. The checkpoint is shared by every stream in a queue, so the provider cannot hold it back for streams that nobody is listening to. When no subscriber is reading from the cache, events stay cached for at least `DataMinTimeInCache` (Orleans default: 5 minutes). After that, they can be purged and the checkpoint moves past them. A subscriber that joins later does not receive those events.
 
-When a subscriber is active, events it has not read yet are never purged, no matter how long they have been cached.
+With a catch-up subscription, events an active subscriber has not read yet are never purged, no matter how long they have been cached. A persistent subscription has already acknowledged its events, so its cache purges on age alone and does not wait for subscribers.
 
 If every event must be handled, use implicit subscriptions (`[ImplicitStreamSubscription]`) so a grain is activated for each stream that receives an event. To change the minimum time in cache, configure `StreamCacheEvictionOptions` for the provider.
 
 ## Idle streams
 
-A stream whose subscriber has read every cached event does not hold back purging, so idle streams do not make the cache grow, even while catching up on a backlog. When a new event for the stream is added, its cursor resumes from that event, which is kept until the subscriber reads it. A subscriber that has not finished reading, including one whose delivery failed, holds back purging until it catches up; unread events are never dropped.
+This applies to catch-up subscriptions, whose cache tracks how far each subscriber has read. A stream whose subscriber has read every cached event does not hold back purging, so idle streams do not make the cache grow, even while catching up on a backlog. When a new event for the stream is added, its cursor resumes from that event, which is kept until the subscriber reads it. A subscriber that has not finished reading, including one whose delivery failed, holds back purging until it catches up; unread events are never dropped.
 
 Orleans releases a stream after `StreamPullingAgentOptions.StreamInactivityPeriod` (Orleans default: 30 minutes) with no new events and no delivery in progress. Its subscriptions are kept, and the next event for the stream is delivered as normal; Orleans only has to look up the stream's subscribers again. A longer period means fewer lookups for streams with regular gaps, at the cost of a little memory per idle stream.
