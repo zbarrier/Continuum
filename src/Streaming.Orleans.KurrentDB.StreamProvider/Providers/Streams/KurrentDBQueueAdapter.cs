@@ -22,6 +22,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
 {
     private readonly KurrentDBOptions _options;
     private readonly KurrentDBReceiverOptionsBase _receiverOptions;
+    private readonly IKurrentDBReceiverFactory _strategy;
     private readonly HashRingBasedPartitionedStreamQueueMapper _streamQueueMapper;
     private readonly Func<string, ILoggerFactory, IKurrentDBQueueCache> _cacheFactory;
     private readonly Func<KurrentDBReceiverMonitorDimensions, ILoggerFactory, IQueueAdapterReceiverMonitor> _receiverMonitorFactory;
@@ -34,14 +35,14 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     private readonly string _consumerGroup;
 
     private readonly ConcurrentDictionary<QueueId, KurrentDBProducer> _producers = new();
-    private readonly ConcurrentDictionary<QueueId, KurrentDBQueueAdapterReceiver> _receivers = new();
+    private readonly ConcurrentDictionary<QueueId, IKurrentDBQueueAdapterReceiver> _receivers = new();
 
     /// <summary>
     ///     Initializes a new instance of the KurrentDBQueueAdapter class.
     /// </summary>
     /// <param name="name">The name of the adapter.</param>
     /// <param name="options">The KurrentDB options.</param>
-    /// <param name="receiverOptions">The KurrentDB receiver options.</param>
+    /// <param name="strategy">The selected subscription strategy, which supplies the receiver options and builds each queue's receiver.</param>
     /// <param name="streamQueueMapper">The stream queue mapper.</param>
     /// <param name="cacheFactory">The cache factory.</param>
     /// <param name="receiverMonitorFactory">The receiver monitor factory.</param>
@@ -50,11 +51,11 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="loggerFactory">The logger factory.</param>
     /// <param name="environmentStatisticsProvider">The environment statistics provider.</param>
-    public KurrentDBQueueAdapter(string name, KurrentDBOptions options, KurrentDBReceiverOptionsBase receiverOptions, HashRingBasedPartitionedStreamQueueMapper streamQueueMapper, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, Func<KurrentDBReceiverMonitorDimensions, ILoggerFactory, IQueueAdapterReceiverMonitor> receiverMonitorFactory, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> receiverFactory, IKurrentDBDataAdapter dataAdapter, IServiceProvider serviceProvider, ILoggerFactory loggerFactory, IEnvironmentStatisticsProvider? environmentStatisticsProvider)
+    public KurrentDBQueueAdapter(string name, KurrentDBOptions options, IKurrentDBReceiverFactory strategy, HashRingBasedPartitionedStreamQueueMapper streamQueueMapper, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, Func<KurrentDBReceiverMonitorDimensions, ILoggerFactory, IQueueAdapterReceiverMonitor> receiverMonitorFactory, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> receiverFactory, IKurrentDBDataAdapter dataAdapter, IServiceProvider serviceProvider, ILoggerFactory loggerFactory, IEnvironmentStatisticsProvider? environmentStatisticsProvider)
     {
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
-        ArgumentNullException.ThrowIfNull(receiverOptions, nameof(receiverOptions));
+        ArgumentNullException.ThrowIfNull(strategy, nameof(strategy));
         ArgumentNullException.ThrowIfNull(streamQueueMapper, nameof(streamQueueMapper));
         ArgumentNullException.ThrowIfNull(cacheFactory, nameof(cacheFactory));
         ArgumentNullException.ThrowIfNull(receiverMonitorFactory, nameof(receiverMonitorFactory));
@@ -64,7 +65,8 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
         ArgumentNullException.ThrowIfNull(loggerFactory, nameof(loggerFactory));
         Name = name;
         _options = options;
-        _receiverOptions = receiverOptions;
+        _strategy = strategy;
+        _receiverOptions = strategy.ReceiverOptions;
         _streamQueueMapper = streamQueueMapper;
         _cacheFactory = cacheFactory;
         _receiverMonitorFactory = receiverMonitorFactory;
@@ -146,12 +148,12 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
         return GetOrCreateReceiver(queueId);
     }
 
-    private KurrentDBQueueAdapterReceiver GetOrCreateReceiver(QueueId queueId)
+    private IKurrentDBQueueAdapterReceiver GetOrCreateReceiver(QueueId queueId)
     {
         return _receivers.GetOrAdd(queueId, static (qid, instance) => instance.MakeReceiver(qid), this);
     }
 
-    private KurrentDBQueueAdapterReceiver MakeReceiver(QueueId queueId)
+    private IKurrentDBQueueAdapterReceiver MakeReceiver(QueueId queueId)
     {
         var receiverSettings = new KurrentDBReceiverSettings
                                {
@@ -166,7 +168,16 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
                                             QueueName = receiverSettings.QueueName,
                                             Name = receiverSettings.Options.Name
                                         };
-        return new KurrentDBQueueAdapterReceiver(receiverSettings, _cacheFactory, _loggerFactory, _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory), _loadSheddingOptions, _environmentStatisticsProvider, _receiverFactory);
+        return _strategy.CreateQueueAdapterReceiver(new KurrentDBQueueAdapterReceiverContext
+        {
+            Settings = receiverSettings,
+            CacheFactory = _cacheFactory,
+            ReceiverFactory = _receiverFactory,
+            LoggerFactory = _loggerFactory,
+            ReceiverMonitor = _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory),
+            LoadSheddingOptions = _loadSheddingOptions,
+            EnvironmentStatisticsProvider = _environmentStatisticsProvider,
+        });
     }
 
     #endregion

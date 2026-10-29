@@ -47,4 +47,7 @@ public sealed class KurrentDBAllStreamReceiverFactory : IKurrentDBReceiverFactor
         var client = _serviceProvider.GetRequiredKeyedService<KurrentDBClient>(_connectionName);
         return new KurrentDBAllStreamReceiver(client, settings, logger, _checkpointMarker);
     }
+
+    /// <inheritdoc />
+    public IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context) => new KurrentDBQueueAdapterReceiver(context);
 }

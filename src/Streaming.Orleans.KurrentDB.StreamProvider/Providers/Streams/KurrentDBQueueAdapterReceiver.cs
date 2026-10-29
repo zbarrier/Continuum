@@ -20,7 +20,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 /// <summary>
 ///     Receives batches of messages from a single queue of a message queue.
 /// </summary>
-internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCache
+internal class KurrentDBQueueAdapterReceiver : IKurrentDBQueueAdapterReceiver
 {
     public const int MaxMessagesPerRead = 1000;
 
@@ -47,6 +47,11 @@ internal class KurrentDBQueueAdapterReceiver : IQueueAdapterReceiver, IQueueCach
 
     private const int ReceiverShutdown = 0;
     private const int ReceiverRunning = 1;
+
+    public KurrentDBQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context)
+        : this(context.Settings, context.CacheFactory, context.LoggerFactory, context.ReceiverMonitor, context.LoadSheddingOptions, context.EnvironmentStatisticsProvider, context.ReceiverFactory)
+    {
+    }
 
     public KurrentDBQueueAdapterReceiver(KurrentDBReceiverSettings settings, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, ILoggerFactory loggerFactory, IQueueAdapterReceiverMonitor receiverMonitor, LoadSheddingOptions loadSheddingOptions, IEnvironmentStatisticsProvider? environmentStatisticsProvider, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> kurrentDBReceiverFactory)
     {

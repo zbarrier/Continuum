@@ -170,7 +170,7 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory, IDisposable
         if (_queueAdapter == null)
         {
             var streamQueueMapper = GetOrCreateStreamQueueMapper();
-            _queueAdapter = new KurrentDBQueueAdapter(_name, _options, _receiverFactory.ReceiverOptions, streamQueueMapper, CacheFactory, ReceiverMonitorFactory, ReceiverFactory, _dataAdapter, _serviceProvider, _loggerFactory, _environmentStatisticsProvider);
+            _queueAdapter = new KurrentDBQueueAdapter(_name, _options, _receiverFactory, streamQueueMapper, CacheFactory, ReceiverMonitorFactory, ReceiverFactory, _dataAdapter, _serviceProvider, _loggerFactory, _environmentStatisticsProvider);
         }
         return _queueAdapter;
     }

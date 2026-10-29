@@ -30,6 +30,12 @@ public interface IKurrentDBReceiverFactory
     /// <param name="settings">The per-queue receiver settings.</param>
     /// <param name="logger">The logger.</param>
     IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, ILogger logger);
+
+    /// <summary>
+    ///     Creates the receiver and cache the pulling agent uses for a single queue.
+    /// </summary>
+    /// <param name="context">What the queue adapter supplies for the queue.</param>
+    IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context);
 }
 
 /// <summary>
@@ -66,4 +72,7 @@ public sealed class KurrentDBPersistentSubscriptionReceiverFactory : IKurrentDBR
         var client = _serviceProvider.GetRequiredKeyedService<KurrentDBPersistentSubscriptionsClient>(_connectionName);
         return new KurrentDBPersistentSubscriptionReceiver(client, settings, logger);
     }
+
+    /// <inheritdoc />
+    public IKurrentDBQueueAdapterReceiver CreateQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context) => new KurrentDBQueueAdapterReceiver(context);
 }
