@@ -24,6 +24,9 @@ public class KurrentDBCatchUpQueueCache : IKurrentDBCatchUpQueueCache
     private readonly IEvictionStrategy _evictionStrategy;
     private readonly KurrentDBCursorTracker _cursorTracker;
     private ulong _newestCommitPosition;
+    // Position of the newest skipped event that came after every cached event. No later purge would report it, so it
+    // is released once nothing cached is left in front of it.
+    private ulong? _skippedTailPosition;
     private readonly ILogger _logger;
     private readonly AggregatedCachePressureMonitor _cachePressureMonitor;
     private readonly ICacheMonitor _cacheMonitor;
@@ -96,6 +99,12 @@ public class KurrentDBCatchUpQueueCache : IKurrentDBCatchUpQueueCache
             // place to advance a checkpoint. The receiver owns that checkpoint, so it is told that these events are
             // done with.
             var commitPosition = _dataAdapter.GetCommitPosition(lastItemPurged.Value);
+            if (_skippedTailPosition is { } skippedTail && commitPosition >= _newestCommitPosition)
+            {
+                // The newest cached event is gone, so the skipped events after it are behind every cursor too.
+                _skippedTailPosition = null;
+                commitPosition = skippedTail;
+            }
             OnCheckpointablePosition?.Invoke(commitPosition);
         }
     }
@@ -118,6 +127,7 @@ public class KurrentDBCatchUpQueueCache : IKurrentDBCatchUpQueueCache
     {
         var streamPositions = new List<StreamPosition>(queueMessages.Count);
         var cachedMessages = new List<CachedMessage>(queueMessages.Count);
+        ulong? skippedTail = null;
         foreach (var queueMessage in queueMessages)
         {
             StreamPosition streamPosition;
@@ -129,12 +139,14 @@ public class KurrentDBCatchUpQueueCache : IKurrentDBCatchUpQueueCache
             {
                 // Same as an oversized event: failing the batch would lose every other event in it.
                 _logger.InvalidStreamNamespace(queueMessage.EventId, queueMessage.EventType, queueMessage.StreamName.Value, queueMessage.Cursor.SequenceNumber, ex.StreamNamespace);
+                skippedTail = (ulong)queueMessage.Cursor.SequenceNumber;
                 continue;
             }
             catch (InvalidOrleansStreamIdException ex)
             {
                 // Same as an invalid namespace: failing the batch would lose every other event in it.
                 _logger.InvalidOrleansStreamId(ex, queueMessage.EventId, queueMessage.EventType, queueMessage.StreamName.Value, queueMessage.Cursor.SequenceNumber, ex.OrleansStreamId);
+                skippedTail = (ulong)queueMessage.Cursor.SequenceNumber;
                 continue;
             }
             CachedMessage cachedMessage;
@@ -147,10 +159,12 @@ public class KurrentDBCatchUpQueueCache : IKurrentDBCatchUpQueueCache
                 // The event has already left the receiver, so failing the batch would lose every other event in it.
                 // Skipping only this event keeps the rest; the checkpoint moves past it with the next purge.
                 _logger.EventTooLargeForCache(queueMessage.EventId, queueMessage.EventType, queueMessage.StreamName.Value, queueMessage.Cursor.SequenceNumber, ex.Size, ex.BlockSize);
+                skippedTail = (ulong)queueMessage.Cursor.SequenceNumber;
                 continue;
             }
             cachedMessages.Add(cachedMessage);
             streamPositions.Add(streamPosition);
+            skippedTail = null;
         }
         _cache.Add(cachedMessages, dequeueTimeUtc);
         if (cachedMessages.Count > 0)
@@ -158,7 +172,19 @@ public class KurrentDBCatchUpQueueCache : IKurrentDBCatchUpQueueCache
             var previousNewest = _newestCommitPosition;
             // The batch is already cached, so the newest position moves first and the positions are always returned.
             _newestCommitPosition = _dataAdapter.GetCommitPosition(cachedMessages[^1]);
+            // Set alongside the newest position so a purge always compares the tail against the batch it belongs to.
+            _skippedTailPosition = skippedTail;
             WakeCaughtUpCursors(cachedMessages, streamPositions, previousNewest);
+        }
+        else if (skippedTail.HasValue)
+        {
+            _skippedTailPosition = skippedTail;
+            if (_cache.IsEmpty)
+            {
+                // Nothing cached is in front of the skipped events, so no purge will ever report them.
+                _skippedTailPosition = null;
+                OnCheckpointablePosition?.Invoke(skippedTail.Value);
+            }
         }
         return streamPositions;
     }

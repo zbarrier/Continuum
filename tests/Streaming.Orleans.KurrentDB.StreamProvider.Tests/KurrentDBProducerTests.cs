@@ -3,6 +3,7 @@ using KurrentDB.Client;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Storage;
 
 using Orleans.Configuration;
 
@@ -38,5 +39,18 @@ public class KurrentDBProducerTests
         await producer.CloseAsync();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => producer.AppendAsync(CreateEvent()));
+    }
+
+    [Fact]
+    public async Task AppendAsync_Failure_Keeps_The_Original_Exception()
+    {
+        // Nothing listens on this port, and the short deadline keeps the failure fast.
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create("kurrentdb://localhost:1?tls=false&defaultDeadline=2000"));
+        var producer = CreateProducer(client);
+        producer.Init();
+
+        var ex = await Assert.ThrowsAsync<KurrentDBStorageException>(() => producer.AppendAsync(CreateEvent()));
+
+        Assert.NotNull(ex.InnerException);
     }
 }

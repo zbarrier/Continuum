@@ -86,4 +86,31 @@ public class KurrentDBCatchUpQueueCacheOversizedEventTests
 
         Assert.Empty(positions);
     }
+
+    [Fact]
+    public void A_Skipped_Batch_On_An_Empty_Cache_Is_Released_For_Checkpointing()
+    {
+        var cache = CreateCache();
+        var checkpoints = new List<ulong>();
+        cache.OnCheckpointablePosition = checkpoints.Add;
+
+        cache.Add([CreateEvent(0, 100, BlockSize * 2), CreateEvent(1, 200, BlockSize * 2)], DateTime.UtcNow);
+
+        // Nothing is cached in front of the skipped events, so no purge would ever report them.
+        Assert.Equal([200UL], checkpoints);
+    }
+
+    [Fact]
+    public void A_Skipped_Batch_Behind_Cached_Events_Waits_For_Them_To_Be_Purged()
+    {
+        var cache = CreateCache();
+        var checkpoints = new List<ulong>();
+        cache.OnCheckpointablePosition = checkpoints.Add;
+        cache.Add([CreateEvent(0, 100, 10)], DateTime.UtcNow);
+
+        cache.Add([CreateEvent(1, 200, BlockSize * 2)], DateTime.UtcNow);
+
+        // The cached event is still in front of the skipped one, so releasing it now would checkpoint past an unread event.
+        Assert.Empty(checkpoints);
+    }
 }

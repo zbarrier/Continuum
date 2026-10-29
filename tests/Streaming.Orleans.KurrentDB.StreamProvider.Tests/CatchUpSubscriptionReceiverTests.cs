@@ -16,6 +16,7 @@ using Continuum.TypeMapping;
 
 using Orleans.Storage;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Storage;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
@@ -191,6 +192,35 @@ public class CatchUpSubscriptionReceiverTests
         {
             await receiver.CloseAsync();
         }
+    }
+
+    private sealed class FailingCheckpointStore : ICheckpointStore<ulong>
+    {
+        public InvalidOperationException Failure { get; } = new("Checkpoint store is unavailable.");
+
+        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) =>
+            Task.FromException<ulong>(Failure);
+
+        public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong streamPosition, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task Init_Failure_Keeps_The_Original_Exception()
+    {
+        // Arrange: the start position is read from the checkpoint store before subscribing, so a failing store fails
+        // initialization without touching KurrentDB.
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
+        var settings = CreateSettings("catchup-init-failure", streamFilterPrefix: "catchup-init-failure");
+        var store = new FailingCheckpointStore();
+        ((KurrentDBCatchUpSubscriptionReceiverOptions)settings.ReceiverOptions).CheckpointStore = store;
+        var receiver = CreateReceiver(client, settings);
+
+        // Act
+        var ex = await Assert.ThrowsAsync<KurrentDBStorageException>(receiver.InitAsync);
+
+        // Assert
+        Assert.Same(store.Failure, ex.InnerException);
     }
 
     private sealed class RecordingCheckpointStore : ICheckpointStore<ulong>

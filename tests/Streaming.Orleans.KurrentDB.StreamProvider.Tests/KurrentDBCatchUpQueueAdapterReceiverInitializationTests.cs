@@ -122,4 +122,74 @@ public class KurrentDBCatchUpQueueAdapterReceiverInitializationTests
 
         await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
     }
+
+    /// <summary>
+    ///     Initializes only when released, so a test can hold an initialization in flight.
+    /// </summary>
+    private sealed class GatedReceiver(Task gate) : IKurrentDBReceiver
+    {
+        public async Task InitAsync() => await gate;
+
+        public Task CloseAsync() => Task.CompletedTask;
+
+        public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
+
+        public Task MessagesDeliveredAsync(ulong commitPosition) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task A_Read_During_Initialization_Does_Not_Start_A_Second_Initialization()
+    {
+        // Arrange
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var created = 0;
+        var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
+        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
+            (_, _) =>
+            {
+                Interlocked.Increment(ref created);
+                return new GatedReceiver(gate.Task);
+            });
+
+        // Act: a read arrives while the explicit initialization is still in flight.
+        var initialize = adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
+        var messages = await adapterReceiver.GetQueueMessagesAsync(10);
+        gate.SetResult();
+        await initialize;
+
+        // Assert: the read backed off instead of building a second cache and receiver.
+        Assert.Empty(messages);
+        Assert.Equal(1, created);
+
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task A_Receiver_Shut_Down_By_A_Rebalance_Can_Be_Initialized_Again()
+    {
+        // Arrange
+        var created = new List<FlakyReceiver>();
+        var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
+        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
+            (_, _) =>
+            {
+                var receiver = new FlakyReceiver(failInit: false);
+                created.Add(receiver);
+                return receiver;
+            });
+        await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
+        Assert.Single(await adapterReceiver.GetQueueMessagesAsync(10));
+
+        // Act: the queue moves away and back, as it does when the pulling agents rebalance.
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+        Assert.Empty(await adapterReceiver.GetQueueMessagesAsync(10));
+        await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
+        var messages = await adapterReceiver.GetQueueMessagesAsync(10);
+
+        // Assert: a fresh receiver was built and reads again.
+        Assert.Equal(2, created.Count);
+        Assert.Single(messages);
+
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
 }

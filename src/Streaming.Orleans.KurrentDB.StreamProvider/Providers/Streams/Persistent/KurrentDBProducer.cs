@@ -74,6 +74,8 @@ public class KurrentDBProducer : IKurrentDBProducer
         }
         try
         {
+            // A null deadline applies the client's DefaultDeadline from KurrentDBClientSettings, so the append is still
+            // bounded. Orleans' QueueMessageBatchAsync passes no cancellation token, so there is none to forward.
             await _client.AppendToStreamAsync(_settings.QueueName, StreamState.Any, events, null, null, _credentials).ConfigureAwait(false);
         }
         catch (Exception ex)
