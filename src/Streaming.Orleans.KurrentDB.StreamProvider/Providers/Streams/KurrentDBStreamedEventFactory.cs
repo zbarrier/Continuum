@@ -50,6 +50,30 @@ internal static class KurrentDBStreamedEventFactory
         return Create(resolvedEvent.Event, sourceConnectionName, commitPosition, nameParser);
     }
 
+    /// <summary>
+    ///     Creates a carrier for a checkpoint reached by a filtered <c>$all</c> subscription.
+    /// </summary>
+    /// <param name="commitPosition">The <c>$all</c> commit position the server reported.</param>
+    /// <param name="sourceConnectionName">The logical connection the position belongs to.</param>
+    /// <param name="marker">The serialized checkpoint marker.</param>
+    /// <remarks>
+    ///     The marker travels through the cache like any other event, so its position is only checkpointed once it is
+    ///     purged, after every event received before it. It belongs to the reserved checkpoint stream, which no
+    ///     application subscribes to.
+    /// </remarks>
+    public static StreamedEvent<KurrentDBRawEvent> CheckpointMarker(ulong commitPosition, string sourceConnectionName, KurrentDBCheckpointMarkerData marker)
+    {
+        var streamName = KurrentDBStreamedEventConversions.CheckpointStreamName;
+        return new StreamedEvent<KurrentDBRawEvent>(
+            Guid.CreateVersion7(),
+            marker.EventType,
+            streamName,
+            0,
+            KurrentDBStreamedEventConversions.ToCursor(sourceConnectionName, streamName, commitPosition),
+            DateTime.UtcNow,
+            new KurrentDBRawEvent(marker.Data));
+    }
+
     private static StreamedEvent<KurrentDBRawEvent> Create(EventRecord record, string sourceConnectionName, ulong commitPosition, IStreamNameParser? nameParser)
     {
         var payload = new KurrentDBRawEvent(record.Data.ToArray());

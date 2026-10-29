@@ -4,6 +4,7 @@ using System.Text;
 using Continuum.Orleans.KurrentDB;
 using Continuum.Orleans.Streams;
 using Continuum.Serialization.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 using KurrentDB.Client;
 
@@ -261,8 +262,18 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
                 throw new InvalidOrleansStreamIdException(orleansStreamId, ex);
             }
         }
+        // The checkpoint stream is reserved for markers and never reaches a custom mapper, which could reject it or
+        // place it in a namespace an application subscribes to.
+        if (string.Equals(queueMessage.StreamName.Value, CheckpointStreamName, StringComparison.Ordinal))
+        {
+            return CheckpointStreamId;
+        }
         return _options.StreamIdMapper(queueMessage.StreamName.Value);
     }
+
+    private static readonly string CheckpointStreamName = KurrentDBStreamedEventConversions.CheckpointStreamName.Value;
+
+    private static readonly StreamId CheckpointStreamId = StreamId.Create(string.Empty, CheckpointStreamName);
 
     private const int MaxStackallocStreamIdBytes = 256;
 

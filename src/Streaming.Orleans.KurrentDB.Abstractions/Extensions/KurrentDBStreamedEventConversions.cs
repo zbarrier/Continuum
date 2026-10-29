@@ -1,7 +1,9 @@
+using Continuum.Orleans.Events;
 using Continuum.Orleans.KurrentDB;
 using Continuum.Orleans.Tenancy;
-using KurrentDB.Client;
 using Continuum.Streams;
+
+using KurrentDB.Client;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
@@ -24,11 +26,6 @@ public static class KurrentDBStreamedEventConversions
     ///     The partition identifier assigned to KurrentDB events, which are not partitioned.
     /// </summary>
     public const string DefaultPartitionId = "0";
-
-    /// <summary>
-    ///     The payload carried by checkpoint events, which mark progress through a stream but hold no event of their own.
-    /// </summary>
-    public static readonly object CheckpointMarker = new();
 
     /// <summary>
     ///     The stream name carried by checkpoint events, which mark progress through a subscription but belong to no stream.
@@ -76,7 +73,7 @@ public static class KurrentDBStreamedEventConversions
             0,
             new StreamedEventCursor(sourceConnectionName, AllStreamCheckpointTopic, DefaultPartitionId, position.CommitPosition, 0),
             DateTime.UtcNow,
-            CheckpointMarker);
+            CheckpointMarker.Instance);
         return streamEvent;
     }
 
@@ -136,7 +133,7 @@ public static class KurrentDBStreamedEventConversions
             0,
             new StreamedEventCursor(sourceConnectionName, StreamCheckpointTopic, DefaultPartitionId, position.ToUInt64(), 0),
             DateTime.UtcNow,
-            CheckpointMarker);
+            CheckpointMarker.Instance);
         return streamEvent;
     }
 

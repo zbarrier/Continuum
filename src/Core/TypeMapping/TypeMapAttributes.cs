@@ -6,7 +6,7 @@ using System.ComponentModel;
 
 namespace Continuum.TypeMapping;
 
-// Max value is 31
+// Max value is 63
 /// <summary>
 /// Categories of mapped types. Values are flags so type mappers can be created for combinations of kinds.
 /// </summary>
@@ -23,6 +23,11 @@ public enum TypeMapKinds
     Snapshot = 8,
     /// <summary>Metadata persisted alongside commands, events, or snapshots.</summary>
     Metadata = 16,
+    /// <summary>
+    /// A type used internally by Continuum. Framework types are registered with every type mapper,
+    /// regardless of the kinds it was created for.
+    /// </summary>
+    Framework = 32,
 }
 
 /// <summary>
@@ -89,12 +94,20 @@ public sealed class SnapshotTypeAttribute(string typeIdentifier) : TypeMapAttrib
 public sealed class MetadataTypeAttribute(string typeIdentifier) : TypeMapAttribute(typeIdentifier, TypeMapKinds.Metadata) { }
 
 /// <summary>
+/// Maps a type used internally by Continuum to a stable type identifier. Framework types are registered with every
+/// type mapper, regardless of the kinds it was created for.
+/// </summary>
+/// <param name="typeIdentifier">The stable identifier the type is persisted under.</param>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class FrameworkTypeAttribute(string typeIdentifier) : TypeMapAttribute(typeIdentifier, TypeMapKinds.Framework) { }
+
+/// <summary>
 /// Helpers for <see cref="TypeMapKinds"/>.
 /// </summary>
 public static class TypeMapKindsExtensions
 {
     private const int MinTypeMapKindsValue = 1;
-    private const int MaxTypeMapKindsValue = 31;
+    private const int MaxTypeMapKindsValue = 63;
 
     /// <summary>Builds the keyed-service key for the type mapper of <paramref name="value"/> on <paramref name="connectionName"/>.</summary>
     /// <param name="value">The kind or combination of kinds.</param>

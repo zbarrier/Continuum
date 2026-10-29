@@ -30,6 +30,7 @@ public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
         ["IntegrationEventTypeAttribute"] = 4,
         ["SnapshotTypeAttribute"] = 8,
         ["MetadataTypeAttribute"] = 16,
+        ["FrameworkTypeAttribute"] = 32,
     };
 
     private readonly record struct Registration(string TypeName, string Identifier, int Kind);
@@ -43,8 +44,9 @@ public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
             .Combine(CollectLocal(context, "IntegrationEventTypeAttribute"))
             .Combine(CollectLocal(context, "SnapshotTypeAttribute"))
             .Combine(CollectLocal(context, "MetadataTypeAttribute"))
+            .Combine(CollectLocal(context, "FrameworkTypeAttribute"))
             .Select(static (x, _) => new EquatableArray<Registration>(
-                x.Left.Left.Left.Left.AddRange(x.Left.Left.Left.Right).AddRange(x.Left.Left.Right).AddRange(x.Left.Right).AddRange(x.Right)));
+                x.Left.Left.Left.Left.Left.AddRange(x.Left.Left.Left.Left.Right).AddRange(x.Left.Left.Left.Right).AddRange(x.Left.Left.Right).AddRange(x.Left.Right).AddRange(x.Right)));
 
         // Runs on every compilation change, but each metadata reference is scanned only once (see ReferenceCache)
         // and the equatable result stops downstream work when nothing changed.

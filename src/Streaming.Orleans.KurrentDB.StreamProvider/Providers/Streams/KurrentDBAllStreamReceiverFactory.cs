@@ -19,6 +19,7 @@ public sealed class KurrentDBAllStreamReceiverFactory : IKurrentDBReceiverFactor
     private readonly IServiceProvider _serviceProvider;
     private readonly KurrentDBAllStreamReceiverOptions _receiverOptions;
     private readonly string _connectionName;
+    private readonly KurrentDBCheckpointMarkerData _checkpointMarker;
 
     /// <summary>
     ///     Creates a new <see cref="KurrentDBAllStreamReceiverFactory" />.
@@ -32,6 +33,7 @@ public sealed class KurrentDBAllStreamReceiverFactory : IKurrentDBReceiverFactor
         _serviceProvider = serviceProvider;
         _receiverOptions = serviceProvider.GetOptionsByName<KurrentDBAllStreamReceiverOptions>(name);
         _connectionName = serviceProvider.GetOptionsByName<KurrentDBOptions>(name).ConnectionName;
+        _checkpointMarker = KurrentDBCheckpointMarkerData.Create(serviceProvider.GetOptionsByName<KurrentDBDataAdapterOptions>(name));
     }
 
     /// <inheritdoc />
@@ -43,6 +45,6 @@ public sealed class KurrentDBAllStreamReceiverFactory : IKurrentDBReceiverFactor
         // The client is a keyed singleton shared by every queue of this connection. It is owned by the container, so
         // receivers must not dispose it.
         var client = _serviceProvider.GetRequiredKeyedService<KurrentDBClient>(_connectionName);
-        return new KurrentDBAllStreamReceiver(client, settings, logger);
+        return new KurrentDBAllStreamReceiver(client, settings, logger, _checkpointMarker);
     }
 }

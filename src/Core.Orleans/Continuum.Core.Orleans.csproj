@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Continuum.Core.csproj" />
+    <ProjectReference Include="..\Core.SourceGenerators\Continuum.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\CSharpFunctionalExtensions.Orleans\Continuum.CSharpFunctionalExtensions.Orleans.csproj" />
     <ProjectReference Include="..\NewId.Orleans\Continuum.NewId.Orleans.csproj" />
   </ItemGroup>

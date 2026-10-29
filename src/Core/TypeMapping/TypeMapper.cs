@@ -128,7 +128,7 @@ public abstract class TypeMapper : ITypeMapper
     /// <inheritdoc/>
     public void RegisterKnownAttributeTypes(TypeMapKinds typeMapKinds)
     {
-        foreach (var registration in TypeMapRegistry.GetRegistrations(typeMapKinds))
+        foreach (var registration in TypeMapRegistry.GetRegistrations(typeMapKinds | TypeMapKinds.Framework))
         {
             AddType(registration.Type, registration.TypeIdentifier);
         }
