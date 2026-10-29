@@ -40,6 +40,9 @@ public sealed class KurrentDBAllStreamReceiverFactory : IKurrentDBReceiverFactor
     public KurrentDBReceiverOptionsBase ReceiverOptions => _receiverOptions;
 
     /// <inheritdoc />
+    public bool ClientCheckpointed => true;
+
+    /// <inheritdoc />
     public IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, ILogger logger)
     {
         // The client is a keyed singleton shared by every queue of this connection. It is owned by the container, so

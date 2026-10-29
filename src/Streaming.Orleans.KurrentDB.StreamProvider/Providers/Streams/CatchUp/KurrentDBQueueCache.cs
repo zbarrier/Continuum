@@ -306,7 +306,7 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
         }
         double cacheSize = _cache.Newest.Value.SequenceNumber - _cache.Oldest.Value.SequenceNumber;
         var distanceFromNewestMessage = _cache.Newest.Value.SequenceNumber - sequenceToken.SequenceNumber;
-        // pressure is the ratio of the distance from the front of the cache to the
+        // pressure is the ratio of the distance from the front of the cache to the size of the cache
         cachePressureContribution = distanceFromNewestMessage / cacheSize;
         return true;
     }

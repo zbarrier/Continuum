@@ -142,7 +142,7 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory, IDisposable
     {
         var sharedDimensions = new KurrentDBMonitorAggregationDimensions(_options.Name);
         var bufferPoolOptions = _serviceProvider.GetOptionsByName<KurrentDBStreamCacheBufferPoolOptions>(_name);
-        return new KurrentDBQueueCacheFactory(cachePressureOptions, bufferPoolOptions, _cacheEvictionOptions, _statisticOptions, _dataAdapter, sharedDimensions, _serviceProvider.GetRequiredService<OrleansInstruments>(), _serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System);
+        return new KurrentDBQueueCacheFactory(cachePressureOptions, bufferPoolOptions, _cacheEvictionOptions, _statisticOptions, _dataAdapter, sharedDimensions, _serviceProvider.GetRequiredService<OrleansInstruments>(), _serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System, clientCheckpointed: _receiverFactory.ClientCheckpointed);
     }
 
     /// <summary>

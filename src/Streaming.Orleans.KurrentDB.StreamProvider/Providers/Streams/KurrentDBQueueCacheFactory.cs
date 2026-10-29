@@ -5,6 +5,7 @@ using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.StatisticMonitors;
 using Orleans.Runtime;
 using Orleans.Streams;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
@@ -22,6 +23,7 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     private readonly KurrentDBMonitorAggregationDimensions _sharedDimensions;
     private readonly OrleansInstruments _instruments;
     private readonly TimePurgePredicate _timePurge;
+    private readonly bool _clientCheckpointed;
 
     private IObjectPool<FixedSizeBuffer>? _bufferPool;
     private string? _bufferPoolId;
@@ -38,7 +40,8 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
                                        OrleansInstruments instruments,
                                        TimeProvider timeProvider,
                                        Func<KurrentDBCacheMonitorDimensions, ILoggerFactory, ICacheMonitor>? cacheMonitorFactory = null,
-                                       Func<KurrentDBBlockPoolMonitorDimensions, ILoggerFactory, IBlockPoolMonitor>? blockPoolMonitorFactory = null)
+                                       Func<KurrentDBBlockPoolMonitorDimensions, ILoggerFactory, IBlockPoolMonitor>? blockPoolMonitorFactory = null,
+                                       bool clientCheckpointed = true)
     {
         ArgumentNullException.ThrowIfNull(pressureOptions, nameof(pressureOptions));
         ArgumentNullException.ThrowIfNull(bufferPoolOptions, nameof(bufferPoolOptions));
@@ -56,6 +59,7 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
         _dataAdater = dataAdater;
         _sharedDimensions = sharedDimensions;
         _instruments = instruments;
+        _clientCheckpointed = clientCheckpointed;
         _timePurge = new TimePurgePredicate(evictionOptions.DataMinTimeInCache, evictionOptions.DataMaxAgeInCache);
         CacheMonitorFactory = cacheMonitorFactory ?? ((dimensions, _) => new DefaultKurrentDBCacheMonitor(dimensions, _instruments));
         BlockPoolMonitorFactory = blockPoolMonitorFactory ?? ((dimensions, _) => new DefaultKurrentDBBlockPoolMonitor(dimensions, _instruments));
@@ -153,6 +157,12 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
         var cacheMonitorDimensions = new KurrentDBCacheMonitorDimensions(sharedDimensions, queue, blockPoolId);
         var cacheMonitor = CacheMonitorFactory(cacheMonitorDimensions, loggerFactory);
         var logger = loggerFactory.CreateLogger($"{typeof(KurrentDBQueueCache).FullName}.{sharedDimensions.Name}.{queue}");
+        if (!_clientCheckpointed)
+        {
+            // The server owns the checkpoint, so purging is on age alone and does not track cursors.
+            var persistentEviction = new KurrentDBPersistentEvictionStrategy(logger, timePurge, cacheMonitor, statisticOptions.StatisticMonitorWriteInterval);
+            return new KurrentDBPersistentQueueCache(queue, KurrentDBPersistentQueueAdapterReceiver.MaxMessagesPerRead, bufferPool, dataAdatper, persistentEviction, logger, cacheMonitor, statisticOptions.StatisticMonitorWriteInterval, cacheEvictionOptions.MetadataMinTimeInCache);
+        }
         var cursorTracker = new KurrentDBCursorTracker();
         var evictionStrategy = new KurrentDBEvictionStrategy(logger, timePurge, cacheMonitor, statisticOptions.StatisticMonitorWriteInterval, dataAdatper, cursorTracker);
         return new KurrentDBQueueCache(queue, KurrentDBQueueAdapterReceiver.MaxMessagesPerRead, bufferPool, dataAdatper, evictionStrategy, cursorTracker, logger, cacheMonitor, statisticOptions.StatisticMonitorWriteInterval, cacheEvictionOptions.MetadataMinTimeInCache);

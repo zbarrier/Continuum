@@ -27,6 +27,12 @@ public interface IKurrentDBReceiverFactory
     KurrentDBReceiverOptionsBase ReceiverOptions { get; }
 
     /// <summary>
+    ///     Whether the client owns the subscription checkpoint, so the queue cache must track cursors and only purge,
+    ///     and therefore checkpoint, events every cursor has finished with.
+    /// </summary>
+    bool ClientCheckpointed { get; }
+
+    /// <summary>
     ///     Creates a receiver for a single queue.
     /// </summary>
     /// <param name="settings">The per-queue receiver settings.</param>
@@ -65,6 +71,9 @@ public sealed class KurrentDBPersistentSubscriptionReceiverFactory : IKurrentDBR
 
     /// <inheritdoc />
     public KurrentDBReceiverOptionsBase ReceiverOptions => _receiverOptions;
+
+    /// <inheritdoc />
+    public bool ClientCheckpointed => false;
 
     /// <inheritdoc />
     public IKurrentDBReceiver Create(KurrentDBReceiverSettings settings, ILogger logger)
