@@ -156,8 +156,9 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
         if (cachedMessages.Count > 0)
         {
             var previousNewest = _newestCommitPosition;
-            WakeCaughtUpCursors(cachedMessages, streamPositions, previousNewest);
+            // The batch is already cached, so the newest position moves first and the positions are always returned.
             _newestCommitPosition = _dataAdapter.GetCommitPosition(cachedMessages[^1]);
+            WakeCaughtUpCursors(cachedMessages, streamPositions, previousNewest);
         }
         return streamPositions;
     }
@@ -189,7 +190,11 @@ public class KurrentDBQueueCache : IKurrentDBQueueCache
                 var result = _cache.TryGetCursor(streamId, token);
                 if (result.CacheMiss is { } cacheMiss)
                 {
-                    throw cacheMiss.ToException();
+                    // The event was just added, so this should not happen. Throwing would drop the batch's
+                    // notifications even though its events are cached. The old cursor is left in place, and if it
+                    // points into purged blocks its next read reports a cache miss to the pulling agent instead.
+                    _logger.WakeCursorCacheMiss(cacheMiss.ToException(), streamId);
+                    continue;
                 }
                 entry.CacheCursor = result.Cursor!;
             }
@@ -377,4 +382,6 @@ internal static partial class KurrentDBQueueCacheLog
     [LoggerMessage(Level = LogLevel.Error, Message = "Skipped event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition}: its stream namespace '{StreamNamespace}' contains the reserved separator ':'.")] public static partial void InvalidStreamNamespace(this ILogger logger, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, string streamNamespace);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Skipped event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition}: its metadata Orleans stream id '{OrleansStreamId}' is not a valid stream id.")] public static partial void InvalidOrleansStreamId(this ILogger logger, Exception exception, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, string orleansStreamId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Could not reposition a caught-up cursor on stream {StreamId} at the event just added to the cache.")] public static partial void WakeCursorCacheMiss(this ILogger logger, Exception exception, StreamId streamId);
 }

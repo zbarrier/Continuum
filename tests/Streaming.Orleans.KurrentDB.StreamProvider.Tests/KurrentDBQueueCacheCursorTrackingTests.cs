@@ -241,6 +241,48 @@ public class KurrentDBQueueCacheCursorTrackingTests
     }
 
     [Fact]
+    public void Waking_A_Cursor_Never_Misses_The_Cache_For_In_Order_Batches()
+    {
+        var (cache, streamId, _) = CreateFilledCache();
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        var later = DateTime.UtcNow.AddMinutes(-30);
+        ulong position = 300;
+        for (var batch = 0; batch < 20; batch++)
+        {
+            while (cache.TryGetNextMessage(cursor, out _))
+            {
+            }
+            cache.RecordCaughtUp(cursor);
+            cache.SignalPurge();
+            var first = position + 100;
+            position += 200;
+            var positions = cache.Add([CreateEvent(0, first, later), CreateEvent(0, position, later)], later);
+
+            Assert.Equal(2, positions.Count);
+            Assert.True(cache.TryGetNextMessage(cursor, out var next));
+            Assert.Equal((long)first, next.SequenceToken.SequenceNumber);
+        }
+    }
+
+    [Fact]
+    public void An_Out_Of_Order_Batch_Older_Than_The_Cache_Still_Returns_Its_Positions()
+    {
+        var (cache, streamId, _) = CreateFilledCache();
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        while (cache.TryGetNextMessage(cursor, out _))
+        {
+        }
+        cache.RecordCaughtUp(cursor);
+        cache.SignalPurge();
+        var later = DateTime.UtcNow.AddMinutes(-30);
+
+        // Persistent subscriptions may deliver an event whose commit position is older than everything cached.
+        var positions = cache.Add([CreateEvent(5, 50, later)], later);
+
+        Assert.Single(positions);
+    }
+
+    [Fact]
     public void A_Released_Caught_Up_Cursor_Is_Not_Woken()
     {
         var (cache, streamId, checkpoints) = CreateFilledCache();
