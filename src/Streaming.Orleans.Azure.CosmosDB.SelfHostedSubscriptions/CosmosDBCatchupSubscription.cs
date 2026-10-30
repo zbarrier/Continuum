@@ -66,6 +66,7 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
     private readonly CosmosDBCatchupSubscriptionMetrics _metrics;
     private volatile CosmosDBCatchupSubscriptionState _state = CosmosDBCatchupSubscriptionState.Starting;
     private readonly HashSet<string> _failingLeases = [];
+    private bool _infrastructureFailing;
     private readonly Lock _leaseLock = new();
 
     /// <summary>Creates the subscription, resolving its options and dependencies from the service provider.</summary>
@@ -104,6 +105,7 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
         lock (_leaseLock)
         {
             _failingLeases.Clear();
+            _infrastructureFailing = false;
         }
 
         SetState(CosmosDBCatchupSubscriptionState.Starting);
@@ -166,7 +168,10 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
         // Checking the failing leases and updating the state happen under one lock so a concurrent failure cannot be overwritten.
         lock (_leaseLock)
         {
-            if (_failingLeases.Remove(context.LeaseToken) && _failingLeases.Count == 0 && _state == CosmosDBCatchupSubscriptionState.Retrying)
+            var recovered = _failingLeases.Remove(context.LeaseToken) | _infrastructureFailing;
+            // An infrastructure error may move the failing lease to another instance, so any successful batch clears it.
+            _infrastructureFailing = false;
+            if (recovered && _failingLeases.Count == 0 && _state == CosmosDBCatchupSubscriptionState.Retrying)
             {
                 SetState(CosmosDBCatchupSubscriptionState.Running);
             }
@@ -188,6 +193,11 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
         else
         {
             _metrics.Error(SubscriptionName);
+            lock (_leaseLock)
+            {
+                _infrastructureFailing = true;
+                SetState(CosmosDBCatchupSubscriptionState.Retrying, $"Lease {leaseToken} failed.", exception);
+            }
         }
         return OnErrorAsync(leaseToken, exception);
     }

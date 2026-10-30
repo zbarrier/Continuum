@@ -77,6 +77,34 @@ public class CosmosDBCatchupSubscriptionCallbackTests
         Assert.Equal(CosmosDBCatchupSubscriptionState.Retrying, harness.State);
     }
 
+    [Fact]
+    public async Task An_infrastructure_error_reports_retrying_until_a_batch_succeeds()
+    {
+        using var harness = new Harness();
+        var error = new InvalidOperationException("The lease was lost.");
+
+        await harness.Subscription.HandleErrorAsync("0", error);
+
+        Assert.Equal(CosmosDBCatchupSubscriptionState.Retrying, harness.State);
+        Assert.Same(error, harness.Exception);
+
+        await harness.Subscription.HandleChangeStreamAsync(new LeaseContext("1"), Changes(Event(1, "event-0")), CancellationToken.None);
+
+        Assert.Equal(CosmosDBCatchupSubscriptionState.Running, harness.State);
+    }
+
+    [Fact]
+    public async Task An_infrastructure_error_recovery_does_not_clear_a_failing_lease()
+    {
+        using var harness = new Harness();
+
+        await harness.Subscription.HandleErrorAsync("0", UserException("0"));
+        await harness.Subscription.HandleErrorAsync("1", new InvalidOperationException("The lease was lost."));
+        await harness.Subscription.HandleChangeStreamAsync(new LeaseContext("2"), Changes(Event(1, "event-0")), CancellationToken.None);
+
+        Assert.Equal(CosmosDBCatchupSubscriptionState.Retrying, harness.State);
+    }
+
     private static ChangeFeedProcessorUserException UserException(string leaseToken)
         => new(new InvalidOperationException("The handler rejected the batch."), new LeaseContext(leaseToken));
 
@@ -121,6 +149,9 @@ public class CosmosDBCatchupSubscriptionCallbackTests
 
         public CosmosDBCatchupSubscriptionState? State
             => _services.GetRequiredService<CosmosDBCatchupSubscriptionStatusRegistry>().TryGetStatus(LeaseCatchupSubscription.Name, out var status) ? status!.State : null;
+
+        public Exception? Exception
+            => _services.GetRequiredService<CosmosDBCatchupSubscriptionStatusRegistry>().TryGetStatus(LeaseCatchupSubscription.Name, out var status) ? status!.Exception : null;
 
         public void Dispose() => _services.Dispose();
     }
