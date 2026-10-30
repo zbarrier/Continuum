@@ -214,9 +214,9 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             {
                 continue;
             }
-            if (change.Type == EventItemType.Header ? _options.IgnoreHeaderEvents : change.Type != EventItemType.Event)
+            if (change.Type != EventItemType.Event)
             {
-                // Snapshots are derived state, not facts, so only events (and headers when opted in) are delivered.
+                // Headers and snapshots are bookkeeping and derived state, not facts, so only events are delivered.
                 continue;
             }
             if (!_typeMapper.TryGetType(change.DataType, out var type))

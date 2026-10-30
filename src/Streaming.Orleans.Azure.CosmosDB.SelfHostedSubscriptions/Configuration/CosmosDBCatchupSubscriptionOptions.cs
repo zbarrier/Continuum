@@ -52,9 +52,6 @@ public class CosmosDBCatchupSubscriptionOptions
     /// <summary>The maximum number of items read per poll.</summary>
     public int MaxItemsPerPoll { get; set; } = 500;
 
-    /// <summary>Whether stream header items are skipped.</summary>
-    public bool IgnoreHeaderEvents { get; set; } = true;
-
     /// <summary>Deserializes event payloads; resolved by connection name when not set.</summary>
     public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;
 
