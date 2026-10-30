@@ -81,7 +81,10 @@ public class KurrentDBCatchUpQueueAdapterReceiverInitializationTests
         public Task MessagesDeliveredAsync(ulong commitPosition) => Task.CompletedTask;
     }
 
-    private static IKurrentDBQueueCache CreateCache(string queue, ILoggerFactory loggerFactory)
+    private static IKurrentDBQueueCache CreateCache(string queue, ILoggerFactory loggerFactory) =>
+        CreateCache(queue, loggerFactory, new KurrentDBQueueCacheBufferPool(() => new FixedSizeBuffer(4096), new KurrentDBStreamCacheBufferPoolOptions(), TimeProvider.System));
+
+    private static IKurrentDBQueueCache CreateCache(string queue, ILoggerFactory loggerFactory, KurrentDBQueueCacheBufferPool pool)
     {
         var adapter = new KurrentDBQueueDataAdapter(OrleansSerializer, new KurrentDBDataAdapterOptions
         {
@@ -91,7 +94,6 @@ public class KurrentDBCatchUpQueueAdapterReceiverInitializationTests
             GrainStorageSerializer = new FakeSerializer(),
         });
         var logger = NullLogger.Instance;
-        var pool = new KurrentDBQueueCacheBufferPool(() => new FixedSizeBuffer(4096), new KurrentDBStreamCacheBufferPoolOptions(), TimeProvider.System);
         var cursorTracker = new KurrentDBCursorTracker();
         var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
         return new KurrentDBCatchUpQueueCache(queue, 100, pool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
@@ -191,5 +193,41 @@ public class KurrentDBCatchUpQueueAdapterReceiverInitializationTests
         Assert.Single(messages);
 
         await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
+
+    /// <summary>
+    ///     Closes only when released, so a test can hold a shutdown in flight.
+    /// </summary>
+    private sealed class GatedCloseReceiver(Task closeGate) : IKurrentDBReceiver
+    {
+        public Task InitAsync() => Task.CompletedTask;
+
+        public Task CloseAsync() => closeGate;
+
+        public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
+
+        public Task MessagesDeliveredAsync(ulong commitPosition) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task Shutdown_Disposes_The_Cache_Only_After_The_Receiver_Has_Closed()
+    {
+        // Arrange: a disposed cache unregisters from its pool, which shows when disposal happened.
+        var closeGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pool = new KurrentDBQueueCacheBufferPool(() => new FixedSizeBuffer(4096), new KurrentDBStreamCacheBufferPoolOptions(), TimeProvider.System);
+        var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
+        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, (queue, loggerFactory) => CreateCache(queue, loggerFactory, pool), NullLoggerFactory.Instance,
+            new NullReceiverMonitor(), new LoadSheddingOptions(), null, (_, _) => new GatedCloseReceiver(closeGate.Task));
+        await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
+        Assert.Equal(1, pool.ActiveCaches);
+
+        // Act: shutdown starts while the receiver is still closing.
+        var shutdown = adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+
+        // Assert
+        Assert.Equal(1, pool.ActiveCaches);
+        closeGate.SetResult();
+        await shutdown;
+        Assert.Equal(0, pool.ActiveCaches);
     }
 }
