@@ -324,15 +324,17 @@ public class KurrentDBCatchUpQueueCache : IKurrentDBCatchUpQueueCache
     private bool TryCalculateCachePressureContribution(StreamSequenceToken sequenceToken, out double cachePressureContribution)
     {
         cachePressureContribution = 0;
-        // if cache is empty or has few items, don't calculate pressure
-        if (_cache.IsEmpty || !_cache.Newest.HasValue || !_cache.Oldest.HasValue || _cache.Newest.Value.SequenceNumber - _cache.Oldest.Value.SequenceNumber < 10 * _defaultMaxAddCount)
+        // Sequence numbers are $all commit positions, which are byte offsets in the log rather than event counts, so the
+        // item count decides whether the cache holds enough events to measure pressure.
+        if (_cache.IsEmpty || !_cache.Newest.HasValue || !_cache.Oldest.HasValue || _cache.ItemCount < 10 * _defaultMaxAddCount)
         {
             // not enough items in cache.
             return false;
         }
         double cacheSize = _cache.Newest.Value.SequenceNumber - _cache.Oldest.Value.SequenceNumber;
         var distanceFromNewestMessage = _cache.Newest.Value.SequenceNumber - sequenceToken.SequenceNumber;
-        // pressure is the ratio of the distance from the front of the cache to the size of the cache
+        // pressure is the ratio of the distance from the front of the cache to the size of the cache, both in bytes of log,
+        // which approximates the share of cached events still ahead of the cursor
         cachePressureContribution = distanceFromNewestMessage / cacheSize;
         return true;
     }

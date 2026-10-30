@@ -37,6 +37,8 @@ Each event is delivered to the Orleans stream named after the KurrentDB stream i
 
 Use `StreamFilterPrefix` to have KurrentDB send only the streams you need. Link events are resolved to the events they point to by default (`ResolveLinkTos`).
 
+A resolved link carries the same event as the original, at a later `$all` position, and the catch-up subscription delivers every position it reads. If the filter matches both the original streams and the streams holding links to them (for example, no filter at all, which includes the `$ce-` and `$et-` system projection streams), each event is delivered once per match. Filter to either the original streams (for example `order-`) or the link streams (for example `$ce-order`), not both. Persistent subscriptions drop a redelivered event that is still queued, so this applies to catch-up subscriptions only.
+
 ### Checkpoints
 
 The provider stores the `$all` position in an `ICheckpointStore<ulong>`. Set `CheckpointConnectionName` to choose which registered store is used. When there is no checkpoint yet, `StartFromNow` (default `true`) chooses between reading only new events and reading from the beginning of `$all`.

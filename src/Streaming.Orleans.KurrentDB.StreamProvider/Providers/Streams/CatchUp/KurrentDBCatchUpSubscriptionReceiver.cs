@@ -42,8 +42,6 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
     private readonly string _subscriptionName;
     private readonly KurrentDBCheckpointMarkerData _checkpointMarker;
 
-    private readonly ConcurrentDictionary<Uuid, bool> _hashSet = new();
-
     // The carrier holds the $all position in SequenceNumber because it cannot be recovered from the event record
     // itself once link resolution is enabled. The buffer is bounded so a catch-up from the start of $all waits for
     // Orleans to drain it instead of reading the whole log into memory.
@@ -180,7 +178,6 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
             while (_queue.Reader.TryRead(out _))
             {
             }
-            _hashSet.Clear();
             _initialized = false;
         }
     }
@@ -212,7 +209,6 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
                 }
                 streamedEvents.Add(streamedEvent);
                 _pendingPositions.Enqueue((ulong)streamedEvent.Cursor.SequenceNumber);
-                _hashSet.TryRemove(Uuid.FromGuid(streamedEvent.EventId), out _);
             }
             return streamedEvents;
         }
@@ -301,11 +297,10 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
                                 _logger.EventWithoutPosition(_subscriptionName, resolvedEvent.Event.EventId);
                                 break;
                             }
-                            // Check duplication
-                            if (_hashSet.TryAdd(resolvedEvent.Event.EventId, true))
-                            {
-                                await _queue.Writer.WriteAsync(KurrentDBCatchUpStreamedEventFactory.FromAllStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser), cancellationToken).ConfigureAwait(false);
-                            }
+                            // No duplicate check: $all delivers each position once. With ResolveLinkTos, an event and a link to
+                            // it are separate positions that both resolve to the same event, and both are delivered when the
+                            // filter matches the original stream and the link stream. Filter to one or the other to avoid that.
+                            await _queue.Writer.WriteAsync(KurrentDBCatchUpStreamedEventFactory.FromAllStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser), cancellationToken).ConfigureAwait(false);
                             // Resuming a dropped subscription must continue from the last event seen by the pump,
                             // otherwise the buffered but undelivered events would be received twice.
                             startPosition = FromAll.After(resolvedEvent.OriginalPosition.GetValueOrDefault());

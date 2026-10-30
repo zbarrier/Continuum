@@ -24,6 +24,11 @@ public sealed class KurrentDBCatchUpSubscriptionReceiverOptions : KurrentDBRecei
     /// <summary>
     ///     Indicates whether link events should be resolved to the events they point at.
     /// </summary>
+    /// <remarks>
+    ///     A resolved link is delivered as the event it points at, at the link's own <c>$all</c> position. When
+    ///     <see cref="StreamFilterPrefix" /> matches both an event's stream and a stream linking to it, the event is
+    ///     delivered once for each, so filter to the original streams or to the link streams, not both.
+    /// </remarks>
     public bool ResolveLinkTos { get; set; } = true;
 
     /// <summary>
