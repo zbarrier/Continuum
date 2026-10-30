@@ -482,7 +482,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             }
             var startPosition = !lastReceivedPosition.HasValue ? FromStream.Start : FromStream.After(new StreamPosition(lastReceivedPosition.Value));
 
-            await using var subscription = _client.SubscribeToStream(StreamName, startPosition, false, null, cancellationToken);
+            await using var subscription = _client.SubscribeToStream(StreamName, startPosition, true, null, cancellationToken);
 
             await foreach (var message in subscription.Messages)
             {
