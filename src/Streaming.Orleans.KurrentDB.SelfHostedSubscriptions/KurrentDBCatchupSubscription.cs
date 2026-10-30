@@ -408,14 +408,6 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                         _logger.SubscriptionFellBehind(SubscriptionName);
                         break;
 
-                    case StreamMessage.LastAllStreamPosition(var position):
-                        {
-                            _logger.AllStreamLastPositionReached(SubscriptionName, position);
-                            var checkpointEvent = position.ToAllStreamCheckpointEvent(_options.ConnectionName);
-                            await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
-                        }
-                        break;
-
                     case StreamMessage.Unknown:
                         _logger.AllStreamUnknownMessage(SubscriptionName);
                         break;
@@ -530,22 +522,6 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
 
                     case StreamMessage.FellBehind:
                         _logger.SubscriptionFellBehind(SubscriptionName);
-                        break;
-
-                    case StreamMessage.FirstStreamPosition(StreamPosition position):
-                        {
-                            _logger.StreamFirstPositionReached(SubscriptionName, position);
-                            var checkpointEvent = position.ToStreamCheckpointEvent(_options.ConnectionName);
-                            await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
-                        }
-                        break;
-
-                    case StreamMessage.LastStreamPosition(StreamPosition position):
-                        {
-                            _logger.StreamLastPositionReached(SubscriptionName, position);
-                            var checkpointEvent = position.ToStreamCheckpointEvent(_options.ConnectionName);
-                            await _channel.Writer.WriteAsync(checkpointEvent, cancellationToken);
-                        }
                         break;
 
                     case StreamMessage.Unknown:
@@ -675,15 +651,6 @@ internal static partial class KurrentDBCatchupSubscriptionLog
 
 	[LoggerMessage(Level = LogLevel.Warning, Message = "Subscription '{SubscriptionName}' has fallen behind. This means the subscription is processing events slower than they are being produced. Consider scaling up the processing or increasing the buffer size.")]
 	public static partial void SubscriptionFellBehind(this ILogger logger, string subscriptionName);
-
-	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' reached first position of the stream at {Position}.")]
-	public static partial void StreamFirstPositionReached(this ILogger logger, string subscriptionName, StreamPosition position);
-
-	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' reached last position of the stream at {Position}.")]
-	public static partial void AllStreamLastPositionReached(this ILogger logger, string subscriptionName, Position position);
-
-	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' reached last position of the stream at {Position}.")]
-	public static partial void StreamLastPositionReached(this ILogger logger, string subscriptionName, StreamPosition position);
 
 	[LoggerMessage(Level = LogLevel.Error, Message = "Received unknown message type in subscription '{SubscriptionName}'.")]
 	public static partial void AllStreamUnknownMessage(this ILogger logger, string subscriptionName);
