@@ -418,11 +418,11 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                 }
             }
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
             _logger.SubscriptionCancelled(ex, SubscriptionName);
         }
-        catch (ObjectDisposedException ex)
+        catch (ObjectDisposedException ex) when (cancellationToken.IsCancellationRequested)
         {
             _logger.SubscriptionCancelledByUser(ex, SubscriptionName);
         }
@@ -534,11 +534,11 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                 }
             }
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
             _logger.SubscriptionCancelled(ex, SubscriptionName);
         }
-        catch (ObjectDisposedException ex)
+        catch (ObjectDisposedException ex) when (cancellationToken.IsCancellationRequested)
         {
             _logger.SubscriptionCancelledByUser(ex, SubscriptionName);
         }
