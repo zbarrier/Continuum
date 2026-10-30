@@ -195,7 +195,10 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
     public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
     {
         _logger.PersistentReceivingEvents(_settings.QueueName);
-        if (_initialized == false || _subscription == null)
+        // Read once: a resubscribe on another thread can clear the field after this check, which would otherwise throw
+        // after events were already taken from the queue and lose them from this receiver.
+        var subscription = _subscription;
+        if (_initialized == false || subscription == null)
         {
             return Array.Empty<StreamedEvent<KurrentDBRawEvent>>();
         }
@@ -216,7 +219,9 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
             }
             if (eventIds.Count > 0)
             {
-                _subscription.Ack(eventIds).Ignore();
+                // Acking through a subscription that was just dropped fails; the server then redelivers the events,
+                // which is tolerated as duplicates.
+                subscription.Ack(eventIds).Ignore();
             }
             return streamedEvents;
         }
