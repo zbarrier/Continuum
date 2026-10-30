@@ -14,10 +14,10 @@ using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
 /// <summary>
-///     Verifies that a receiver whose initialization fails is retried on the next read rather than left in place
-///     half-initialized.
+///     Verifies the catch-up queue adapter receiver's lifecycle: failed initialization is retried on the next read
+///     rather than left half-initialized, and shutdown waits for in-flight work before disposing the cache.
 /// </summary>
-public class KurrentDBCatchUpQueueAdapterReceiverInitializationTests
+public class KurrentDBCatchUpQueueAdapterReceiverTests
 {
     private static readonly Serializer OrleansSerializer = new ServiceCollection().AddSerializer().BuildServiceProvider().GetRequiredService<Serializer>();
 
