@@ -196,6 +196,32 @@ public class CatchUpSubscriptionReceiverTests
         }
     }
 
+    [Fact]
+    public async Task Receive_After_Close_Returns_Nothing_Even_With_Events_Still_Buffered()
+    {
+        // Arrange
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
+        var streamName = "catchup-closed-read-" + Guid.NewGuid().ToString("N");
+        var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
+        ((KurrentDBCatchUpSubscriptionReceiverOptions)settings.ReceiverOptions).CheckpointStore = new RecordingCheckpointStore();
+        await AppendAsync(client, streamName, "one", "two", "three");
+
+        var receiver = CreateReceiver(client, settings);
+        await receiver.InitAsync();
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (receiver.BufferedCount < 3 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+        }
+
+        // Act: a read that lands after shutdown closed the receiver.
+        await receiver.CloseAsync();
+        var batch = receiver.Receive(10);
+
+        // Assert: buffered events are not handed out after close; the next subscription rereads them from the checkpoint.
+        Assert.Empty(batch);
+    }
+
     private sealed class FailingCheckpointStore : ICheckpointStore<ulong>
     {
         public InvalidOperationException Failure { get; } = new("Checkpoint store is unavailable.");
