@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Text;
 
 using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Configuration;
@@ -367,8 +367,8 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
     {
         public ConcurrentDictionary<string, ulong> Positions { get; } = new();
 
-        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Positions.GetValueOrDefault(subscriptionName));
+        public Task<ulong?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
+            => Task.FromResult(Positions.TryGetValue(subscriptionName, out var position) ? position : (ulong?)null);
 
         public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong streamPosition, CancellationToken cancellationToken = default)
         {

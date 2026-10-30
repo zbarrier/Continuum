@@ -16,11 +16,22 @@ public class SubscriptionCheckpointStoreTests
     }
 
     [Fact]
-    public async Task Returns_Default_For_Unknown_Subscription()
+    public async Task Returns_Null_For_Unknown_Subscription()
     {
         var store = new SubscriptionCheckpointStore<ulong>(_fixture.Cluster.GrainFactory);
 
-        Assert.Equal(0UL, await store.GetLastCheckpointAsync(Guid.NewGuid().ToString("N"), "0", TestContext.Current.CancellationToken));
+        Assert.Null(await store.GetLastCheckpointAsync(Guid.NewGuid().ToString("N"), "0", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Distinguishes_A_Stored_Zero_From_No_Checkpoint()
+    {
+        var store = new SubscriptionCheckpointStore<ulong>(_fixture.Cluster.GrainFactory);
+        var subscription = Guid.NewGuid().ToString("N");
+
+        await store.StoreCheckpointAsync(subscription, "0", 0UL, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0UL, await store.GetLastCheckpointAsync(subscription, "0", TestContext.Current.CancellationToken));
     }
 
     [Fact]

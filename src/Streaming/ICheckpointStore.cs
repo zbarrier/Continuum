@@ -5,6 +5,7 @@ namespace Continuum.Streaming;
 /// </summary>
 /// <typeparam name="TStreamPosition">The provider-specific stream position type.</typeparam>
 public interface ICheckpointStore<TStreamPosition>
+    where TStreamPosition : struct
 {
     /// <summary>
     /// Gets the last stored position of the subscription.
@@ -12,8 +13,8 @@ public interface ICheckpointStore<TStreamPosition>
     /// <param name="subscriptionName">The subscription name.</param>
     /// <param name="partitionId">The stream partition the checkpoint belongs to.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The last stored position.</returns>
-    Task<TStreamPosition> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default);
+    /// <returns>The last stored position, or <see langword="null" /> when no checkpoint has been stored.</returns>
+    Task<TStreamPosition?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default);
     /// <summary>
     /// Stores the position the subscription has processed up to.
     /// </summary>

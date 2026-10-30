@@ -29,22 +29,22 @@ public sealed class KurrentDBCheckpointStore : ICheckpointStore<ulong>
     }
 
     /// <inheritdoc />
-    public async Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
+    public async Task<ulong?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
     {
         var streamName = ForCheckpoint(subscriptionName, partitionId);
         var result = _client.ReadStreamAsync(Direction.Backwards, streamName, StreamPosition.End, 1, cancellationToken: cancellationToken);
         if (await result.ReadState.ConfigureAwait(false) == ReadState.StreamNotFound)
         {
-            return default(ulong);
+            return null;
         }
 
         await foreach (var resolvedEvent in result.ConfigureAwait(false))
         {
             var checkpoint = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, CheckpointJsonContext.Default.Checkpoint);
-            return checkpoint?.Position ?? default(ulong);
+            return checkpoint?.Position;
         }
 
-        return default(ulong);
+        return null;
     }
 
     /// <inheritdoc />

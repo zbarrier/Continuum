@@ -10,12 +10,12 @@ namespace Continuum.Streaming.Orleans;
 /// <typeparam name="TPosition">The provider-specific stream position type.</typeparam>
 /// <param name="grainFactory">The grain factory.</param>
 public sealed class SubscriptionCheckpointStore<TPosition>(IGrainFactory grainFactory) : ICheckpointStore<TPosition>
-    where TPosition : IComparable<TPosition>
+    where TPosition : struct, IComparable<TPosition>
 {
     private readonly IGrainFactory _grainFactory = grainFactory ?? throw new ArgumentNullException(nameof(grainFactory));
 
     /// <inheritdoc/>
-    public Task<TPosition> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
+    public Task<TPosition?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
         => GetGrain(subscriptionName, partitionId).GetCheckpointAsync(cancellationToken);
 
     /// <inheritdoc/>

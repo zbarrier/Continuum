@@ -30,7 +30,7 @@ public class KurrentDBOptionsValidatorTests
 
     private sealed class FakeCheckpointStore : ICheckpointStore<ulong>
     {
-        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) => Task.FromResult(0UL);
+        public Task<ulong?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) => Task.FromResult<ulong?>(null);
 
         public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong streamPosition, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }

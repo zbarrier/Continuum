@@ -259,13 +259,27 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
             _logger.ResumingSubscription(_subscriptionName, lastCheckpoint.Value);
             return FromAll.After(new Position(lastCheckpoint.Value, lastCheckpoint.Value));
         }
-        if (_receiverOptions.StartFromNow)
+        if (_receiverOptions.StartFromNow && await ReadLastPositionAsync().ConfigureAwait(false) is { } lastPosition)
         {
-            _logger.StartingFromLatest(_settings.Options.Name, _settings.QueueName);
-            return FromAll.End;
+            // Starting from the current end of $all is turned into a real position and committed right away. Subscribing
+            // from FromAll.End instead would pick a new end on every reconnect or restart before the first checkpoint,
+            // skipping whatever was written in between.
+            _logger.StartingFromLatest(_settings.Options.Name, _settings.QueueName, lastPosition);
+            await _checkpointMonitor.CommitInitialCheckpointAsync(lastPosition).ConfigureAwait(false);
+            return FromAll.After(new Position(lastPosition, lastPosition));
         }
+        // An empty database has nothing to skip, so starting from now and from the beginning are the same.
         _logger.StartingFromBeginning(_settings.Options.Name, _settings.QueueName);
         return FromAll.Start;
+    }
+
+    private async Task<ulong?> ReadLastPositionAsync()
+    {
+        await foreach (var resolvedEvent in _client.ReadAllAsync(Direction.Backwards, Position.End, maxCount: 1, resolveLinkTos: false, userCredentials: _credentials).ConfigureAwait(false))
+        {
+            return resolvedEvent.OriginalPosition?.CommitPosition;
+        }
+        return null;
     }
 
     private SubscriptionFilterOptions? GetFilterOptions()
@@ -389,8 +403,8 @@ internal static partial class KurrentDBCatchUpSubscriptionReceiverLog
     [LoggerMessage(Level = LogLevel.Information, Message = "Resuming KurrentDB $all subscription {SubscriptionName} after checkpointed position {Position}.")]
     public static partial void ResumingSubscription(this ILogger logger, string subscriptionName, ulong position);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Starting to read latest messages from KurrentDB $all for queue {ConnectionName}-{QueueName}.")]
-    public static partial void StartingFromLatest(this ILogger logger, string connectionName, string queueName);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting to read latest messages from KurrentDB $all for queue {ConnectionName}-{QueueName} after position {Position}.")]
+    public static partial void StartingFromLatest(this ILogger logger, string connectionName, string queueName, ulong position);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Starting to read messages from beginning of KurrentDB $all for queue {ConnectionName}-{QueueName}.")]
     public static partial void StartingFromBeginning(this ILogger logger, string connectionName, string queueName);

@@ -23,13 +23,13 @@ public class KurrentDBCheckpointMonitorTests
         public void Advance(TimeSpan by) => _ticks += by.Ticks;
     }
 
-    private sealed class FakeCheckpointStore(ulong storedPosition = 0) : ICheckpointStore<ulong>
+    private sealed class FakeCheckpointStore(ulong? storedPosition = null) : ICheckpointStore<ulong>
     {
         public int Reads { get; private set; }
 
         public List<ulong> Stored { get; } = [];
 
-        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
+        public Task<ulong?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
         {
             Reads++;
             return Task.FromResult(storedPosition);
@@ -58,6 +58,14 @@ public class KurrentDBCheckpointMonitorTests
         var monitor = CreateMonitor(new FakeCheckpointStore());
 
         Assert.Null(await monitor.GetLastCheckpointAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Returns_a_stored_checkpoint_of_zero()
+    {
+        var monitor = CreateMonitor(new FakeCheckpointStore(0));
+
+        Assert.Equal(0UL, await monitor.GetLastCheckpointAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -219,8 +227,8 @@ public class KurrentDBCheckpointMonitorTests
 
         public List<ulong> Stored { get; } = [];
 
-        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(0UL);
+        public Task<ulong?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<ulong?>(null);
 
         public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong streamPosition, CancellationToken cancellationToken = default)
         {

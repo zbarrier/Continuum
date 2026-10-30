@@ -20,23 +20,34 @@ public sealed class AzureTableCheckpointStoreTests(AzuriteFixture fixture)
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private AzureTableCheckpointStore<TPosition> Store<TPosition>()
-        where TPosition : IComparable<TPosition>, ISpanFormattable, IParsable<TPosition>
+        where TPosition : struct, IComparable<TPosition>, ISpanFormattable, IParsable<TPosition>
         => new(fixture.ServiceClient);
 
     [Fact]
-    public async Task Returns_Default_When_No_Checkpoint_Is_Stored()
+    public async Task Returns_Null_When_No_Checkpoint_Is_Stored()
     {
         var position = await Store<ulong>().GetLastCheckpointAsync(NewSubscription(), PartitionId, Token);
 
-        Assert.Equal(0UL, position);
+        Assert.Null(position);
     }
 
     [Fact]
-    public async Task Returns_Default_BigInteger_When_No_Checkpoint_Is_Stored()
+    public async Task Distinguishes_A_Stored_Zero_From_No_Checkpoint()
+    {
+        var store = Store<ulong>();
+        var subscription = NewSubscription();
+
+        await store.StoreCheckpointAsync(subscription, PartitionId, 0UL, Token);
+
+        Assert.Equal(0UL, await store.GetLastCheckpointAsync(subscription, PartitionId, Token));
+    }
+
+    [Fact]
+    public async Task Returns_Null_BigInteger_When_No_Checkpoint_Is_Stored()
     {
         var position = await Store<BigInteger>().GetLastCheckpointAsync(NewSubscription(), PartitionId, Token);
 
-        Assert.Equal(BigInteger.Zero, position);
+        Assert.Null(position);
     }
 
     [Theory]

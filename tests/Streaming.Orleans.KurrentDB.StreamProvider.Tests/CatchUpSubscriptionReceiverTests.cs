@@ -200,8 +200,8 @@ public class CatchUpSubscriptionReceiverTests
     {
         public InvalidOperationException Failure { get; } = new("Checkpoint store is unavailable.");
 
-        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) =>
-            Task.FromException<ulong>(Failure);
+        public Task<ulong?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) =>
+            Task.FromException<ulong?>(Failure);
 
         public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong streamPosition, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
@@ -225,12 +225,37 @@ public class CatchUpSubscriptionReceiverTests
         Assert.Same(store.Failure, ex.InnerException);
     }
 
+    [Fact]
+    public async Task Start_From_Now_Commits_The_Start_Position_So_A_Restart_Does_Not_Skip_Events()
+    {
+        // Arrange
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
+        var streamName = $"catchup-start-now-{Guid.NewGuid():N}";
+        var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
+        ((KurrentDBCatchUpSubscriptionReceiverOptions)settings.ReceiverOptions).StartFromNow = true;
+
+        await AppendAsync(client, streamName, "before-1", "before-2");
+
+        // Act: the first receiver starts from now and stops before anything new is written, so it never checkpoints
+        // a delivered event.
+        var firstBatch = await ReceiveAllAsync(client, settings, expectedCount: 0);
+
+        await AppendAsync(client, streamName, "after-1", "after-2");
+
+        var secondBatch = await ReceiveAllAsync(client, settings, expectedCount: 2);
+
+        // Assert: the second receiver resumes from the position committed at start-up rather than from a new end of
+        // $all, which would skip the events written while no receiver was running.
+        Assert.Empty(firstBatch);
+        Assert.Equal(new[] { "after-1", "after-2" }, secondBatch);
+    }
+
     private sealed class RecordingCheckpointStore : ICheckpointStore<ulong>
     {
         public List<ulong> Stored { get; } = new();
 
-        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(0UL);
+        public Task<ulong?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<ulong?>(null);
 
         public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong streamPosition, CancellationToken cancellationToken = default)
         {

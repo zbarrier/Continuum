@@ -17,7 +17,7 @@ namespace Continuum.Streaming.Orleans.Azure.Storage;
 /// </remarks>
 /// <typeparam name="TPosition">The provider-specific stream position type.</typeparam>
 public sealed class AzureTableCheckpointStore<TPosition> : ICheckpointStore<TPosition>
-    where TPosition : IComparable<TPosition>, ISpanFormattable, IParsable<TPosition>
+    where TPosition : struct, IComparable<TPosition>, ISpanFormattable, IParsable<TPosition>
 {
     private const string CheckpointsTableName = "Checkpoints";
     private const string PositionPropertyName = "Position";
@@ -38,13 +38,13 @@ public sealed class AzureTableCheckpointStore<TPosition> : ICheckpointStore<TPos
     }
 
     /// <inheritdoc/>
-    public async Task<TPosition> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
+    public async Task<TPosition?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
     {
         await EnsureTableAsync(cancellationToken).ConfigureAwait(false);
         var response = await _client.GetEntityIfExistsAsync<TableEntity>(subscriptionName, partitionId, [PositionPropertyName], cancellationToken).ConfigureAwait(false);
         return response.HasValue && response.Value!.GetString(PositionPropertyName) is { } position
             ? TPosition.Parse(position, CultureInfo.InvariantCulture)
-            : default!;
+            : null;
     }
 
     /// <inheritdoc/>
