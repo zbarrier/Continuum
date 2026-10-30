@@ -18,7 +18,8 @@ public class KurrentDBProducer : IKurrentDBProducer
     // NOTE: this client is a keyed singleton owned by the container and shared by every queue of this connection.
     // It must never be disposed by this producer.
     private readonly KurrentDBClient _client;
-    private bool _initialized;
+    // Written by init and close, read by the pulling agent and producer callers on other threads.
+    private volatile bool _initialized;
 
     /// <summary>
     ///     Creates a new <see cref="KurrentDBProducer" />.
@@ -94,6 +95,6 @@ internal static partial class KurrentDBProducerLog
     [LoggerMessage(Level = LogLevel.Trace, Message = "Appending events to stream: {QueueName}")]
     public static partial void AppendingEvents(this ILogger logger, string queueName);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to append events for the the stream {QueueName}.")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to append events for the stream {QueueName}.")]
     public static partial void AppendEventsFailed(this ILogger logger, Exception exception, string queueName);
 }

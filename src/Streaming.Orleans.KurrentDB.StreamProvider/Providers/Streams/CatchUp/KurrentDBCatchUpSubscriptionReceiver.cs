@@ -65,7 +65,8 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
 
     private CancellationTokenSource? _cancellation;
     private Task? _pump;
-    private bool _initialized;
+    // Written by init and close, read by the pulling agent and producer callers on other threads.
+    private volatile bool _initialized;
 
     /// <summary>
     ///     Creates a new <see cref="KurrentDBCatchUpSubscriptionReceiver" />.

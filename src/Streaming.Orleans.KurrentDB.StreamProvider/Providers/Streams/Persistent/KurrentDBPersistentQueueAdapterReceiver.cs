@@ -159,10 +159,16 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
             {
                 closeTask = localReceiver.CloseAsync();
             }
-            // dispose of cache
-            localCache?.Dispose();
-            // finish return receiver closing task
-            await closeTask;
+            try
+            {
+                // The receiver is closed first so its final checkpoint and in-flight work finish before the cache
+                // they report into is disposed.
+                await closeTask;
+            }
+            finally
+            {
+                localCache?.Dispose();
+            }
             watch.Stop();
             _receiverMonitor.TrackShutdown(true, watch.Elapsed, null);
         }

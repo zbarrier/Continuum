@@ -42,7 +42,8 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
     private PersistentSubscription? _subscription;
     private CancellationTokenSource? _cancellation;
     private readonly SemaphoreSlim _resubscribeLock = new(1, 1);
-    private bool _initialized;
+    // Written by init and close, read by the pulling agent and producer callers on other threads.
+    private volatile bool _initialized;
 
     /// <summary>
     ///     Creates a new <see cref="KurrentDBPersistentSubscriptionReceiver" />.
