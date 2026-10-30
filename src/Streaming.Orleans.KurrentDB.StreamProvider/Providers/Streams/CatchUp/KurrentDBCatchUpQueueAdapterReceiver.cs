@@ -464,8 +464,10 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
         public bool MoveNext()
         {
             // Asking for the next event is the only signal the agent gives that it is finished with the current one,
-            // so the watermark advances here rather than when the event was handed out. An event whose delivery failed
-            // keeps the watermark where it is, so it is not purged or checkpointed away and survives a restart.
+            // so the watermark advances here rather than when the event was handed out. With the default unlimited
+            // MaxEventDeliveryTime the agent retries a failing event until it succeeds, so the cursor never moves past
+            // an undelivered event. Only with a finite MaxEventDeliveryTime does Orleans give up on an event; it is then
+            // not recorded, but the next successful delivery passes it and it can be purged and checkpointed.
             var committed = CommitCurrent();
             if (!_cache.TryGetNextMessage(_cursor, out var next))
             {
@@ -497,7 +499,8 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
 
         public void RecordDeliveryFailure()
         {
-            // Holds the watermark at the last successfully delivered event so this one is retained for redelivery.
+            // Orleans calls this only when a finite MaxEventDeliveryTime has run out, then moves past the event.
+            // Skipping the record keeps the watermark at the last successful delivery until the next one.
             _deliveryFailed = true;
         }
     }

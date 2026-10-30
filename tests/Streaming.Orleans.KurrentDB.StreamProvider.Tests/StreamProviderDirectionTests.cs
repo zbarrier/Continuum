@@ -6,6 +6,7 @@ using Continuum.TypeMapping;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
@@ -110,6 +111,45 @@ public class StreamProviderDirectionTests
             adapter.QueueMessageBatchAsync(StreamId.Create("ns", "key"), new[] { "event" }, null, null));
 
         Assert.Contains(ProviderName, exception.Message);
+    }
+
+    [Fact]
+    public void The_Catch_Up_Strategy_Retries_Failed_Deliveries_Forever_By_Default()
+    {
+        using var services = BuildServices(configurator => configurator.UseCatchUpSubscription());
+
+        var options = services.GetRequiredService<IOptionsMonitor<StreamPullingAgentOptions>>().Get(ProviderName);
+
+        Assert.Equal(Timeout.InfiniteTimeSpan, options.MaxEventDeliveryTime);
+    }
+
+    [Fact]
+    public void The_Catch_Up_Strategy_Lets_The_Application_Opt_Out_Of_Infinite_Retries()
+    {
+        var limit = TimeSpan.FromMinutes(5);
+        using var configuredBefore = BuildServices(configurator =>
+        {
+            configurator.ConfigurePullingAgent(ob => ob.Configure(options => options.MaxEventDeliveryTime = limit));
+            configurator.UseCatchUpSubscription();
+        });
+        using var configuredAfter = BuildServices(configurator =>
+        {
+            configurator.UseCatchUpSubscription();
+            configurator.ConfigurePullingAgent(ob => ob.Configure(options => options.MaxEventDeliveryTime = limit));
+        });
+
+        Assert.Equal(limit, configuredBefore.GetRequiredService<IOptionsMonitor<StreamPullingAgentOptions>>().Get(ProviderName).MaxEventDeliveryTime);
+        Assert.Equal(limit, configuredAfter.GetRequiredService<IOptionsMonitor<StreamPullingAgentOptions>>().Get(ProviderName).MaxEventDeliveryTime);
+    }
+
+    [Fact]
+    public void The_Persistent_Subscription_Strategy_Keeps_The_Orleans_Delivery_Time_Limit()
+    {
+        using var services = BuildServices(configurator => configurator.UsePersistentSubscriptions());
+
+        var options = services.GetRequiredService<IOptionsMonitor<StreamPullingAgentOptions>>().Get(ProviderName);
+
+        Assert.Equal(StreamPullingAgentOptions.DEFAULT_MAX_EVENT_DELIVERY_TIME, options.MaxEventDeliveryTime);
     }
 
     private sealed class MarkerTypeMapper : TypeMapper;
