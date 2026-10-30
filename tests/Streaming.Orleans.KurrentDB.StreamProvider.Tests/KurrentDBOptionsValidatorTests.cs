@@ -1,3 +1,4 @@
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 using Continuum.Streaming.Orleans.KurrentDB.Monitors;
 using Continuum.TypeMapping;
 
@@ -294,6 +295,18 @@ public class KurrentDBOptionsValidatorTests
         options.CheckpointMonitorOptions = null!;
 
         AssertInvalid(new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(options, ValidKurrentDBOptions(), ProviderName), nameof(KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointMonitorOptions));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MaxValue / KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead + 1)]
+    public void CatchUpOptions_Rejects_out_of_range_buffer_capacity_multiplier(int bufferCapacityMultiplier)
+    {
+        var options = ValidCatchUpOptions();
+        options.BufferCapacityMultiplier = bufferCapacityMultiplier;
+
+        AssertInvalid(new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(options, ValidKurrentDBOptions(), ProviderName), nameof(KurrentDBCatchUpSubscriptionReceiverOptions.BufferCapacityMultiplier));
     }
 
     #endregion

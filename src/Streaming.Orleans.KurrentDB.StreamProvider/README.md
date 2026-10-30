@@ -37,6 +37,8 @@ Each event is delivered to the Orleans stream named after the KurrentDB stream i
 
 Use `StreamFilterPrefix` to have KurrentDB send only the streams you need. Link events are resolved to the events they point to by default (`ResolveLinkTos`).
 
+`BufferCapacityMultiplier` (default 10) limits how far the subscription reads from `$all` ahead of the cache, in Orleans reads of up to 1,000 events each, so 10,000 events by default.
+
 A resolved link carries the same event as the original, at a later `$all` position, and the catch-up subscription delivers every position it reads. If the filter matches both the original streams and the streams holding links to them (for example, no filter at all, which includes the `$ce-` and `$et-` system projection streams), each event is delivered once per match. Filter to either the original streams (for example `order-`) or the link streams (for example `$ce-order`), not both. Persistent subscriptions drop a redelivered event that is still queued, so this applies to catch-up subscriptions only.
 
 ### Checkpoints

@@ -1,3 +1,4 @@
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 using Orleans.Runtime;
 
 namespace Orleans.Configuration;
@@ -67,7 +68,11 @@ public class KurrentDBCatchUpSubscriptionReceiverOptionsValidator : IConfigurati
         }
         if (_options.CheckpointMonitorOptions is null)
         {
-                        throw new OrleansConfigurationException($"{nameof(KurrentDBCatchUpSubscriptionReceiverOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointMonitorOptions)} is required.");
-                }
-            }
+            throw new OrleansConfigurationException($"{nameof(KurrentDBCatchUpSubscriptionReceiverOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointMonitorOptions)} is required.");
+        }
+        if (_options.BufferCapacityMultiplier < 1 || _options.BufferCapacityMultiplier > KurrentDBCatchUpSubscriptionReceiver.MaxBufferCapacityMultiplier)
+        {
+            throw new OrleansConfigurationException($"{nameof(KurrentDBCatchUpSubscriptionReceiverOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBCatchUpSubscriptionReceiverOptions.BufferCapacityMultiplier)} must be between 1 and {KurrentDBCatchUpSubscriptionReceiver.MaxBufferCapacityMultiplier}, but was {_options.BufferCapacityMultiplier}.");
+        }
+    }
 }

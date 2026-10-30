@@ -45,13 +45,15 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
     // The carrier holds the $all position in SequenceNumber because it cannot be recovered from the event record
     // itself once link resolution is enabled. The buffer is bounded so a catch-up from the start of $all waits for
     // Orleans to drain it instead of reading the whole log into memory.
-    private Channel<StreamedEvent<KurrentDBRawEvent>> _queue = CreateBuffer();
+    private Channel<StreamedEvent<KurrentDBRawEvent>> _queue;
 
-    internal const int BufferCapacity = 10 * KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead;
+    internal const int MaxBufferCapacityMultiplier = int.MaxValue / KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead;
+
+    internal int BufferCapacity => _receiverOptions.BufferCapacityMultiplier * KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead;
 
     internal int BufferedCount => _queue.Reader.Count;
 
-    private static Channel<StreamedEvent<KurrentDBRawEvent>> CreateBuffer() =>
+    private Channel<StreamedEvent<KurrentDBRawEvent>> CreateBuffer() =>
         Channel.CreateBounded<StreamedEvent<KurrentDBRawEvent>>(new BoundedChannelOptions(BufferCapacity) { SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait });
 
     // Positions handed to Orleans and not yet reported as delivered. The cache reports only the newest purged
@@ -96,9 +98,12 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
         }
         ArgumentNullException.ThrowIfNull(receiverOptions.CheckpointStore, nameof(receiverOptions.CheckpointStore));
         ArgumentNullException.ThrowIfNull(receiverOptions.CheckpointMonitorOptions, nameof(receiverOptions.CheckpointMonitorOptions));
+        ArgumentOutOfRangeException.ThrowIfLessThan(receiverOptions.BufferCapacityMultiplier, 1, nameof(receiverOptions.BufferCapacityMultiplier));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(receiverOptions.BufferCapacityMultiplier, MaxBufferCapacityMultiplier, nameof(receiverOptions.BufferCapacityMultiplier));
         _client = client;
         _settings = settings;
         _receiverOptions = receiverOptions;
+        _queue = CreateBuffer();
         _credentials = settings.Options.Credentials?.ToUserCredentials();
         _logger = logger;
         _checkpointMarker = checkpointMarker;

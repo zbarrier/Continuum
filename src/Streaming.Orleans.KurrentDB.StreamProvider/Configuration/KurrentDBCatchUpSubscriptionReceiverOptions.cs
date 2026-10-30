@@ -37,6 +37,16 @@ public sealed class KurrentDBCatchUpSubscriptionReceiverOptions : KurrentDBRecei
     public string? StreamFilterPrefix { get; set; }
 
     /// <summary>
+    ///     The number of Orleans reads, of up to 1000 events each, that can be read from <c>$all</c> and held in memory
+    ///     ahead of the cache.
+    /// </summary>
+    /// <remarks>
+    ///     When the buffer is full the subscription waits for Orleans to drain it, so a catch-up from the start of
+    ///     <c>$all</c> does not read the whole log into memory. A larger buffer smooths bursts at the cost of memory.
+    /// </remarks>
+    public int BufferCapacityMultiplier { get; set; } = 10;
+
+    /// <summary>
     ///     The name of the KurrentDB connection used to resolve the <see cref="CheckpointStore" />.
     ///     When not set, the unkeyed <see cref="ICheckpointStore{T}" /> registration is used.
     /// </summary>

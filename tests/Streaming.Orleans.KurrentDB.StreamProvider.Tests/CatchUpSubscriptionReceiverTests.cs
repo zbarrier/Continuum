@@ -152,7 +152,9 @@ public class CatchUpSubscriptionReceiverTests
         var settings = CreateSettings(streamName, streamFilterPrefix: streamName);
         var receiverOptions = (KurrentDBCatchUpSubscriptionReceiverOptions)settings.ReceiverOptions;
         receiverOptions.CheckpointStore = new RecordingCheckpointStore();
-        var total = KurrentDBCatchUpSubscriptionReceiver.BufferCapacity + 500;
+        receiverOptions.BufferCapacityMultiplier = 2;
+        var capacity = 2 * KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead;
+        var total = capacity + 500;
         foreach (var chunk in Enumerable.Range(0, total).Chunk(1000))
         {
             await AppendAsync(client, streamName, chunk.Select(i => i.ToString()).ToArray());
@@ -165,14 +167,14 @@ public class CatchUpSubscriptionReceiverTests
 
             // Act: wait for the pump
             var deadline = DateTime.UtcNow.AddSeconds(30);
-            while (receiver.BufferedCount < KurrentDBCatchUpSubscriptionReceiver.BufferCapacity && DateTime.UtcNow < deadline)
+            while (receiver.BufferedCount < capacity && DateTime.UtcNow < deadline)
             {
                 await Task.Delay(50, TestContext.Current.CancellationToken);
             }
             await Task.Delay(500, TestContext.Current.CancellationToken);
 
             // Assert: the pump waits at capacity instead of reading the rest of the log into memory.
-            Assert.Equal(KurrentDBCatchUpSubscriptionReceiver.BufferCapacity, receiver.BufferedCount);
+            Assert.Equal(capacity, receiver.BufferedCount);
 
             // Draining the buffer lets the pump read the remaining events, in order and without loss.
             var received = new List<string>();
