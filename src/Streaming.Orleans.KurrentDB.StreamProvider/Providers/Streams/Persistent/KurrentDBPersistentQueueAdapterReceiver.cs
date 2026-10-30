@@ -209,7 +209,7 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
             }
             if (_receiver == null)
             {
-                // should not get here, should throw instead, but just incase.
+                // A shutdown during the retry skips initialization and leaves no receiver, so there is nothing to read.
                 return Array.Empty<IBatchContainer>();
             }
         }

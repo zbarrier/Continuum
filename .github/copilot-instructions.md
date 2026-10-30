@@ -33,3 +33,6 @@
 - ProjectionGrain must save state before acknowledging each delivered event or batch; do not buffer or throttle projection state writes by default, since a delivered event may be checkpointed and purged. A buffered/throttled projection may be added later only as an explicit opt-in when the user asks for it.
 - KurrentDB persistent subscriptions are intended only for consumers that can tolerate dropped and out-of-order events; ack-on-receive stays. Consumers that need ordering and no drops should use catch-up subscriptions. Do not propose ack-on-purge for persistent subscriptions.
 - In KurrentDB, every event has a unique $all commit position; events in the same append/transaction never share a commit position. Do not flag issues that assume shared commit positions.
+
+## Testing Guidelines
+- Don't add production hooks or seams just to test narrow race windows or code that's likely to change soon. Prefer tests that need no production changes, and rely on code review for small, easy-to-read logic rather than testing every little thing.
