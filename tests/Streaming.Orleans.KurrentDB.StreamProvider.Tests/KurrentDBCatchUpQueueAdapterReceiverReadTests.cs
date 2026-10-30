@@ -54,7 +54,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverReadTests
 
         public Task CloseAsync() => Task.CompletedTask;
 
-        public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => receive(maxCount);
+        public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => receive(maxCount);
 
         public Task MessagesDeliveredAsync(ulong commitPosition) => Task.CompletedTask;
     }

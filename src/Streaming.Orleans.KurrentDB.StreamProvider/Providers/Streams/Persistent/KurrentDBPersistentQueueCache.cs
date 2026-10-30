@@ -88,7 +88,7 @@ public class KurrentDBPersistentQueueCache : IKurrentDBQueueCache
     #region IKurrentDBQueueCache Implementation
 
     /// <inheritdoc />
-    public List<StreamPosition> Add(List<StreamedEvent<KurrentDBRawEvent>> queueMessages, DateTime dequeueTimeUtc)
+    public List<StreamPosition> Add(IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> queueMessages, DateTime dequeueTimeUtc)
     {
         var streamPositions = new List<StreamPosition>(queueMessages.Count);
         var cachedMessages = new List<CachedMessage>(queueMessages.Count);

@@ -32,7 +32,7 @@ public interface IKurrentDBReceiver
     ///     <c>$all</c> strategy this is the global commit position, which cannot be recovered from the event record
     ///     once link resolution is enabled, so it must be captured here rather than further down the pipeline.
     /// </remarks>
-    List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount);
+    IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount);
 
     /// <summary>
     ///     Notifies the receiver that every event up to <paramref name="commitPosition" /> has been delivered to all

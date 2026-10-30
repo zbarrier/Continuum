@@ -64,7 +64,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
 
         public Task CloseAsync() => Task.CompletedTask;
 
-        public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
+        public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
         {
             if (!Initialized)
             {
@@ -134,7 +134,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
 
         public Task CloseAsync() => Task.CompletedTask;
 
-        public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
+        public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
 
         public Task MessagesDeliveredAsync(ulong commitPosition) => Task.CompletedTask;
     }
@@ -204,7 +204,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
 
         public Task CloseAsync() => closeGate;
 
-        public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
+        public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
 
         public Task MessagesDeliveredAsync(ulong commitPosition) => Task.CompletedTask;
     }
@@ -253,7 +253,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
 			return Task.CompletedTask;
 		}
 
-		public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
+		public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
 
 		public async Task MessagesDeliveredAsync(ulong commitPosition)
 		{

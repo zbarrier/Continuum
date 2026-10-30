@@ -192,12 +192,12 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
     /// </summary>
     /// <param name="maxCount">Max amount of message which should be delivered in this request</param>
     /// <returns></returns>
-    public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
+    public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
     {
         _logger.PersistentReceivingEvents(_settings.QueueName);
         if (_initialized == false || _subscription == null)
         {
-            return new List<StreamedEvent<KurrentDBRawEvent>>();
+            return Array.Empty<StreamedEvent<KurrentDBRawEvent>>();
         }
         try
         {

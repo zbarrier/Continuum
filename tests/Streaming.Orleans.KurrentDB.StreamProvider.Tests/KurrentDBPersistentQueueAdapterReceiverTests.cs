@@ -70,7 +70,7 @@ public class KurrentDBPersistentQueueAdapterReceiverTests
 
         public Task CloseAsync() => closeGate;
 
-        public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
+        public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
         {
             if (_delivered)
             {
@@ -90,7 +90,7 @@ public class KurrentDBPersistentQueueAdapterReceiverTests
     {
         public bool Disposed { get; private set; }
 
-        public List<StreamPosition> Add(List<StreamedEvent<KurrentDBRawEvent>> queueMessages, DateTime dequeueTimeUtc) => inner.Add(queueMessages, dequeueTimeUtc);
+        public List<StreamPosition> Add(IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> queueMessages, DateTime dequeueTimeUtc) => inner.Add(queueMessages, dequeueTimeUtc);
 
         public object GetCursor(StreamId streamId, StreamSequenceToken? sequenceToken) => inner.GetCursor(streamId, sequenceToken);
 

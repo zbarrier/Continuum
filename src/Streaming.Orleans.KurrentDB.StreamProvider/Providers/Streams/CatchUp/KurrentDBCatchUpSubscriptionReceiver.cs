@@ -197,12 +197,12 @@ public class KurrentDBCatchUpSubscriptionReceiver : IKurrentDBReceiver
     ///     consumer reading them, so checkpointing at this point would lose messages if the silo stopped before
     ///     delivery. The checkpoint is written once the cache reports the events as purged behind every active cursor.
     /// </remarks>
-    public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
+    public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount)
     {
         _logger.ReceivingEvents(_settings.QueueName);
         if (_initialized == false)
         {
-            return new List<StreamedEvent<KurrentDBRawEvent>>();
+            return Array.Empty<StreamedEvent<KurrentDBRawEvent>>();
         }
         try
         {

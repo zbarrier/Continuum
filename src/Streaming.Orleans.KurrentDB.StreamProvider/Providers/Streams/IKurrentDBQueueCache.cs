@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Continuum.Streaming.Orleans;
 
 using Orleans.Streams;
@@ -18,7 +18,7 @@ public interface IKurrentDBQueueCache : IQueueFlowController, IDisposable
     /// <param name="queueMessages"></param>
     /// <param name="dequeueTimeUtc"></param>
     /// <returns></returns>
-    List<StreamPosition> Add(List<StreamedEvent<KurrentDBRawEvent>> queueMessages, DateTime dequeueTimeUtc);
+    List<StreamPosition> Add(IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> queueMessages, DateTime dequeueTimeUtc);
 
     /// <summary>
     ///     Get a cursor into the cache to read events from a stream.

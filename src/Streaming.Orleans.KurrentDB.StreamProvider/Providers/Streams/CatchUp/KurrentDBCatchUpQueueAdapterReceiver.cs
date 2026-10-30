@@ -201,7 +201,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     {
         if (_receiverState == ReceiverShutdown || maxCount <= 0)
         {
-            return new List<IBatchContainer>();
+            return Array.Empty<IBatchContainer>();
         }
         // if receiver initialization failed, retry
         if (_receiver == null)
@@ -209,7 +209,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
             // Only one retry may rebuild the cache and receiver at a time.
             if (Interlocked.CompareExchange(ref _initializing, 1, 0) != 0)
             {
-                return new List<IBatchContainer>();
+                return Array.Empty<IBatchContainer>();
             }
             try
             {
@@ -226,11 +226,11 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
             if (_receiver == null)
             {
                 // should not get here, should throw instead, but just incase.
-                return new List<IBatchContainer>();
+                return Array.Empty<IBatchContainer>();
             }
         }
         var watch = Stopwatch.StartNew();
-        List<StreamedEvent<KurrentDBRawEvent>> messages;
+        IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> messages;
         try
         {
             messages = _receiver.Receive(maxCount);
@@ -244,21 +244,25 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
             _logger.ReceiverReadFailed(ex, _settings.QueueName);
             throw;
         }
-        var batches = new List<IBatchContainer>();
         if (messages == null || messages.Count == 0)
         {
             _receiverMonitor.TrackMessagesReceived(0, null, null);
-            return batches;
+            return Array.Empty<IBatchContainer>();
         }
         // receiverMonitor message age
         var dequeueTimeUtc = DateTime.UtcNow;
         var oldestMessageEnqueueTime = messages[0].Timestamp;
         var newestMessageEnqueueTime = messages[^1].Timestamp;
         _receiverMonitor.TrackMessagesReceived(messages.Count, oldestMessageEnqueueTime, newestMessageEnqueueTime);
-        if (_cache != null)
+        if (_cache == null)
         {
-            var messageStreamPositions = _cache.Add(messages, dequeueTimeUtc);
-            batches.AddRange(messageStreamPositions.Select(streamPosition => new StreamActivityNotificationBatch(streamPosition)));
+            return Array.Empty<IBatchContainer>();
+        }
+        var messageStreamPositions = _cache.Add(messages, dequeueTimeUtc);
+        var batches = new List<IBatchContainer>(messageStreamPositions.Count);
+        foreach (var streamPosition in messageStreamPositions)
+        {
+            batches.Add(new StreamActivityNotificationBatch(streamPosition));
         }
         return batches;
     }
