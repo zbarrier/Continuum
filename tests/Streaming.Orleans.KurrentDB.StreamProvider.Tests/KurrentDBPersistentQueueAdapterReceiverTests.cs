@@ -180,6 +180,20 @@ public class KurrentDBPersistentQueueAdapterReceiverTests
     }
 
     [Fact]
+    public async Task Cache_Cursors_After_Shutdown_Read_As_Empty()
+    {
+        var adapterReceiver = CreateAdapterReceiver((queue, _) => CreatePersistentCache(queue), () => new FakeReceiver(Task.CompletedTask));
+        await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+
+        using var cursor = adapterReceiver.GetCacheCursor(StreamId.Create("ns", "key"), null);
+        using var positioned = adapterReceiver.TryGetCacheCursorAtPosition(StreamId.Create("ns", "key"), StreamSubscriptionStartPosition.EarliestAvailable).Cursor;
+
+        Assert.False(cursor.MoveNext());
+        Assert.False(positioned!.MoveNext());
+    }
+
+    [Fact]
     public void A_Few_Events_Far_Apart_In_The_Log_Do_Not_Measure_Pressure()
     {
         // Commit positions are byte offsets, so a few events can span far more than the item threshold.

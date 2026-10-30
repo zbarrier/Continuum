@@ -229,11 +229,17 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
                 return Array.Empty<IBatchContainer>();
             }
         }
+        // Read once: shutdown can clear the field on another thread after the checks above.
+        var receiver = _receiver;
+        if (receiver == null)
+        {
+            return Array.Empty<IBatchContainer>();
+        }
         var watch = Stopwatch.StartNew();
         IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> messages;
         try
         {
-            messages = _receiver.Receive(maxCount);
+            messages = receiver.Receive(maxCount);
             watch.Stop();
             _receiverMonitor.TrackRead(true, watch.Elapsed, null);
         }
@@ -254,11 +260,12 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
         var oldestMessageEnqueueTime = messages[0].Timestamp;
         var newestMessageEnqueueTime = messages[^1].Timestamp;
         _receiverMonitor.TrackMessagesReceived(messages.Count, oldestMessageEnqueueTime, newestMessageEnqueueTime);
-        if (_cache == null)
+        var cache = _cache;
+        if (cache == null)
         {
             return Array.Empty<IBatchContainer>();
         }
-        var messageStreamPositions = _cache.Add(messages, dequeueTimeUtc);
+        var messageStreamPositions = cache.Add(messages, dequeueTimeUtc);
         var batches = new List<IBatchContainer>(messageStreamPositions.Count);
         foreach (var streamPosition in messageStreamPositions)
         {
@@ -371,13 +378,16 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     /// <inheritdoc />
     public IQueueCacheCursor GetCacheCursor(StreamId streamId, StreamSequenceToken? token)
     {
-        return new Cursor(_cache!, _cache!.GetCursor(streamId, token));
+        // After shutdown or a failed initialization there is no cache, so the stream reads as empty.
+        var cache = _cache;
+        return cache == null ? EmptyCursor.Instance : new Cursor(cache, cache.GetCursor(streamId, token));
     }
 
     /// <inheritdoc />
     public QueueCacheCursorResult<IQueueCacheCursor> TryGetCacheCursorAtPosition(StreamId streamId, StreamSubscriptionStartPosition startPosition)
     {
-        return QueueCacheCursorResult<IQueueCacheCursor>.FromCursor(new Cursor(_cache!, _cache!.GetCursorAtPosition(streamId, startPosition)));
+        var cache = _cache;
+        return QueueCacheCursorResult<IQueueCacheCursor>.FromCursor(cache == null ? EmptyCursor.Instance : new Cursor(cache, cache.GetCursorAtPosition(streamId, startPosition)));
     }
 
     /// <inheritdoc />

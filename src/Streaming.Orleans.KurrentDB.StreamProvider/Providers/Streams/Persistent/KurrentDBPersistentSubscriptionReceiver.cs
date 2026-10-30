@@ -221,7 +221,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
             {
                 // Acking through a subscription that was just dropped fails; the server then redelivers the events,
                 // which is tolerated as duplicates.
-                subscription.Ack(eventIds).Ignore();
+                _ = AckAsync(subscription, eventIds);
             }
             return streamedEvents;
         }
@@ -229,6 +229,22 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
         {
             _logger.PersistentReceiveEventsFailed(ex, _settings.QueueName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to receive events from internal queue for stream {_settings.QueueName}. {ex.GetType()}: {ex.Message}"), ex);
+        }
+    }
+
+    /// <summary>
+    ///     Acknowledges received events without blocking the pulling agent. A failure is logged and otherwise tolerated,
+    ///     because the server redelivers unacknowledged events.
+    /// </summary>
+    private async Task AckAsync(PersistentSubscription subscription, List<Uuid> eventIds)
+    {
+        try
+        {
+            await subscription.Ack(eventIds).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.AckFailed(ex, eventIds.Count, _settings.QueueName);
         }
     }
 
@@ -432,4 +448,7 @@ internal static partial class KurrentDBPersistentSubscriptionReceiverLog
 
     [LoggerMessage(Message = "Failed to reconnect to the stream {QueueName} on attempt {Attempt}. Retrying in {Delay}.")]
     public static partial void ReconnectFailed(this ILogger logger, LogLevel level, Exception exception, string queueName, int attempt, TimeSpan delay);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to acknowledge {Count} event(s) on stream {QueueName}. The server will redeliver them.")]
+    public static partial void AckFailed(this ILogger logger, Exception exception, int count, string queueName);
 }

@@ -9,6 +9,7 @@ using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
 using Orleans.Serialization;
 using Orleans.Storage;
+using Orleans.Streams;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
@@ -193,6 +194,22 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
         Assert.Single(messages);
 
         await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Cache_Cursors_After_Shutdown_Read_As_Empty()
+    {
+        var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
+        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
+            (_, _) => new FlakyReceiver(failInit: false));
+        await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+
+        using var cursor = adapterReceiver.GetCacheCursor(StreamId.Create("ns", "key"), null);
+        using var positioned = adapterReceiver.TryGetCacheCursorAtPosition(StreamId.Create("ns", "key"), StreamSubscriptionStartPosition.EarliestAvailable).Cursor;
+
+        Assert.False(cursor.MoveNext());
+        Assert.False(positioned!.MoveNext());
     }
 
     /// <summary>
