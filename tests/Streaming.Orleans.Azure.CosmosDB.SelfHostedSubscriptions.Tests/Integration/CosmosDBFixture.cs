@@ -15,7 +15,9 @@ public sealed class CosmosDBFixture : IAsyncLifetime
 
     // The classic Linux emulator supports the change feed processor and lease containers.
     // Classic emulator builds stop starting once their evaluation period expires, so the image cannot be pinned to a version.
+    // Each test creates two containers, and the emulator only provisions 10 partitions by default.
     private readonly CosmosDbContainer _container = new CosmosDbBuilder("mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest")
+        .WithEnvironment("AZURE_COSMOS_EMULATOR_PARTITION_COUNT", "30")
         .Build();
 
     public CosmosClient Client { get; private set; } = default!;

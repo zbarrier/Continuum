@@ -132,9 +132,112 @@ public class CosmosDBCatchupSubscriptionIntegrationTests(CosmosDBFixture fixture
         await subscription.StopAsync(TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public async Task Starting_from_a_date_time_skips_earlier_changes()
+    {
+        var containers = await fixture.CreateContainersAsync();
+        var stream = NewStream();
+        await WriteAsync(containers.Monitored, stream, 0, 2);
+        // _ts has one second resolution, so the start time is kept clear of both writes.
+        await Task.Delay(1500, TestContext.Current.CancellationToken);
+        var startTime = DateTime.UtcNow;
+        await Task.Delay(1500, TestContext.Current.CancellationToken);
+        await WriteAsync(containers.Monitored, stream, 2, 2);
+
+        await using var harness = CreateHarness(containers, configure: options =>
+        {
+            options.StartingPositionType = StartingPositionType.FromDateTime;
+            options.StartingPositionDateTime = startTime;
+        });
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => harness.Settings.Received(FirstCatchupSubscription.Name).Count >= 2);
+        await Task.Delay(500, TestContext.Current.CancellationToken);
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event-2", "event-3"], harness.Settings.Received(FirstCatchupSubscription.Name));
+    }
+
+    [Fact]
+    public async Task Starting_from_latest_skips_existing_changes()
+    {
+        var containers = await fixture.CreateContainersAsync();
+        var stream = NewStream();
+        await WriteAsync(containers.Monitored, stream, 0, 2);
+
+        await using var harness = CreateHarness(containers, configure: options => options.StartingPositionType = StartingPositionType.Latest);
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        // The processor initializes its leases in the background; changes written before that would also be skipped.
+        await Task.Delay(3000, TestContext.Current.CancellationToken);
+        await WriteAsync(containers.Monitored, stream, 2, 2);
+        await WaitUntilAsync(() => harness.Settings.Received(FirstCatchupSubscription.Name).Count >= 2);
+        await Task.Delay(500, TestContext.Current.CancellationToken);
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event-2", "event-3"], harness.Settings.Received(FirstCatchupSubscription.Name));
+    }
+
+    [Fact]
+    public async Task Starting_twice_replaces_the_processor_without_duplicate_delivery()
+    {
+        var containers = await fixture.CreateContainersAsync();
+        var stream = NewStream();
+        await using var harness = CreateHarness(containers);
+        await WriteAsync(containers.Monitored, stream, 0, 2);
+
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => harness.Settings.Received(FirstCatchupSubscription.Name).Count == 2);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WriteAsync(containers.Monitored, stream, 2, 2);
+        await WaitUntilAsync(() => harness.Settings.Received(FirstCatchupSubscription.Name).Count >= 4);
+        await Task.Delay(500, TestContext.Current.CancellationToken);
+
+        Assert.Equal(CosmosDBCatchupSubscriptionState.Running, harness.State(FirstCatchupSubscription.Name));
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event-0", "event-1", "event-2", "event-3"], harness.Settings.Received(FirstCatchupSubscription.Name));
+    }
+
+    [Fact]
+    public async Task Events_from_one_append_are_delivered_in_sub_sequence_order()
+    {
+        var containers = await fixture.CreateContainersAsync();
+        var stream = NewStream();
+        await using var harness = CreateHarness(containers);
+        var batch = fixture.Client.GetContainer(CosmosDBFixture.DatabaseName, containers.Monitored).CreateTransactionalBatch(new PartitionKey(stream));
+        for (var i = 0; i < 3; i++)
+        {
+            batch.CreateItem(new Dictionary<string, object>
+            {
+                ["id"] = Guid.NewGuid().ToString(),
+                ["type"] = "evt",
+                ["streamName"] = stream,
+                ["ver"] = i + 1,
+                ["dataType"] = EventType,
+                ["data"] = $"event-{i}",
+                ["subSeq"] = i,
+            });
+        }
+        using (var response = await batch.ExecuteAsync(TestContext.Current.CancellationToken))
+        {
+            Assert.True(response.IsSuccessStatusCode);
+        }
+
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => harness.Settings.Received(FirstCatchupSubscription.Name).Count == 3);
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event-0", "event-1", "event-2"], harness.Settings.Received(FirstCatchupSubscription.Name));
+        Assert.Equal([0UL, 1UL, 2UL], harness.Settings.Events.Select(e => e.Cursor.SubSequenceNumber));
+        Assert.Equal([1UL, 2UL, 3UL], harness.Settings.Events.Select(e => e.StreamVersion));
+    }
+
     private static string NewStream() => $"test/{Guid.NewGuid():N}";
 
-    private Harness CreateHarness((string Monitored, string Leases) containers, bool enabled = true)
+    private Harness CreateHarness((string Monitored, string Leases) containers, bool enabled = true, Action<CosmosDBCatchupSubscriptionOptions>? configure = null)
     {
         var typeMapper = new TestTypeMapper();
         typeMapper.AddType(typeof(string), EventType);
@@ -159,6 +262,7 @@ public class CosmosDBCatchupSubscriptionIntegrationTests(CosmosDBFixture fixture
             options.GrainStorageSerializer = new JsonStringSerializer();
             options.TypeMapper = typeMapper;
             options.StreamNameParser = new DefaultCosmosDBStreamNameParser();
+            configure?.Invoke(options);
         });
         return new Harness(services.BuildServiceProvider());
     }
@@ -221,11 +325,14 @@ public class CosmosDBCatchupSubscriptionIntegrationTests(CosmosDBFixture fixture
 
         public List<string> Received(string subscriptionName) => _received.GetOrAdd(subscriptionName, _ => new()).ToList();
 
+        public ConcurrentQueue<IStreamedEvent<object>> Events { get; } = new();
+
         public void Record(string subscriptionName, IEnumerable<IStreamedEvent<object>> events)
         {
             var received = _received.GetOrAdd(subscriptionName, _ => new());
             foreach (var streamedEvent in events)
             {
+                Events.Enqueue(streamedEvent);
                 received.Enqueue((string)streamedEvent.Event);
             }
         }
