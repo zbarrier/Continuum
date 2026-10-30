@@ -115,6 +115,23 @@ public class CosmosDBCatchupSubscriptionIntegrationTests(CosmosDBFixture fixture
         Assert.Contains(harness.Logs.Messages, m => m == $"Subscription {FirstCatchupSubscription.Name} is disabled.");
     }
 
+    [Fact]
+    public async Task A_failed_start_reports_stopped_with_the_error_and_is_unhealthy()
+    {
+        var containers = await fixture.CreateContainersAsync();
+        await using var harness = CreateHarness((containers.Monitored, $"missing-{Guid.NewGuid():N}"));
+
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        var error = await Assert.ThrowsAnyAsync<Exception>(() => subscription.StartAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(CosmosDBCatchupSubscriptionState.Stopped, harness.State(FirstCatchupSubscription.Name));
+        var health = await harness.CheckHealthAsync();
+        Assert.Equal(HealthStatus.Degraded, health.Status);
+        Assert.Same(error, health.Exception);
+
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+    }
+
     private static string NewStream() => $"test/{Guid.NewGuid():N}";
 
     private Harness CreateHarness((string Monitored, string Leases) containers, bool enabled = true)

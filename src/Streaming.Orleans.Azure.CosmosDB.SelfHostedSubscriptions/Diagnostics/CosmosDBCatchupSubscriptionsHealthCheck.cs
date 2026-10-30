@@ -29,11 +29,11 @@ public sealed class CosmosDBCatchupSubscriptionsHealthCheck : IHealthCheck
         var statuses = _statusRegistry.Statuses;
         var data = statuses.ToDictionary(s => s.SubscriptionName, s => (object)s.State.ToString(), StringComparer.Ordinal);
 
-        var retrying = statuses.Where(s => s.State == CosmosDBCatchupSubscriptionState.Retrying).ToList();
-        if (retrying.Count > 0)
+        var failing = statuses.Where(s => s.State == CosmosDBCatchupSubscriptionState.Retrying || s.Exception is not null).ToList();
+        if (failing.Count > 0)
         {
-            var description = string.Join(" ", retrying.Select(s => $"Subscription '{s.SubscriptionName}' is retrying: {s.Description}"));
-            return Task.FromResult(new HealthCheckResult(context.Registration.FailureStatus, description, retrying[0].Exception, data));
+            var description = string.Join(" ", failing.Select(s => $"Subscription '{s.SubscriptionName}' is {s.State.ToString().ToLowerInvariant()}: {s.Description}"));
+            return Task.FromResult(new HealthCheckResult(context.Registration.FailureStatus, description, failing[0].Exception, data));
         }
 
         return Task.FromResult(HealthCheckResult.Healthy($"{statuses.Count} catch-up subscriptions are healthy.", data));

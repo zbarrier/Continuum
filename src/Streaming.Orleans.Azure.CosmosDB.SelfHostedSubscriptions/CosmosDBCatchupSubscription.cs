@@ -137,9 +137,20 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             .WithPollInterval(TimeSpan.FromMilliseconds(_options.PollingIntervalInMilliseconds))
             .WithMaxItems(_options.MaxItemsPerPoll);
 
-        _changeFeedProcessor = builder.Build();
+        var processor = builder.Build();
 
-        await _changeFeedProcessor.StartAsync().ConfigureAwait(false);
+        try
+        {
+            await processor.StartAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // A processor that failed to start is not kept, so a later stop does not act on it.
+            SetState(CosmosDBCatchupSubscriptionState.Stopped, "The change feed processor failed to start.", ex);
+            throw;
+        }
+
+        _changeFeedProcessor = processor;
         SetState(CosmosDBCatchupSubscriptionState.Running);
 
         _logger.SubscriptionStarted(SubscriptionName, _options.InstanceName);
