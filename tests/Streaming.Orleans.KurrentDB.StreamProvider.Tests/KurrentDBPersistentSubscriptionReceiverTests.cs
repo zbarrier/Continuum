@@ -193,6 +193,33 @@ public class KurrentDBPersistentSubscriptionReceiverTests
     }
 
     [Fact]
+    public async Task Received_Events_Are_No_Longer_Tracked_For_Duplicates()
+    {
+        await using var client = CreateSubscriptionsClient();
+        await using var writer = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
+        // A short message timeout makes the server redeliver events while they sit in the internal queue.
+        var settings = CreateSettings(messageTimeout: TimeSpan.FromMilliseconds(500));
+        await AppendAsync(writer, settings.QueueName, "a", "b", "c");
+
+        var receiver = CreateReceiver(client, settings);
+        try
+        {
+            await receiver.InitAsync();
+            await Task.Delay(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+            Assert.Equal(3, receiver.TrackedEventIdCount);
+
+            Assert.Equal(["a", "b", "c"], await ReceiveAsync(receiver, 3));
+
+            // Every ID was released, so the set does not grow and a later delivery of the event is not suppressed.
+            Assert.Equal(0, receiver.TrackedEventIdCount);
+        }
+        finally
+        {
+            await receiver.CloseAsync();
+        }
+    }
+
+    [Fact]
     public async Task Receive_Before_Init_Returns_Nothing()
     {
         await using var client = CreateSubscriptionsClient();

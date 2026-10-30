@@ -36,6 +36,11 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
     private readonly ConcurrentDictionary<Uuid, bool> _hashSet = new();
     private readonly ConcurrentQueue<StreamedEvent<KurrentDBRawEvent>> _queue = new();
 
+    /// <summary>
+    ///     Number of event IDs held for duplicate suppression; each is removed once its event is received.
+    /// </summary>
+    internal int TrackedEventIdCount => _hashSet.Count;
+
     // NOTE: this client is a keyed singleton owned by the container and shared by every queue of this connection.
     // It must never be disposed by this receiver.
     private readonly KurrentDBPersistentSubscriptionsClient _subscriptionClient;

@@ -284,6 +284,26 @@ public class KurrentDBCatchUpQueueCacheCursorTrackingTests
     }
 
     [Fact]
+    public void A_Woken_Cursor_That_Cannot_Be_Repositioned_Keeps_Reading_From_Its_Old_Cursor()
+    {
+        var (cache, streamId, _) = CreateFilledCache();
+        var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
+        while (cache.TryGetNextMessage(cursor, out _))
+        {
+        }
+        cache.RecordCaughtUp(cursor);
+        cache.SignalPurge();
+        var later = DateTime.UtcNow.AddMinutes(-30);
+
+        // Events at 100 and 200 were purged, so repositioning at 50 misses the cache. The wake must not throw.
+        var positions = cache.Add([CreateEvent(5, 50, later)], later);
+
+        Assert.Single(positions);
+        Assert.True(cache.TryGetNextMessage(cursor, out var next));
+        Assert.Equal(50, next.SequenceToken.SequenceNumber);
+    }
+
+    [Fact]
     public void A_Released_Caught_Up_Cursor_Is_Not_Woken()
     {
         var (cache, streamId, checkpoints) = CreateFilledCache();

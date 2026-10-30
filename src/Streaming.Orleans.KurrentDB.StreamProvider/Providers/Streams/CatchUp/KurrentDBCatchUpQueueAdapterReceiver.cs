@@ -40,6 +40,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     private ulong? _pendingNotifyPosition;
     private ulong? _highestNotifyPosition;
     private bool _notifyRunning;
+    private Task _notifyTask = Task.CompletedTask;
 
     // Receiver life cycle
     private int _receiverState = ReceiverShutdown;
@@ -160,6 +161,14 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
             // clear cache and receiver
             var localCache = Interlocked.Exchange(ref _cache, null);
             var localReceiver = Interlocked.Exchange(ref _receiver, null);
+            // No new notification can start once the receiver is cleared, so the running one is the last. It is
+            // awaited so its checkpoint write cannot overlap or land after the final checkpoint written by close.
+            Task notifyTask;
+            lock (_notifyLock)
+            {
+                notifyTask = _notifyTask;
+            }
+            await notifyTask;
             // start closing receiver
             var closeTask = Task.CompletedTask;
             if (localReceiver != null)
@@ -277,6 +286,12 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
         }
         lock (_notifyLock)
         {
+            // Shutdown clears the receiver before reading the worker under this lock, so a worker is never started for
+            // a receiver that is closing.
+            if (!ReferenceEquals(Volatile.Read(ref _receiver), receiver))
+            {
+                return;
+            }
             // Purge notifications are not guaranteed to arrive in order. A position at or below the highest one already
             // queued is covered by it, so it is dropped rather than sent behind the newer one.
             if (commitPosition <= _highestNotifyPosition)
@@ -290,8 +305,8 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
                 return;
             }
             _notifyRunning = true;
+            _notifyTask = Task.Run(() => DrainDeliveredNotificationsAsync(receiver));
         }
-        _ = Task.Run(() => DrainDeliveredNotificationsAsync(receiver));
     }
 
     private async Task DrainDeliveredNotificationsAsync(IKurrentDBReceiver receiver)

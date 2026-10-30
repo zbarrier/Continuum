@@ -230,4 +230,69 @@ public class KurrentDBCatchUpQueueAdapterReceiverInitializationTests
         await shutdown;
         Assert.Equal(0, pool.ActiveCaches);
     }
+
+	/// <summary>
+	///     Holds each checkpoint write open until released, and records whether close overlapped one.
+	/// </summary>
+	private sealed class GatedDeliveryReceiver(Task deliveryGate) : IKurrentDBReceiver
+	{
+		private int _deliveriesInFlight;
+
+		public TaskCompletionSource DeliveryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		public bool ClosedDuringDelivery { get; private set; }
+
+		public bool Closed { get; private set; }
+
+		public Task InitAsync() => Task.CompletedTask;
+
+		public Task CloseAsync()
+		{
+			ClosedDuringDelivery = Volatile.Read(ref _deliveriesInFlight) > 0;
+			Closed = true;
+			return Task.CompletedTask;
+		}
+
+		public List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
+
+		public async Task MessagesDeliveredAsync(ulong commitPosition)
+		{
+			Interlocked.Increment(ref _deliveriesInFlight);
+			DeliveryStarted.TrySetResult();
+			try
+			{
+				await deliveryGate;
+			}
+			finally
+			{
+				Interlocked.Decrement(ref _deliveriesInFlight);
+			}
+		}
+	}
+
+	[Fact]
+	public async Task Shutdown_Waits_For_An_In_Flight_Checkpoint_Write_Before_Closing_The_Receiver()
+	{
+		// Arrange
+		var deliveryGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var receiver = new GatedDeliveryReceiver(deliveryGate.Task);
+		IKurrentDBCatchUpQueueCache? cache = null;
+		var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
+		var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, (queue, loggerFactory) => (IKurrentDBQueueCache)(cache = (IKurrentDBCatchUpQueueCache)CreateCache(queue, loggerFactory)),
+			NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null, (_, _) => receiver);
+		await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
+
+		// Act: a purge reports a checkpointable position, and shutdown starts while its write is in flight.
+		cache!.OnCheckpointablePosition!(100);
+		await receiver.DeliveryStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+		var shutdown = adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+		await Task.Delay(200, TestContext.Current.CancellationToken);
+
+		// Assert: close waits for the write, so the final checkpoint it writes is not raced by the earlier one.
+		Assert.False(receiver.Closed);
+		deliveryGate.SetResult();
+		await shutdown;
+		Assert.True(receiver.Closed);
+		Assert.False(receiver.ClosedDuringDelivery);
+	}
 }
