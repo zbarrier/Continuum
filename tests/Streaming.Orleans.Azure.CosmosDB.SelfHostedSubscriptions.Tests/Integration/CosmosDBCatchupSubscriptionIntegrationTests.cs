@@ -164,6 +164,8 @@ public class CosmosDBCatchupSubscriptionIntegrationTests(CosmosDBFixture fixture
         var containers = await fixture.CreateContainersAsync();
         var stream = NewStream();
         await WriteAsync(containers.Monitored, stream, 0, 2);
+        // _ts has one second resolution, so the start time is kept clear of the earlier writes.
+        await Task.Delay(1500, TestContext.Current.CancellationToken);
 
         await using var harness = CreateHarness(containers, configure: options => options.StartingPositionType = StartingPositionType.Latest);
         var subscription = new FirstCatchupSubscription(harness.Services);

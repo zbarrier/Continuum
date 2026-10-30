@@ -130,10 +130,12 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             case StartingPositionType.FromDateTime:
                 builder.WithStartTime(_options.StartingPositionDateTime!.Value.ToUniversalTime());
                 break;
-            default:
-                // Do nothing
+            case StartingPositionType.Latest:
+                // Set explicitly rather than relying on the SDK default, which delivered existing changes.
+                // Like any start time, it only applies when the leases are first created.
+                builder.WithStartTime(DateTime.UtcNow);
                 break;
-        }   
+        }
 
         builder
             .WithPollInterval(TimeSpan.FromMilliseconds(_options.PollingIntervalInMilliseconds))
