@@ -105,6 +105,18 @@ public class CosmosDBCatchupSubscriptionCallbackTests
         Assert.Equal(CosmosDBCatchupSubscriptionState.Retrying, harness.State);
     }
 
+    [Fact]
+    public async Task Maps_item_metadata_onto_the_streamed_event()
+    {
+        using var harness = new Harness();
+        var withMetadata = Event(1, "event-0").TrimEnd('}') + ""","meta":{"tenant":"t1"}}""";
+
+        await harness.Subscription.HandleChangeStreamAsync(new LeaseContext("0"), Changes(withMetadata, Event(2, "event-1")), CancellationToken.None);
+
+        Assert.Equal("t1", harness.Subscription.ReceivedEvents[0].Metadata["tenant"]);
+        Assert.Empty(harness.Subscription.ReceivedEvents[1].Metadata);
+    }
+
     private static ChangeFeedProcessorUserException UserException(string leaseToken)
         => new(new InvalidOperationException("The handler rejected the batch."), new LeaseContext(leaseToken));
 
@@ -161,8 +173,11 @@ public class CosmosDBCatchupSubscriptionCallbackTests
     {
         public List<string> Received { get; } = [];
 
+        public List<IStreamedEvent<object>> ReceivedEvents { get; } = [];
+
         protected override Task HandleStreamEventsAsync(ChangeFeedProcessorContext context, List<IStreamedEvent<object>> streamEvents, CancellationToken cancellationToken)
         {
+            ReceivedEvents.AddRange(streamEvents);
             Received.AddRange(streamEvents.Select(streamEvent => (string)streamEvent.Event));
             return Task.CompletedTask;
         }

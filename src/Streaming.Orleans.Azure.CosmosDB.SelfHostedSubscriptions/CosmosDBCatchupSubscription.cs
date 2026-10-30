@@ -12,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using Continuum.Orleans.Events;
+
 using Orleans.Storage;
 using Continuum.Streams;
 
@@ -242,7 +244,7 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             }
             if (!_typeMapper.TryGetType(change.DataType, out var type))
             {
-                _logger.SkippingUnknownDataType(change.DataType);
+                _logger.SkippingUnknownDataType(change.DataType, change.Id, change.StreamName);
                 continue;
             }
 
@@ -284,7 +286,8 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             streamVersion: eventItem.Version,
             cursor: new StreamedEventCursor(_options.ConnectionName, _options.MonitoredContainerName, context.LeaseToken, eventItem.LogicalSequenceNumber, eventItem.SubSequenceNumber),
             timestamp: timestamp,
-            @event: deserializedEvent);
+            @event: deserializedEvent,
+            metadata: eventItem.Metadata is { Count: > 0 } metadata ? EventMetadata.Create(metadata!) : null);
 
         return streamEvent;
     }
@@ -327,13 +330,13 @@ internal static partial class CosmosDBCatchupSubscriptionLog
     [LoggerMessage(Level = LogLevel.Warning, Message = "Subscription {SubscriptionName} for instance {InstanceName} has stopped.")]
     public static partial void SubscriptionStopped(this ILogger logger, string subscriptionName, string instanceName);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Skipping change with unknown data type {DataType}.")]
-    public static partial void SkippingUnknownDataType(this ILogger logger, string dataType);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Skipping change {Id} in stream {StreamName} with unknown data type {DataType}.")]
+    public static partial void SkippingUnknownDataType(this ILogger logger, string dataType, string id, string streamName);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Skipping change {Id} in stream {StreamName} on lease {LeaseToken} at logical sequence number {LogicalSequenceNumber}: its id or stream name is malformed.")]
     public static partial void SkippingMalformedChange(this ILogger logger, Exception exception, string id, string streamName, string leaseToken, long logicalSequenceNumber);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Processed {Count} changes using {RequestCharge} RUs.")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Processed {Count} changes using {RequestCharge} RUs.")]
     public static partial void ChangesProcessed(this ILogger logger, int count, double requestCharge);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Lease {LeaseToken} processing failed with an unhandled exception from the user delegate.")]
