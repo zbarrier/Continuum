@@ -244,10 +244,12 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
         _logger.EventAppeared(subscription.SubscriptionId, _settings.QueueName);
         try
         {
-            // Check duplication
+            // Convert before tracking the event ID, so a conversion failure leaves the event untracked and a
+            // redelivery is processed again instead of being filtered as a duplicate.
+            var streamedEvent = KurrentDBPersistentStreamedEventFactory.FromPersistentSubscription(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser);
             if (_hashSet.TryAdd(resolvedEvent.Event.EventId, true))
             {
-                _queue.Enqueue(KurrentDBPersistentStreamedEventFactory.FromPersistentSubscription(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser));
+                _queue.Enqueue(streamedEvent);
             }
         }
         catch (Exception ex)

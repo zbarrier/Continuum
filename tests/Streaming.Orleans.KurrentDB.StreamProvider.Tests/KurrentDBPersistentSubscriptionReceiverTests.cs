@@ -1,4 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
+
+using Continuum.Streams;
 
 using KurrentDB.Client;
 
@@ -106,6 +109,56 @@ public class KurrentDBPersistentSubscriptionReceiverTests
         finally
         {
             await receiver.CloseAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Delivers_A_Redelivered_Event_After_Its_First_Conversion_Failed()
+    {
+        await using var client = CreateSubscriptionsClient();
+        await using var writer = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
+        // The failed event is never acknowledged, so a short message timeout makes the server redeliver it.
+        var settings = CreateSettings(messageTimeout: TimeSpan.FromMilliseconds(500));
+        settings.StreamNameParser = new FailOnceStreamNameParser();
+        await AppendAsync(writer, settings.QueueName, "retried");
+
+        var receiver = CreateReceiver(client, settings);
+        try
+        {
+            await receiver.InitAsync();
+
+            // Tracking the event ID before conversion would filter every redelivery as a duplicate.
+            Assert.Equal(["retried"], await ReceiveAsync(receiver, 1));
+        }
+        finally
+        {
+            await receiver.CloseAsync();
+        }
+    }
+
+    private sealed class FailOnceStreamNameParser : IStreamNameParser
+    {
+        private readonly IStreamNameParser _inner = new DefaultKurrentDBStreamNameParser();
+        private int _calls;
+
+        public IStreamName Parse(string streamName)
+        {
+            ThrowOnFirstCall();
+            return _inner.Parse(streamName);
+        }
+
+        public bool TryParse(string streamName, [NotNullWhen(true)] out IStreamName? result)
+        {
+            ThrowOnFirstCall();
+            return _inner.TryParse(streamName, out result);
+        }
+
+        private void ThrowOnFirstCall()
+        {
+            if (Interlocked.Increment(ref _calls) == 1)
+            {
+                throw new InvalidOperationException("Simulated conversion failure.");
+            }
         }
     }
 
