@@ -13,7 +13,7 @@ public class Generating_ids_over_time
     [Fact]
     public void Should_keep_them_ordered_for_sql_server()
     {
-        var generator = new NewIdGenerator(new TimeLapseTickProvider(), new NetworkAddressWorkerIdProvider());
+        var generator = new NewIdGenerator(new TimeLapseTimeProvider(), new NetworkAddressWorkerIdProvider());
         generator.Next();
 
         var limit = 1024;
@@ -35,20 +35,17 @@ public class Generating_ids_over_time
     }
 
 
-    class TimeLapseTickProvider :
-        ITickProvider
+    class TimeLapseTimeProvider :
+        TimeProvider
     {
         TimeSpan _interval = TimeSpan.FromSeconds(2);
-        DateTime _previous = DateTime.UtcNow;
+        DateTimeOffset _previous = DateTimeOffset.UtcNow;
 
-        public long Ticks
+        public override DateTimeOffset GetUtcNow()
         {
-            get
-            {
-                _previous = _previous + _interval;
-                _interval = TimeSpan.FromSeconds((long)_interval.TotalSeconds + 30);
-                return _previous.Ticks;
-            }
+            _previous = _previous + _interval;
+            _interval = TimeSpan.FromSeconds((long)_interval.TotalSeconds + 30);
+            return _previous;
         }
     }
 }

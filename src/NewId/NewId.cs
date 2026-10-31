@@ -32,7 +32,7 @@ public readonly struct NewId :
     static readonly INewIdFormatter ParenFormatter = new DashedHexFormatter('(', ')');
 
     static INewIdGenerator? _generator;
-    static ITickProvider? _tickProvider;
+    static TimeProvider? _timeProvider;
     static IWorkerIdProvider? _workerIdProvider;
     static IProcessIdProvider? _processIdProvider;
 
@@ -106,7 +106,7 @@ public readonly struct NewId :
 
     static IProcessIdProvider? ProcessIdProvider => _processIdProvider;
 
-    static ITickProvider TickProvider => _tickProvider ??= new DateTimeTickProvider();
+    static TimeProvider TimeProvider => _timeProvider ?? TimeProvider.System;
 
     /// <summary>Gets the UTC timestamp at which this identifier was generated.</summary>
     public DateTimeOffset Timestamp
@@ -422,11 +422,11 @@ public readonly struct NewId :
         _processIdProvider = provider;
     }
 
-    /// <summary>Sets the tick provider used when the default generator is created. Must be called before the first identifier is generated to take effect.</summary>
+    /// <summary>Sets the time provider used when the default generator is created. Defaults to <see cref="System.TimeProvider.System"/>. Must be called before the first identifier is generated to take effect.</summary>
     /// <param name="provider">The provider to use.</param>
-    public static void SetTickProvider(ITickProvider provider)
+    public static void SetTimeProvider(TimeProvider provider)
     {
-        _tickProvider = provider;
+        _timeProvider = provider;
     }
 
     static SpinLock _spinLock = new SpinLock(false);
@@ -441,7 +441,7 @@ public readonly struct NewId :
         {
             _spinLock.Enter(ref lockTaken);
 
-            _generator ??= new NewIdGenerator(TickProvider, WorkerIdProvider, ProcessIdProvider);
+            _generator ??= new NewIdGenerator(TimeProvider, WorkerIdProvider, ProcessIdProvider);
         }
         finally
         {

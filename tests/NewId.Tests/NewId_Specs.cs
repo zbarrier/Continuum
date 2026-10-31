@@ -145,7 +145,7 @@ public class Using_the_newid_generator
     [Fact]
     public void Should_generate_sequential_ids_quickly()
     {
-        NewId.SetTickProvider(new StopwatchTickProvider());
+        NewId.SetTimeProvider(new StopwatchTimeProvider());
         NewId.Next();
 
         var limit = 10;

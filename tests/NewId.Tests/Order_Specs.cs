@@ -14,7 +14,7 @@ public class Generating_ids_and_preserve_same_order_for_sql_and_ToSequentialGuid
     [Fact]
     public void Should_keep_them_ordered_for_sql_server_when_using_array_call()
     {
-        var generator = new NewIdGenerator(_tickProvider, _workerIdProvider);
+        var generator = new NewIdGenerator(_timeProvider, _workerIdProvider);
         generator.Next();
 
         var limit = 1024;
@@ -37,7 +37,7 @@ public class Generating_ids_and_preserve_same_order_for_sql_and_ToSequentialGuid
     [Fact]
     public void Should_keep_them_ordered_for_ToSequentialGuid_when_using_array_call()
     {
-        var generator = new NewIdGenerator(_tickProvider, _workerIdProvider);
+        var generator = new NewIdGenerator(_timeProvider, _workerIdProvider);
         generator.Next();
 
         var limit = 1024;
@@ -63,8 +63,8 @@ public class Generating_ids_and_preserve_same_order_for_sql_and_ToSequentialGuid
         [Fact]
         public void Should_keep_them_ordered_for_sql_server_when_using_different_mac_addresses()
         {
-            var generator1 = new NewIdGenerator(_tickProvider, new MockNetworkProvider(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, }));
-            var generator2 = new NewIdGenerator(_tickProvider, new MockNetworkProvider(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, }));
+            var generator1 = new NewIdGenerator(_timeProvider, new MockNetworkProvider(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, }));
+            var generator2 = new NewIdGenerator(_timeProvider, new MockNetworkProvider(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, }));
 
             var id1 = generator1.Next();
             var id2 = generator2.Next();
@@ -81,8 +81,8 @@ public class Generating_ids_and_preserve_same_order_for_sql_and_ToSequentialGuid
         [Fact]
         public void Should_keep_them_ordered_for_ToSequentialGuid_when_using_different_mac_addresses()
         {
-            var generator1 = new NewIdGenerator(_tickProvider, new MockNetworkProvider(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, }));
-            var generator2 = new NewIdGenerator(_tickProvider, new MockNetworkProvider(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, }));
+            var generator1 = new NewIdGenerator(_timeProvider, new MockNetworkProvider(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, }));
+            var generator2 = new NewIdGenerator(_timeProvider, new MockNetworkProvider(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, }));
 
             var id1 = generator1.Next();
             var id2 = generator2.Next();
@@ -106,8 +106,8 @@ public class Generating_ids_and_preserve_same_order_for_sql_and_ToSequentialGuid
         [Fact]
         public void Should_keep_them_ordered_for_sql_server_when_using_different_processes()
         {
-            var generator1 = new NewIdGenerator(_tickProvider, _workerIdProvider, new MockProcessIdProvider(BitConverter.GetBytes(1)));
-            var generator2 = new NewIdGenerator(_tickProvider, _workerIdProvider, new MockProcessIdProvider(BitConverter.GetBytes(256)));
+            var generator1 = new NewIdGenerator(_timeProvider, _workerIdProvider, new MockProcessIdProvider(BitConverter.GetBytes(1)));
+            var generator2 = new NewIdGenerator(_timeProvider, _workerIdProvider, new MockProcessIdProvider(BitConverter.GetBytes(256)));
 
             var id1 = generator1.Next();
             var id2 = generator2.Next();
@@ -124,8 +124,8 @@ public class Generating_ids_and_preserve_same_order_for_sql_and_ToSequentialGuid
         [Fact]
         public void Should_keep_them_ordered_for_ToSequentialGuid_when_using_different_processes()
         {
-            var generator1 = new NewIdGenerator(_tickProvider, _workerIdProvider, new MockProcessIdProvider(BitConverter.GetBytes(1)));
-            var generator2 = new NewIdGenerator(_tickProvider, _workerIdProvider, new MockProcessIdProvider(BitConverter.GetBytes(256)));
+            var generator1 = new NewIdGenerator(_timeProvider, _workerIdProvider, new MockProcessIdProvider(BitConverter.GetBytes(1)));
+            var generator2 = new NewIdGenerator(_timeProvider, _workerIdProvider, new MockProcessIdProvider(BitConverter.GetBytes(256)));
 
             var id1 = generator1.Next();
             var id2 = generator2.Next();
@@ -148,11 +148,11 @@ public class Generating_ids_and_preserve_same_order_for_sql_and_ToSequentialGuid
         _start = DateTime.UtcNow;
         _stopwatch = Stopwatch.StartNew();
 
-        _tickProvider = new MockTickProvider(GetTicks());
+        _timeProvider = new MockTimeProvider(GetTicks());
         _workerIdProvider = new MockNetworkProvider(BitConverter.GetBytes(1234567890L));
     }
 
-    ITickProvider _tickProvider;
+    TimeProvider _timeProvider;
     IWorkerIdProvider _workerIdProvider;
     DateTime _start;
     Stopwatch _stopwatch;
@@ -163,15 +163,17 @@ public class Generating_ids_and_preserve_same_order_for_sql_and_ToSequentialGuid
     }
 
 
-    class MockTickProvider :
-        ITickProvider
+    class MockTimeProvider :
+        TimeProvider
     {
-        public MockTickProvider(long ticks)
+        public MockTimeProvider(long ticks)
         {
-            Ticks = ticks;
+            _utcNow = new DateTimeOffset(ticks, TimeSpan.Zero);
         }
 
-        public long Ticks { get; }
+        readonly DateTimeOffset _utcNow;
+
+        public override DateTimeOffset GetUtcNow() => _utcNow;
     }
 
 

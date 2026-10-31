@@ -58,14 +58,14 @@ var options = new JsonSerializerOptions { Converters = { new NewIdConverter() } 
 
 ### Configuration
 
-The default generator uses `BestPossibleWorkerIdProvider` (MAC address, falling back to a host name hash) and `DateTimeTickProvider`. To change them, call these methods at startup, before the first id is generated:
+The default generator uses `BestPossibleWorkerIdProvider` (MAC address, falling back to a host name hash) and `TimeProvider.System`. To change them, call these methods at startup, before the first id is generated:
 
 ```csharp
 NewId.SetProcessIdProvider(new CurrentProcessIdProvider()); // unique per process on the same machine
-NewId.SetTickProvider(new StopwatchTickProvider());         // never goes backward; see below
+NewId.SetTimeProvider(new StopwatchTimeProvider());         // never goes backward; see below
 ```
 
-`StopwatchTickProvider` was originally used for higher resolution timestamps, but on .NET 10 `DateTime.UtcNow` has about the same resolution. Its remaining benefit is that it never moves backward when the system clock is adjusted, because it adds elapsed `Stopwatch` time to the wall-clock time captured at startup. The trade-off is that its timestamps slowly drift from wall-clock time over long uptimes.
+Any `TimeProvider` can be used, for example the one your app already registers, or `FakeTimeProvider` in tests. `StopwatchTimeProvider` never moves backward when the system clock is adjusted, because it adds elapsed high-resolution time to the wall-clock time captured at startup. The trade-off is that its timestamps slowly drift from wall-clock time over long uptimes.
 
 #### Containers
 

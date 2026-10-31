@@ -18,7 +18,7 @@ public class NewIdGenerator : INewIdGenerator
     readonly int _d;
     readonly short _gb;
     readonly short _gc;
-    readonly ITickProvider _tickProvider;
+    readonly TimeProvider _timeProvider;
     int _a;
     int _b;
     long _lastTick;
@@ -27,13 +27,13 @@ public class NewIdGenerator : INewIdGenerator
     readonly Lock _lock = new();
 
     /// <summary>Initializes a new instance of the <see cref="NewIdGenerator"/> class.</summary>
-    /// <param name="tickProvider">The timestamp source.</param>
+    /// <param name="timeProvider">The UTC time source.</param>
     /// <param name="workerIdProvider">The worker identifier source.</param>
     /// <param name="processIdProvider">An optional process identifier source; when <see langword="null"/>, the last two worker identifier bytes are used instead.</param>
     /// <param name="workerIndex">The index passed to <see cref="IWorkerIdProvider.GetWorkerId(int)"/>.</param>
-    public NewIdGenerator(ITickProvider tickProvider, IWorkerIdProvider workerIdProvider, IProcessIdProvider? processIdProvider = null, int workerIndex = 0)
+    public NewIdGenerator(TimeProvider timeProvider, IWorkerIdProvider workerIdProvider, IProcessIdProvider? processIdProvider = null, int workerIndex = 0)
     {
-        _tickProvider = tickProvider;
+        _timeProvider = timeProvider;
 
         var workerId = workerIdProvider.GetWorkerId(workerIndex);
 
@@ -204,10 +204,10 @@ public class NewIdGenerator : INewIdGenerator
 
     long GetTicks()
     {
-        var ticks = _tickProvider.Ticks;
+        var ticks = _timeProvider.GetUtcNow().UtcTicks;
 
         if (ticks < NewId.MinTicks || ticks > NewId.MaxTicks)
-            throw new InvalidOperationException($"The tick provider returned {ticks}, which is outside the range a NewId can hold ({NewId.MinTicks} to {NewId.MaxTicks}).");
+            throw new InvalidOperationException($"The time provider returned {ticks} ticks, which is outside the range a NewId can hold ({NewId.MinTicks} to {NewId.MaxTicks}).");
 
         return ticks;
     }
