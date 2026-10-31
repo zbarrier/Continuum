@@ -53,9 +53,11 @@ public sealed class TenantStorageFailureLogger
         var now = _timeProvider.GetUtcNow();
         var state = _failures.GetOrAdd(tenantId, _ => new FailureState(now));
         int suppressed;
+        int count;
         lock (state)
         {
             state.Count++;
+            count = state.Count;
             var throttled = now - state.FirstFailure >= FullLoggingPeriod;
             if (throttled && state.LastLogged is { } lastLogged && now - lastLogged < ThrottledLoggingInterval)
             {
@@ -66,7 +68,7 @@ public sealed class TenantStorageFailureLogger
             state.Suppressed = 0;
             state.LastLogged = now;
         }
-        _logger.TenantStorageCreationFailed(exception, tenantId, _providerName, state.FirstFailure, state.Count, suppressed);
+        _logger.TenantStorageCreationFailed(exception, tenantId, _providerName, state.FirstFailure, count, suppressed);
     }
 
     /// <summary>
@@ -76,7 +78,12 @@ public sealed class TenantStorageFailureLogger
     {
         if (_failures.TryRemove(tenantId, out var state))
         {
-            _logger.TenantStorageCreated(tenantId, _providerName, state.Count, state.FirstFailure);
+            int count;
+            lock (state)
+            {
+                count = state.Count;
+            }
+            _logger.TenantStorageCreated(tenantId, _providerName, count, state.FirstFailure);
         }
     }
 

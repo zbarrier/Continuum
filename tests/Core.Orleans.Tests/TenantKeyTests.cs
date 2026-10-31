@@ -67,9 +67,23 @@ public class TenantKeyTests
     [InlineData("")]
     [InlineData("|key")]
     [InlineData("acme|")]
+    [InlineData("acme|a|b")]
+    [InlineData("acme|~|a|b")]
+    [InlineData("acme|~|key")]
     public void Split_Invalid_Throws(string key)
     {
         Assert.ThrowsAny<FormatException>(() => TenantKey.Split(key, out _, out _));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("|key")]
+    [InlineData("acme|")]
+    [InlineData("acme|a|b")]
+    public void StreamName_TryCreate_Invalid_ReturnsFalse(string remainder)
+    {
+        Assert.False(StreamNameParsing.TryCreate($"Order-{remainder}", "Order", remainder, out var name));
+        Assert.Null(name);
     }
 
     [Theory]
@@ -97,7 +111,6 @@ public class TenantKeyTests
     [InlineData("acme|3f2a9c1e-0b1d", "acme", "3f2a9c1e-0b1d")]
     [InlineData("3f2a9c1e-0b1d", null, "3f2a9c1e-0b1d")]
     [InlineData("acme|~~key", "acme", "~key")]
-    [InlineData("acme|~|key", "acme", "|key")]
     public void StreamName_Create_SplitsTenantAndKey(string remainder, string? tenantId, string key)
     {
         var name = StreamNameParsing.Create($"Order-{remainder}", "Order", remainder);

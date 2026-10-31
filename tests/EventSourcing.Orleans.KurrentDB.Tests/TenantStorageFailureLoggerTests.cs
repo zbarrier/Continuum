@@ -81,6 +81,18 @@ public class TenantStorageFailureLoggerTests
     }
 
     [Fact]
+    public void Failure_entries_report_the_running_failure_count()
+    {
+        var sut = CreateSut();
+
+        sut.Failed("acme", new InvalidOperationException("boom"));
+        sut.Failed("acme", new InvalidOperationException("boom"));
+
+        Assert.Contains("(1 failures", _logger.Entries[0].Message);
+        Assert.Contains("(2 failures", _logger.Entries[1].Message);
+    }
+
+    [Fact]
     public void Success_without_prior_failure_does_not_log()
     {
         CreateSut().Succeeded("acme");
