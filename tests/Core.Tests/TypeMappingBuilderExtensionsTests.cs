@@ -81,4 +81,19 @@ public sealed class TypeMappingBuilderExtensionsTests
         Assert.Null(commandOnly.KeyedImplementationInstance);
         Assert.NotNull(commandOnly.KeyedImplementationFactory);
     }
+
+    [Fact]
+    public void Subset_mapper_is_built_lazily_with_its_kinds_and_framework_types()
+    {
+        var provider = new ServiceCollection()
+            .AddDefaultTypeMapAttributeMappers(Connection, TypeMapKinds.Command | TypeMapKinds.DomainEvent)
+            .BuildServiceProvider();
+
+        var command = provider.GetRequiredKeyedService<ITypeMapper>(TypeMapKinds.Command.ToTypeMapperKey(Connection));
+
+        Assert.True(command.IsFrozen);
+        Assert.True(command.IsTypeRegistered<CreateOrder>());
+        Assert.True(command.IsTypeRegistered<FrameworkMarker>());
+        Assert.False(command.IsTypeRegistered<OrderCreated>());
+    }
 }

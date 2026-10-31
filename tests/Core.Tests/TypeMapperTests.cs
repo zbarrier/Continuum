@@ -136,6 +136,48 @@ public sealed class TypeMapperTests
     }
 
     [Fact]
+    public void RegisterKnownAttributeTypes_always_adds_framework_types()
+    {
+        var mapper = new DefaultTypeMapAttributeMapper();
+
+        mapper.RegisterKnownTypes(TypeMapKinds.Command);
+
+        Assert.Equal("tests.framework-marker", mapper.GetTypeName<FrameworkMarker>());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void AddType_blank_name_throws(string? typeName)
+    {
+        var mapper = new TestTypeMapper();
+
+        Assert.ThrowsAny<ArgumentException>(() => mapper.AddType(typeof(Unmapped), typeName!));
+        Assert.Empty(mapper.TypeMap);
+    }
+
+    [Fact]
+    public void RemoveType_unmapped_type_throws()
+    {
+        var mapper = new TestTypeMapper();
+
+        Assert.Throws<TypeMappingNotFoundException>(() => mapper.RemoveType<Unmapped>());
+    }
+
+    [Fact]
+    public void TypeMappingNotFoundException_names_the_missing_type()
+    {
+        var mapper = new TestTypeMapper();
+
+        var byType = Assert.Throws<TypeMappingNotFoundException>(() => mapper.GetTypeName<Unmapped>());
+        var byName = Assert.Throws<TypeMappingNotFoundException>(() => mapper.GetType("missing"));
+
+        Assert.Equal($"A type mapping for the type '{typeof(Unmapped).FullName}' was not found.", byType.Message);
+        Assert.Equal("A type mapping for the type 'missing' was not found.", byName.Message);
+    }
+
+    [Fact]
     public void EnsureTypesRegistered_throws_for_missing_type()
     {
         var mapper = new TestTypeMapper();

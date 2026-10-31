@@ -70,6 +70,9 @@ public abstract class TypeMapper : ITypeMapper
     /// <inheritdoc/>
     public void AddType(Type type, string typeName)
     {
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
+
         lock (_lock)
         {
             ThrowIfFrozen();
