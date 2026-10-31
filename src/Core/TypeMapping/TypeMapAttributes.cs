@@ -39,8 +39,8 @@ public abstract class TypeMapAttribute : Attribute
     /// <summary>Initializes a new instance.</summary>
     /// <param name="typeIdentifier">The stable identifier the type is persisted under. Must not change once data exists.</param>
     /// <param name="typeKinds">The single kind of the decorated type.</param>
-    /// <exception cref="ArgumentException"><paramref name="typeIdentifier"/> is blank, or <paramref name="typeKinds"/> is a combination of kinds.</exception>
-    public TypeMapAttribute(string typeIdentifier, TypeMapKinds typeKinds)
+    /// <exception cref="ArgumentException"><paramref name="typeIdentifier"/> is blank, or <paramref name="typeKinds"/> is not exactly one defined kind.</exception>
+    protected TypeMapAttribute(string typeIdentifier, TypeMapKinds typeKinds)
     {
         if (string.IsNullOrWhiteSpace(typeIdentifier))
         {
@@ -48,10 +48,10 @@ public abstract class TypeMapAttribute : Attribute
         }
 
         int typeKindsValue = (int)typeKinds;
-        bool isCombinationOfKinds = (typeKindsValue & (typeKindsValue - 1)) != 0;
-        if (isCombinationOfKinds)
+        bool isSingleDefinedKind = typeKindsValue is > 0 and <= TypeMapKindsExtensions.MaxTypeMapKindsValue && (typeKindsValue & (typeKindsValue - 1)) == 0;
+        if (!isSingleDefinedKind)
         {
-            throw new ArgumentException($"'{nameof(typeKinds)}' cannot be a combination of kinds.", nameof(typeKinds));
+            throw new ArgumentException($"'{nameof(typeKinds)}' must be exactly one defined kind.", nameof(typeKinds));
         }
 
         TypeIdentifier = typeIdentifier;
@@ -106,7 +106,7 @@ public sealed class FrameworkTypeAttribute(string typeIdentifier) : TypeMapAttri
 public static class TypeMapKindsExtensions
 {
     private const int MinTypeMapKindsValue = 1;
-    private const int MaxTypeMapKindsValue = 63;
+    internal const int MaxTypeMapKindsValue = 63;
 
     /// <summary>Builds the keyed-service key for the type mapper of <paramref name="value"/> on <paramref name="connectionName"/>.</summary>
     /// <param name="value">The kind or combination of kinds.</param>
