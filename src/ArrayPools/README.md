@@ -14,10 +14,8 @@ Utilities for working with `System.Buffers.ArrayPool<T>`.
 
 ## Limits
 
-- `maxRentArrayLength` must be between 1 and `MaxPooledArrayLength`.
-- `maxArrayInstancesPerBucket` must be greater than 0.
-- The optional `minRentArrayLength` (default 1) skips pre-warming buckets for smaller arrays; it must be between 1 and
-  the maximum length.
+- `maxRentArrayLength` (`maxArrayLength` for `CreatePreWarmed`) must be between 1 and `MaxPooledArrayLength`.
+- `maxArrayInstancesPerBucket` (`maxArraysPerBucket` for `CreatePreWarmed`) must be greater than 0.
 - The optional `minRentArrayLength` (default 1) skips pre-warming buckets for smaller arrays; it must be between 1 and
   the maximum length.
 - Invalid arguments throw `ArgumentNullException` or `ArgumentOutOfRangeException`.
@@ -32,8 +30,10 @@ Utilities for working with `System.Buffers.ArrayPool<T>`.
 
 ## Memory usage
 
-Bucket sizes double, so pre-warming allocates roughly
-`2 * maxRentArrayLength * sizeof(T) * maxArrayInstancesPerBucket` bytes. Choose limits that match your real workload.
+Every bucket is filled with arrays of the bucket's full length, and bucket sizes double, so pre-warming allocates roughly
+`2 * maxBucketLength * sizeof(T) * maxArrayInstancesPerBucket` bytes, where `maxBucketLength` is `maxRentArrayLength`
+rounded up to the next power of two (minimum 16). This can approach four times `maxRentArrayLength` when it is just above
+a power of two. Choose limits that match your real workload.
 
 ## Usage
 
