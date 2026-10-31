@@ -40,7 +40,7 @@ public class Using_the_newid_generator
     [Fact(Explicit = true)]
     public void Should_be_able_to_extract_timestamp()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var id = NewId.Next();
 
         var timestamp = id.Timestamp;
@@ -57,7 +57,7 @@ public class Using_the_newid_generator
     [Fact(Explicit = true)]
     public void Should_be_able_to_extract_timestamp_with_process_id()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         NewId.SetProcessIdProvider(new CurrentProcessIdProvider());
         var id = NewId.Next();
 

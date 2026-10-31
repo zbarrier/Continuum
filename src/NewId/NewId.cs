@@ -109,13 +109,13 @@ public readonly struct NewId :
     static ITickProvider TickProvider => _tickProvider ??= new DateTimeTickProvider();
 
     /// <summary>Gets the UTC timestamp at which this identifier was generated.</summary>
-    public DateTime Timestamp
+    public DateTimeOffset Timestamp
     {
         get
         {
             var timestamp = (long)((ulong)(uint)_a << 26 | (ulong)((uint)_b >> 16) << 10 | (ulong)(((uint)_b >> 2) & 0x3FF));
 
-            return new DateTime(MinTicks + timestamp, DateTimeKind.Utc);
+            return new DateTimeOffset(MinTicks + timestamp, TimeSpan.Zero);
         }
     }
 

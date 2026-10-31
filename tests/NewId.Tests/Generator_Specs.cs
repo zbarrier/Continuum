@@ -176,7 +176,7 @@ public class When_generating_id
         var id = generator.Next();
 
         Assert.Equal(ticks, id.Timestamp.Ticks);
-        Assert.Equal(DateTimeKind.Utc, id.Timestamp.Kind);
+        Assert.Equal(TimeSpan.Zero, id.Timestamp.Offset);
     }
 
     [Theory]

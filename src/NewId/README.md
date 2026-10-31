@@ -18,7 +18,7 @@ NewId id = NewId.Next();
 Guid sequential = NewId.NextSequentialGuid(); // PostgreSQL, MySQL, general use
 Guid mssql = NewId.NextSqlServerGuid();       // MSSQL Server uniqueidentifier ordering
 
-DateTime created = id.Timestamp;              // UTC time the id was generated
+DateTimeOffset created = id.Timestamp;        // UTC time the id was generated
 ```
 
 ### Guid ordering
