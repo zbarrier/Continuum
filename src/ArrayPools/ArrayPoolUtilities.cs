@@ -62,8 +62,11 @@ public static class ArrayPoolUtilities
     /// For <see cref="ArrayPool{T}.Shared"/>, returned arrays are stored per thread and per processor core, and
     /// may be trimmed under memory pressure, so pre-warming from a single thread has limited and temporary effect.
     /// <para>
-    /// Bucket sizes double, so the total memory allocated is roughly
-    /// <c>2 * maxRentArrayLength * sizeof(T) * maxArrayInstancesPerBucket</c> bytes. For example, pre-warming a
+    /// Every bucket is filled with arrays of the bucket's full length, and bucket sizes double, so the total memory
+    /// allocated is roughly <c>2 * maxBucketLength * sizeof(T) * maxArrayInstancesPerBucket</c> bytes, where
+    /// <c>maxBucketLength</c> is <paramref name="maxRentArrayLength"/> rounded up to the next power of two (minimum 16).
+    /// This can approach four times <paramref name="maxRentArrayLength"/> when it is just above a power of two.
+    /// For example, pre-warming a
     /// <see cref="long"/> pool to <see cref="MaxPooledArrayLength"/> with 16 arrays per bucket allocates about 256 GB.
     /// </para>
     /// </remarks>
@@ -91,6 +94,10 @@ public static class ArrayPoolUtilities
 
         int maxBucketIndex = SelectBucketIndex(maxRentArrayLength);
         var rented = new T[maxArrayInstancesPerBucket][];
+
+        // Warm from the smallest bucket to the largest. When a bucket is empty, ArrayPool<T>.Create pools fall back to
+        // larger buckets, so warming larger buckets first would let smaller rentals take (and return) larger arrays,
+        // leaving the smaller buckets unfilled.
         for (int bucketIndex = SelectBucketIndex(minRentArrayLength); bucketIndex <= maxBucketIndex; bucketIndex++)
         {
             int bucketSize = GetMaxSizeForBucket(bucketIndex);
