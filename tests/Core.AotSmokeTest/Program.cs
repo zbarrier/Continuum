@@ -71,4 +71,5 @@ internal sealed class EventMetadata;
 
 [JsonSerializable(typeof(OrderPlaced))]
 [JsonSerializable(typeof(OrderSnapshot))]
+[JsonSerializable(typeof(EventMetadata))]
 internal sealed partial class SmokeJsonContext : JsonSerializerContext;

@@ -20,18 +20,7 @@ namespace Continuum.Core.SourceGenerators;
 public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
 {
     private const string CoreAssemblyName = "Continuum.Core";
-    private const string TypeMappingNamespace = "Continuum.TypeMapping";
     private const string RegistryTypeName = "Continuum.TypeMapping.TypeMapRegistry";
-
-    private static readonly Dictionary<string, int> KnownAttributeKinds = new()
-    {
-        ["CommandTypeAttribute"] = 1,
-        ["DomainEventTypeAttribute"] = 2,
-        ["IntegrationEventTypeAttribute"] = 4,
-        ["SnapshotTypeAttribute"] = 8,
-        ["MetadataTypeAttribute"] = 16,
-        ["FrameworkTypeAttribute"] = 32,
-    };
 
     private readonly record struct Registration(string TypeName, string Identifier, int Kind);
 
@@ -39,14 +28,15 @@ public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
     {
         // ForAttributeWithMetadataName uses the compiler's attribute index, so only classes carrying one of the
         // known attributes reach the semantic transform.
-        var local = CollectLocal(context, "CommandTypeAttribute")
-            .Combine(CollectLocal(context, "DomainEventTypeAttribute"))
-            .Combine(CollectLocal(context, "IntegrationEventTypeAttribute"))
-            .Combine(CollectLocal(context, "SnapshotTypeAttribute"))
-            .Combine(CollectLocal(context, "MetadataTypeAttribute"))
-            .Combine(CollectLocal(context, "FrameworkTypeAttribute"))
-            .Select(static (x, _) => new EquatableArray<Registration>(
-                x.Left.Left.Left.Left.Left.AddRange(x.Left.Left.Left.Left.Right).AddRange(x.Left.Left.Left.Right).AddRange(x.Left.Left.Right).AddRange(x.Left.Right).AddRange(x.Right)));
+        IncrementalValueProvider<ImmutableArray<Registration>>? collected = null;
+        foreach (var attributeName in TypeMapAttributeKinds.ByAttributeName.Keys)
+        {
+            var next = CollectLocal(context, attributeName);
+            collected = collected is null
+                ? next
+                : collected.Value.Combine(next).Select(static (x, _) => x.Left.AddRange(x.Right));
+        }
+        var local = collected!.Value.Select(static (x, _) => new EquatableArray<Registration>(x));
 
         // Runs on every compilation change, but each metadata reference is scanned only once (see ReferenceCache)
         // and the equatable result stops downstream work when nothing changed.
@@ -83,7 +73,7 @@ public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
     private static IncrementalValueProvider<ImmutableArray<Registration>> CollectLocal(IncrementalGeneratorInitializationContext context, string attributeName)
         => context.SyntaxProvider
             .ForAttributeWithMetadataName(
-                $"{TypeMappingNamespace}.{attributeName}",
+                $"{TypeMapAttributeKinds.TypeMappingNamespace}.{attributeName}",
                 static (node, _) => node is ClassDeclarationSyntax or RecordDeclarationSyntax,
                 static (ctx, _) => ctx.TargetSymbol is INamedTypeSymbol symbol
                     && TryGetRegistration(symbol, requirePublic: false, out var registration)
@@ -173,7 +163,7 @@ public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
     {
         registration = default;
 
-        if (type.TypeKind != TypeKind.Class || type.IsGenericType || (type.IsAbstract && type.IsSealed))
+        if (!IsRegistrableShape(type))
         {
             return false;
         }
@@ -185,10 +175,7 @@ public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
 
         foreach (var attribute in type.GetAttributes())
         {
-            var attributeClass = attribute.AttributeClass;
-            if (attributeClass is null
-                || attributeClass.ContainingNamespace?.ToDisplayString() != TypeMappingNamespace
-                || !KnownAttributeKinds.TryGetValue(attributeClass.Name, out var kind)
+            if (!TypeMapAttributeKinds.TryGetKind(attribute, out var kind)
                 || attribute.ConstructorArguments.Length != 1
                 || attribute.ConstructorArguments[0].Value is not string identifier
                 || string.IsNullOrWhiteSpace(identifier))
@@ -218,6 +205,10 @@ public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
 
         return true;
     }
+
+    // Generic and static classes cannot be named with a closed typeof(...) or instantiated, so they are not registered.
+    internal static bool IsRegistrableShape(INamedTypeSymbol type)
+        => type.TypeKind == TypeKind.Class && !type.IsGenericType && !type.IsStatic;
 
     // The generated registration class is a top-level internal class in the same assembly, so it can only name types
     // that, along with every containing type, are visible assembly-wide and not file-local.

@@ -13,16 +13,6 @@ namespace Continuum.Core.SourceGenerators;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class NonPublicTypeMapAnalyzer : DiagnosticAnalyzer
 {
-    private const string TypeMappingNamespace = "Continuum.TypeMapping";
-
-    private static readonly ImmutableHashSet<string> KnownAttributeNames = ImmutableHashSet.Create(
-        "CommandTypeAttribute",
-        "DomainEventTypeAttribute",
-        "IntegrationEventTypeAttribute",
-        "SnapshotTypeAttribute",
-        "MetadataTypeAttribute",
-        "FrameworkTypeAttribute");
-
     internal static readonly DiagnosticDescriptor NonPublicTypeMap = new(
         id: "CTM001",
         title: "Type map attribute on a non-public type in a library",
@@ -55,7 +45,7 @@ public sealed class NonPublicTypeMapAnalyzer : DiagnosticAnalyzer
             start.RegisterSymbolAction(ctx =>
             {
                 var type = (INamedTypeSymbol)ctx.Symbol;
-                if (type.TypeKind != TypeKind.Class || !HasTypeMapAttribute(type))
+                if (!TypeMapRegistrationGenerator.IsRegistrableShape(type) || TypeMapAttributeKinds.Find(type) is null)
                 {
                     return;
                 }
@@ -84,22 +74,6 @@ public sealed class NonPublicTypeMapAnalyzer : DiagnosticAnalyzer
                 }
             }, SymbolKind.NamedType);
         });
-    }
-
-    private static bool HasTypeMapAttribute(INamedTypeSymbol type)
-    {
-        foreach (var attribute in type.GetAttributes())
-        {
-            var attributeClass = attribute.AttributeClass;
-            if (attributeClass is not null
-                && KnownAttributeNames.Contains(attributeClass.Name)
-                && attributeClass.ContainingNamespace?.ToDisplayString() == TypeMappingNamespace)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static bool IsPubliclyAccessible(INamedTypeSymbol type)
