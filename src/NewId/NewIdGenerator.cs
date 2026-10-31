@@ -1,4 +1,4 @@
-﻿// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
+// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
 // Copyright 2007-2019 Chris Patterson.
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
 //
@@ -170,7 +170,9 @@ public class NewIdGenerator : INewIdGenerator
     /// <inheritdoc />
     public ArraySegment<NewId> Next(NewId[] ids, int index, int count)
     {
-        if (index + count > ids.Length)
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        if (count > ids.Length - index)
             throw new ArgumentOutOfRangeException(nameof(count));
 
         var ticks = _tickProvider.Ticks;

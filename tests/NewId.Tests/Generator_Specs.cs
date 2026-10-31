@@ -1,4 +1,4 @@
-﻿// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
+// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
 // Copyright 2007-2019 Chris Patterson.
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
 //
@@ -151,6 +151,21 @@ public class When_generating_id
         var guid = generator.NextGuid();
 
         Assert.Equal(guid, expected);
+    }
+
+    [Theory]
+    [InlineData(-1, 1)]
+    [InlineData(0, -1)]
+    [InlineData(1, int.MaxValue)]
+    public async Task Should_reject_invalid_range_without_blocking_later_calls(int index, int count)
+    {
+        var generator = new NewIdGenerator(_tickProvider, _workerIdProvider);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => generator.Next(new NewId[4], index, count));
+
+        // Times out if the failed call left the generator lock held.
+        await Task.Run(generator.Next, cancellationToken).WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
     }
 
     public When_generating_id()
