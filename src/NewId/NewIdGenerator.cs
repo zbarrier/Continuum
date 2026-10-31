@@ -77,7 +77,7 @@ public class NewIdGenerator : INewIdGenerator
     /// This is the format that should be used for MSSQL Server for clustered indexes.
     /// </summary>
     /// <returns>MSSQL Server ordered Guid.</returns>
-    public Guid NextGuid()
+    public Guid NextSqlServerGuid()
     {
         var ticks = _tickProvider.Ticks;
 

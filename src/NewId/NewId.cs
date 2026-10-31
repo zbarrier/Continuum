@@ -1,4 +1,4 @@
-﻿// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
+// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
 // Copyright 2007-2019 Chris Patterson.
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
 //
@@ -42,9 +42,9 @@ public readonly struct NewId :
     readonly int _d;
 
     /// <summary>
-    /// Creates a NewId using the specified byte array.
+    /// Creates a NewId from bytes in sequential <see cref="Guid"/> byte order, as returned by <see cref="ToByteArray"/>.
     /// </summary>
-    /// <param name="bytes"></param>
+    /// <param name="bytes">Exactly 16 bytes.</param>
     public NewId(in byte[] bytes)
     {
         if (bytes == null)
@@ -52,10 +52,10 @@ public readonly struct NewId :
         if (bytes.Length != 16)
             throw new ArgumentException("Exactly 16 bytes expected", nameof(bytes));
 
-        FromByteArray(bytes, out _a, out _b, out _c, out _d);
+        this = FromSequentialGuid(new Guid(bytes));
     }
 
-    /// <summary>Creates a <see cref="NewId"/> from a <see cref="Guid"/>-formatted string.</summary>
+    /// <summary>Creates a <see cref="NewId"/> from a <see cref="Guid"/>-formatted string in sequential order, as returned by <see cref="ToString()"/>.</summary>
     /// <param name="value">A string accepted by <see cref="Guid.Guid(string)"/>.</param>
     /// <exception cref="ArgumentException"><paramref name="value"/> is null or empty.</exception>
     public NewId(in string value)
@@ -63,11 +63,7 @@ public readonly struct NewId :
         if (string.IsNullOrEmpty(value))
             throw new ArgumentException("must not be null or empty", nameof(value));
 
-        var guid = new Guid(value);
-
-        var bytes = guid.ToByteArray();
-
-        FromByteArray(bytes, out _a, out _b, out _c, out _d);
+        this = FromSequentialGuid(new Guid(value));
     }
 
     /// <summary>Creates a <see cref="NewId"/> from its four internal 32-bit components.</summary>
@@ -83,7 +79,7 @@ public readonly struct NewId :
         _d = d;
     }
 
-    /// <summary>Creates a <see cref="NewId"/> from components laid out like the <see cref="Guid"/> constructor.</summary>
+    /// <summary>Creates a <see cref="NewId"/> from components laid out like the <see cref="Guid"/> constructor, in sequential order.</summary>
     /// <param name="a">The first 4 bytes.</param>
     /// <param name="b">The next 2 bytes.</param>
     /// <param name="c">The next 2 bytes.</param>
@@ -97,10 +93,7 @@ public readonly struct NewId :
     /// <param name="k">Byte 15.</param>
     public NewId(int a, short b, short c, byte d, byte e, byte f, byte g, byte h, byte i, byte j, byte k)
     {
-        _a = (f << 24) | (g << 16) | (h << 8) | i;
-        _b = (j << 24) | (k << 16) | (d << 8) | e;
-        _c = (c << 16) | (ushort)b;
-        _d = (int)(a & 0xFFFF0000) | ((a >> 8) & 0x00FF) | ((a << 8) & 0xFF00);
+        this = FromSequentialGuid(new Guid(a, b, c, d, e, f, g, h, i, j, k));
     }
 
     static IWorkerIdProvider WorkerIdProvider => _workerIdProvider ??= new BestPossibleWorkerIdProvider();
@@ -153,7 +146,7 @@ public readonly struct NewId :
     }
 
     /// <summary>Formats this identifier using a <see cref="Guid"/>-style format specifier.</summary>
-    /// <param name="format"><c>D</c> (default), <c>N</c>, <c>B</c>, or <c>P</c>; append <c>S</c> (for example <c>DS</c>) for sequential byte order.</param>
+    /// <param name="format"><c>D</c> (default), <c>N</c>, <c>B</c>, or <c>P</c>. Output is in sequential order.</param>
     /// <param name="formatProvider">Ignored.</param>
     /// <returns>The formatted identifier.</returns>
     /// <exception cref="FormatException"><paramref name="format"/> is not a supported specifier.</exception>
@@ -162,14 +155,11 @@ public readonly struct NewId :
         if (string.IsNullOrEmpty(format))
             format = "D";
 
-        var sequential = false;
-        if (format.Length == 2 && (format[1] == 'S' || format[1] == 's'))
-            sequential = true;
-        else if (format.Length != 1)
+        if (format.Length != 1)
             throw new FormatException("The format string must be exactly one character or null");
 
         var formatCh = format[0];
-        var bytes = sequential ? GetSequentialFormatterArray() : GetFormatterArray();
+        var bytes = GetSequentialFormatterArray();
 
         if (formatCh == 'B' || formatCh == 'b')
             return BraceFormatter.Format(bytes);
@@ -186,47 +176,11 @@ public readonly struct NewId :
     static readonly ThreadLocal<byte[]> _formatterArray = new ThreadLocal<byte[]>(() => new byte[16]);
 
     /// <summary>Formats this identifier using a custom formatter.</summary>
-    /// <param name="formatter">The formatter to use.</param>
-    /// <param name="sequential"><see langword="true"/> to pass bytes in sequential order instead of <see cref="Guid"/> order.</param>
+    /// <param name="formatter">The formatter to use. Bytes are passed in sequential order.</param>
     /// <returns>The formatted identifier.</returns>
-    public string ToString(INewIdFormatter formatter, bool sequential = false)
+    public string ToString(INewIdFormatter formatter)
     {
-        var bytes = sequential ? GetSequentialFormatterArray() : GetFormatterArray();
-
-        return formatter.Format(bytes);
-    }
-
-    byte[] GetFormatterArray()
-    {
-        var bytes = _formatterArray.Value!;
-
-        if (Vector128.IsHardwareAccelerated && BitConverter.IsLittleEndian)
-        {
-            var vector = Unsafe.As<NewId, Vector128<byte>>(ref Unsafe.AsRef(in this));
-            var byteArrayShuffle = Vector128.Create((byte)15, 14, 12, 13, 9, 8, 11, 10, 5, 4, 3, 2, 1, 0, 7, 6);
-            var result = Vector128.Shuffle(vector, byteArrayShuffle);
-            MemoryMarshal.TryWrite(bytes, in result);
-            return bytes;
-        }
-
-        bytes[15] = (byte)(_b >> 16);
-        bytes[14] = (byte)(_b >> 24);
-        bytes[13] = (byte)_a;
-        bytes[12] = (byte)(_a >> 8);
-        bytes[11] = (byte)(_a >> 16);
-        bytes[10] = (byte)(_a >> 24);
-        bytes[9] = (byte)_b;
-        bytes[8] = (byte)(_b >> 8);
-        bytes[7] = (byte)(_c >> 16);
-        bytes[6] = (byte)(_c >> 24);
-        bytes[5] = (byte)_c;
-        bytes[4] = (byte)(_c >> 8);
-        bytes[3] = (byte)(_d >> 8);
-        bytes[2] = (byte)_d;
-        bytes[1] = (byte)(_d >> 16);
-        bytes[0] = (byte)(_d >> 24);
-
-        return bytes;
+        return formatter.Format(GetSequentialFormatterArray());
     }
 
     byte[] GetSequentialFormatterArray()
@@ -267,7 +221,7 @@ public readonly struct NewId :
     /// This is the format that should be used for MSSQL Server for clustered indexes.
     /// </summary>
     /// <returns>MSSQL Server ordered Guid.</returns>
-    public Guid ToGuid()
+    public Guid ToSqlServerGuid()
     {
         if (Vector128.IsHardwareAccelerated && BitConverter.IsLittleEndian)
         {
@@ -325,7 +279,7 @@ public readonly struct NewId :
     /// <summary>Creates a <see cref="NewId"/> from a <see cref="Guid"/> in MSSQL Server ordered format.</summary>
     /// <param name="guid">The <see cref="Guid"/> to convert.</param>
     /// <returns>The equivalent <see cref="NewId"/>.</returns>
-    public static NewId FromGuid(in Guid guid)
+    public static NewId FromSqlServerGuid(in Guid guid)
     {
         if (Vector128.IsHardwareAccelerated && BitConverter.IsLittleEndian)
         {
@@ -358,38 +312,12 @@ public readonly struct NewId :
         return new NewId(a, b, c, d);
     }
 
-    /// <summary>Returns the 16-byte representation of this identifier in <see cref="Guid"/> byte order.</summary>
+    /// <summary>Returns the 16-byte representation of this identifier, the same bytes as <c>ToSequentialGuid().ToByteArray()</c>.</summary>
     /// <returns>A new 16-byte array.</returns>
     public byte[] ToByteArray()
     {
         var bytes = new byte[16];
-
-        if (Vector128.IsHardwareAccelerated && BitConverter.IsLittleEndian)
-        {
-            var vector = Unsafe.As<NewId, Vector128<byte>>(ref Unsafe.AsRef(in this));
-            var byteArrayShuffle = Vector128.Create((byte)13, 12, 14, 15, 8, 9, 10, 11, 5, 4, 3, 2, 1, 0, 7, 6);
-            var result = Vector128.Shuffle(vector, byteArrayShuffle);
-            MemoryMarshal.TryWrite(bytes, in result);
-            return bytes;
-        }
-
-        bytes[15] = (byte)(_b >> 16);
-        bytes[14] = (byte)(_b >> 24);
-        bytes[13] = (byte)_a;
-        bytes[12] = (byte)(_a >> 8);
-        bytes[11] = (byte)(_a >> 16);
-        bytes[10] = (byte)(_a >> 24);
-        bytes[9] = (byte)_b;
-        bytes[8] = (byte)(_b >> 8);
-        bytes[7] = (byte)(_c >> 24);
-        bytes[6] = (byte)(_c >> 16);
-        bytes[5] = (byte)(_c >> 8);
-        bytes[4] = (byte)_c;
-        bytes[3] = (byte)(_d >> 24);
-        bytes[2] = (byte)(_d >> 16);
-        bytes[1] = (byte)_d;
-        bytes[0] = (byte)(_d >> 8);
-
+        ToSequentialGuid().TryWriteBytes(bytes);
         return bytes;
     }
 
@@ -519,7 +447,7 @@ public readonly struct NewId :
     }
 
     /// <summary>
-    /// Generate a NewId
+    /// Generate a new, time-ordered NewId.
     /// </summary>
     /// <returns></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -529,7 +457,7 @@ public readonly struct NewId :
     }
 
     /// <summary>
-    /// Generate an array of NewIds
+    /// Generate an array of new, time-ordered NewIds.
     /// </summary>
     /// <param name="count">The number of NewIds to generate</param>
     /// <returns></returns>
@@ -544,7 +472,7 @@ public readonly struct NewId :
     }
 
     /// <summary>
-    /// Generate an array of NewIds
+    /// Generate an array of new, time-ordered NewIds.
     /// </summary>
     /// <param name="index">The starting offset for the newly generated ids</param>
     /// <param name="count">The number of NewIds to generate</param>
@@ -560,9 +488,9 @@ public readonly struct NewId :
     /// This is the format that should be used for MSSQL Server for clustered indexes.
     /// </summary>
     /// <returns>MSSQL Server ordered Guid.</returns>
-    public static Guid NextGuid()
+    public static Guid NextSqlServerGuid()
     {
-        return _getGenerator().NextGuid();
+        return _getGenerator().NextSqlServerGuid();
     }
 
     /// <summary>

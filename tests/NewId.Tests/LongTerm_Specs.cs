@@ -1,4 +1,4 @@
-﻿// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
+// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
 // Copyright 2007-2019 Chris Patterson.
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
 //
@@ -26,8 +26,8 @@ public class Generating_ids_over_time
         {
             Assert.NotEqual(ids[i + 1], ids[i]);
 
-            SqlGuid left = ids[i].ToGuid();
-            SqlGuid right = ids[i + 1].ToGuid();
+            SqlGuid left = ids[i].ToSqlServerGuid();
+            SqlGuid right = ids[i + 1].ToSqlServerGuid();
             Assert.True(left.CompareTo(right) < 0);
             if (i % 128 == 0)
                 Console.WriteLine("Normal: {0} Sql: {1}", left, ids[i].ToSequentialGuid());

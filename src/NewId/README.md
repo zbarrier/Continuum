@@ -16,7 +16,7 @@ using Continuum;
 NewId id = NewId.Next();
 
 Guid sequential = NewId.NextSequentialGuid(); // PostgreSQL, MySQL, general use
-Guid mssql = NewId.NextGuid();                // MSSQL Server uniqueidentifier ordering
+Guid mssql = NewId.NextSqlServerGuid();       // MSSQL Server uniqueidentifier ordering
 
 DateTime created = id.Timestamp;              // UTC time the id was generated
 ```
@@ -28,11 +28,11 @@ MSSQL Server sorts `uniqueidentifier` values using a different byte order than m
 | Method | Ordered correctly in | Convert back with |
 |---|---|---|
 | `NextSequentialGuid()` / `ToSequentialGuid()` | PostgreSQL, MySQL, string/byte comparison | `NewId.FromSequentialGuid(guid)` or `guid.ToNewIdFromSequential()` |
-| `NextGuid()` / `ToGuid()` | MSSQL Server | `NewId.FromGuid(guid)` or `guid.ToNewId()` |
+| `NextSqlServerGuid()` / `ToSqlServerGuid()` | MSSQL Server | `NewId.FromSqlServerGuid(guid)` or `guid.ToNewIdFromSqlServer()` |
 
 ### Formatting
 
-`ToString` accepts the same format specifiers as `Guid` (`D`, `N`, `B`, `P`). Add `S` (for example `"DS"`) to format the bytes in sequential order. Custom formatters are also included:
+`ToString` accepts the same format specifiers as `Guid` (`D`, `N`, `B`, `P`). Strings, `ToByteArray()`, and the `byte[]`/`string` constructors always use sequential order; use the `SqlServer` methods only for MSSQL Server `uniqueidentifier` columns. Custom formatters are also included:
 
 ```csharp
 id.ToString("N");

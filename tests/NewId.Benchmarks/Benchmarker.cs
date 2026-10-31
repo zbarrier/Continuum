@@ -29,7 +29,7 @@ public class Benchmarker
 	}
 
 	readonly NewId _id = NewId.Next();
-	readonly Guid _guid = NewId.NextGuid();
+	readonly Guid _guid = NewId.NextSqlServerGuid();
 	readonly Guid _sequentialGuid = NewId.NextSequentialGuid();
 
 	[Benchmark(Baseline = true, Description = "Next")]
@@ -44,10 +44,10 @@ public class Benchmarker
 		return NewId.Next(100);
 	}
 
-	[Benchmark(Description = "NextGuid")]
-	public Guid GetNextGuid()
+	[Benchmark(Description = "NextSqlServerGuid")]
+	public Guid GetNextSqlServerGuid()
 	{
-		return NewId.NextGuid();
+		return NewId.NextSqlServerGuid();
 	}
 
 	[Benchmark(Description = "NextSequentialGuid")]
@@ -56,10 +56,10 @@ public class Benchmarker
 		return NewId.NextSequentialGuid();
 	}
 
-	[Benchmark(Description = "ToGuid")]
-	public Guid ToGuid()
+	[Benchmark(Description = "ToSqlServerGuid")]
+	public Guid ToSqlServerGuid()
 	{
-		return _id.ToGuid();
+		return _id.ToSqlServerGuid();
 	}
 
 	[Benchmark(Description = "ToSequentialGuid")]
@@ -68,10 +68,10 @@ public class Benchmarker
 		return _id.ToSequentialGuid();
 	}
 
-	[Benchmark(Description = "FromGuid")]
-	public NewId FromGuid()
+	[Benchmark(Description = "FromSqlServerGuid")]
+	public NewId FromSqlServerGuid()
 	{
-		return NewId.FromGuid(_guid);
+		return NewId.FromSqlServerGuid(_guid);
 	}
 
 	[Benchmark(Description = "FromSequentialGuid")]

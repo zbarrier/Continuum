@@ -1,4 +1,4 @@
-﻿// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
+// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
 // Copyright 2007-2019 Chris Patterson.
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
 //
@@ -13,7 +13,7 @@ public class When_interoperating_with_the_guid_type
     {
         var g = Guid.NewGuid();
 
-        var n = g.ToNewId();
+        var n = g.ToNewIdFromSequential();
 
         var ns = n.ToString();
         var gs = g.ToString();
@@ -26,7 +26,7 @@ public class When_interoperating_with_the_guid_type
     {
         var n = NewId.Next(2)[1]; // ensure sequence number is not 0x0000
 
-        var g = n.ToGuid();
+        var g = n.ToSequentialGuid();
 
         var ns = n.ToString();
         var gs = g.ToString();
@@ -39,7 +39,7 @@ public class When_interoperating_with_the_guid_type
     {
         var id = NewId.Next(2)[1]; // ensure sequence number is not 0x0000
 
-        Console.WriteLine(id.ToString("DS"));
+        Console.WriteLine(id.ToString("D"));
     }
 
     [Fact]
@@ -59,9 +59,9 @@ public class When_interoperating_with_the_guid_type
     {
         var g = Guid.NewGuid();
 
-        var n = g.ToNewId();
+        var n = g.ToNewIdFromSqlServer();
 
-        var gn = n.ToGuid();
+        var gn = n.ToSqlServerGuid();
 
         Assert.Equal(gn, g);
     }
@@ -134,65 +134,22 @@ public class When_interoperating_with_the_guid_type
         Assert.Equal(ns, gs);
     }
 
-    [Fact]
-    public void Should_match_parsed_guid_bs()
+    [Theory]
+    [InlineData("B")]
+    [InlineData("D")]
+    [InlineData("N")]
+    [InlineData("P")]
+    public void Should_format_in_sequential_guid_order(string format)
     {
         var bytes = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 
         var n = new NewId(bytes);
 
-        var ns = n.ToString("Bs");
+        var ns = n.ToString(format);
 
-        var gsn = Guid.Parse(ns);
-        var g = n.ToSequentialGuid();
-
-        Assert.Equal(gsn, g);
-    }
-
-    [Fact]
-    public void Should_match_parsed_guid_ds()
-    {
-        var bytes = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-
-        var n = new NewId(bytes);
-
-        var ns = n.ToString("Ds");
-
-        var gsn = Guid.Parse(ns);
-        var g = n.ToSequentialGuid();
-
-        Assert.Equal(gsn, g);
-        Assert.NotEqual(n.ToGuid(), gsn);
-    }
-
-    [Fact]
-    public void Should_match_parsed_guid_ns()
-    {
-        var bytes = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-
-        var n = new NewId(bytes);
-
-        var ns = n.ToString("Ns");
-
-        var gsn = Guid.Parse(ns);
-        var g = n.ToSequentialGuid();
-
-        Assert.Equal(gsn, g);
-    }
-
-    [Fact]
-    public void Should_match_parsed_guid_ps()
-    {
-        var bytes = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-
-        var n = new NewId(bytes);
-
-        var ns = n.ToString("Ps");
-
-        var gsn = Guid.Parse(ns);
-        var g = n.ToSequentialGuid();
-
-        Assert.Equal(gsn, g);
+        Assert.Equal(n.ToSequentialGuid().ToString(format), ns);
+        Assert.Equal(n, NewId.FromSequentialGuid(Guid.Parse(ns)));
+        Assert.NotEqual(n.ToSqlServerGuid(), Guid.Parse(ns));
     }
 
     [Fact]
@@ -239,9 +196,9 @@ public class When_interoperating_with_the_guid_type
     {
         NewId n = NewId.Next(2)[1];
 
-        var g = n.ToGuid();
+        var g = n.ToSqlServerGuid();
 
-        var ng = NewId.FromGuid(g);
+        var ng = NewId.FromSqlServerGuid(g);
 
         Assert.Equal(ng, n);
 
@@ -255,7 +212,6 @@ public class When_interoperating_with_the_guid_type
     {
         NewId n = NewId.Next(2)[1];
 
-        var nn = n.ToGuid();
         var g = n.ToSequentialGuid();
 
         var ng = NewId.FromSequentialGuid(g);

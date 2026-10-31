@@ -31,12 +31,12 @@ public class When_generating_id
         // Arrange
         var generator1 = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
         var generator2 = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
-        generator1.Next().ToGuid();
-        generator2.NextGuid();
+        generator1.Next().ToSqlServerGuid();
+        generator2.NextSqlServerGuid();
 
         // Act
-        var id1 = generator1.Next().ToGuid();
-        var id2 = generator2.NextGuid();
+        var id1 = generator1.Next().ToSqlServerGuid();
+        var id2 = generator2.NextSqlServerGuid();
 
         // Assert
         Assert.Equal(id2, id1);
@@ -79,9 +79,9 @@ public class When_generating_id
     {
         var generator = new NewIdGenerator(_tickProvider, _workerIdProvider);
 
-        var id1 = generator.Next().ToGuid();
-        var id2 = generator.NextGuid();
-        var id3 = generator.NextGuid();
+        var id1 = generator.Next().ToSqlServerGuid();
+        var id2 = generator.NextSqlServerGuid();
+        var id3 = generator.NextSqlServerGuid();
 
         Assert.NotEqual(id2, id1);
         Assert.NotEqual(id3, id2);
@@ -91,8 +91,8 @@ public class When_generating_id
         Console.WriteLine(id2);
         Console.WriteLine(id3);
 
-        NewId nid1 = id1.ToNewId();
-        NewId nid2 = id2.ToNewId();
+        NewId nid1 = id1.ToNewIdFromSqlServer();
+        NewId nid2 = id2.ToNewIdFromSqlServer();
     }
 
     [Fact]
@@ -146,9 +146,9 @@ public class When_generating_id
 
         for (int i = 0; i < 267; i++)
         {
-            generator.NextGuid();
+            generator.NextSqlServerGuid();
         }
-        var guid = generator.NextGuid();
+        var guid = generator.NextSqlServerGuid();
 
         Assert.Equal(guid, expected);
     }

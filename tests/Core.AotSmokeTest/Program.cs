@@ -44,7 +44,7 @@ Check("Lazy sub-mapper filters kinds", eventsOnly.IsTypeRegistered<OrderPlaced>(
 
 // Serializer round-trip via source-generated JSON metadata, resolving the CLR type from the mapper
 var serializer = services.GetRequiredKeyedService<IGrainStorageSerializer>(connection);
-object original = new OrderPlaced(NewId.NextGuid(), 42.5m, TimeSpan.FromMinutes(90));
+object original = new OrderPlaced(NewId.NextSequentialGuid(), 42.5m, TimeSpan.FromMinutes(90));
 var payload = serializer.Serialize(original);
 var roundTripped = serializer.Deserialize<object>(new BinaryDataWithType(payload.ToMemory(), mapper.GetType(mapper.GetTypeName(original.GetType()))));
 Check("Serializer round-trip", roundTripped is OrderPlaced placed && placed == (OrderPlaced)original);
