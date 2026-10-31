@@ -6,7 +6,6 @@ using System.ComponentModel;
 
 namespace Continuum.TypeMapping;
 
-// Max value is 63
 /// <summary>
 /// Categories of mapped types. Values are flags so type mappers can be created for combinations of kinds.
 /// </summary>
