@@ -47,6 +47,8 @@ NewId parsed = new ZBase32Parser().Parse(text);
 `NewIdConverter` reads and writes a `NewId` as a sequential `Guid` string with System.Text.Json:
 
 ```csharp
+using Continuum.Converters.Json;
+
 var options = new JsonSerializerOptions { Converters = { new NewIdConverter() } };
 ```
 
@@ -56,12 +58,14 @@ The default generator uses `BestPossibleWorkerIdProvider` (MAC address, falling 
 
 ```csharp
 NewId.SetProcessIdProvider(new CurrentProcessIdProvider()); // unique per process on the same machine
-NewId.SetTickProvider(new StopwatchTickProvider());         // higher resolution timestamps
+NewId.SetTickProvider(new StopwatchTickProvider());         // never goes backward; see below
 ```
+
+`StopwatchTickProvider` was originally used for higher resolution timestamps, but on .NET 10 `DateTime.UtcNow` has about the same resolution. Its remaining benefit is that it never moves backward when the system clock is adjusted, because it adds elapsed `Stopwatch` time to the wall-clock time captured at startup. The trade-off is that its timestamps slowly drift from wall-clock time over long uptimes.
 
 #### Containers
 
-On Docker's default bridge network, a container's MAC address is derived from its internal IP address, so containers on different hosts that receive the same internal IP get the same worker id and can generate duplicate ids. The process id does not help, since it is often 1 inside a container. In these deployments, supply an `IWorkerIdProvider` that returns 6 bytes unique to each running process, such as a hash of the pod or container name, or of the Orleans silo address:
+Containers often lack a MAC address that is unique across hosts. Before Docker Engine 28.0, a container's MAC address on bridge networks was derived from its internal IP address, so containers on different hosts that received the same internal IP got the same worker id and could generate duplicate ids. Docker Engine 28.0 and later assign random MAC addresses, but other container runtimes and network setups may still reuse addresses. The process id does not help, since it is often 1 inside a container. In container deployments, supply an `IWorkerIdProvider` that returns 6 bytes unique to each running process, such as a hash of the pod or container name, or of the Orleans silo address:
 
 ```csharp
 NewId.SetWorkerIdProvider(new MyWorkerIdProvider());
@@ -69,7 +73,7 @@ NewId.SetWorkerIdProvider(new MyWorkerIdProvider());
 
 ## Orleans
 
-To pass `NewId` values through Microsoft Orleans, install [Continuum.NewId.Orleans](../NewId.Orleans/README.md).
+To pass `NewId` values through Microsoft Orleans, install [Continuum.NewId.Orleans](https://www.nuget.org/packages/Continuum.NewId.Orleans).
 
 ## Attribution
 
