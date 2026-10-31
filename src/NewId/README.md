@@ -59,6 +59,14 @@ NewId.SetProcessIdProvider(new CurrentProcessIdProvider()); // unique per proces
 NewId.SetTickProvider(new StopwatchTickProvider());         // higher resolution timestamps
 ```
 
+#### Containers
+
+On Docker's default bridge network, a container's MAC address is derived from its internal IP address, so containers on different hosts that receive the same internal IP get the same worker id and can generate duplicate ids. The process id does not help, since it is often 1 inside a container. In these deployments, supply an `IWorkerIdProvider` that returns 6 bytes unique to each running process, such as a hash of the pod or container name, or of the Orleans silo address:
+
+```csharp
+NewId.SetWorkerIdProvider(new MyWorkerIdProvider());
+```
+
 ## Orleans
 
 To pass `NewId` values through Microsoft Orleans, install [Continuum.NewId.Orleans](../NewId.Orleans/README.md).
