@@ -113,6 +113,29 @@ public sealed class TypeMapperTests
     }
 
     [Fact]
+    public void AddType_generic_maps_both_directions()
+    {
+        var mapper = new TestTypeMapper();
+
+        mapper.AddType<Unmapped>("unmapped");
+
+        Assert.Equal("unmapped", mapper.GetTypeName<Unmapped>());
+        Assert.Equal(typeof(Unmapped), mapper.GetType("unmapped"));
+    }
+
+    [Fact]
+    public void RemoveType_by_type_removes_both_directions()
+    {
+        var mapper = new TestTypeMapper();
+        mapper.AddType(typeof(Unmapped), "unmapped");
+
+        mapper.RemoveType(typeof(Unmapped));
+
+        Assert.Empty(mapper.TypeMap);
+        Assert.Empty(mapper.TypeNameMap);
+    }
+
+    [Fact]
     public void EnsureTypesRegistered_throws_for_missing_type()
     {
         var mapper = new TestTypeMapper();

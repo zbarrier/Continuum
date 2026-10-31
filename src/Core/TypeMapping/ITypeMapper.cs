@@ -22,7 +22,7 @@ public interface ITypeMapper
 
     /// <summary>
     /// Marks registration as complete. Lookups switch to read-optimized frozen dictionaries, and subsequent
-    /// calls to <see cref="AddType"/> or <see cref="RemoveType{T}"/> throw <see cref="InvalidOperationException"/>.
+    /// calls to <see cref="AddType"/>, <see cref="RemoveType{T}"/>, or <see cref="RemoveType(Type)"/> throw <see cref="InvalidOperationException"/>.
     /// Calling it more than once is a no-op.
     /// </summary>
     void Freeze();
@@ -57,6 +57,16 @@ public interface ITypeMapper
     /// <returns><see langword="true"/> if <paramref name="typeName"/> is mapped; otherwise <see langword="false"/>.</returns>
     bool TryGetType(string typeName, [NotNullWhen(true)] out Type? type);
 
+
+    /// <summary>
+    /// Adds a mapping for <typeparamref name="T"/>. Adding an existing mapping again is a no-op. Intended to be called during startup.
+    /// </summary>
+    /// <typeparam name="T">The CLR type.</typeparam>
+    /// <param name="typeName">The stable type name.</param>
+    /// <exception cref="ArgumentException"><typeparamref name="T"/> is already mapped to a different name, or <paramref name="typeName"/> is already mapped to a different type.</exception>
+    /// <exception cref="InvalidOperationException">The mapper is frozen.</exception>
+    void AddType<T>(string typeName);
+
     /// <summary>
     /// Adds a mapping. Adding an existing mapping again is a no-op. Intended to be called during startup.
     /// </summary>
@@ -71,6 +81,12 @@ public interface ITypeMapper
     /// <exception cref="TypeMappingNotFoundException"><typeparamref name="T"/> is not mapped.</exception>
     /// <exception cref="InvalidOperationException">The mapper is frozen.</exception>
     void RemoveType<T>();
+
+    /// <summary>Removes the mapping for <paramref name="type"/>.</summary>
+    /// <param name="type">The mapped type.</param>
+    /// <exception cref="TypeMappingNotFoundException"><paramref name="type"/> is not mapped.</exception>
+    /// <exception cref="InvalidOperationException">The mapper is frozen.</exception>
+    void RemoveType(Type type);
 
     /// <summary>Determines whether <typeparamref name="T"/> is mapped.</summary>
     /// <typeparam name="T">The type to check.</typeparam>
