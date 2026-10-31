@@ -96,6 +96,12 @@ public readonly struct NewId :
         this = FromSequentialGuid(new Guid(a, b, c, d, e, f, g, h, i, j, k));
     }
 
+    /// <summary>The earliest <see cref="DateTime"/> ticks a <see cref="NewId"/> can hold (1970-01-01 UTC).</summary>
+    internal const long MinTicks = 621355968000000000;
+
+    /// <summary>The latest <see cref="DateTime"/> ticks a <see cref="NewId"/> can hold (58 bits of 100 ns ticks after <see cref="MinTicks"/>, about year 2883).</summary>
+    internal const long MaxTicks = MinTicks + (1L << 58) - 1;
+
     static IWorkerIdProvider WorkerIdProvider => _workerIdProvider ??= new BestPossibleWorkerIdProvider();
 
     static IProcessIdProvider? ProcessIdProvider => _processIdProvider;
@@ -107,9 +113,9 @@ public readonly struct NewId :
     {
         get
         {
-            var ticks = (long)(((ulong)_a << 32) | (uint)_b);
+            var timestamp = (long)((ulong)(uint)_a << 26 | (ulong)((uint)_b >> 16) << 10 | (ulong)(((uint)_b >> 2) & 0x3FF));
 
-            return new DateTime(ticks, DateTimeKind.Utc);
+            return new DateTime(MinTicks + timestamp, DateTimeKind.Utc);
         }
     }
 

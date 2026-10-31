@@ -122,8 +122,8 @@ public class When_generating_id
     [Fact]
     public void Should_generate_known_sequential_guid()
     {
-        var expected = Guid.Parse("74b719ec-7596-3cf0-7d81-bf34437f0b01");
-        var tickProvider = new MockTickProvider(8410219332513447152);
+        var expected = Guid.Parse("ffbbf0a1-ae2b-8a1d-bd81-bf34437f0b01");
+        var tickProvider = new MockTickProvider(new DateTime(2882, 6, 1, 12, 34, 56, DateTimeKind.Utc).AddTicks(1234567).Ticks);
         var networkProvider = new MockNetworkProvider(BitConverter.GetBytes(6857996259202924925));
         var generator = new NewIdGenerator(tickProvider, networkProvider);
 
@@ -139,8 +139,8 @@ public class When_generating_id
     [Fact]
     public void Should_generate_known_guid()
     {
-        var expected = Guid.Parse("437f0b01-bf34-7d81-3cf0-74b719ec7596");
-        var tickProvider = new MockTickProvider(8410219332513447152);
+        var expected = Guid.Parse("437f0b01-bf34-bd81-8a1d-ffbbf0a1ae2b");
+        var tickProvider = new MockTickProvider(new DateTime(2882, 6, 1, 12, 34, 56, DateTimeKind.Utc).AddTicks(1234567).Ticks);
         var networkProvider = new MockNetworkProvider(BitConverter.GetBytes(6857996259202924925));
         var generator = new NewIdGenerator(tickProvider, networkProvider);
 
@@ -151,6 +151,42 @@ public class When_generating_id
         var guid = generator.NextSqlServerGuid();
 
         Assert.Equal(guid, expected);
+    }
+
+    [Fact]
+    public void Should_generate_uuid_version_8_with_rfc_variant()
+    {
+        var generator = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
+
+        var guid = generator.NextSequentialGuid();
+
+        Assert.Equal(8, guid.Version);
+        Assert.Equal(0b1000, guid.Variant & 0b1100);
+        Assert.Equal(8, generator.Next().ToSequentialGuid().Version);
+    }
+
+    [Theory]
+    [InlineData(621355968000000000L)]
+    [InlineData(638843228961234567L)]
+    [InlineData(621355968000000000L + (1L << 58) - 1)]
+    public void Should_round_trip_timestamp(long ticks)
+    {
+        var generator = new NewIdGenerator(new MockTickProvider(ticks), _workerIdProvider);
+
+        var id = generator.Next();
+
+        Assert.Equal(ticks, id.Timestamp.Ticks);
+        Assert.Equal(DateTimeKind.Utc, id.Timestamp.Kind);
+    }
+
+    [Theory]
+    [InlineData(621355967999999999L)]
+    [InlineData(621355968000000000L + (1L << 58))]
+    public void Should_reject_ticks_outside_supported_range(long ticks)
+    {
+        var generator = new NewIdGenerator(new MockTickProvider(ticks), _workerIdProvider);
+
+        Assert.Throws<InvalidOperationException>(() => generator.Next());
     }
 
     [Theory]

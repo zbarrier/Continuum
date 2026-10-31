@@ -30,6 +30,10 @@ MSSQL Server sorts `uniqueidentifier` values using a different byte order than m
 | `NextSequentialGuid()` / `ToSequentialGuid()` | PostgreSQL, MySQL, string/byte comparison | `NewId.FromSequentialGuid(guid)` or `guid.ToNewIdFromSequential()` |
 | `NextSqlServerGuid()` / `ToSqlServerGuid()` | MSSQL Server | `NewId.FromSqlServerGuid(guid)` or `guid.ToNewIdFromSqlServer()` |
 
+### UUID version 8
+
+In sequential order a `NewId` is a valid RFC 9562 UUIDv8 (`Guid.Version == 8`, RFC variant). It holds a 58-bit timestamp of 100 ns ticks since 1970-01-01 UTC (good until about year 2883), a 48-bit worker id, and a 16-bit sequence. The generator throws if the clock is outside that range. MSSQL Server order rearranges the bytes, so `NextSqlServerGuid()` and `ToSqlServerGuid()` values are not v8.
+
 ### Formatting
 
 `ToString` accepts the same format specifiers as `Guid` (`D`, `N`, `B`, `P`). Strings, `ToByteArray()`, and the `byte[]`/`string` constructors always use sequential order; use the `SqlServer` methods only for MSSQL Server `uniqueidentifier` columns. Custom formatters are also included:
