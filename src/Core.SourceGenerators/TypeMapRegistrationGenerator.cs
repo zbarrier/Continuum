@@ -178,7 +178,7 @@ public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
             return false;
         }
 
-        if (requirePublic && !IsPubliclyAccessible(type))
+        if (requirePublic ? !IsPubliclyAccessible(type) : !IsAccessibleWithinAssembly(type))
         {
             return false;
         }
@@ -211,6 +211,22 @@ public sealed class TypeMapRegistrationGenerator : IIncrementalGenerator
         for (var current = type; current is not null; current = current.ContainingType)
         {
             if (current.DeclaredAccessibility != Accessibility.Public)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // The generated registration class is a top-level internal class in the same assembly, so it can only name types
+    // that, along with every containing type, are visible assembly-wide and not file-local.
+    internal static bool IsAccessibleWithinAssembly(INamedTypeSymbol type)
+    {
+        for (var current = type; current is not null; current = current.ContainingType)
+        {
+            if (current.IsFileLocal
+                || current.DeclaredAccessibility is not (Accessibility.Public or Accessibility.Internal or Accessibility.ProtectedOrInternal))
             {
                 return false;
             }
