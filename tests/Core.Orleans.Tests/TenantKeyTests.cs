@@ -102,6 +102,7 @@ public class TenantKeyTests
     [InlineData("")]
     [InlineData("|key")]
     [InlineData("acme|")]
+    [InlineData("acme|a|b")]
     public void StreamName_Create_EmptyTenantOrKey_Throws(string remainder)
     {
         Assert.Throws<FormatException>(() => StreamNameParsing.Create($"Order-{remainder}", "Order", remainder));
