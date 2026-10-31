@@ -37,3 +37,4 @@
 
 ## Testing Guidelines
 - Don't add production hooks or seams just to test narrow race windows or code that's likely to change soon. Prefer tests that need no production changes, and rely on code review for small, easy-to-read logic rather than testing every little thing.
+- When reviewing code, say plainly when code is fine as is; do not invent marginal suggestions just to have something to report. Only report findings with real value.
