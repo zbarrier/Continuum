@@ -1,4 +1,4 @@
-﻿// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
+// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
 // Copyright 2007-2019 Chris Patterson.
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
 //
@@ -14,9 +14,9 @@ public sealed class NewIdConverter : JsonConverter<NewId>
 {
     /// <inheritdoc />
     public override NewId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        => NewId.FromSequentialGuid(Guid.Parse(reader.GetString()!));
+        => NewId.FromSequentialGuid(reader.GetGuid());
 
     /// <inheritdoc />
     public override void Write(Utf8JsonWriter writer, NewId value, JsonSerializerOptions options)
-        => writer.WriteStringValue(value.ToSequentialGuid().ToString());
+        => writer.WriteStringValue(value.ToSequentialGuid());
 }
