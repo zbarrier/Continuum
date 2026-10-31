@@ -10,7 +10,7 @@
 
 ## Framework Usage
 - Continuum type map attributes are used almost only in application code that consumes the framework via NuGet, not in other Continuum projects.
-- Use the Orleans [Alias] naming convention in Continuum: "Continuum.<Area>.<TypeName>.V<n>" (e.g., Continuum.KurrentDBStorageException.V1). Omit namespace segments already implied by the type name or by Orleans itself. Abstract types do not get an [Alias].
+- Use the Orleans [Alias] naming convention in Continuum: "Continuum.<Area>.<TypeName>.V<n>" (e.g., Continuum.KurrentDBStorageException.V1). Omit namespace segments already implied by the type name or by Orleans itself. Abstract classes do not get an [Alias], since Orleans only writes the concrete runtime type's alias; interfaces still do (grain interface aliases define the grain interface identity, and grain method aliases identify methods).
 - Orleans [Alias] names in Continuum should not include an "Orleans" segment, since being for Orleans is implied (e.g., "Continuum.KurrentDBStorageException.V1", not "Continuum.Orleans.KurrentDBStorageException.V1").
 - Continuum namespaces put the "Orleans" segment right after "Continuum" (e.g., Continuum.Orleans.Events, not Continuum.Events.Orleans), matching project naming like Continuum.Orleans.KurrentDB.
 - Add a test project only when the library has behavior that genuinely needs testing; Continuum libraries do not each need their own test project.
@@ -38,3 +38,6 @@
 ## Testing Guidelines
 - Don't add production hooks or seams just to test narrow race windows or code that's likely to change soon. Prefer tests that need no production changes, and rely on code review for small, easy-to-read logic rather than testing every little thing.
 - When reviewing code, say plainly when code is fine as is; do not invent marginal suggestions just to have something to report. Only report findings with real value.
+
+## Alias Versioning
+- The Orleans [Alias] ".V<n>" suffix is not a hard rule in Continuum. During reviews, flag aliases that may not need ".V1" (types never persisted or sent polymorphically, e.g., surrogates) rather than changing them automatically. Keep ".V1" where versioning is plausible: persisted state, exceptions, types sent polymorphically, and messages like commands where a later V2 alongside V1 should be easy to identify.
