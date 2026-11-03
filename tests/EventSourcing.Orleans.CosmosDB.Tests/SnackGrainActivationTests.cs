@@ -24,7 +24,7 @@ public class SnackGrainActivationTests(ClusterFixture fixture)
             new SnackInitializedEvent(snackId, "Apple", Guid.NewGuid(), DateTimeOffset.UtcNow, "Seed", 1),
             new SnackNameChangedEvent(snackId, "Orange", Guid.NewGuid(), DateTimeOffset.UtcNow, "Seed", 2),
         ];
-        await storage.AppendAsync("snack", GrainId.Create("snack", snackId.ToString("N")), seeded, 0);
+        await storage.AppendAsync("snack", GrainId.Create("snack", snackId.ToString("N")), seeded, 0, Guid.NewGuid());
 
         var grainFactory = fixture.Cluster.ServiceProvider.GetRequiredService<IGrainFactory>();
         var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId);

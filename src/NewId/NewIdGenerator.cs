@@ -1,4 +1,4 @@
-﻿// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
+// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
 // Copyright 2007-2019 Chris Patterson.
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
 //
@@ -13,11 +13,12 @@ namespace Continuum;
 /// <summary>Default thread-safe <see cref="INewIdGenerator"/> combining a timestamp, worker identifier, optional process identifier, and sequence.</summary>
 public class NewIdGenerator : INewIdGenerator
 {
+    readonly int _workerHigh;
     readonly int _c;
     readonly int _d;
     readonly short _gb;
     readonly short _gc;
-    readonly ITickProvider _tickProvider;
+    readonly TimeProvider _timeProvider;
     int _a;
     int _b;
     long _lastTick;
@@ -26,25 +27,30 @@ public class NewIdGenerator : INewIdGenerator
     readonly Lock _lock = new();
 
     /// <summary>Initializes a new instance of the <see cref="NewIdGenerator"/> class.</summary>
-    /// <param name="tickProvider">The timestamp source.</param>
+    /// <param name="timeProvider">The UTC time source.</param>
     /// <param name="workerIdProvider">The worker identifier source.</param>
     /// <param name="processIdProvider">An optional process identifier source; when <see langword="null"/>, the last two worker identifier bytes are used instead.</param>
     /// <param name="workerIndex">The index passed to <see cref="IWorkerIdProvider.GetWorkerId(int)"/>.</param>
-    public NewIdGenerator(ITickProvider tickProvider, IWorkerIdProvider workerIdProvider, IProcessIdProvider? processIdProvider = null, int workerIndex = 0)
+    public NewIdGenerator(TimeProvider timeProvider, IWorkerIdProvider workerIdProvider, IProcessIdProvider? processIdProvider = null, int workerIndex = 0)
     {
-        _tickProvider = tickProvider;
+        _timeProvider = timeProvider;
 
         var workerId = workerIdProvider.GetWorkerId(workerIndex);
 
-        _c = workerId[0] << 24 | workerId[1] << 16 | workerId[2] << 8 | workerId[3];
+        var worker = (ulong)workerId[0] << 40 | (ulong)workerId[1] << 32 | (ulong)workerId[2] << 24 | (ulong)workerId[3] << 16;
 
         if (processIdProvider != null)
         {
             var processId = processIdProvider.GetProcessId();
-            _d = processId[0] << 24 | processId[1] << 16;
+            worker |= (ulong)processId[0] << 8 | processId[1];
         }
         else
-            _d = workerId[4] << 24 | workerId[5] << 16;
+            worker |= (ulong)workerId[4] << 8 | workerId[5];
+
+        // UUIDv8 layout: the 2 high worker bits follow the timestamp in _b, the variant bits (10) lead _c.
+        _workerHigh = (int)(worker >> 46);
+        _c = unchecked((int)0x80000000) | (int)((worker >> 16) & 0x3FFFFFFF);
+        _d = (int)(worker << 16);
 
         _gb = (short)_c;
         _gc = (short)(_c >> 16);
@@ -53,7 +59,7 @@ public class NewIdGenerator : INewIdGenerator
     /// <inheritdoc />
     public NewId Next()
     {
-        var ticks = _tickProvider.Ticks;
+        var ticks = GetTicks();
 
         _lock.Enter();
 
@@ -77,9 +83,9 @@ public class NewIdGenerator : INewIdGenerator
     /// This is the format that should be used for MSSQL Server for clustered indexes.
     /// </summary>
     /// <returns>MSSQL Server ordered Guid.</returns>
-    public Guid NextGuid()
+    public Guid NextSqlServerGuid()
     {
-        var ticks = _tickProvider.Ticks;
+        var ticks = GetTicks();
 
         _lock.Enter();
 
@@ -126,7 +132,7 @@ public class NewIdGenerator : INewIdGenerator
     /// <returns>Lexicographical ordered Guid.</returns>
     public Guid NextSequentialGuid()
     {
-        var ticks = _tickProvider.Ticks;
+        var ticks = GetTicks();
 
         _lock.Enter();
 
@@ -170,10 +176,12 @@ public class NewIdGenerator : INewIdGenerator
     /// <inheritdoc />
     public ArraySegment<NewId> Next(NewId[] ids, int index, int count)
     {
-        if (index + count > ids.Length)
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        if (count > ids.Length - index)
             throw new ArgumentOutOfRangeException(nameof(count));
 
-        var ticks = _tickProvider.Ticks;
+        var ticks = GetTicks();
 
         _lock.Enter();
 
@@ -194,10 +202,22 @@ public class NewIdGenerator : INewIdGenerator
         return new ArraySegment<NewId>(ids, index, count);
     }
 
+    long GetTicks()
+    {
+        var ticks = _timeProvider.GetUtcNow().UtcTicks;
+
+        if (ticks < NewId.MinTicks || ticks > NewId.MaxTicks)
+            throw new InvalidOperationException($"The time provider returned {ticks} ticks, which is outside the range a NewId can hold ({NewId.MinTicks} to {NewId.MaxTicks}).");
+
+        return ticks;
+    }
+
     void UpdateTimestamp(long tick)
     {
-        _b = (int)(tick & 0xFFFFFFFF);
-        _a = (int)(tick >> 32);
+        // UUIDv8 layout: 58-bit timestamp (100 ns ticks since 1970) split around the version nibble (1000).
+        var timestamp = tick - NewId.MinTicks;
+        _a = (int)(timestamp >> 26);
+        _b = (int)((timestamp >> 10) & 0xFFFF) << 16 | 0x8000 | (int)(timestamp & 0x3FF) << 2 | _workerHigh;
 
         _sequence = 0;
         _lastTick = tick;

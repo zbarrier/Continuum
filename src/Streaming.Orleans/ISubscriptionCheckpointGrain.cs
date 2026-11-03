@@ -10,15 +10,15 @@ namespace Continuum.Streaming.Orleans;
 /// </remarks>
 [Alias("Continuum.Streaming.ISubscriptionCheckpointGrain.V1`1")]
 public interface ISubscriptionCheckpointGrain<TPosition> : IGrainWithStringKey
-    where TPosition : IComparable<TPosition>
+    where TPosition : struct, IComparable<TPosition>
 {
     /// <summary>
     /// Gets the last checkpoint, including one stored but not yet written to grain storage.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The last checkpoint, or the default position if none has been stored.</returns>
+    /// <returns>The last checkpoint, or <see langword="null" /> if none has been stored.</returns>
     [Alias("GetCheckpoint")]
-    Task<TPosition> GetCheckpointAsync(CancellationToken cancellationToken = default);
+    Task<TPosition?> GetCheckpointAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records the checkpoint in memory. It is written to grain storage periodically and when the grain deactivates.

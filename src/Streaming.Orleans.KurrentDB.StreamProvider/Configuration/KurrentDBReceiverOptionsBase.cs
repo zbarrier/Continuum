@@ -5,7 +5,7 @@ namespace Orleans.Configuration;
 /// </summary>
 /// <remarks>
 ///     Concrete strategies derive from this type: <see cref="KurrentDBPersistentSubscriptionReceiverOptions" /> for
-///     server managed consumer groups and <see cref="KurrentDBAllStreamReceiverOptions" /> for a client checkpointed
+///     server managed consumer groups and <see cref="KurrentDBCatchUpSubscriptionReceiverOptions" /> for a client checkpointed
 ///     <c>$all</c> subscription. The strategy is selected through the stream configurator, which registers only the
 ///     options class that applies, so that start up validation cannot fail on options belonging to the other strategy.
 ///     Deserialization is not configured here; receivers hand raw event records to the queue data adapter, which owns

@@ -79,7 +79,7 @@ public sealed class EventMetadata : IEventMetadata
         TransactionInfo? transaction)
     {
         transaction?.EnsureValid(nameof(transaction));
-        var copy = new Dictionary<string, string>(StringComparer.Ordinal);
+        var copy = new Dictionary<string, string>(values?.TryGetNonEnumeratedCount(out var count) == true ? count : 0, StringComparer.Ordinal);
         if (values is not null)
         {
             foreach (var (key, value) in values)

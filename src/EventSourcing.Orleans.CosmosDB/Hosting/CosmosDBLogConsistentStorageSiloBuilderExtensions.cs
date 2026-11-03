@@ -6,6 +6,7 @@ using Orleans.Providers;
 namespace Orleans.Hosting;
 
 /// <summary>
+///     <see cref="ISiloBuilder" /> extensions that register the Cosmos DB log-consistency provider.
 /// </summary>
 public static class CosmosDBLogConsistentStorageSiloBuilderExtensions
 {

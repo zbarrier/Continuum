@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace Continuum.Domain.Orleans;
 
@@ -13,6 +14,9 @@ public abstract record ByteValueObject<T> where T : ByteValueObject<T>
 
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected byte Value { get; init; }
+
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
@@ -73,6 +77,9 @@ public abstract record SByteValueObject<T> where T : SByteValueObject<T>
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected sbyte Value { get; init; }
 
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
+
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
     /// <returns>The <see cref="string"/> representation of the value.</returns>
@@ -132,9 +139,8 @@ public abstract record DateOnlyValueObject<T> where T : DateOnlyValueObject<T>
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected DateOnly Value { get; init; }
 
-    // Could cause issues with serialization if ToString() is used??
-    // Can be overridden in the concrete class to provide the desired format.
-    // public override string ToString() => Value.ToString("yyyy-MM-dd HH:mm:ss");
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
@@ -167,9 +173,8 @@ public abstract record DateTimeValueObject<T> where T : DateTimeValueObject<T>
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected DateTime Value { get; init; }
 
-    // Could cause issues with serialization if ToString() is used??
-    // Can be overridden in the concrete class to provide the desired format.
-    // public override string ToString() => Value.ToString("yyyy-MM-dd HH:mm:ss");
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString("O", CultureInfo.InvariantCulture);
 
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
@@ -188,6 +193,68 @@ public abstract record DateTimeValueObject<T> where T : DateTimeValueObject<T>
     /// <summary>Deconstructs the value object into a <see cref="DateTime"/>.</summary>
     /// <param name="value">The <see cref="DateTime"/> representation of the value.</param>
     public void Deconstruct(out DateTime value) => value = Value;
+}
+
+/// <summary>Base record for a strongly typed value object that wraps a <see cref="DateTimeOffset"/> value.</summary>
+/// <typeparam name="T">The concrete value object type.</typeparam>
+[GenerateSerializer, Immutable]
+public abstract record DateTimeOffsetValueObject<T> where T : DateTimeOffsetValueObject<T>
+{
+    /// <summary>Initializes a new instance with the specified value.</summary>
+    /// <param name="value">The value to wrap.</param>
+    protected DateTimeOffsetValueObject(DateTimeOffset value) => Value = value;
+
+    /// <summary>Gets the wrapped value.</summary>
+    [Id(0), JsonInclude] protected DateTimeOffset Value { get; init; }
+
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString("O", CultureInfo.InvariantCulture);
+
+    /// <summary>Converts the value object to a <see cref="string"/>.</summary>
+    /// <param name="self">The value object to convert.</param>
+    /// <returns>The <see cref="string"/> representation of the value.</returns>
+    public static implicit operator string(DateTimeOffsetValueObject<T> self) => self.ToString();
+
+    /// <summary>Converts the value object to a <see cref="DateTimeOffset"/>.</summary>
+    /// <param name="self">The value object to convert.</param>
+    /// <returns>The <see cref="DateTimeOffset"/> representation of the value.</returns>
+    public static implicit operator DateTimeOffset(DateTimeOffsetValueObject<T> self) => self.Value;
+
+    /// <summary>Deconstructs the value object into a <see cref="string"/>.</summary>
+    /// <param name="value">The <see cref="string"/> representation of the value.</param>
+    public void Deconstruct(out string value) => value = ToString();
+
+    /// <summary>Deconstructs the value object into a <see cref="DateTimeOffset"/>.</summary>
+    /// <param name="value">The <see cref="DateTimeOffset"/> representation of the value.</param>
+    public void Deconstruct(out DateTimeOffset value) => value = Value;
+
+    /// <summary>Determines whether <paramref name="left"/> is earlier than <paramref name="right"/>.</summary>
+    /// <param name="left">The first value to compare.</param>
+    /// <param name="right">The second value to compare.</param>
+    /// <returns><see langword="true"/> if <paramref name="left"/> is earlier than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+    public static bool operator <(DateTimeOffsetValueObject<T> left, DateTimeOffsetValueObject<T> right)
+        => left.Value < right.Value;
+
+    /// <summary>Determines whether <paramref name="left"/> is later than <paramref name="right"/>.</summary>
+    /// <param name="left">The first value to compare.</param>
+    /// <param name="right">The second value to compare.</param>
+    /// <returns><see langword="true"/> if <paramref name="left"/> is later than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+    public static bool operator >(DateTimeOffsetValueObject<T> left, DateTimeOffsetValueObject<T> right)
+        => left.Value > right.Value;
+
+    /// <summary>Determines whether <paramref name="left"/> is earlier than or equal to <paramref name="right"/>.</summary>
+    /// <param name="left">The first value to compare.</param>
+    /// <param name="right">The second value to compare.</param>
+    /// <returns><see langword="true"/> if <paramref name="left"/> is earlier than or equal to <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+    public static bool operator <=(DateTimeOffsetValueObject<T> left, DateTimeOffsetValueObject<T> right)
+        => left.Value <= right.Value;
+
+    /// <summary>Determines whether <paramref name="left"/> is later than or equal to <paramref name="right"/>.</summary>
+    /// <param name="left">The first value to compare.</param>
+    /// <param name="right">The second value to compare.</param>
+    /// <returns><see langword="true"/> if <paramref name="left"/> is later than or equal to <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+    public static bool operator >=(DateTimeOffsetValueObject<T> left, DateTimeOffsetValueObject<T> right)
+        => left.Value >= right.Value;
 }
 
 /// <summary>Base record for a strongly typed value object that wraps a <see cref="Guid"/> value.</summary>
@@ -261,9 +328,8 @@ public abstract record TimeSpanValueObject<T> where T : TimeSpanValueObject<T>
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected TimeSpan Value { get; init; }
 
-    // Could cause issues with serialization if ToString() is used??
-    // Can be overridden in the concrete class to provide the desired format.
-    // public override string ToString() => Value.ToString("c");
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString("c", CultureInfo.InvariantCulture);
 
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
@@ -295,6 +361,9 @@ public abstract record Int32ValueObject<T> where T : Int32ValueObject<T>
 
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected int Value { get; init; }
+
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
@@ -355,6 +424,9 @@ public abstract record UInt32ValueObject<T> where T : UInt32ValueObject<T>
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected uint Value { get; init; }
 
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
+
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
     /// <returns>The <see cref="string"/> representation of the value.</returns>
@@ -413,6 +485,9 @@ public abstract record Int64ValueObject<T> where T : Int64ValueObject<T>
 
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected long Value { get; init; }
+
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
@@ -473,6 +548,9 @@ public abstract record UInt64ValueObject<T> where T : UInt64ValueObject<T>
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected ulong Value { get; init; }
 
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
+
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
     /// <returns>The <see cref="string"/> representation of the value.</returns>
@@ -531,6 +609,9 @@ public abstract record FloatValueObject<T> where T : FloatValueObject<T>
 
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected float Value { get; init; }
+
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
@@ -591,6 +672,9 @@ public abstract record DoubleValueObject<T> where T : DoubleValueObject<T>
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected double Value { get; init; }
 
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
+
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>
     /// <returns>The <see cref="string"/> representation of the value.</returns>
@@ -649,6 +733,9 @@ public abstract record DecimalValueObject<T> where T : DecimalValueObject<T>
 
     /// <summary>Gets the wrapped value.</summary>
     [Id(0), JsonInclude] protected decimal Value { get; init; }
+
+    /// <summary>Returns the invariant-culture string representation of the wrapped value.</summary>
+    public sealed override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Converts the value object to a <see cref="string"/>.</summary>
     /// <param name="self">The value object to convert.</param>

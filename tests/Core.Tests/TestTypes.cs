@@ -14,6 +14,9 @@ public sealed class OrderShipped;
 [SnapshotType("tests.order-state")]
 public sealed class OrderState;
 
+[FrameworkType("tests.framework-marker")]
+public sealed class FrameworkMarker;
+
 [DomainEventType("tests.internal-event")]
 internal sealed class InternalEvent;
 

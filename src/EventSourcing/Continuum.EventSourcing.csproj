@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Continuum.EventSourcing</PackageId>
-    <Description>Host-independent event sourcing abstractions, including producer supplied event metadata with tracing and transaction grouping.</Description>
+    <Description>Placeholder for future host-independent Continuum event sourcing abstractions. Contains no types yet.</Description>
     <PackageTags>event-sourcing;events;metadata;tracing</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

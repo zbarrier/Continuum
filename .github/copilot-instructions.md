@@ -2,6 +2,7 @@
 
 ## Project Guidelines
 - Do not commit or push without explicit approval; leave changes uncommitted for review. Approval to commit/push applies only to the changes that exist when approval is given. Any work done after that (even within the same request, e.g., "commit and push, then write X") must be left uncommitted for review until the user explicitly approves committing it. Stage all changes (git add -A) when leaving work uncommitted for review, since staged changes are easier for the user to review.
+- Never commit or push failing tests without prominently flagging the failure and getting explicit approval first; clearly call out any failing test before a commit.
 - Follow the Continuum release strategy: no package releases until all Continuum framework projects are added; then a single coordinated 1.0.0 release of all packages.
 - All Continuum framework library projects must be Native AOT compatible (set IsAotCompatible=true and keep builds free of AOT/trim warnings). Orleans-dependent runtime features (e.g., Orleans DeepCopier/AddSerializer used by grains and sessions) are not required to run under Native AOT since Orleans does not support AOT yet; libraries must still be IsAotCompatible with no AOT/trim warnings from Continuum's own code.
 - Continuum projects reference each other with ProjectReference. Any Continuum project or test project that declares its own type-mapped types (e.g., [DomainEventType]) must reference Continuum.Core.SourceGenerators as an analyzer (OutputItemType="Analyzer" ReferenceOutputAssembly="false"); otherwise those types are never registered with the type mapper. Projects that do not declare type-mapped types do not need this analyzer reference.
@@ -32,3 +33,14 @@
 - Events with an active cursor must never be dropped: a cursor with unread events must keep blocking purge and checkpointing indefinitely. Do not suggest staleness timeouts or similar mechanisms that would purge unread events.
 - ProjectionGrain must save state before acknowledging each delivered event or batch; do not buffer or throttle projection state writes by default, since a delivered event may be checkpointed and purged. A buffered/throttled projection may be added later only as an explicit opt-in when the user asks for it.
 - KurrentDB persistent subscriptions are intended only for consumers that can tolerate dropped and out-of-order events; ack-on-receive stays. Consumers that need ordering and no drops should use catch-up subscriptions. Do not propose ack-on-purge for persistent subscriptions.
+- In KurrentDB, every event has a unique $all commit position; events in the same append/transaction never share a commit position. Do not flag issues that assume shared commit positions.
+
+## Testing Guidelines
+- Don't add production hooks or seams just to test narrow race windows or code that's likely to change soon. Prefer tests that need no production changes, and rely on code review for small, easy-to-read logic rather than testing every little thing.
+- When reviewing code, say plainly when code is fine as is; do not invent marginal suggestions just to have something to report. Only report findings with real value.
+
+## Versioning for Orleans Aliases
+- Continuum Orleans [Alias] version suffixes (e.g., .V1) are only used on types that can be persisted. Orleans surrogate types (e.g., ResultSurrogate, MaybeSurrogate, RequestErrorSurrogate) for message-only types do not get a version suffix, because surrogate aliases aren't meaningfully written to the wire and these types are never persisted.
+
+## Domain Events
+- Continuum domain events use `InitiatedBy` (Guid) and `OccurredAt` (DateTimeOffset). `InitiatedBy` comes from the validated Orleans.Identity identity in RequestContext, never from command input; in-silo automations run as dedicated system users stored in the identity store, and the original user is traced through the correlation ID.

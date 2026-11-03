@@ -7,21 +7,18 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Continuum.Core.SourceGenerators;
 
 /// <summary>
-/// Reports serialized type-mapped classes (domain events, integration events and snapshots) that are not listed through
+/// Reports serialized type-mapped classes (domain events, integration events, snapshots and metadata) that are not listed through
 /// <c>[JsonSerializable]</c> on any <c>JsonSerializerContext</c> in the same project. Only runs when the project declares at least
 /// one context, so projects that do not use source-generated JSON are not affected.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class MissingJsonSerializableAnalyzer : DiagnosticAnalyzer
 {
-    private const string TypeMappingNamespace = "Continuum.TypeMapping";
     private const string JsonSerializerContextName = "System.Text.Json.Serialization.JsonSerializerContext";
     private const string JsonSerializableAttributeName = "System.Text.Json.Serialization.JsonSerializableAttribute";
 
-    private static readonly ImmutableHashSet<string> SerializedAttributeNames = ImmutableHashSet.Create(
-        "DomainEventTypeAttribute",
-        "IntegrationEventTypeAttribute",
-        "SnapshotTypeAttribute");
+    private const int SerializedKinds = TypeMapAttributeKinds.DomainEvent | TypeMapAttributeKinds.IntegrationEvent
+        | TypeMapAttributeKinds.Snapshot | TypeMapAttributeKinds.Metadata;
 
     internal static readonly DiagnosticDescriptor MissingJsonSerializable = new(
         id: "CTM002",
@@ -75,7 +72,7 @@ public sealed class MissingJsonSerializableAnalyzer : DiagnosticAnalyzer
                     }
                 }
 
-                if (HasSerializedTypeMapAttribute(type))
+                if (TypeMapAttributeKinds.Find(type, SerializedKinds) is not null)
                 {
                     mappedTypes.Add(type);
                 }
@@ -113,22 +110,6 @@ public sealed class MissingJsonSerializableAnalyzer : DiagnosticAnalyzer
         for (var current = type.BaseType; current is not null; current = current.BaseType)
         {
             if (SymbolEqualityComparer.Default.Equals(current, baseType))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool HasSerializedTypeMapAttribute(INamedTypeSymbol type)
-    {
-        foreach (var attribute in type.GetAttributes())
-        {
-            var attributeClass = attribute.AttributeClass;
-            if (attributeClass is not null
-                && SerializedAttributeNames.Contains(attributeClass.Name)
-                && attributeClass.ContainingNamespace?.ToDisplayString() == TypeMappingNamespace)
             {
                 return true;
             }

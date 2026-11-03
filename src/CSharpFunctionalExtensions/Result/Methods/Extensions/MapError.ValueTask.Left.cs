@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -10,7 +11,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> MapError(this ValueTask<Result> resultTask, Func<Error, Error> errorFactory)
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             if (result.IsSuccess)
             {
                 return Result.Success();
@@ -29,7 +30,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             TContext context
         )
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             if (result.IsSuccess)
             {
                 return Result.Success();
@@ -44,7 +45,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> MapError<T>(this ValueTask<Result<T>> resultTask, Func<Error, Error> errorFactory)
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             if (result.IsSuccess)
             {
                 return Result.Success(result.Value);
@@ -63,7 +64,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             TContext context
         )
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             if (result.IsSuccess)
             {
                 return Result.Success(result.Value);

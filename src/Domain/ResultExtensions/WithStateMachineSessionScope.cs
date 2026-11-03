@@ -6,7 +6,7 @@ namespace Continuum.Domain;
 public static partial class ResultSessionScopeExtensions
 {
 
-    private static async Task<Result<ISaveChangesResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand>(
+    private static async Task<Result<ISessionSaveResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand>(
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Action<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>> f)
         where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
@@ -23,12 +23,12 @@ public static partial class ResultSessionScopeExtensions
             }
             catch (Exception ex)
             {
-                return Result.Failure<ISaveChangesResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
+                return Result.Failure<ISessionSaveResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
             }
         }
     }
 
-    private static async Task<Result<ISaveChangesResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand>(
+    private static async Task<Result<ISessionSaveResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand>(
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Func<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>, Result> f)
         where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
@@ -45,16 +45,16 @@ public static partial class ResultSessionScopeExtensions
                 {
                     return await sessionScope.SaveChanges(session);
                 }
-                return Result.Failure<ISaveChangesResponse>(result.Error);
+                return Result.Failure<ISessionSaveResponse>(result.Error);
             }
             catch (Exception ex)
             {
-                return Result.Failure<ISaveChangesResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
+                return Result.Failure<ISessionSaveResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
             }
         }
     }
 
-    private static async Task<Result<ISaveChangesResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand, T>(
+    private static async Task<Result<ISessionSaveResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand, T>(
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Func<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>, T, Result> f,
             T value)
@@ -72,16 +72,16 @@ public static partial class ResultSessionScopeExtensions
                 {
                     return await sessionScope.SaveChanges(session);
                 }
-                return Result.Failure<ISaveChangesResponse>(result.Error);
+                return Result.Failure<ISessionSaveResponse>(result.Error);
             }
             catch (Exception ex)
             {
-                return Result.Failure<ISaveChangesResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
+                return Result.Failure<ISessionSaveResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
             }
         }
     }
 
-    private static async Task<Result<ISaveChangesResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand>(
+    private static async Task<Result<ISessionSaveResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand>(
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Func<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>, Task<Result>> f)
         where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
@@ -98,16 +98,16 @@ public static partial class ResultSessionScopeExtensions
                 {
                     return await sessionScope.SaveChanges(session);
                 }
-                return Result.Failure<ISaveChangesResponse>(result.Error);
+                return Result.Failure<ISessionSaveResponse>(result.Error);
             }
             catch (Exception ex)
             {
-                return Result.Failure<ISaveChangesResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
+                return Result.Failure<ISessionSaveResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
             }
         }
     }
 
-    private static async Task<Result<ISaveChangesResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand, T>(
+    private static async Task<Result<ISessionSaveResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand, T>(
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Func<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>, T, Task<Result>> f,
             T value)
@@ -126,16 +126,16 @@ public static partial class ResultSessionScopeExtensions
                 {
                     return await sessionScope.SaveChanges(session);
                 }
-                return Result.Failure<ISaveChangesResponse>(result.Error);
+                return Result.Failure<ISessionSaveResponse>(result.Error);
             }
             catch (Exception ex)
             {
-                return Result.Failure<ISaveChangesResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
+                return Result.Failure<ISessionSaveResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
             }
         }
     }
 
-    private static async Task<Result<ISaveChangesResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand>(
+    private static async Task<Result<ISessionSaveResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand>(
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Func<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>, ValueTask<Result>> f)
         where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
@@ -152,16 +152,16 @@ public static partial class ResultSessionScopeExtensions
                 {
                     return await sessionScope.SaveChanges(session);
                 }
-                return Result.Failure<ISaveChangesResponse>(result.Error);
+                return Result.Failure<ISessionSaveResponse>(result.Error);
             }
             catch (Exception ex)
             {
-                return Result.Failure<ISaveChangesResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
+                return Result.Failure<ISessionSaveResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
             }
         }
     }
 
-    private static async Task<Result<ISaveChangesResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand, T>(
+    private static async Task<Result<ISessionSaveResponse>> WithSessionScope<TState, TEventBase, TStatus, TCommand, T>(
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Func<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>, T, ValueTask<Result>> f,
             T value)
@@ -179,11 +179,11 @@ public static partial class ResultSessionScopeExtensions
                 {
                     return await sessionScope.SaveChanges(session);
                 }
-                return Result.Failure<ISaveChangesResponse>(result.Error);
+                return Result.Failure<ISessionSaveResponse>(result.Error);
             }
             catch (Exception ex)
             {
-                return Result.Failure<ISaveChangesResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
+                return Result.Failure<ISessionSaveResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(sessionScope.Logger, ex));
             }
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -26,7 +27,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.CheckIf{T}(Result{T}, Func{T, bool}, Func{T, Result})"/>
         public static async ValueTask<Result<T>> CheckIf<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, Result> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsSuccess && predicate(result.Value))
                 return result.Check(valueTask);
@@ -37,7 +38,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.CheckIf{T, K}(Result{T}, Func{T, bool}, Func{T, Result{K}})"/>
         public static async ValueTask<Result<T>> CheckIf<T, K>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, Result<K>> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsSuccess && predicate(result.Value))
                 return result.Check(valueTask);

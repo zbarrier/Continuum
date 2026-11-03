@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -10,7 +11,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> TapError<T>(this ValueTask<Result<T>> resultTask, Action action)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.TapError(action);
         }
 
@@ -19,7 +20,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> TapError(this ValueTask<Result> resultTask, Action action)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.TapError(action);
         }
 
@@ -28,7 +29,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> TapError<T>(this ValueTask<Result<T>> resultTask, Action<Error> action)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.TapError(action);
         }
 
@@ -37,7 +38,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> TapError(this ValueTask<Result> resultTask, Action<Error> action)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.TapError(action);
         }
     }

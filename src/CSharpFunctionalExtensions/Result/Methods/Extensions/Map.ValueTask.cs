@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -10,12 +11,12 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<K>> Map<T, K>(this ValueTask<Result<T>> resultTask, Func<T, ValueTask<K>> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            K value = await valueTask(result.Value);
+            K value = await valueTask(result.Value).DefaultAwait();
 
             return Result.Success(value);
         }
@@ -29,12 +30,12 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             TContext context
         )
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            K value = await valueTask(result.Value, context);
+            K value = await valueTask(result.Value, context).DefaultAwait();
 
             return Result.Success(value);
         }
@@ -44,12 +45,12 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<K>> Map<K>(this ValueTask<Result> resultTask, Func<ValueTask<K>> valueTask)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
 
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            K value = await valueTask();
+            K value = await valueTask().DefaultAwait();
 
             return Result.Success(value);
         }
@@ -63,12 +64,12 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             TContext context
         )
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
 
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            K value = await valueTask(context);
+            K value = await valueTask(context).DefaultAwait();
 
             return Result.Success(value);
         }

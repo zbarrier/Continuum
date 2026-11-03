@@ -60,10 +60,17 @@ public sealed class TenantLogConsistentStorage : ILogConsistentStorage, ILifecyc
     }
 
     /// <inheritdoc />
-    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion)
+    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId)
     {
         var storage = await GetStorageAsync(grainId).ConfigureAwait(false);
-        return await storage.AppendAsync(grainTypeName, grainId, entries, expectedVersion).ConfigureAwait(false);
+        return await storage.AppendAsync(grainTypeName, grainId, entries, expectedVersion, transactionId).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<Guid?> GetTransactionIdAsync(string grainTypeName, GrainId grainId, int version)
+    {
+        var storage = await GetStorageAsync(grainId).ConfigureAwait(false);
+        return await storage.GetTransactionIdAsync(grainTypeName, grainId, version).ConfigureAwait(false);
     }
 
     private Task<ILogConsistentStorage> GetStorageAsync(GrainId grainId)

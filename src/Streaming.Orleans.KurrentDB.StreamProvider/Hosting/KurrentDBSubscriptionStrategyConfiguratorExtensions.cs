@@ -3,6 +3,8 @@ using Microsoft.Extensions.Options;
 
 using Orleans.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 namespace Orleans.Hosting;
 
@@ -46,22 +48,32 @@ public static class KurrentDBSubscriptionStrategyConfiguratorExtensions
     /// <param name="configureOptions">An action to configure the receiver options.</param>
     /// <remarks>
     ///     Requires exactly one entry in <see cref="KurrentDBOptions.Queues" />; see
-    ///     <see cref="KurrentDBAllStreamReceiverOptions" />.
+    ///     <see cref="KurrentDBCatchUpSubscriptionReceiverOptions" />.
+    ///     <para>
+    ///         <see cref="StreamPullingAgentOptions.MaxEventDeliveryTime" /> defaults to
+    ///         <see cref="Timeout.InfiniteTimeSpan" />, so an event whose delivery keeps failing is retried until it
+    ///         succeeds and is never skipped, purged, or checkpointed past. That stream stops for the failing consumer, and
+    ///         the queue stops purging and checkpointing, until the delivery succeeds. Set a finite value through the
+    ///         pulling agent configuration to let Orleans give up and move past the event instead.
+    ///     </para>
     /// </remarks>
-    public static ISiloKurrentDBStreamConfigurator UseAllStreamSubscription(this ISiloKurrentDBStreamConfigurator configurator, Action<OptionsBuilder<KurrentDBAllStreamReceiverOptions>>? configureOptions = null)
+    public static ISiloKurrentDBStreamConfigurator UseCatchUpSubscription(this ISiloKurrentDBStreamConfigurator configurator, Action<OptionsBuilder<KurrentDBCatchUpSubscriptionReceiverOptions>>? configureOptions = null)
     {
         ArgumentNullException.ThrowIfNull(configurator, nameof(configurator));
         var name = configurator.Name;
-        configurator.Configure<KurrentDBAllStreamReceiverOptions>(ob =>
+        configurator.Configure<KurrentDBCatchUpSubscriptionReceiverOptions>(ob =>
         {
             configureOptions?.Invoke(ob);
-            ob.Services.AddTransient<IPostConfigureOptions<KurrentDBAllStreamReceiverOptions>, DefaultKurrentDBAllStreamReceiverOptionsConfigurator>();
+            ob.Services.AddTransient<IPostConfigureOptions<KurrentDBCatchUpSubscriptionReceiverOptions>, DefaultKurrentDBCatchUpSubscriptionReceiverOptionsConfigurator>();
         });
         configurator.ConfigureDelegate(services =>
         {
-            services.ConfigureNamedOptionForLogging<KurrentDBAllStreamReceiverOptions>(name)
-                    .AddTransient<IConfigurationValidator>(sp => new KurrentDBAllStreamReceiverOptionsValidator(sp.GetOptionsByName<KurrentDBAllStreamReceiverOptions>(name), sp.GetOptionsByName<KurrentDBOptions>(name), name))
-                    .AddKeyedSingleton<IKurrentDBReceiverFactory>(name, (sp, _) => new KurrentDBAllStreamReceiverFactory(sp, name));
+            // Registered first so any pulling agent configuration supplied by the application still runs after it.
+            services.Insert(0, ServiceDescriptor.Singleton<IConfigureOptions<StreamPullingAgentOptions>>(new ConfigureNamedOptions<StreamPullingAgentOptions>(name, options => options.MaxEventDeliveryTime = Timeout.InfiniteTimeSpan)));
+            services.ConfigureNamedOptionForLogging<KurrentDBCatchUpSubscriptionReceiverOptions>(name)
+                    .AddTransient<IConfigurationValidator>(sp => new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(sp.GetOptionsByName<KurrentDBCatchUpSubscriptionReceiverOptions>(name), sp.GetOptionsByName<KurrentDBOptions>(name), name))
+                    .AddTransient<IConfigurationValidator>(sp => new KurrentDBCatchUpPullingAgentOptionsValidator(sp.GetOptionsByName<StreamPullingAgentOptions>(name), name))
+                    .AddKeyedSingleton<IKurrentDBReceiverFactory>(name, (sp, _) => new KurrentDBCatchUpSubscriptionReceiverFactory(sp, name));
         });
         return configurator;
     }

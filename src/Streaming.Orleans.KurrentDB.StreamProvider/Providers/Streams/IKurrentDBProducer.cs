@@ -3,13 +3,13 @@
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
 /// <summary>
-///     Abstraction on KurrentDBProducer class, used to configure KurrentDBProducer class in KurrentDBQueueAdapter,
-///     also used to configure KurrentDBGeneratorProducer in KurrentDBQueueAdapter for testing purpose
+///     Appends queued events to a single KurrentDB queue stream. Created by subscription strategies whose stream
+///     provider is writable.
 /// </summary>
 public interface IKurrentDBProducer
 {
     /// <summary>
-    ///     Start to create client and subscribe from KurrentDB persistent subscriptions.
+    ///     Marks the producer ready to append.
     /// </summary>
     void Init();
 

@@ -25,7 +25,7 @@ public sealed class FakeSession : IEventDrivenSession<CounterState, CounterEvent
 }
 
 public sealed class FakeChange(object evt) : IChange { public string EventType => Event.GetType().Name; public object Event { get; } = evt; }
-public sealed class FakeSaveChangesResponse(IEnumerable<IChange> changes, int version) : ISaveChangesResponse { public IEnumerable<IChange> Changes { get; } = changes; public int Version { get; } = version; }
+public sealed class FakeSessionSaveResponse(IReadOnlyList<IChange> changes, int version) : ISessionSaveResponse { public IReadOnlyList<IChange> Changes { get; } = changes; public int Version { get; } = version; }
 
 public sealed class FakeScope : IEventDrivenSessionScope<CounterState, CounterEvent>
 {
@@ -35,10 +35,10 @@ public sealed class FakeScope : IEventDrivenSessionScope<CounterState, CounterEv
     public int SaveCount { get; private set; }
     public FakeSession? LastSession { get; private set; }
     public IEventDrivenSession<CounterState, CounterEvent> CreateSession() { SessionsCreated++; return LastSession = new FakeSession(); }
-    public Task<Result<ISaveChangesResponse>> SaveChanges(IEventDrivenSession<CounterState, CounterEvent> session)
+    public Task<Result<ISessionSaveResponse>> SaveChanges(IEventDrivenSession<CounterState, CounterEvent> session)
     {
         SaveCount++;
-        ISaveChangesResponse response = new FakeSaveChangesResponse(session.UncommittedEvents.Select(e => (IChange)new FakeChange(e)).ToList(), session.UncommittedEvents.Count);
+        ISessionSaveResponse response = new FakeSessionSaveResponse(session.UncommittedEvents.Select(e => (IChange)new FakeChange(e)).ToList(), session.UncommittedEvents.Count);
         return Task.FromResult(Result.Success(response));
     }
 }

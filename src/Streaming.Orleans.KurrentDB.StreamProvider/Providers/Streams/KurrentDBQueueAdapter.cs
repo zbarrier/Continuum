@@ -16,12 +16,14 @@ using Orleans.Streams;
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
 /// <summary>
-///     Queue adapter factory which allows the PersistentStreamProvider to use KurrentDB as its backend persistent event queue.
+///     Queue adapter that lets the Orleans PersistentStreamProvider use KurrentDB as its event queue, for both the
+///     catch-up and persistent subscription strategies.
 /// </summary>
 public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
 {
     private readonly KurrentDBOptions _options;
     private readonly KurrentDBReceiverOptionsBase _receiverOptions;
+    private readonly IKurrentDBReceiverFactory _strategy;
     private readonly HashRingBasedPartitionedStreamQueueMapper _streamQueueMapper;
     private readonly Func<string, ILoggerFactory, IKurrentDBQueueCache> _cacheFactory;
     private readonly Func<KurrentDBReceiverMonitorDimensions, ILoggerFactory, IQueueAdapterReceiverMonitor> _receiverMonitorFactory;
@@ -30,16 +32,18 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     private readonly ILoggerFactory _loggerFactory;
     private readonly IEnvironmentStatisticsProvider? _environmentStatisticsProvider;
     private readonly Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> _receiverFactory;
+    private readonly LoadSheddingOptions _loadSheddingOptions;
+    private readonly string _consumerGroup;
 
-    private readonly ConcurrentDictionary<QueueId, KurrentDBProducer> _producers = new();
-    private readonly ConcurrentDictionary<QueueId, KurrentDBQueueAdapterReceiver> _receivers = new();
+    private readonly ConcurrentDictionary<QueueId, IKurrentDBProducer> _producers = new();
+    private readonly ConcurrentDictionary<QueueId, IKurrentDBQueueAdapterReceiver> _receivers = new();
 
     /// <summary>
     ///     Initializes a new instance of the KurrentDBQueueAdapter class.
     /// </summary>
     /// <param name="name">The name of the adapter.</param>
     /// <param name="options">The KurrentDB options.</param>
-    /// <param name="receiverOptions">The KurrentDB receiver options.</param>
+    /// <param name="strategy">The selected subscription strategy, which supplies the receiver options and builds each queue's receiver.</param>
     /// <param name="streamQueueMapper">The stream queue mapper.</param>
     /// <param name="cacheFactory">The cache factory.</param>
     /// <param name="receiverMonitorFactory">The receiver monitor factory.</param>
@@ -48,11 +52,11 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="loggerFactory">The logger factory.</param>
     /// <param name="environmentStatisticsProvider">The environment statistics provider.</param>
-    public KurrentDBQueueAdapter(string name, KurrentDBOptions options, KurrentDBReceiverOptionsBase receiverOptions, HashRingBasedPartitionedStreamQueueMapper streamQueueMapper, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, Func<KurrentDBReceiverMonitorDimensions, ILoggerFactory, IQueueAdapterReceiverMonitor> receiverMonitorFactory, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> receiverFactory, IKurrentDBDataAdapter dataAdapter, IServiceProvider serviceProvider, ILoggerFactory loggerFactory, IEnvironmentStatisticsProvider? environmentStatisticsProvider)
+    public KurrentDBQueueAdapter(string name, KurrentDBOptions options, IKurrentDBReceiverFactory strategy, HashRingBasedPartitionedStreamQueueMapper streamQueueMapper, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, Func<KurrentDBReceiverMonitorDimensions, ILoggerFactory, IQueueAdapterReceiverMonitor> receiverMonitorFactory, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> receiverFactory, IKurrentDBDataAdapter dataAdapter, IServiceProvider serviceProvider, ILoggerFactory loggerFactory, IEnvironmentStatisticsProvider? environmentStatisticsProvider)
     {
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
         ArgumentNullException.ThrowIfNull(options, nameof(options));
-        ArgumentNullException.ThrowIfNull(receiverOptions, nameof(receiverOptions));
+        ArgumentNullException.ThrowIfNull(strategy, nameof(strategy));
         ArgumentNullException.ThrowIfNull(streamQueueMapper, nameof(streamQueueMapper));
         ArgumentNullException.ThrowIfNull(cacheFactory, nameof(cacheFactory));
         ArgumentNullException.ThrowIfNull(receiverMonitorFactory, nameof(receiverMonitorFactory));
@@ -62,7 +66,9 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
         ArgumentNullException.ThrowIfNull(loggerFactory, nameof(loggerFactory));
         Name = name;
         _options = options;
-        _receiverOptions = receiverOptions;
+        _strategy = strategy;
+        _receiverOptions = strategy.ReceiverOptions;
+        Direction = strategy.Direction;
         _streamQueueMapper = streamQueueMapper;
         _cacheFactory = cacheFactory;
         _receiverMonitorFactory = receiverMonitorFactory;
@@ -71,6 +77,9 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
         _serviceProvider = serviceProvider;
         _loggerFactory = loggerFactory;
         _environmentStatisticsProvider = environmentStatisticsProvider;
+        // Resolved once here rather than per receiver, so missing configuration fails when the adapter is built.
+        _loadSheddingOptions = serviceProvider.GetRequiredService<IOptions<LoadSheddingOptions>>().Value;
+        _consumerGroup = $"{serviceProvider.GetProviderClusterOptions(name).Value.ServiceId}-{name}";
     }
 
     #region IQueueAdapter Implementation
@@ -90,7 +99,7 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     ///     Direction of this queue adapter: Read, Write or ReadWrite.
     /// </summary>
     /// <returns>The direction in which this adapter provides data.</returns>
-    public StreamProviderDirection Direction { get; protected set; } = StreamProviderDirection.ReadWrite;
+    public StreamProviderDirection Direction { get; }
 
     /// <summary>
     ///     Writes a set of events to the queue as a single batch associated with the provided streamId.
@@ -107,28 +116,19 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
     /// </remarks>
     public Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken? token, Dictionary<string, object>? requestContext)
     {
+        if (Direction == StreamProviderDirection.ReadOnly)
+        {
+            // Catch-up subscriptions read streams owned by event sourced grains. Writing here would bypass those grains.
+            throw new InvalidOperationException(FormattableString.Invariant($"Stream provider {Name} is read only. Its events are produced by event sourced grains, not by the stream provider."));
+        }
         var records = _dataAdapter.ToQueueMessage(streamId, events, token, requestContext);
         if (records.Length == 0)
         {
             return Task.CompletedTask;
         }
         var queueId = _streamQueueMapper.GetQueueForStream(streamId);
-        var producer = _producers.GetOrAdd(queueId, static (qid, instance) => instance.MakeProducer(qid), this);
+        var producer = _producers.GetOrAdd(queueId, static (qid, instance) => instance._strategy.CreateProducer(instance._streamQueueMapper.QueueToPartition(qid), instance._loggerFactory), this);
         return producer.AppendAsync(records);
-    }
-
-    private KurrentDBProducer MakeProducer(QueueId queueId)
-    {
-        var producerSettings = new KurrentProducerSettings
-                               {
-                                   Options = _options,
-                                   QueueName = _streamQueueMapper.QueueToPartition(queueId)
-                               };
-        // The client is a keyed singleton shared by every queue of this connection.
-        var client = _serviceProvider.GetRequiredKeyedService<KurrentDBClient>(_options.ConnectionName);
-        var producer = new KurrentDBProducer(client, producerSettings, _loggerFactory.CreateLogger<KurrentDBProducer>());
-        producer.Init();
-        return producer;
     }
 
     /// <summary>
@@ -141,19 +141,18 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
         return GetOrCreateReceiver(queueId);
     }
 
-    private KurrentDBQueueAdapterReceiver GetOrCreateReceiver(QueueId queueId)
+    private IKurrentDBQueueAdapterReceiver GetOrCreateReceiver(QueueId queueId)
     {
         return _receivers.GetOrAdd(queueId, static (qid, instance) => instance.MakeReceiver(qid), this);
     }
 
-    private KurrentDBQueueAdapterReceiver MakeReceiver(QueueId queueId)
+    private IKurrentDBQueueAdapterReceiver MakeReceiver(QueueId queueId)
     {
-        var clusterOptions = _serviceProvider.GetProviderClusterOptions(Name);
         var receiverSettings = new KurrentDBReceiverSettings
                                {
                                    Options = _options,
                                    ReceiverOptions = _receiverOptions,
-                                   ConsumerGroup = $"{clusterOptions.Value.ServiceId}-{Name}",
+                                   ConsumerGroup = _consumerGroup,
                                    QueueName = _streamQueueMapper.QueueToPartition(queueId),
                                    StreamNameParser = _serviceProvider.GetKeyedService<Continuum.Streams.IStreamNameParser>(_options.ConnectionName)
                                };
@@ -162,7 +161,16 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
                                             QueueName = receiverSettings.QueueName,
                                             Name = receiverSettings.Options.Name
                                         };
-        return new KurrentDBQueueAdapterReceiver(receiverSettings, _cacheFactory, _loggerFactory, _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory), _serviceProvider.GetRequiredService<IOptions<LoadSheddingOptions>>().Value, _environmentStatisticsProvider, _receiverFactory);
+        return _strategy.CreateQueueAdapterReceiver(new KurrentDBQueueAdapterReceiverContext
+        {
+            Settings = receiverSettings,
+            CacheFactory = _cacheFactory,
+            ReceiverFactory = _receiverFactory,
+            LoggerFactory = _loggerFactory,
+            ReceiverMonitor = _receiverMonitorFactory(receiverMonitorDimensions, _loggerFactory),
+            LoadSheddingOptions = _loadSheddingOptions,
+            EnvironmentStatisticsProvider = _environmentStatisticsProvider,
+        });
     }
 
     #endregion

@@ -119,9 +119,9 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <returns>The matching member, or an empty <see cref="Maybe{T}"/>.</returns>
         public static Maybe<TEnumeration> FromId(TId id)
         {
-            return EnumerationsById.ContainsKey(id)
-                ? EnumerationsById[id]
-                : null;
+            return EnumerationsById.TryGetValue(id, out var enumeration)
+                ? enumeration
+                : Maybe<TEnumeration>.None;
         }
         
         /// <summary>
@@ -131,9 +131,9 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <returns>The matching member, or an empty <see cref="Maybe{T}"/>.</returns>
         public static Maybe<TEnumeration> FromName(string name)
         {
-            return EnumerationsByName.ContainsKey(name)
-                ? EnumerationsByName[name]
-                : null;
+            return name is not null && EnumerationsByName.TryGetValue(name, out var enumeration)
+                ? enumeration
+                : Maybe<TEnumeration>.None;
         }
 
         /// <summary>
@@ -282,9 +282,9 @@ namespace Continuum.CSharpFunctionalExtensions
         /// <returns>The matching member, or an empty <see cref="Maybe{T}"/>.</returns>
         public static Maybe<TEnumeration> FromId(string id)
         {
-            return Enumerations.ContainsKey(id)
-                ? Enumerations[id]
-                : null;
+            return id is not null && Enumerations.TryGetValue(id, out var enumeration)
+                ? enumeration
+                : Maybe<TEnumeration>.None;
         }
 
         /// <summary>

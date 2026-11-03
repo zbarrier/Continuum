@@ -142,7 +142,7 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory, IDisposable
     {
         var sharedDimensions = new KurrentDBMonitorAggregationDimensions(_options.Name);
         var bufferPoolOptions = _serviceProvider.GetOptionsByName<KurrentDBStreamCacheBufferPoolOptions>(_name);
-        return new KurrentDBQueueCacheFactory(cachePressureOptions, bufferPoolOptions, _cacheEvictionOptions, _statisticOptions, _dataAdapter, sharedDimensions, _serviceProvider.GetRequiredService<OrleansInstruments>(), _serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System);
+        return new KurrentDBQueueCacheFactory(_receiverFactory, cachePressureOptions, bufferPoolOptions, _cacheEvictionOptions, _statisticOptions, _dataAdapter, sharedDimensions, _serviceProvider.GetRequiredService<OrleansInstruments>(), _serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System);
     }
 
     /// <summary>
@@ -170,7 +170,7 @@ public class KurrentDBQueueAdapterFactory : IQueueAdapterFactory, IDisposable
         if (_queueAdapter == null)
         {
             var streamQueueMapper = GetOrCreateStreamQueueMapper();
-            _queueAdapter = new KurrentDBQueueAdapter(_name, _options, _receiverFactory.ReceiverOptions, streamQueueMapper, CacheFactory, ReceiverMonitorFactory, ReceiverFactory, _dataAdapter, _serviceProvider, _loggerFactory, _environmentStatisticsProvider);
+            _queueAdapter = new KurrentDBQueueAdapter(_name, _options, _receiverFactory, streamQueueMapper, CacheFactory, ReceiverMonitorFactory, ReceiverFactory, _dataAdapter, _serviceProvider, _loggerFactory, _environmentStatisticsProvider);
         }
         return _queueAdapter;
     }

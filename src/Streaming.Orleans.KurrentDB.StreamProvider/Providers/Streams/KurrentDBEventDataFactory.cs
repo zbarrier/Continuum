@@ -25,7 +25,8 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 ///
 ///     The records of one batch are appended together, so they are recorded as a transaction in the same way an
 ///     append from the event sourcing storage is. That grouping is the only thing that survives to tell a subscriber
-///     the events were written as a unit, since KurrentDB reports the same commit position for all of them.
+///     the events were written as a unit, since every event has its own $all position and the log does not record
+///     which events were appended together.
 /// </remarks>
 internal static class KurrentDBEventDataFactory
 {

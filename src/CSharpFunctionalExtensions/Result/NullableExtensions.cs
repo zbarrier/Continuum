@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -45,7 +46,7 @@ public static partial class NullableExtensions
     public static async Task<Result<T>> ToResultAsync<T>(this Task<T?> nullableTask, Error error)
         where T : struct
     {
-        var nullable = await nullableTask.ConfigureAwait(false);
+        var nullable = await nullableTask.DefaultAwait();
         return nullable.ToResult(error);
     }
 
@@ -58,7 +59,7 @@ public static partial class NullableExtensions
     public static async Task<Result<T>> ToResultAsync<T>(this Task<T?> nullableTask, Error error)
     where T : class
     {
-        var nullable = await nullableTask.ConfigureAwait(false);
+        var nullable = await nullableTask.DefaultAwait();
         return nullable.ToResult(error);
     }
 
@@ -71,7 +72,7 @@ public static partial class NullableExtensions
     public static async ValueTask<Result<T>> ToResultAsync<T>(this ValueTask<T?> nullableTask, Error error)
         where T : struct
     {
-        var nullable = await nullableTask.ConfigureAwait(false);
+        var nullable = await nullableTask.DefaultAwait();
         return nullable.ToResult(error);
     }
 
@@ -84,7 +85,7 @@ public static partial class NullableExtensions
     public static async ValueTask<Result<T>> ToResultAsync<T>(this ValueTask<T?> nullableTask, Error error)
         where T : class
     {
-        var nullable = await nullableTask.ConfigureAwait(false);
+        var nullable = await nullableTask.DefaultAwait();
         return nullable.ToResult(error);
     }
 }

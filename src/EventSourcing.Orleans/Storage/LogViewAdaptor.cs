@@ -11,11 +11,11 @@ using Orleans.Storage;
 namespace Continuum.EventSourcing.Orleans;
 
 /// <summary>
-///     A log view adaptor that wraps around a traditional storage adaptor, and uses batching and e-tags
-///     to append entries.
+///     A log view adaptor that appends batches of entries to an <see cref="ILogConsistentStorage" /> event log and keeps
+///     the latest view as a snapshot in an <see cref="IGrainStorage" />.
 ///     <para>
-///         The log itself is actually saved to storage - the latest view (snapshot) and metadata (the log position, and write flags)
-///         and all log entries are stored in the primary.
+///         The event log is the source of truth. The snapshot, with its version and e-tag, is only a cache that
+///         speeds up activation; when it is missing or stale, the view is rebuilt from the log.
 ///     </para>
 /// </summary>
 /// <typeparam name="TLogView">Type of log view</typeparam>
@@ -28,6 +28,7 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
     private readonly string _grainTypeName;
     private readonly ILogConsistentStorage _logStorage;
     private readonly DeepCopier _deepCopier;
+    private readonly ITransactionIdGenerator _transactionIdGenerator;
 
     private SnapshotWithMetaDataAndETag<TLogView> _globalSnapshot = new();
     private TLogView _confirmedView = new();
@@ -42,17 +43,20 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
         string grainTypeName,
         ILogConsistencyProtocolServices services,
         ILogConsistentStorage logStorage,
-        DeepCopier deepCopier)
+        DeepCopier deepCopier,
+        ITransactionIdGenerator transactionIdGenerator)
             : base(host, initialState, services)
     {
         ArgumentNullException.ThrowIfNull(grainStorage);
         ArgumentException.ThrowIfNullOrEmpty(grainTypeName);
         ArgumentNullException.ThrowIfNull(logStorage);
+        ArgumentNullException.ThrowIfNull(transactionIdGenerator);
 
         _grainStorage = grainStorage;
         _grainTypeName = grainTypeName;
         _logStorage = logStorage;
         _deepCopier = deepCopier;
+        _transactionIdGenerator = transactionIdGenerator;
     }
 
     /// <inheritdoc />
@@ -157,15 +161,20 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
         enter_operation("WriteAsync");
 
         var updates = GetCurrentBatchOfUpdates();
-        var logsSuccessfullyAppended = false;
-        var batchSuccessfullyWritten = false;
-        var writeBit = _globalSnapshot.State.FlipBit(Services.MyClusterId);
+        var expectedVersion = _globalVersion;
+        // A new ID for every attempt: an unknown outcome is always settled within this call, so a retry never needs
+        // to recognize an earlier attempt.
+        var transactionId = _transactionIdGenerator.NewTransactionId();
+        var batchAppended = false;
 
         try
         {
             var logEntries = updates.Select(x => x.Entry!).ToImmutableList();
-            _globalVersion = await _logStorage.AppendAsync(_grainTypeName, Services.GrainId, logEntries, _globalVersion);
-            logsSuccessfullyAppended = true;
+            _globalVersion = await _logStorage.AppendAsync(_grainTypeName, Services.GrainId, logEntries, expectedVersion, transactionId);
+            // The log is the source of truth and the snapshot is only a cache, so the batch is written once the append
+            // succeeds. Reporting a failed snapshot write as a failed batch would make Orleans retry and append the
+            // same entries again.
+            batchAppended = true;
             Services.Log(LogLevel.Debug, "write success {0}", logEntries);
             UpdateConfirmedView(logEntries);
         }
@@ -173,23 +182,24 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
         {
             LastPrimaryIssue.Record(new UpdateLogStorageFailed { Exception = ex }, Host, Services);
         }
-        if (logsSuccessfullyAppended)
+        if (batchAppended)
         {
             try
             {
                 _globalSnapshot.State.Snapshot = _deepCopier.Copy(_confirmedView)!;
                 _globalSnapshot.State.SnapshotVersion = _confirmedVersion;
                 await _grainStorage.WriteStateAsync(_grainTypeName, Services.GrainId, _globalSnapshot);
-                batchSuccessfullyWritten = true;
                 Services.Log(LogLevel.Debug, "write ({0} updates) success {1}", updates.Length, _globalSnapshot);
                 LastPrimaryIssue.Resolve(Host, Services);
             }
             catch (Exception ex)
             {
                 LastPrimaryIssue.Record(new UpdateSnapshotStorageFailed { Exception = ex }, Host, Services);
+                Services.Log(LogLevel.Warning, "snapshot write failed after a successful append {0}", LastPrimaryIssue);
+                await RefreshSnapshotETag();
             }
         }
-        if (!batchSuccessfullyWritten)
+        else
         {
             Services.Log(LogLevel.Warning, "write apparently failed {0}", LastPrimaryIssue);
             while (true) // be stubborn until we can read what is there
@@ -215,6 +225,15 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
                             Services.Log(LogLevel.Debug, "read success {0}", logEntries);
                             UpdateConfirmedView(logEntries);
                         }
+                        // The append may have been committed even though it threw (for example, a timeout). If the
+                        // entry after the expected version carries this attempt's transaction ID, the whole batch is in
+                        // the log; it was just read into the confirmed view, so it must not be submitted again.
+                        if (_globalVersion > expectedVersion &&
+                            await _logStorage.GetTransactionIdAsync(_grainTypeName, Services.GrainId, expectedVersion + 1) == transactionId)
+                        {
+                            Services.Log(LogLevel.Debug, "last write ({0} updates) was actually a success {1}", updates.Length, _globalSnapshot);
+                            batchAppended = true;
+                        }
                         LastPrimaryIssue.Resolve(Host, Services);
                         break; // successful
                     }
@@ -229,26 +248,39 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
                 }
                 Services.Log(LogLevel.Warning, "read failed {0}", LastPrimaryIssue);
             }
-            // Check if last apparently failed write was in fact successful
-            if (writeBit == _globalSnapshot.State.GetBit(Services.MyClusterId))
-            {
-                Services.Log(LogLevel.Debug, "last write ({0} updates) was actually a success {1}", updates.Length, _globalSnapshot);
-                batchSuccessfullyWritten = true;
-            }
         }
 
         exit_operation("WriteAsync");
 
-        return batchSuccessfullyWritten ? updates.Length : 0;
+        return batchAppended ? updates.Length : 0;
     }
 
     #endregion
 
+    /// <summary>
+    ///     Re-reads the stored snapshot's ETag after a failed snapshot write, so the next write is not rejected because
+    ///     the failed write actually reached storage. The in-memory view is kept, since it already includes the
+    ///     appended entries. A failed read is only recorded; the next write will try again.
+    /// </summary>
+    private async Task RefreshSnapshotETag()
+    {
+        try
+        {
+            var stored = new SnapshotWithMetaDataAndETag<TLogView>();
+            await _grainStorage.ReadStateAsync(_grainTypeName, Services.GrainId, stored);
+            _globalSnapshot.ETag = stored.ETag;
+            _globalSnapshot.RecordExists = stored.RecordExists;
+        }
+        catch (Exception ex)
+        {
+            LastPrimaryIssue.Record(new ReadFromSnapshotStorageFailed { Exception = ex }, Host, Services);
+        }
+    }
+
     // The notification handling (Merge, OnNotificationReceived, ProcessNotifications and UpdateNotificationMessage) that
     // Orleans' own adaptors carry comes from the multi-cluster replication feature, which is not active in Orleans 7+.
     // Nothing sends these notifications, so the queue logic was removed. Cross-region freshness, if needed later,
-    // should come from store subscriptions. WriteVector and MyClusterId are still used by WriteAsync to detect
-    // whether an apparently failed write actually succeeded.
+    // should come from store subscriptions.
 
     #region Operation Failed Classes
 

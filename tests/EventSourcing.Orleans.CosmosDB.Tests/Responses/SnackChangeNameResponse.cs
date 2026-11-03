@@ -5,5 +5,5 @@ namespace Continuum.EventSourcing.Orleans.CosmosDB.Tests.Responses;
 
 [Immutable]
 [GenerateSerializer]
-public sealed class SnackChangeNameResponse(IEnumerable<IChange> changes, int version)
-    : EventSourcedCommandResponseBase(changes, version);
+public sealed class SnackChangeNameResponse(IReadOnlyList<IChange> changes, int version)
+    : CommandResponseWithChangesBase(changes, version);

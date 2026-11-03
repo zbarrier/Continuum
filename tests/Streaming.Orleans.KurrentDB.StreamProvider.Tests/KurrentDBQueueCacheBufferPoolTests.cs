@@ -41,6 +41,21 @@ public class KurrentDBQueueCacheBufferPoolTests
     private static void Touch(KurrentDBQueueCacheBufferPool pool) => pool.Allocate().Dispose();
 
     [Fact]
+    public void A_Failed_Block_Allocation_Leaves_The_Counts_Unchanged()
+    {
+        var fail = false;
+        var pool = new KurrentDBQueueCacheBufferPool(() => fail ? throw new OutOfMemoryException() : new FixedSizeBuffer(16), new KurrentDBStreamCacheBufferPoolOptions(), new ManualTimeProvider());
+        pool.Allocate();
+
+        fail = true;
+        Assert.Throws<OutOfMemoryException>(() => pool.Allocate());
+
+        Assert.Equal(1, pool.Allocated);
+        Assert.Equal(1, pool.InUse);
+        Assert.Equal(0, pool.Available);
+    }
+
+    [Fact]
     public void Free_Blocks_Are_Released_After_Two_Windows_Below_The_Target()
     {
         var (pool, time) = CreatePool();

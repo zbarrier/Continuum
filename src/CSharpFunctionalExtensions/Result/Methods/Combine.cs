@@ -144,7 +144,7 @@ public partial struct Result
     }
 
     /// <summary>
-    ///     Combines several results (and any valiation error messages) into a single result.
+    ///     Combines several results (and any validation error messages) into a single result.
     ///     The returned result will be a failure if any of the input <paramref name="results"/> are failures.</summary>
     /// <param name="results">
     ///     The Results to be combined.</param>

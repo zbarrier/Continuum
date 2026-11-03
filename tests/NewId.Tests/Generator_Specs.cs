@@ -1,4 +1,4 @@
-﻿// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
+// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
 // Copyright 2007-2019 Chris Patterson.
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
 //
@@ -14,8 +14,8 @@ public class When_generating_id
     public void Should_match_when_all_providers_equal()
     {
         // Arrange
-        var generator1 = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
-        var generator2 = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
+        var generator1 = new NewIdGenerator(_timeProvider, _workerIdProvider, _processIdProvider);
+        var generator2 = new NewIdGenerator(_timeProvider, _workerIdProvider, _processIdProvider);
 
         // Act
         var id1 = generator1.Next();
@@ -29,14 +29,14 @@ public class When_generating_id
     public void Should_match_when_all_providers_equal_with_guid_method()
     {
         // Arrange
-        var generator1 = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
-        var generator2 = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
-        generator1.Next().ToGuid();
-        generator2.NextGuid();
+        var generator1 = new NewIdGenerator(_timeProvider, _workerIdProvider, _processIdProvider);
+        var generator2 = new NewIdGenerator(_timeProvider, _workerIdProvider, _processIdProvider);
+        generator1.Next().ToSqlServerGuid();
+        generator2.NextSqlServerGuid();
 
         // Act
-        var id1 = generator1.Next().ToGuid();
-        var id2 = generator2.NextGuid();
+        var id1 = generator1.Next().ToSqlServerGuid();
+        var id2 = generator2.NextSqlServerGuid();
 
         // Assert
         Assert.Equal(id2, id1);
@@ -46,10 +46,10 @@ public class When_generating_id
     public void Should_not_match_when_generated_from_two_processes()
     {
         // Arrange
-        var generator1 = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
+        var generator1 = new NewIdGenerator(_timeProvider, _workerIdProvider, _processIdProvider);
 
         _processIdProvider = new MockProcessIdProvider(BitConverter.GetBytes(11));
-        var generator2 = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
+        var generator2 = new NewIdGenerator(_timeProvider, _workerIdProvider, _processIdProvider);
 
         // Act
         var id1 = generator1.Next();
@@ -63,8 +63,8 @@ public class When_generating_id
     public void Should_not_match_when_processor_id_provided()
     {
         // Arrange
-        var generator1 = new NewIdGenerator(_tickProvider, _workerIdProvider);
-        var generator2 = new NewIdGenerator(_tickProvider, _workerIdProvider, _processIdProvider);
+        var generator1 = new NewIdGenerator(_timeProvider, _workerIdProvider);
+        var generator2 = new NewIdGenerator(_timeProvider, _workerIdProvider, _processIdProvider);
 
         // Act
         var id1 = generator1.Next();
@@ -77,11 +77,11 @@ public class When_generating_id
     [Fact]
     public void Should_match_sequentially()
     {
-        var generator = new NewIdGenerator(_tickProvider, _workerIdProvider);
+        var generator = new NewIdGenerator(_timeProvider, _workerIdProvider);
 
-        var id1 = generator.Next().ToGuid();
-        var id2 = generator.NextGuid();
-        var id3 = generator.NextGuid();
+        var id1 = generator.Next().ToSqlServerGuid();
+        var id2 = generator.NextSqlServerGuid();
+        var id3 = generator.NextSqlServerGuid();
 
         Assert.NotEqual(id2, id1);
         Assert.NotEqual(id3, id2);
@@ -91,14 +91,14 @@ public class When_generating_id
         Console.WriteLine(id2);
         Console.WriteLine(id3);
 
-        NewId nid1 = id1.ToNewId();
-        NewId nid2 = id2.ToNewId();
+        NewId nid1 = id1.ToNewIdFromSqlServer();
+        NewId nid2 = id2.ToNewIdFromSqlServer();
     }
 
     [Fact]
     public void Should_match_sequentially_with_sequential_guid()
     {
-        var generator = new NewIdGenerator(_tickProvider, _workerIdProvider);
+        var generator = new NewIdGenerator(_timeProvider, _workerIdProvider);
 
         var nid = generator.Next();
         var id1 = nid.ToSequentialGuid();
@@ -122,10 +122,10 @@ public class When_generating_id
     [Fact]
     public void Should_generate_known_sequential_guid()
     {
-        var expected = Guid.Parse("74b719ec-7596-3cf0-7d81-bf34437f0b01");
-        var tickProvider = new MockTickProvider(8410219332513447152);
+        var expected = Guid.Parse("ffbbf0a1-ae2b-8a1d-bd81-bf34437f0b01");
+        var timeProvider = new MockTimeProvider(new DateTime(2882, 6, 1, 12, 34, 56, DateTimeKind.Utc).AddTicks(1234567).Ticks);
         var networkProvider = new MockNetworkProvider(BitConverter.GetBytes(6857996259202924925));
-        var generator = new NewIdGenerator(tickProvider, networkProvider);
+        var generator = new NewIdGenerator(timeProvider, networkProvider);
 
         for (int i = 0; i < 267; i++)
         {
@@ -139,18 +139,69 @@ public class When_generating_id
     [Fact]
     public void Should_generate_known_guid()
     {
-        var expected = Guid.Parse("437f0b01-bf34-7d81-3cf0-74b719ec7596");
-        var tickProvider = new MockTickProvider(8410219332513447152);
+        var expected = Guid.Parse("437f0b01-bf34-bd81-8a1d-ffbbf0a1ae2b");
+        var timeProvider = new MockTimeProvider(new DateTime(2882, 6, 1, 12, 34, 56, DateTimeKind.Utc).AddTicks(1234567).Ticks);
         var networkProvider = new MockNetworkProvider(BitConverter.GetBytes(6857996259202924925));
-        var generator = new NewIdGenerator(tickProvider, networkProvider);
+        var generator = new NewIdGenerator(timeProvider, networkProvider);
 
         for (int i = 0; i < 267; i++)
         {
-            generator.NextGuid();
+            generator.NextSqlServerGuid();
         }
-        var guid = generator.NextGuid();
+        var guid = generator.NextSqlServerGuid();
 
         Assert.Equal(guid, expected);
+    }
+
+    [Fact]
+    public void Should_generate_uuid_version_8_with_rfc_variant()
+    {
+        var generator = new NewIdGenerator(_timeProvider, _workerIdProvider, _processIdProvider);
+
+        var guid = generator.NextSequentialGuid();
+
+        Assert.Equal(8, guid.Version);
+        Assert.Equal(0b1000, guid.Variant & 0b1100);
+        Assert.Equal(8, generator.Next().ToSequentialGuid().Version);
+    }
+
+    [Theory]
+    [InlineData(621355968000000000L)]
+    [InlineData(638843228961234567L)]
+    [InlineData(621355968000000000L + (1L << 58) - 1)]
+    public void Should_round_trip_timestamp(long ticks)
+    {
+        var generator = new NewIdGenerator(new MockTimeProvider(ticks), _workerIdProvider);
+
+        var id = generator.Next();
+
+        Assert.Equal(ticks, id.Timestamp.Ticks);
+        Assert.Equal(TimeSpan.Zero, id.Timestamp.Offset);
+    }
+
+    [Theory]
+    [InlineData(621355967999999999L)]
+    [InlineData(621355968000000000L + (1L << 58))]
+    public void Should_reject_ticks_outside_supported_range(long ticks)
+    {
+        var generator = new NewIdGenerator(new MockTimeProvider(ticks), _workerIdProvider);
+
+        Assert.Throws<InvalidOperationException>(() => generator.Next());
+    }
+
+    [Theory]
+    [InlineData(-1, 1)]
+    [InlineData(0, -1)]
+    [InlineData(1, int.MaxValue)]
+    public async Task Should_reject_invalid_range_without_blocking_later_calls(int index, int count)
+    {
+        var generator = new NewIdGenerator(_timeProvider, _workerIdProvider);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => generator.Next(new NewId[4], index, count));
+
+        // Times out if the failed call left the generator lock held.
+        await Task.Run(generator.Next, cancellationToken).WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
     }
 
     public When_generating_id()
@@ -158,12 +209,12 @@ public class When_generating_id
         _start = DateTime.UtcNow;
         _stopwatch = Stopwatch.StartNew();
 
-        _tickProvider = new MockTickProvider(GetTicks());
+        _timeProvider = new MockTimeProvider(GetTicks());
         _workerIdProvider = new MockNetworkProvider(BitConverter.GetBytes(1234567890L));
         _processIdProvider = new MockProcessIdProvider(BitConverter.GetBytes(10));
     }
 
-    ITickProvider _tickProvider;
+    TimeProvider _timeProvider;
     IWorkerIdProvider _workerIdProvider;
     IProcessIdProvider _processIdProvider;
     DateTime _start;
@@ -175,15 +226,17 @@ public class When_generating_id
     }
 
 
-    class MockTickProvider :
-        ITickProvider
+    class MockTimeProvider :
+        TimeProvider
     {
-        public MockTickProvider(long ticks)
+        public MockTimeProvider(long ticks)
         {
-            Ticks = ticks;
+            _utcNow = new DateTimeOffset(ticks, TimeSpan.Zero);
         }
 
-        public long Ticks { get; }
+        readonly DateTimeOffset _utcNow;
+
+        public override DateTimeOffset GetUtcNow() => _utcNow;
     }
 
 

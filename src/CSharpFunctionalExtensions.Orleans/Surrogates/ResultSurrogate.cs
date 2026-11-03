@@ -41,7 +41,7 @@ public sealed class ResultSurrogateConverter : IConverter<Result, ResultSurrogat
 ///     Orleans surrogate for <see cref="Result{T}"/>.
 /// </summary>
 /// <typeparam name="T">The type of the success value.</typeparam>
-[GenerateSerializer, Immutable, Alias("Continuum.Result`1")]
+[GenerateSerializer, Alias("Continuum.Result`1")]
 public struct ResultSurrogate<T>
 {
     /// <summary>Whether the result is a failure.</summary>

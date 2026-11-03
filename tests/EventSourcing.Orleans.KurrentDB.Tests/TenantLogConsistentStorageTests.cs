@@ -41,7 +41,7 @@ public class TenantLogConsistentStorageTests
         }, FailureLogger());
 
         await sut.GetLastVersionAsync("snack", GrainFor("acme", "1"));
-        await sut.AppendAsync("snack", GrainFor("acme", "2"), new List<string> { "e" }, 0);
+        await sut.AppendAsync("snack", GrainFor("acme", "2"), new List<string> { "e" }, 0, Guid.NewGuid());
         await sut.ReadAsync<string>("snack", GrainFor("contoso", "1"), 0, 10);
 
         Assert.Equal(0, defaultStorage.Calls);
@@ -83,10 +83,16 @@ public class TenantLogConsistentStorageTests
             return Task.FromResult(0);
         }
 
-        public Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion)
+        public Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId)
         {
             Calls++;
             return Task.FromResult(expectedVersion + entries.Count);
+        }
+
+        public Task<Guid?> GetTransactionIdAsync(string grainTypeName, GrainId grainId, int version)
+        {
+            Calls++;
+            return Task.FromResult<Guid?>(null);
         }
     }
 }

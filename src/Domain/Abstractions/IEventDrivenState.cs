@@ -25,5 +25,5 @@ public interface IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCom
 {
     /// <summary>Applies an event to the state.</summary>
     /// <param name="event">The event to apply.</param>
-    void When(IStateMachineEvent<TCommand> @event);
+    void When(TEventBase @event);
 }

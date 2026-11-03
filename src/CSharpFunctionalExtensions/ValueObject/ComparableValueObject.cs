@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Continuum.CSharpFunctionalExtensions
 {
@@ -35,20 +34,30 @@ namespace Continuum.CSharpFunctionalExtensions
             Type thisType = GetUnproxiedType(this);
             Type otherType = GetUnproxiedType(other);
             if (thisType != otherType)
-                return string.Compare($"{thisType}", $"{otherType}", StringComparison.Ordinal);
+                return string.CompareOrdinal(thisType.ToString(), otherType.ToString());
 
-            return
-                GetComparableEqualityComponents().Zip(
-                        other.GetComparableEqualityComponents(),
-                        (left, right) =>
-                            left?.CompareTo(right) ?? (right is null ? 0 : -1))
-                    .FirstOrDefault(cmp => cmp != 0);
+            using IEnumerator<IComparable> left = GetComparableEqualityComponents().GetEnumerator();
+            using IEnumerator<IComparable> right = other.GetComparableEqualityComponents().GetEnumerator();
+            while (left.MoveNext() && right.MoveNext())
+            {
+                int cmp = left.Current?.CompareTo(right.Current) ?? (right.Current is null ? 0 : -1);
+                if (cmp != 0)
+                    return cmp;
+            }
+
+            return 0;
         }
 
         /// <inheritdoc cref="CompareTo(ComparableValueObject)"/>
         public virtual int CompareTo(object? other) 
         {
-            return CompareTo(other as ComparableValueObject);
+            if (other is null)
+                return 1;
+
+            if (other is not ComparableValueObject comparable)
+                throw new ArgumentException($"Object must be of type {nameof(ComparableValueObject)}.", nameof(other));
+
+            return CompareTo(comparable);
         }
     }
 }

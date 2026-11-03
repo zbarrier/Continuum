@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -11,8 +12,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<T>> Check<T>(this ValueTask<Result<T>> resultTask,
             Func<T, ValueTask<Result>> valueTask)
         {
-            Result<T> result = await resultTask;
-            return await result.Bind(valueTask).Map(() => result.Value);
+            Result<T> result = await resultTask.DefaultAwait();
+            return await result.Bind(valueTask).Map(() => result.Value).DefaultAwait();
         }
 
         /// <summary>
@@ -21,8 +22,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<T>> Check<T, K>(this ValueTask<Result<T>> resultTask,
             Func<T, ValueTask<Result<K>>> valueTask)
         {
-            Result<T> result = await resultTask;
-            return await result.Bind(valueTask).Map(_ => result.Value);
+            Result<T> result = await resultTask.DefaultAwait();
+            return await result.Bind(valueTask).Map(_ => result.Value).DefaultAwait();
         }
     }
 }

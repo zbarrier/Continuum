@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -15,7 +16,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 		public static async ValueTask<Maybe<T>> TapNoValue<T>(this Maybe<T> maybe, Func<ValueTask> valueTask)
 		{
             if (maybe.HasNoValue)
-                await valueTask();
+                await valueTask().DefaultAwait();
 
             return maybe;
 		}

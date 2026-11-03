@@ -1,10 +1,10 @@
 namespace Continuum.Domain;
 
 /// <summary>The result of persisting the uncommitted events of a session.</summary>
-public interface ISaveChangesResponse : IResponse
+public interface ISessionSaveResponse : IResponse
 {
     /// <summary>Gets the changes (events) that were saved.</summary>
-    IEnumerable<IChange> Changes { get; }
+    IReadOnlyList<IChange> Changes { get; }
 
     /// <summary>Gets the version of the event stream after the changes were saved.</summary>
     int Version { get; }
@@ -20,11 +20,11 @@ public interface IChange
     object Event { get; }
 }
 
-/// <summary>The result of executing a command against an event-sourced entity.</summary>
-public interface IEventSourcedCommandResponse : IResponse
+/// <summary>The response of a command that includes the changes (events) it produced.</summary>
+public interface ICommandResponseWithChanges : IResponse
 {
     /// <summary>Gets the changes (events) produced by the command.</summary>
-    IEnumerable<IChange> Changes { get; }
+    IReadOnlyList<IChange> Changes { get; }
 
     /// <summary>Gets the version of the event stream after the command was applied.</summary>
     int Version { get; }

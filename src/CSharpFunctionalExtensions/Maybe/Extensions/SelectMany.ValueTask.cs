@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -21,8 +22,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             Func<T, ValueTask<Maybe<U>>> selector,
             Func<T, U, V> project)
         {
-            var maybe = await maybeTask;
-            return await maybe.SelectMany(selector, project);
+            var maybe = await maybeTask.DefaultAwait();
+            return await maybe.SelectMany(selector, project).DefaultAwait();
         }
     }
 }

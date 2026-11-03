@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -11,43 +12,43 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> CombineInOrder(this IEnumerable<ValueTask<Result>> tasks)
         {
-            Result[] results = await CompleteInOrder(tasks);
+            Result[] results = await CompleteInOrder(tasks).DefaultAwait();
             return results.Combine();
         }
 
         /// <inheritdoc cref="CombineInOrder(IEnumerable{ValueTask{Result}})"/>
         public static async ValueTask<Result<IEnumerable<T>>> CombineInOrder<T>(this IEnumerable<ValueTask<Result<T>>> tasks)
         {
-            Result<T>[] results = await CompleteInOrder(tasks);
+            Result<T>[] results = await CompleteInOrder(tasks).DefaultAwait();
             return results.Combine();
         }
 
         /// <inheritdoc cref="CombineInOrder(IEnumerable{ValueTask{Result}})"/>
         public static async ValueTask<Result> CombineInOrder(this ValueTask<IEnumerable<ValueTask<Result>>> task)
         {
-            IEnumerable<ValueTask<Result>> tasks = await task;
-            return await tasks.CombineInOrder();
+            IEnumerable<ValueTask<Result>> tasks = await task.DefaultAwait();
+            return await tasks.CombineInOrder().DefaultAwait();
         }
 
         /// <inheritdoc cref="CombineInOrder(IEnumerable{ValueTask{Result}})"/>
         public static async ValueTask<Result<IEnumerable<T>>> CombineInOrder<T>(this ValueTask<IEnumerable<ValueTask<Result<T>>>> task)
         {
-            IEnumerable<ValueTask<Result<T>>> tasks = await task;
-            return await tasks.CombineInOrder();
+            IEnumerable<ValueTask<Result<T>>> tasks = await task.DefaultAwait();
+            return await tasks.CombineInOrder().DefaultAwait();
         }
 
         /// <inheritdoc cref="CombineInOrder(IEnumerable{ValueTask{Result}})"/>
         public static async ValueTask<Result<K>> CombineInOrder<T, K>(this IEnumerable<ValueTask<Result<T>>> tasks, Func<IEnumerable<T>, K> composer)
         {
-            IEnumerable<Result<T>> results = await CompleteInOrder(tasks);
+            IEnumerable<Result<T>> results = await CompleteInOrder(tasks).DefaultAwait();
             return results.Combine(composer);
         }
 
         /// <inheritdoc cref="CombineInOrder(IEnumerable{ValueTask{Result}})"/>
         public static async ValueTask<Result<K>> CombineInOrder<T, K>(this ValueTask<IEnumerable<ValueTask<Result<T>>>> task, Func<IEnumerable<T>, K> composer)
         {
-            IEnumerable<ValueTask<Result<T>>> tasks = await task;
-            return await tasks.CombineInOrder(composer);
+            IEnumerable<ValueTask<Result<T>>> tasks = await task.DefaultAwait();
+            return await tasks.CombineInOrder(composer).DefaultAwait();
         }
 
         /// <summary>
@@ -58,7 +59,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             List<T> results = new List<T>();
             foreach (var task in tasks)
             {
-                results.Add(await task);
+                results.Add(await task.DefaultAwait());
             }
             return results.ToArray();
         }

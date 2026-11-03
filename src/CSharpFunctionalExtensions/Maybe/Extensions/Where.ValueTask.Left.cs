@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -8,7 +9,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Where{T}(in Maybe{T}, Func{T, bool})"/>
         public static async ValueTask<Maybe<T>> Where<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, bool> predicate)
         {
-            Maybe<T> maybe = await maybeTask;
+            Maybe<T> maybe = await maybeTask.DefaultAwait();
             return maybe.Where(predicate);
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -13,8 +14,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<K>> Bind<T, K>(this ValueTask<Result<T>> resultTask, Func<T, ValueTask<Result<K>>> valueTask)
         {
-            Result<T> result = await resultTask;
-            return await result.Bind(valueTask);
+            Result<T> result = await resultTask.DefaultAwait();
+            return await result.Bind(valueTask).DefaultAwait();
         }
 
         /// <summary>
@@ -22,8 +23,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<K>> Bind<K>(this ValueTask<Result> resultTask, Func<ValueTask<Result<K>>> valueTask)
         {
-            Result result = await resultTask;
-            return await result.Bind(valueTask);
+            Result result = await resultTask.DefaultAwait();
+            return await result.Bind(valueTask).DefaultAwait();
         }
 
         /// <summary>
@@ -31,8 +32,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> Bind<T>(this ValueTask<Result<T>> resultTask, Func<T, ValueTask<Result>> valueTask)
         {
-            Result<T> result = await resultTask;
-            return await result.Bind(valueTask);
+            Result<T> result = await resultTask.DefaultAwait();
+            return await result.Bind(valueTask).DefaultAwait();
         }
 
         /// <summary>
@@ -40,8 +41,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> Bind(this ValueTask<Result> resultTask, Func<ValueTask<Result>> valueTask)
         {
-            Result result = await resultTask;
-            return await result.Bind(valueTask);
+            Result result = await resultTask.DefaultAwait();
+            return await result.Bind(valueTask).DefaultAwait();
         }
     }
 }

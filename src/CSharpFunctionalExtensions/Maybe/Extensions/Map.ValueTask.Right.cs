@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -11,7 +12,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (maybe.HasNoValue)
                 return Maybe<K>.None;
 
-            return await valueTask(maybe.GetValueOrThrow());
+            return await valueTask(maybe.GetValueOrThrow()).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Map{T, K, TContext}(in Maybe{T}, Func{T, TContext, K}, TContext)"/>
@@ -24,7 +25,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (maybe.HasNoValue)
                 return Maybe<K>.None;
 
-            return await valueTask(maybe.GetValueOrThrow(), context);
+            return await valueTask(maybe.GetValueOrThrow(), context).DefaultAwait();
         }
     }
 }

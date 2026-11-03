@@ -5,8 +5,8 @@ namespace Continuum.Events;
 /// </summary>
 /// <remarks>
 ///     The grouping is all or nothing: either every value is present and describes a consistent shape, or the event
-///     carries no transaction. KurrentDB reports the same position for every event of an append, so this is the only
-///     record of the grouping, and a subscriber uses it to apply the whole append at once.
+///     carries no transaction. The event store cannot tell which events were appended together once they are written,
+///     so this is the only record of the grouping, and a subscriber uses it to apply the whole append at once.
 /// </remarks>
 /// <param name="TransactionId">The producer assigned identifier shared by every event of the append.</param>
 /// <param name="TransactionSize">The number of events in the append, across every stream it wrote to.</param>

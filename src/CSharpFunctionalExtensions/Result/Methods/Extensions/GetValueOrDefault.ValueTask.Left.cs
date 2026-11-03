@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -8,7 +9,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.GetValueOrDefault{T}(in Result{T}, Func{T})"/>
         public static async ValueTask<T> GetValueOrDefault<T>(this ValueTask<Result<T>> resultTask, Func<T> defaultValue)
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             return result.GetValueOrDefault(defaultValue);
         }
 
@@ -16,7 +17,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<K?> GetValueOrDefault<T, K>(this ValueTask<Result<T>> resultTask, Func<T, K> selector,
             K? defaultValue = default)
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             return result.GetValueOrDefault(selector, defaultValue);
         }
 
@@ -24,7 +25,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<K> GetValueOrDefault<T, K>(this ValueTask<Result<T>> resultTask, Func<T, K> selector,
             Func<K> defaultValue)
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             return result.GetValueOrDefault(selector, defaultValue);
         }
     }

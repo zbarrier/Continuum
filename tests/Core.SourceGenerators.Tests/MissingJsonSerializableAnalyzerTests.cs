@@ -58,12 +58,23 @@ public sealed class MissingJsonSerializableAnalyzerTests
     }
 
     [Fact]
-    public async Task Commands_and_metadata_are_not_required()
+    public async Task Commands_are_not_required()
     {
         var diagnostics = await AnalyzeAsync("""
             [CommandType("create-order")]
             public sealed class CreateOrder;
 
+            [System.Text.Json.Serialization.JsonSerializable(typeof(int))]
+            internal sealed partial class AppJsonContext : System.Text.Json.Serialization.JsonSerializerContext;
+            """);
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task Unlisted_metadata_reports_CTM002()
+    {
+        var diagnostics = await AnalyzeAsync("""
             [MetadataType("event-metadata")]
             public sealed class EventMetadata;
 
@@ -71,7 +82,7 @@ public sealed class MissingJsonSerializableAnalyzerTests
             internal sealed partial class AppJsonContext : System.Text.Json.Serialization.JsonSerializerContext;
             """);
 
-        Assert.Empty(diagnostics);
+        Assert.Equal("CTM002", Assert.Single(diagnostics).Id);
     }
 
     private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string body)

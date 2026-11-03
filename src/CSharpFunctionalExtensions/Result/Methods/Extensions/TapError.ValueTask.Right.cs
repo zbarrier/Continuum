@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -12,7 +13,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         {
             if (result.IsFailure)
             {
-                await valueTask();
+                await valueTask().DefaultAwait();
             }
 
             return result;
@@ -25,7 +26,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         {
             if (result.IsFailure)
             {
-                await valueTask();
+                await valueTask().DefaultAwait();
             }
 
             return result;
@@ -38,7 +39,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         {
             if (result.IsFailure)
             {
-                await valueTask(result.Error);
+                await valueTask(result.Error).DefaultAwait();
             }
 
             return result;
@@ -51,7 +52,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         {
             if (result.IsFailure)
             {
-                await valueTask(result.Error);
+                await valueTask(result.Error).DefaultAwait();
             }
 
             return result;

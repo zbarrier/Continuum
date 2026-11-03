@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -10,10 +11,10 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> Tap(this ValueTask<Result> resultTask, Func<ValueTask> valueTask)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
 
             if (result.IsSuccess)
-                await valueTask();
+                await valueTask().DefaultAwait();
 
             return result;
         }
@@ -23,10 +24,10 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Tap<T>(this ValueTask<Result<T>> resultTask, Func<ValueTask> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsSuccess)
-                await valueTask();
+                await valueTask().DefaultAwait();
 
             return result;
         }
@@ -36,10 +37,10 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Tap<T>(this ValueTask<Result<T>> resultTask, Func<T, ValueTask> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsSuccess)
-                await valueTask(result.Value);
+                await valueTask(result.Value).DefaultAwait();
 
             return result;
         }

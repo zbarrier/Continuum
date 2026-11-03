@@ -28,7 +28,7 @@ public sealed class CounterState : EventDrivenState<CounterState, CounterEvent>
 public sealed class CounterGrain(IServiceProvider services)
     : EventDrivenGrain<CounterState, CounterEvent>(services, "counters"), ICounterGrain
 {
-    public async Task<Result<ISaveChangesResponse>> Increment(int by)
+    public async Task<Result<ISessionSaveResponse>> Increment(int by)
     {
         using var session = CreateSession();
         session.Apply(new CounterIncremented(by));

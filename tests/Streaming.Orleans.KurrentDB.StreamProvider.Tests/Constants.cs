@@ -1,4 +1,4 @@
-﻿namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
 public static class Constants
 {
@@ -9,7 +9,7 @@ public static class Constants
     /// <summary>
     ///     A second stream provider consuming <c>$all</c>, used to read events written outside the stream provider.
     /// </summary>
-    public const string AllStreamProviderName = "KurrentDBStream-All";
+    public const string CatchUpProviderName = "KurrentDBStream-All";
 
     /// <summary>
     ///     The KurrentDB stream name prefix the <c>$all</c> provider is filtered to, made unique per process.
@@ -34,7 +34,7 @@ public static class Constants
     ///     reused between runs, so a fixed name would let one run resume from the position another run checkpointed
     ///     and skip the events under test.
     /// </remarks>
-    public static readonly string AllStreamQueueName = $"all-stream-queue-{Guid.NewGuid():N}";
+    public static readonly string CatchUpQueueName = $"catch-up-queue-{Guid.NewGuid():N}";
 
     /// <summary>
     ///     A third stream provider consuming <c>$all</c>, used by the implicit subscription tests.
@@ -54,6 +54,16 @@ public static class Constants
     ///     The default stream id mapper splits a stream name on the first '-', so this must not contain one.
     /// </remarks>
     public const string ImplicitStreamPrefix = "implicitprojection";
+
+    /// <summary>
+    ///     The provider-qualified namespace the implicit subscription provider delivers <see cref="ImplicitStreamPrefix" /> on.
+    /// </summary>
+    public const string ImplicitStreamNamespace = ImplicitProviderName + ":" + ImplicitStreamPrefix;
+
+    /// <summary>
+    ///     The provider-qualified namespace the <c>$all</c> provider delivers <see cref="EventSourcedStreamPrefix" /> on.
+    /// </summary>
+    public static readonly string EventSourcedStreamNamespace = $"{CatchUpProviderName}:{EventSourcedStreamPrefix}";
 
     /// <summary>
     ///     The queue name of the implicit subscription provider, made unique per process.

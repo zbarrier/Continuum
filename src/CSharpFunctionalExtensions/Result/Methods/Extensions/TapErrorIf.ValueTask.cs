@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -62,11 +63,11 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> TapErrorIf(this ValueTask<Result> resultTask, Func<Error, bool> predicate, Func<ValueTask> valueTask)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
 
             if (result.IsFailure && predicate(result.Error))
             {
-                return await result.TapError(valueTask);
+                return await result.TapError(valueTask).DefaultAwait();
             }
 
             return result;
@@ -77,11 +78,11 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> TapErrorIf(this ValueTask<Result> resultTask, Func<Error, bool> predicate, Func<Error, ValueTask> valueTask)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
 
             if (result.IsFailure && predicate(result.Error))
             {
-                return await result.TapError(valueTask);
+                return await result.TapError(valueTask).DefaultAwait();
             }
 
             return result;
@@ -92,11 +93,11 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> TapErrorIf<T>(this ValueTask<Result<T>> resultTask, Func<Error, bool> predicate, Func<ValueTask> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsFailure && predicate(result.Error))
             {
-                return await result.TapError(valueTask);
+                return await result.TapError(valueTask).DefaultAwait();
             }
 
             return result;
@@ -107,11 +108,11 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> TapErrorIf<T>(this ValueTask<Result<T>> resultTask, Func<Error, bool> predicate, Func<Error, ValueTask> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsFailure && predicate(result.Error))
             {
-                return await result.TapError(valueTask);
+                return await result.TapError(valueTask).DefaultAwait();
             }
 
             return result;

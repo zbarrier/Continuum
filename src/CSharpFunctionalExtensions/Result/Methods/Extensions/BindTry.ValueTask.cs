@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using System;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -16,8 +17,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result> BindTry(this ValueTask<Result> resultTask, Func<ValueTask<Result>> valueTask,
 			Func<Exception, Error>? errorHandler = null)
 		{            
-			var result = await resultTask;
-			return await result.BindTry(valueTask, errorHandler);
+			var result = await resultTask.DefaultAwait();
+			return await result.BindTry(valueTask, errorHandler).DefaultAwait();
 		}
 
         /// <summary>
@@ -32,8 +33,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<K>> BindTry<K>(this ValueTask<Result> resultTask, Func<ValueTask<Result<K>>> valueTask,
             Func<Exception, Error>? errorHandler = null)
         {
-            var result = await resultTask;
-            return await result.BindTry(valueTask, errorHandler);
+            var result = await resultTask.DefaultAwait();
+            return await result.BindTry(valueTask, errorHandler).DefaultAwait();
         }
 
         /// <summary>
@@ -48,8 +49,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result> BindTry<T>(this ValueTask<Result<T>> resultTask, Func<T, ValueTask<Result>> valueTask,
 			Func<Exception, Error>? errorHandler = null)
 		{
-			var result = await resultTask;
-			return await result.BindTry(valueTask, errorHandler);
+			var result = await resultTask.DefaultAwait();
+			return await result.BindTry(valueTask, errorHandler).DefaultAwait();
 		}
 
         /// <summary>
@@ -65,8 +66,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<K>> BindTry<T, K>(this ValueTask<Result<T>> resultTask, Func<T, ValueTask<Result<K>>> valueTask,
             Func<Exception, Error>? errorHandler = null)
         {
-            var result = await resultTask;
-            return await result.BindTry(valueTask, errorHandler);
+            var result = await resultTask.DefaultAwait();
+            return await result.BindTry(valueTask, errorHandler).DefaultAwait();
         }		
 	}
 }

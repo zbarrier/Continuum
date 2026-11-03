@@ -13,7 +13,7 @@ namespace Continuum.EventSourcing.Orleans.CosmosDB;
 public static class CosmosDBLogConsistentStorageFactory
 {
     /// <summary>
-    ///     Creates an CosmosDB log consistent storage instance.
+    ///     Creates a Cosmos DB log consistent storage instance.
     /// </summary>
     public static CosmosDBLogConsistentStorage Create(IServiceProvider serviceProvider, string name)
     {

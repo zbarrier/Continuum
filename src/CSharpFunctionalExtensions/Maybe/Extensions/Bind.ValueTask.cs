@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -8,8 +9,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Bind{T, K}(in Maybe{T}, Func{T, Maybe{K}})"/>
         public static async ValueTask<Maybe<K>> Bind<T, K>(this ValueTask<Maybe<T>> maybeTask, Func<T, ValueTask<Maybe<K>>> selector)
         {
-            Maybe<T> maybe = await maybeTask;
-            return await maybe.Bind(selector);
+            Maybe<T> maybe = await maybeTask.DefaultAwait();
+            return await maybe.Bind(selector).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Bind{T, K, TContext}(in Maybe{T}, Func{T, TContext, Maybe{K}}, TContext)"/>
@@ -18,8 +19,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
                 Func<T, TContext, ValueTask<Maybe<K>>> selector,
                 TContext context)
         {
-            Maybe<T> maybe = await maybeTask;
-            return await maybe.Bind(selector, context);
+            Maybe<T> maybe = await maybeTask.DefaultAwait();
+            return await maybe.Bind(selector, context).DefaultAwait();
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -12,7 +13,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<K>> MapTry<T, K>(this ValueTask<Result<T>> resultTask, Func<T, K> valueTask,
             Func<Exception, Error>? errorHandler = null)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.MapTry(valueTask, errorHandler);
         }
 
@@ -23,7 +24,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<K>> MapTry<K>(this ValueTask<Result> resultTask, Func<K> valueTask,
             Func<Exception, Error>? errorHandler = null)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.MapTry(valueTask, errorHandler);
         }
     }

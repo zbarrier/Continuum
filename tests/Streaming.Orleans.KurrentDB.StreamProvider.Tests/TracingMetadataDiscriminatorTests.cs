@@ -107,7 +107,7 @@ public class TracingMetadataDiscriminatorTests
         // Arrange
         var key = Guid.NewGuid();
         var streamName = $"{Constants.EventSourcedStreamPrefix}-{key:N}";
-        var streamId = StreamId.Create(Constants.EventSourcedStreamPrefix, key.ToString("N"));
+        var streamId = StreamId.Create(Constants.EventSourcedStreamNamespace, key.ToString("N"));
 
         var collector = _fixture.Cluster.Client.GetGrain<ICollectorGrain>(Guid.NewGuid());
         await collector.Subscribe(streamId);
@@ -146,7 +146,7 @@ public class TracingMetadataDiscriminatorTests
         // Arrange: mimic the stream provider, which puts the Orleans stream id in the metadata slot.
         var key = Guid.NewGuid();
         var streamName = $"{Constants.EventSourcedStreamPrefix}-{key:N}";
-        var streamId = StreamId.Create(Constants.EventSourcedStreamPrefix, key.ToString("N"));
+        var streamId = StreamId.Create(Constants.EventSourcedStreamNamespace, key.ToString("N"));
         var callerMetadata = Encoding.UTF8.GetBytes(streamId.ToString());
         var message = new ChatMessage("StreamProvider", "written with caller metadata", DateTimeOffset.UtcNow);
 
@@ -242,7 +242,7 @@ public class TracingMetadataDiscriminatorTests
 
         // The subscription is explicit and starts at the current position, so it has to exist before the publish or
         // the event is gone by the time the collector is listening.
-        var streamId = StreamId.Create(Constants.ChatNamespace, key);
+        var streamId = StreamId.Create($"{Constants.StreamProviderName}:{Constants.ChatNamespace}", key);
         var collector = _fixture.Cluster.Client.GetGrain<ICollectorGrain>(Guid.NewGuid());
         await collector.Subscribe(streamId, Constants.StreamProviderName);
 

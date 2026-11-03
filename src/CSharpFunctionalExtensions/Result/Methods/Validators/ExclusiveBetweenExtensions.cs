@@ -15,8 +15,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (comparer.Compare(to, from) == -1)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (comparer.Compare(to, from) < 0)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return comparer.Compare(result.Value, from) <= 0 || comparer.Compare(result.Value, to) >= 0
             ? Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(result.Value)))
@@ -30,8 +30,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (comparer.Compare(to, from) == -1)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (comparer.Compare(to, from) < 0)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (comparer.Compare(result.Value, from) <= 0 || comparer.Compare(result.Value, to) >= 0)
         {
@@ -49,8 +49,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from.CompareTo(to) >= 0)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (to.CompareTo(from) < 0)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value.CompareTo(from) <= 0 || result.Value.CompareTo(to) >= 0
             ? Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, ErrorArgument.FromObject(from), ErrorArgument.FromObject(to), ErrorArgument.FromObject(result.Value)))
@@ -64,8 +64,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from.CompareTo(to) >= 0)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (to.CompareTo(from) < 0)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value.CompareTo(from) <= 0 || result.Value.CompareTo(to) >= 0)
         {
@@ -83,8 +83,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -98,8 +98,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -117,8 +117,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -132,8 +132,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -151,8 +151,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -166,8 +166,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -185,8 +185,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -200,8 +200,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -219,8 +219,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -234,8 +234,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -253,8 +253,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -268,8 +268,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -287,8 +287,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -302,8 +302,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -321,8 +321,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -336,8 +336,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -355,8 +355,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -370,8 +370,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -389,8 +389,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to) 
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to) 
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -404,8 +404,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {
@@ -423,8 +423,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         return result.Value <= from || result.Value >= to
             ? Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.ExclusiveBetween, ValidatorErrorStrings.ExclusiveBetween, propertyName, from, to, result.Value))
@@ -439,8 +439,8 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return result;
 
-        if (from >= to)
-            throw new ArgumentOutOfRangeException(ToShouldBeLargerThanFrom);
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
 
         if (result.Value <= from || result.Value >= to)
         {

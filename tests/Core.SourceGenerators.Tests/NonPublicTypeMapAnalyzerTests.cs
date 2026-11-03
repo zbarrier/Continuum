@@ -64,6 +64,37 @@ public sealed class NonPublicTypeMapAnalyzerTests
     }
 
     [Fact]
+    public async Task Internal_framework_type_in_library_reports_CTM001()
+    {
+        var diagnostics = await AnalyzeAsync("""
+            [FrameworkType("marker")]
+            internal sealed class Marker;
+            """);
+
+        Assert.Equal("CTM001", Assert.Single(diagnostics).Id);
+    }
+
+    [Theory]
+    [InlineData(OutputKind.DynamicallyLinkedLibrary)]
+    [InlineData(OutputKind.ConsoleApplication)]
+    public async Task Private_nested_mapped_type_reports_CTM003(OutputKind outputKind)
+    {
+        var diagnostics = await AnalyzeAsync("""
+            public static class Program
+            {
+                public static void Main() { }
+
+                [DomainEventType("order-created")]
+                private sealed class OrderCreated;
+            }
+            """, outputKind);
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("CTM003", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+    }
+
+    [Fact]
     public async Task Internal_mapped_type_in_application_reports_nothing()
     {
         var diagnostics = await AnalyzeAsync("""

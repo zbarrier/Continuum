@@ -31,6 +31,7 @@ public class CachedMessageRoundTripTests
     private static KurrentDBQueueDataAdapter CreateAdapter() => new(OrleansSerializer, new KurrentDBDataAdapterOptions
     {
         ConnectionName = "test",
+        ProviderName = "test",
         TypeMapper = new FakeTypeMapper(),
         GrainStorageSerializer = new FakeSerializer(),
     });
@@ -60,7 +61,7 @@ public class CachedMessageRoundTripTests
         Assert.Equal(9_000_000_000UL, message.CommitPosition);
         Assert.Equal(9_000_000_000L, message.SequenceNumber);
         Assert.Equal(queueMessage.EventId, message.EventId);
-        Assert.Equal(StreamId.Create("snack", "acme|123"), message.StreamId);
+        Assert.Equal(StreamId.Create("test:snack", "acme|123"), message.StreamId);
         Assert.Equal(streamName.Value, message.StreamName.Value);
         Assert.Equal(streamName.Category, message.StreamName.Category);
         Assert.Equal(streamName.TenantId, message.StreamName.TenantId);

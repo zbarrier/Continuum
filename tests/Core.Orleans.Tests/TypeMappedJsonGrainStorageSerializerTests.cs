@@ -115,6 +115,24 @@ public sealed class TypeMappedJsonGrainStorageSerializerTests
     }
 
     [Fact]
+    public void Deserialize_uses_stored_type_over_requested_type()
+    {
+        var serializer = new TypeMappedJsonGrainStorageSerializer(TypeMappedJsonGrainStorageSerializer.DefaultOptions);
+
+        var restored = serializer.Deserialize<object>(new BinaryDataWithType(serializer.Serialize(Sample).ToMemory(), typeof(StoredEvent)));
+
+        AssertEqual(Sample, Assert.IsType<StoredEvent>(restored));
+    }
+
+    [Fact]
+    public void Deserialize_stored_type_not_assignable_to_requested_type_throws()
+    {
+        var serializer = new TypeMappedJsonGrainStorageSerializer(TypeMappedJsonGrainStorageSerializer.DefaultOptions);
+
+        Assert.Throws<InvalidCastException>(() => serializer.Deserialize<string>(new BinaryDataWithType(serializer.Serialize(Sample).ToMemory(), typeof(StoredEvent))));
+    }
+
+    [Fact]
     public void Deserialize_null_payload_throws()
     {
         var serializer = new TypeMappedJsonGrainStorageSerializer(TypeMappedJsonGrainStorageSerializer.DefaultOptions);

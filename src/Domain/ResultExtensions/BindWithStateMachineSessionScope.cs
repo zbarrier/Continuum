@@ -18,7 +18,7 @@ public static partial class ResultSessionScopeExtensions
     /// <param name="sessionScope">The session scope used to create and save the session.</param>
     /// <param name="f">The operation to run against the session.</param>
     /// <returns>The result of saving the session, or the failure of the source result or operation.</returns>
-    public static Task<Result<ISaveChangesResponse>> BindWithSessionScope<TState, TEventBase, TStatus, TCommand>(this Result self,
+    public static Task<Result<ISessionSaveResponse>> BindWithSessionScope<TState, TEventBase, TStatus, TCommand>(this Result self,
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Action<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>> f)
         where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
@@ -28,7 +28,7 @@ public static partial class ResultSessionScopeExtensions
     {
         if (self.IsFailure)
         {
-            return Task.FromResult(Result.Failure<ISaveChangesResponse>(self.Error));
+            return Task.FromResult(Result.Failure<ISessionSaveResponse>(self.Error));
         }
         return WithSessionScope(sessionScope, f);
     }
@@ -45,7 +45,7 @@ public static partial class ResultSessionScopeExtensions
     /// <param name="sessionScope">The session scope used to create and save the session.</param>
     /// <param name="f">The operation to run against the session.</param>
     /// <returns>The result of saving the session, or the failure of the source result or operation.</returns>
-    public static Task<Result<ISaveChangesResponse>> BindWithSessionScope<TState, TEventBase, TStatus, TCommand>(this Result self,
+    public static Task<Result<ISessionSaveResponse>> BindWithSessionScope<TState, TEventBase, TStatus, TCommand>(this Result self,
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Func<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>, Result> f)
         where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
@@ -55,7 +55,7 @@ public static partial class ResultSessionScopeExtensions
     {
         if (self.IsFailure)
         {
-            return Task.FromResult(Result.Failure<ISaveChangesResponse>(self.Error));
+            return Task.FromResult(Result.Failure<ISessionSaveResponse>(self.Error));
         }
         return WithSessionScope(sessionScope, f);
     }
@@ -73,7 +73,7 @@ public static partial class ResultSessionScopeExtensions
     /// <param name="sessionScope">The session scope used to create and save the session.</param>
     /// <param name="f">The operation to run against the session.</param>
     /// <returns>The result of saving the session, or the failure of the source result or operation.</returns>
-    public static Task<Result<ISaveChangesResponse>> BindWithSessionScope<TState, TEventBase, TStatus, TCommand, T>(this Result<T> self,
+    public static Task<Result<ISessionSaveResponse>> BindWithSessionScope<TState, TEventBase, TStatus, TCommand, T>(this Result<T> self,
             IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatus, TCommand> sessionScope,
             Func<IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>, T, Result> f)
         where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
@@ -83,7 +83,7 @@ public static partial class ResultSessionScopeExtensions
     {
         if (self.IsFailure)
         {
-            return Task.FromResult(Result.Failure<ISaveChangesResponse>(self.Error));
+            return Task.FromResult(Result.Failure<ISessionSaveResponse>(self.Error));
         }
         return WithSessionScope(sessionScope, f, self.Value);
     }

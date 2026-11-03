@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions
 {
@@ -10,7 +11,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// </summary>
         public static async ValueTask<Result> FailureIf(Func<ValueTask<bool>> failurePredicate, Error error)
         {
-            bool isFailure = await failurePredicate();
+            bool isFailure = await failurePredicate().DefaultAwait();
             return SuccessIf(!isFailure, error);
         }
 
@@ -19,7 +20,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// </summary>
         public static async ValueTask<Result> FailureIf(Func<ValueTask<bool>> failurePredicate, Func<Error> errorFactory)
         {
-            bool isFailure = await failurePredicate();
+            bool isFailure = await failurePredicate().DefaultAwait();
             return SuccessIf(!isFailure, errorFactory);
         }
 
@@ -28,7 +29,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// </summary>
         public static async ValueTask<Result<T>> FailureIf<T>(Func<ValueTask<bool>> failurePredicate, T value, Error error)
         {
-            bool isFailure = await failurePredicate();
+            bool isFailure = await failurePredicate().DefaultAwait();
             return SuccessIf(!isFailure, value, error);
         }
 
@@ -37,7 +38,7 @@ namespace Continuum.CSharpFunctionalExtensions
         /// </summary>
         public static async ValueTask<Result<T>> FailureIf<T>(Func<ValueTask<bool>> failurePredicate, T value, Func<Error> errorFactory)
         {
-            bool isFailure = await failurePredicate();
+            bool isFailure = await failurePredicate().DefaultAwait();
             return SuccessIf(!isFailure, value, errorFactory);
         }
     }

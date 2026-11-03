@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Continuum.EventSourcing.Orleans</PackageId>
-    <Description>Microsoft Orleans implementation of Continuum.EventSourcing: serializable, immutable event metadata for journaled grains and log-consistency providers.</Description>
+    <Description>Shared Microsoft Orleans log-consistency support for Continuum event-sourced grains: the log view adaptor, event log storage abstraction, tenant routing and telemetry used by storage providers.</Description>
     <PackageTags>event-sourcing;orleans;journaled-grain;log-consistency;metadata</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

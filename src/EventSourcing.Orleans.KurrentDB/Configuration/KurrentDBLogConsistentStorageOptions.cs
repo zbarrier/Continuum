@@ -26,20 +26,20 @@ public sealed class KurrentDBLogConsistentStorageOptions : IStorageProviderSeria
     public int InitStage { get; set; } = ServiceLifecycleStage.ApplicationServices;
 
     /// <summary>
-    ///     The name of the KurrentDB connection used to get the KurrentDBClient. 
-    ///     Must be set to a valid Kurrent connection name.
+    ///     The name of the KurrentDB connection used to get the KurrentDBClient.
+    ///     Must be set to a valid KurrentDB connection name.
     /// </summary>
     public string ConnectionName { get; set; } = default!;
 
     /// <summary>
-    ///     The credentials that have permissions to append/read events. 
-    ///     UseDefault should be true for Insecure localhost connections.
+    ///     The credentials that have permissions to append/read events.
+    ///     UseDefault should be true for insecure localhost connections.
     /// </summary>
     [Redact]
     public KurrentDBCredentialsOptions Credentials { get; set; } = new();
 
     /// <summary>
-    ///     The serializer used in serialize events to an Kurrent stream. 
+    ///     The serializer used to serialize events to a KurrentDB stream.
     ///     Gets set based on the connection name.
     /// </summary>
     public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;

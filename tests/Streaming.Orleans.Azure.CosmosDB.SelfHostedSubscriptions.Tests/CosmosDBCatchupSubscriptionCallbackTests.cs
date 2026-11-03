@@ -77,13 +77,100 @@ public class CosmosDBCatchupSubscriptionCallbackTests
         Assert.Equal(CosmosDBCatchupSubscriptionState.Retrying, harness.State);
     }
 
+    [Fact]
+    public async Task An_infrastructure_error_reports_retrying_until_a_batch_succeeds()
+    {
+        using var harness = new Harness();
+        var error = new InvalidOperationException("The lease was lost.");
+
+        await harness.Subscription.HandleErrorAsync("0", error);
+
+        Assert.Equal(CosmosDBCatchupSubscriptionState.Retrying, harness.State);
+        Assert.Same(error, harness.Exception);
+
+        await harness.Subscription.HandleChangeStreamAsync(new LeaseContext("1"), Changes(Event(1, "event-0")), CancellationToken.None);
+
+        Assert.Equal(CosmosDBCatchupSubscriptionState.Running, harness.State);
+    }
+
+    [Fact]
+    public async Task An_infrastructure_error_recovery_does_not_clear_a_failing_lease()
+    {
+        using var harness = new Harness();
+
+        await harness.Subscription.HandleErrorAsync("0", UserException("0"));
+        await harness.Subscription.HandleErrorAsync("1", new InvalidOperationException("The lease was lost."));
+        await harness.Subscription.HandleChangeStreamAsync(new LeaseContext("2"), Changes(Event(1, "event-0")), CancellationToken.None);
+
+        Assert.Equal(CosmosDBCatchupSubscriptionState.Retrying, harness.State);
+    }
+
+    [Fact]
+    public async Task Maps_item_metadata_onto_the_streamed_event()
+    {
+        using var harness = new Harness();
+        var withMetadata = Event(1, "event-0").TrimEnd('}') + ""","meta":{"tenant":"t1"}}""";
+
+        await harness.Subscription.HandleChangeStreamAsync(new LeaseContext("0"), Changes(withMetadata, Event(2, "event-1")), CancellationToken.None);
+
+        Assert.Equal("t1", harness.Subscription.ReceivedEvents[0].Metadata["tenant"]);
+        Assert.Empty(harness.Subscription.ReceivedEvents[1].Metadata);
+    }
+
+    [Fact]
+    public async Task Skips_snapshot_items()
+    {
+        using var harness = new Harness();
+
+        await harness.Subscription.HandleChangeStreamAsync(new LeaseContext("0"), Changes(
+            Item("ss", 1, EventType, "\"snapshot\""),
+            Event(2, "event-0")), CancellationToken.None);
+
+        Assert.Equal(["event-0"], harness.Subscription.Received);
+    }
+
+    [Theory]
+    [InlineData("not-a-guid", "test/stream")]
+    [InlineData(null, "orders/")]
+    public async Task Skips_a_malformed_change_and_delivers_the_rest_of_the_batch(string? id, string streamName)
+    {
+        using var harness = new Harness();
+
+        await harness.Subscription.HandleChangeStreamAsync(new LeaseContext("0"), Changes(
+            Event(1, "event-0"),
+            Item("evt", 2, EventType, "\"malformed\"", id: id, streamName: streamName),
+            Event(3, "event-1")), CancellationToken.None);
+
+        Assert.Equal(["event-0", "event-1"], harness.Subscription.Received);
+    }
+
+    [Fact]
+    public async Task Maps_the_change_onto_the_streamed_event()
+    {
+        using var harness = new Harness();
+        var id = Guid.NewGuid();
+        var item = $$"""{"id":"{{id}}","type":"evt","streamName":"test/stream","ver":7,"dataType":"{{EventType}}","data":"event-0","subSeq":2,"_ts":1700000000,"_lsn":42}""";
+
+        await harness.Subscription.HandleChangeStreamAsync(new LeaseContext("3"), Changes(item), CancellationToken.None);
+
+        var streamEvent = Assert.Single(harness.Subscription.ReceivedEvents);
+        Assert.Equal(id, streamEvent.EventId);
+        Assert.Equal(EventType, streamEvent.EventType);
+        Assert.Equal("test/stream", streamEvent.StreamName.ToString());
+        Assert.Equal(7UL, streamEvent.StreamVersion);
+        Assert.Equal(new StreamedEventCursor(ConnectionName, "events", "3", 42, 2), streamEvent.Cursor);
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1700000000).UtcDateTime, streamEvent.Timestamp);
+        Assert.Equal(DateTimeKind.Utc, streamEvent.Timestamp.Kind);
+        Assert.Equal("event-0", streamEvent.Event);
+    }
+
     private static ChangeFeedProcessorUserException UserException(string leaseToken)
         => new(new InvalidOperationException("The handler rejected the batch."), new LeaseContext(leaseToken));
 
     private static string Event(int version, string data) => Item("evt", version, EventType, $"\"{data}\"");
 
-    private static string Item(string type, int version, string dataType, string data, bool deleted = false)
-        => $$"""{"id":"{{Guid.NewGuid()}}","type":"{{type}}","streamName":"test/stream","ver":{{version}},"dataType":"{{dataType}}","data":{{data}},"del":{{(deleted ? "true" : "false")}},"subSeq":0,"_ts":0,"_lsn":{{version}}}""";
+    private static string Item(string type, int version, string dataType, string data, bool deleted = false, string? id = null, string streamName = "test/stream")
+        => $$"""{"id":"{{id ?? Guid.NewGuid().ToString()}}","type":"{{type}}","streamName":"{{streamName}}","ver":{{version}},"dataType":"{{dataType}}","data":{{data}},"del":{{(deleted ? "true" : "false")}},"subSeq":0,"_ts":0,"_lsn":{{version}}}""";
 
     private static MemoryStream Changes(params string[] items)
         => new(Encoding.UTF8.GetBytes($$"""{"Documents":[{{string.Join(",", items)}}]}"""));
@@ -122,6 +209,9 @@ public class CosmosDBCatchupSubscriptionCallbackTests
         public CosmosDBCatchupSubscriptionState? State
             => _services.GetRequiredService<CosmosDBCatchupSubscriptionStatusRegistry>().TryGetStatus(LeaseCatchupSubscription.Name, out var status) ? status!.State : null;
 
+        public Exception? Exception
+            => _services.GetRequiredService<CosmosDBCatchupSubscriptionStatusRegistry>().TryGetStatus(LeaseCatchupSubscription.Name, out var status) ? status!.Exception : null;
+
         public void Dispose() => _services.Dispose();
     }
 
@@ -130,8 +220,11 @@ public class CosmosDBCatchupSubscriptionCallbackTests
     {
         public List<string> Received { get; } = [];
 
+        public List<IStreamedEvent<object>> ReceivedEvents { get; } = [];
+
         protected override Task HandleStreamEventsAsync(ChangeFeedProcessorContext context, List<IStreamedEvent<object>> streamEvents, CancellationToken cancellationToken)
         {
+            ReceivedEvents.AddRange(streamEvents);
             Received.AddRange(streamEvents.Select(streamEvent => (string)streamEvent.Event));
             return Task.CompletedTask;
         }

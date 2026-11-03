@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -10,7 +11,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<K> Match<K, T>(this ValueTask<Result<T>> resultTask, Func<T, K> onSuccess, Func<Error, K> onFailure)
         {
-            return (await resultTask).Match(onSuccess, onFailure);
+            return (await resultTask.DefaultAwait()).Match(onSuccess, onFailure);
         }
 
         /// <summary>
@@ -18,7 +19,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<T> Match<T>(this ValueTask<Result> resultTask, Func<T> onSuccess, Func<Error, T> onFailure)
         {
-            return (await resultTask).Match(onSuccess, onFailure);
+            return (await resultTask.DefaultAwait()).Match(onSuccess, onFailure);
         }
 
         /// <summary>
@@ -26,7 +27,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async Task Match<T>(this ValueTask<Result<T>> resultTask, Action<T> onSuccess, Action<Error> onFailure)
         {
-            (await resultTask).Match(onSuccess, onFailure);
+            (await resultTask.DefaultAwait()).Match(onSuccess, onFailure);
         }
 
         /// <summary>
@@ -34,7 +35,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async Task Match(this ValueTask<Result> resultTask, Action onSuccess, Action<Error> onFailure)
         {
-            (await resultTask).Match(onSuccess, onFailure);
+            (await resultTask.DefaultAwait()).Match(onSuccess, onFailure);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Text;
 
 using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Configuration;
@@ -233,6 +233,31 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
         Assert.Equal([null, "acme", "contoso"], streams.Select(s => s.TenantId));
     }
 
+    [Fact]
+    public async Task A_stream_of_links_delivers_the_linked_events()
+    {
+        await using var harness = CreateHarness();
+        var source = await AppendAsync(3);
+        var links = $"links-{Guid.NewGuid():N}";
+        await using (var client = new KurrentDBClient(KurrentDBClientSettings.Create(fixture.ConnectionString)))
+        {
+            var linkEvents = Enumerable.Range(0, 3)
+                .Select(i => new EventData(Uuid.NewUuid(), "$>", Encoding.UTF8.GetBytes($"{i}@{source}")))
+                .ToList();
+            await client.AppendToStreamAsync(links, StreamState.NoStream, linkEvents, cancellationToken: TestContext.Current.CancellationToken);
+        }
+        harness.Settings.Streams[FirstCatchupSubscription.Name] = links;
+
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => harness.Settings.Received(FirstCatchupSubscription.Name).Count == 3);
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event-0", "event-1", "event-2"], harness.Settings.Received(FirstCatchupSubscription.Name));
+        Assert.All(harness.Settings.ReceivedStreams(FirstCatchupSubscription.Name), s => Assert.Equal(source, s.Value));
+        Assert.Equal(2UL, harness.CheckpointStore.Positions[FirstCatchupSubscription.Name]);
+    }
+
     private Harness CreateHarness(InMemoryCheckpointStore? checkpointStore = null, bool enabled = true,
         Action<KurrentDBCatchupSubscriptionOptions>? configure = null)
     {
@@ -367,8 +392,8 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
     {
         public ConcurrentDictionary<string, ulong> Positions { get; } = new();
 
-        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Positions.GetValueOrDefault(subscriptionName));
+        public Task<ulong?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default)
+            => Task.FromResult(Positions.TryGetValue(subscriptionName, out var position) ? position : (ulong?)null);
 
         public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong streamPosition, CancellationToken cancellationToken = default)
         {

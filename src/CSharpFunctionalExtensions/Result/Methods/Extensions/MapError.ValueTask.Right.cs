@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -15,7 +16,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
                 return Result.Success();
             }
 
-            var error = await errorFactory(result.Error);
+            var error = await errorFactory(result.Error).DefaultAwait();
             return Result.Failure(error);
         }
 
@@ -33,7 +34,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
                 return Result.Success();
             }
 
-            var error = await errorFactory(result.Error, context);
+            var error = await errorFactory(result.Error, context).DefaultAwait();
             return Result.Failure(error);
         }
 
@@ -47,7 +48,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
                 return Result.Success(result.Value);
             }
 
-            var error = await errorFactory(result.Error);
+            var error = await errorFactory(result.Error).DefaultAwait();
             return Result.Failure<T>(error);
         }
 
@@ -65,7 +66,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
                 return Result.Success(result.Value);
             }
 
-            var error = await errorFactory(result.Error, context);
+            var error = await errorFactory(result.Error, context).DefaultAwait();
             return Result.Failure<T>(error);
         }
     }

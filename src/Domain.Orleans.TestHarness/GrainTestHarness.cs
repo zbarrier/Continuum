@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+
 using Continuum.CSharpFunctionalExtensions;
 
 using Orleans.TestingHost;
@@ -7,12 +9,18 @@ using Xunit;
 namespace Continuum.Domain.Orleans.TestHarness;
 
 /// <summary>Base Given/When/Then harness for testing event-sourced grains in a <see cref="TestCluster"/>.</summary>
+/// <remarks>
+///     Each test follows a single Given/When/Then flow: call <c>Given</c> to set up the initial state, call <c>When</c> exactly
+///     once to run the operation under test, then assert the outcome with <c>Then</c>, <c>ThenError</c> or <c>ThenException</c>.
+///     Create a new harness for every test (xUnit does this by default by creating a new test class instance per test).
+/// </remarks>
 /// <typeparam name="TEventBase">The base type of events applied to the grain state.</typeparam>
 public abstract class GrainTestHarness<TEventBase>
     where TEventBase : class
 {
     private Result<object>? _result;
     private Exception? _exception;
+    private bool _whenCalled;
 
     /// <summary>Initializes a new instance of the <see cref="GrainTestHarness{TEventBase}"/> class.</summary>
     /// <param name="cluster">The test cluster hosting the grain.</param>
@@ -44,8 +52,15 @@ public abstract class GrainTestHarness<TEventBase>
     /// <typeparam name="TValue">The result value type.</typeparam>
     /// <param name="func">The operation to run.</param>
     /// <returns>A task that completes when the operation has run.</returns>
+    /// <exception cref="InvalidOperationException">An operation has already been run by this harness; <c>When</c> can only be called once per test.</exception>
     protected async Task Capture<TValue>(Func<Task<Result<TValue>>> func) where TValue : class
     {
+        if (_whenCalled)
+        {
+            throw new InvalidOperationException("When can only be called once per test.");
+        }
+        _whenCalled = true;
+
         try
         {
             _result = await func();
@@ -98,7 +113,7 @@ public abstract class GrainTestHarness<TEventBase>
     {
         if (_exception is not null)
         {
-            throw _exception;
+            ExceptionDispatchInfo.Throw(_exception);
         }
         if (!_result.HasValue)
         {
@@ -119,7 +134,7 @@ public abstract class GrainTestHarness<TEventBase>
     {
         if (_exception is not null)
         {
-            throw _exception;
+            ExceptionDispatchInfo.Throw(_exception);
         }
         if (!_result.HasValue)
         {

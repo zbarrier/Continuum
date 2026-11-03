@@ -151,11 +151,11 @@ public class MultitenantLogConsistentStorageTests
             var sharedTenantGrain = GrainFor("shared-tenant");
             var dedicatedTenantGrain = GrainFor(DedicatedTenantId);
 
-            Assert.Equal(2, await storage.AppendAsync(GrainTypeName, plainGrain, CreateEvents(2), 0));
-            Assert.Equal(2, await storage.AppendAsync(GrainTypeName, sharedTenantGrain, CreateEvents(2), 0));
+            Assert.Equal(2, await storage.AppendAsync(GrainTypeName, plainGrain, CreateEvents(2), 0, Guid.NewGuid()));
+            Assert.Equal(2, await storage.AppendAsync(GrainTypeName, sharedTenantGrain, CreateEvents(2), 0, Guid.NewGuid()));
             Assert.DoesNotContain(DedicatedConnectionName, resolvedConnections);
 
-            Assert.Equal(2, await storage.AppendAsync(GrainTypeName, dedicatedTenantGrain, CreateEvents(2), 0));
+            Assert.Equal(2, await storage.AppendAsync(GrainTypeName, dedicatedTenantGrain, CreateEvents(2), 0, Guid.NewGuid()));
             Assert.Contains(DedicatedConnectionName, resolvedConnections);
 
             Assert.True(await CountItemsAsync(sharedContainer, plainGrain) > 0);

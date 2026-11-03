@@ -63,6 +63,11 @@ public sealed class EventItem
     [JsonPropertyName("subSeq")]
     public ulong SubSequenceNumber { get; set; }
 
+    /// <summary>The transaction ID shared by every event of the append that wrote it (events only).</summary>
+    [JsonPropertyName("txId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? TransactionId { get; set; }
+
     /// <summary>The Cosmos DB ETag; read only.</summary>
     [JsonPropertyName("_etag")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -178,24 +178,9 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         _ => false,
     };
 
-    private async Task Close(CancellationToken cancellationToken)
-    {
-        if (_initialized == false)
-        {
-            return;
-        }
-        try
-        {
-            // We don't need to dispose the client because it's a singleton, could be used by
-            // other providers and will be disposed by the container.
-            //_client.Dispose();
-        }
-        catch (Exception ex)
-        {
-            _logger.StorageCloseFailed(ex, _name, _serviceId);
-            throw new CosmosDBLogConsistentStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
-        }
-    }
+    // The CosmosClient is a keyed singleton that other providers may share, so the DI container disposes it, not this
+    // provider. There is nothing else to release.
+    private static Task Close(CancellationToken cancellationToken) => Task.CompletedTask;
 
     #endregion
 
@@ -287,7 +272,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     }
 
     /// <inheritdoc />
-    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion)
+    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId)
     {
         EnsureInitialized();
         ArgumentNullException.ThrowIfNull(entries);
@@ -311,7 +296,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         using var operation = _instrumentation.Start(LogConsistentStorageInstrumentation.AppendOperation, grainTypeName, grainId, streamName);
         try
         {
-            return await AppendCoreAsync(grainTypeName, grainId, streamName, entries, expectedVersion, operation).ConfigureAwait(false);
+            return await AppendCoreAsync(grainTypeName, grainId, streamName, entries, expectedVersion, transactionId, operation).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -321,7 +306,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     }
 
     private async Task<int> AppendCoreAsync<TLogEntry>(string grainTypeName, GrainId grainId, string streamName, IList<TLogEntry> entries, int expectedVersion,
-        LogConsistentStorageInstrumentation.Operation operation)
+        Guid transactionId, LogConsistentStorageInstrumentation.Operation operation)
     {
         var transaction = _container.CreateTransactionalBatch(new PartitionKey(streamName));
         ulong currentVersion = (ulong)expectedVersion;
@@ -383,6 +368,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
                 StreamName = streamName,
                 Version = ++currentVersion,
                 SubSequenceNumber = subSequenceNumber++,
+                TransactionId = transactionId,
                 DataType = _typeMapper.GetTypeName(entry.GetType()),
                 Data = SerializeEntry(entry),
             };
@@ -414,6 +400,50 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         LogRequestCharge(LogConsistentStorageInstrumentation.AppendOperation, streamName, eventItemsToAppend.Count, requestCharge);
 
         return checked((int)currentVersion);
+    }
+
+    /// <inheritdoc />
+    public async Task<Guid?> GetTransactionIdAsync(string grainTypeName, GrainId grainId, int version)
+    {
+        EnsureInitialized();
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(version);
+
+        var streamName = GetStreamName(grainId);
+        using var operation = _instrumentation.Start(LogConsistentStorageInstrumentation.GetTransactionIdOperation, grainTypeName, grainId, streamName);
+
+        try
+        {
+            var sql = new QueryDefinition("SELECT * FROM c WHERE c.type = 'evt' AND c.ver = @ver")
+                .WithParameter("@ver", version);
+            using var iterator = _container.GetItemQueryStreamIterator(sql, requestOptions: new QueryRequestOptions
+            {
+                PartitionKey = new PartitionKey(streamName),
+                MaxItemCount = 1,
+            });
+            double requestCharge = 0;
+            Guid? transactionId = null;
+            while (iterator.HasMoreResults)
+            {
+                using var response = await iterator.ReadNextAsync().ConfigureAwait(false);
+                requestCharge += response.Headers.RequestCharge;
+                operation.AddRequestCharge(response.Headers.RequestCharge);
+                response.EnsureSuccessStatusCode();
+                var page = await JsonSerializer.DeserializeAsync(response.Content, CosmosDBJsonContext.Default.EventItemQueryResponse).ConfigureAwait(false);
+                if (page?.Documents is [var item, ..])
+                {
+                    transactionId = item.TransactionId;
+                    break;
+                }
+            }
+            LogRequestCharge(LogConsistentStorageInstrumentation.GetTransactionIdOperation, streamName, 0, requestCharge);
+            return transactionId;
+        }
+        catch (Exception ex)
+        {
+            operation.Fail(ex);
+            _logger.ReadTransactionIdFailed(ex, grainTypeName, grainId, streamName, version);
+            throw new CosmosDBLogConsistentStorageException(FormattableString.Invariant($"Failed to read the transaction ID of version {version} for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
+        }
     }
 
     private void LogRequestCharge(string operation, string streamName, int eventCount, double requestCharge)
@@ -500,6 +530,9 @@ internal static partial class CosmosDBLogConsistentStorageLog
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read last log entry for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
     public static partial void ReadLastLogEntryFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read the transaction ID of version {Version} for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
+    public static partial void ReadTransactionIdFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName, int version);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Operation '{Operation}' on stream '{StreamName}' with '{EventCount}' events consumed '{RequestUnits}' RUs, exceeding the warning threshold of '{RequestChargeWarningThreshold}' RUs")]
     public static partial void RequestChargeExceeded(this ILogger logger, string operation, string streamName, int eventCount, double requestUnits, double requestChargeWarningThreshold);

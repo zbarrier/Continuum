@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -10,7 +11,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<T> Finally<T>(this ValueTask<Result> resultTask, Func<Result, T> valueTask)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.Finally(valueTask);
         }
 
@@ -19,7 +20,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<K> Finally<T, K>(this ValueTask<Result<T>> resultTask, Func<Result<T>, K> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.Finally(valueTask);
         }
     }

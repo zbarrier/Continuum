@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -10,8 +11,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<K> Match<K, T>(this ValueTask<Result<T>> resultTask, Func<T, ValueTask<K>> onSuccessValueTask, Func<Error, ValueTask<K>> onFailureValueTask)
         {
-            return await (await resultTask)
-                .Match(onSuccessValueTask, onFailureValueTask);
+            return await (await resultTask.DefaultAwait())
+                .Match(onSuccessValueTask, onFailureValueTask).DefaultAwait();
         }
 
         /// <summary>
@@ -19,8 +20,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<T> Match<T>(this ValueTask<Result> resultTask, Func<ValueTask<T>> onSuccessValueTask, Func<Error, ValueTask<T>> onFailureValueTask)
         {
-            return await (await resultTask)
-                .Match(onSuccessValueTask, onFailureValueTask);
+            return await (await resultTask.DefaultAwait())
+                .Match(onSuccessValueTask, onFailureValueTask).DefaultAwait();
         }
 
         /// <summary>
@@ -28,8 +29,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async Task Match<T>(this ValueTask<Result<T>> resultTask, Func<T, ValueTask> onSuccessValueTask, Func<Error, ValueTask> onFailureValueTask)
         {
-            await (await resultTask)
-                .Match(onSuccessValueTask, onFailureValueTask);
+            await (await resultTask.DefaultAwait())
+                .Match(onSuccessValueTask, onFailureValueTask).DefaultAwait();
         }
 
         /// <summary>
@@ -37,8 +38,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async Task Match(this ValueTask<Result> resultTask, Func<ValueTask> onSuccessValueTask, Func<Error, ValueTask> onFailureValueTask)
         {
-            await (await resultTask)
-                .Match(onSuccessValueTask, onFailureValueTask);
+            await (await resultTask.DefaultAwait())
+                .Match(onSuccessValueTask, onFailureValueTask).DefaultAwait();
         }
     }
 }

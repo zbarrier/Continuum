@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -24,29 +25,29 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.Combine(IEnumerable{Result})"/>
         public static async ValueTask<Result> Combine(this ValueTask<IEnumerable<Result>> task)
         {
-            IEnumerable<Result> results = await task;
+            IEnumerable<Result> results = await task.DefaultAwait();
             return Result.Combine(results);
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.Combine{T}(IEnumerable{Result{T}})"/>
         public static async ValueTask<Result<IEnumerable<T>>> Combine<T>(this ValueTask<IEnumerable<Result<T>>> task)
         {
-            IEnumerable<Result<T>> results = await task;
+            IEnumerable<Result<T>> results = await task.DefaultAwait();
             return results.Combine();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.Combine(IEnumerable{Result})"/>
         public static async ValueTask<Result> Combine(this ValueTask<IEnumerable<ValueTask<Result>>> task)
         {
-            IEnumerable<ValueTask<Result>> tasks = await task;
-            return await tasks.Combine();
+            IEnumerable<ValueTask<Result>> tasks = await task.DefaultAwait();
+            return await tasks.Combine().DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.Combine{T}(IEnumerable{Result{T}})"/>
         public static async ValueTask<Result<IEnumerable<T>>> Combine<T>(this ValueTask<IEnumerable<ValueTask<Result<T>>>> task)
         {
-            IEnumerable<ValueTask<Result<T>>> tasks = await task;
-            return await tasks.Combine();
+            IEnumerable<ValueTask<Result<T>>> tasks = await task.DefaultAwait();
+            return await tasks.Combine().DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.Combine{T, K}(IEnumerable{Result{T}}, Func{IEnumerable{T}, K})"/>
@@ -59,8 +60,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.Combine{T, K}(IEnumerable{Result{T}}, Func{IEnumerable{T}, K})"/>
         public static async ValueTask<Result<K>> Combine<T, K>(this ValueTask<IEnumerable<ValueTask<Result<T>>>> task, Func<IEnumerable<T>, K> composer)
         {
-            IEnumerable<ValueTask<Result<T>>> tasks = await task;
-            return await tasks.Combine(composer);
+            IEnumerable<ValueTask<Result<T>>> tasks = await task.DefaultAwait();
+            return await tasks.Combine(composer).DefaultAwait();
         }
     }
 }

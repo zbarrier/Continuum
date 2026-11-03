@@ -98,6 +98,7 @@ public sealed class TypeMappedJsonGrainStorageSerializer : IGrainStorageSerializ
     /// <exception cref="ArgumentException">
     /// <paramref name="input"/> deserializes to null, or stored types are required and <paramref name="input"/> is not a <see cref="BinaryDataWithType"/>.
     /// </exception>
+    /// <exception cref="InvalidCastException">The type carried by <paramref name="input"/> is not assignable to <typeparamref name="T"/>.</exception>
     public T Deserialize<T>(BinaryData input)
     {
         ArgumentNullException.ThrowIfNull(input);

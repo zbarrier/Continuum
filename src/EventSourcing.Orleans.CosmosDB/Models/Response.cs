@@ -7,6 +7,5 @@ internal abstract class Response(double requestCharge)
 
 internal class EventItemResponse(EventItem? eventItem, double requestCharge) : Response(requestCharge)
 {
-    public bool HasEventItem => EventItem is not null;
     public EventItem? EventItem { get; } = eventItem;
 }

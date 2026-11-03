@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Text.RegularExpressions;
 
@@ -37,7 +37,7 @@ public static partial class USPhoneNumberValidators
             // Check characters
             for (int i = 0; i < strippedValue.Length; i++)
             {
-                bool isValidChar = char.IsDigit(strippedValue[i]);
+                bool isValidChar = char.IsAsciiDigit(strippedValue[i]);
                 if (!isValidChar)
                 {
                     return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.PhoneNumber, USValidatorErrorStrings.PhoneNumber, propertyName));
@@ -68,7 +68,7 @@ public static partial class USPhoneNumberValidators
             // Check characters
             for (int i = 0; i < strippedValue.Length; i++)
             {
-                bool isValidChar = char.IsDigit(strippedValue[i]);
+                bool isValidChar = char.IsAsciiDigit(strippedValue[i]);
                 if (!isValidChar)
                 {
                     var propertyName = string.Format(propertyNameFormat, arguments);
@@ -93,7 +93,7 @@ public static partial class USPhoneNumberValidators
             // Check characters
             for (int i = 0; i < value.Length; i++)
             {
-                bool isValidChar = char.IsDigit(value[i]);
+                bool isValidChar = char.IsAsciiDigit(value[i]);
                 if (!isValidChar)
                 {
                     return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.PhoneNumberExtension, USValidatorErrorStrings.PhoneNumberExtension, propertyName));
@@ -116,7 +116,7 @@ public static partial class USPhoneNumberValidators
             // Check characters
             for (int i = 0; i < value.Length; i++)
             {
-                bool isValidChar = char.IsDigit(value[i]);
+                bool isValidChar = char.IsAsciiDigit(value[i]);
                 if (!isValidChar)
                 {
                     var propertyName = string.Format(propertyNameFormat, arguments);

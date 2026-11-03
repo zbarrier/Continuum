@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -16,7 +17,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Maybe<T>> AsMaybe<T>(this ValueTask<Nullable<T>> nullableTask)
             where T : struct
         {
-            var nullable = await nullableTask;
+            var nullable = await nullableTask.DefaultAwait();
             return nullable.AsMaybe();
         }
 
@@ -28,7 +29,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Maybe<T>> AsMaybe<T>(this ValueTask<T?> nullableTask)
             where T : class
         {
-            var nullable = await nullableTask;
+            var nullable = await nullableTask.DefaultAwait();
             return nullable.AsMaybe();
         }
 #nullable restore

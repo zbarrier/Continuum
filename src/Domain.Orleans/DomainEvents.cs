@@ -1,26 +1,26 @@
 namespace Continuum.Domain.Orleans;
 
-/// <summary>Base class for domain events that record who performed them and when.</summary>
+/// <summary>Base class for domain events that record who initiated them and when they occurred.</summary>
 /// <remarks>Marked <see cref="ImmutableAttribute"/>: domain events must always be immutable, so derived events must not expose mutable state.</remarks>
 [GenerateSerializer, Immutable]
 public abstract class DomainEvent : IDomainEvent
 {
     /// <summary>Initializes a new instance of the <see cref="DomainEvent"/> class.</summary>
-    /// <param name="performedBy">The identifier of the user or actor that performed the action.</param>
-    /// <param name="performedOn">The time at which the action was performed.</param>
-    public DomainEvent(Guid performedBy, DateTime performedOn)
+    /// <param name="initiatedBy">The identifier of the user or system user whose identity initiated the action.</param>
+    /// <param name="occurredAt">The time at which the event occurred.</param>
+    public DomainEvent(Guid initiatedBy, DateTimeOffset occurredAt)
     {
-        PerformedBy = performedBy;
-        PerformedOn = performedOn;
+        InitiatedBy = initiatedBy;
+        OccurredAt = occurredAt;
     }
 
     /// <inheritdoc/>
     [Id(0)]
-    public Guid PerformedBy { get; init; }
+    public Guid InitiatedBy { get; init; }
 
     /// <inheritdoc/>
     [Id(1)]
-    public DateTime PerformedOn { get; init; }
+    public DateTimeOffset OccurredAt { get; init; }
 }
 
 /// <summary>Base class for events that carry the state machine command (trigger) that produced them.</summary>
@@ -51,20 +51,20 @@ public abstract class StateMachineDomainEvent<TCommand> : StateMachineEvent<TCom
 {
     /// <summary>Initializes a new instance of the <see cref="StateMachineDomainEvent{TCommand}"/> class.</summary>
     /// <param name="command">The state machine command (trigger) that produced the event.</param>
-    /// <param name="performedBy">The identifier of the user or actor that performed the action.</param>
-    /// <param name="performedOn">The time at which the action was performed.</param>
-    public StateMachineDomainEvent(TCommand command, Guid performedBy, DateTime performedOn)
+    /// <param name="initiatedBy">The identifier of the user or system user whose identity initiated the action.</param>
+    /// <param name="occurredAt">The time at which the event occurred.</param>
+    public StateMachineDomainEvent(TCommand command, Guid initiatedBy, DateTimeOffset occurredAt)
         : base(command)
     {
-        PerformedBy = performedBy;
-        PerformedOn = performedOn;
+        InitiatedBy = initiatedBy;
+        OccurredAt = occurredAt;
     }
 
     /// <inheritdoc/>
     [Id(0)]
-    public Guid PerformedBy { get; init; }
+    public Guid InitiatedBy { get; init; }
 
     /// <inheritdoc/>
     [Id(1)]
-    public DateTime PerformedOn { get; init; }
+    public DateTimeOffset OccurredAt { get; init; }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -10,7 +11,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Ensure<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Error error)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.Ensure(predicate, error);
         }
 
@@ -19,7 +20,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Ensure<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<Error> errorPredicate)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.Ensure(predicate, errorPredicate);
         }
 
@@ -28,7 +29,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Ensure<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, Error> errorPredicate)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsFailure)
                 return result;
@@ -41,7 +42,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Ensure<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, ValueTask<Error>> errorPredicate)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsFailure)
                 return result;
@@ -49,7 +50,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (predicate(result.Value))
                 return result;
 
-            return Result.Failure<T>(await errorPredicate(result.Value));
+            return Result.Failure<T>(await errorPredicate(result.Value).DefaultAwait());
         }
 
         /// <summary>
@@ -57,7 +58,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> Ensure(this ValueTask<Result> resultTask, Func<bool> predicate, Error error)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.Ensure(predicate, error);
         }
 
@@ -66,7 +67,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> Ensure(this ValueTask<Result> resultTask, Func<bool> predicate, Func<Error> errorPredicate)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.Ensure(predicate, errorPredicate);
         }
 
@@ -75,7 +76,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> Ensure(this ValueTask<Result> resultTask, Func<Result> predicate)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.Ensure(predicate);
         }
         
@@ -84,7 +85,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Ensure<T>(this ValueTask<Result<T>> resultTask, Func<Result> predicate)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.Ensure(predicate);
         }
         
@@ -93,7 +94,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> Ensure<T>(this ValueTask<Result> resultTask, Func<Result<T>> predicate)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.Ensure(predicate);
         }
         
@@ -102,7 +103,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Ensure<T>(this ValueTask<Result<T>> resultTask, Func<Result<T>> predicate)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.Ensure(predicate);
         }
         
@@ -111,7 +112,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Ensure<T>(this ValueTask<Result<T>> resultTask, Func<T, Result> predicate)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.Ensure(predicate);
         }
         
@@ -120,7 +121,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> Ensure<T>(this ValueTask<Result<T>> resultTask, Func<T, Result<T>> predicate)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.Ensure(predicate);
         }
     }

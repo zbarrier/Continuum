@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -25,7 +26,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
                 return Maybe<V>.None;
 
             var value = maybe.GetValueOrThrow();
-            var inner = await selector(value);
+            var inner = await selector(value).DefaultAwait();
             return inner.Map(x => project(value, x));
         }
     }

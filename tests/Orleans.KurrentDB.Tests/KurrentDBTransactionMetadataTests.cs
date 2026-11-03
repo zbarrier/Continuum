@@ -6,8 +6,8 @@ namespace Continuum.Orleans.KurrentDB.Tests;
 ///     Verifies how <see cref="KurrentDBEventMetadataCodec" /> carries the transaction an event was appended in.
 /// </summary>
 /// <remarks>
-///     KurrentDB reports the same commit and prepare position for every event of an append, so the grouping cannot be
-///     recovered from the log and has to be recorded by the producer. These tests pin the behaviours the assembler
+///     Every event has its own <c>$all</c> position, and the log does not record which events were appended together,
+///     so the grouping has to be recorded by the producer. These tests pin the behaviours the assembler
 ///     depends on. A group must round trip exactly, and a group that is absent or does not describe a consistent shape
 ///     must be reported as no transaction at all, because the caller then delivers the event immediately as its own
 ///     transaction. Trusting a bad count instead would leave a batch waiting for events that never arrive.

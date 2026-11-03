@@ -42,7 +42,7 @@ public class EventSourcedEventDeliveryTests
         // default mapper splits on the first '-', so this becomes namespace "eventsourced" and key <guid>.
         var key = Guid.NewGuid();
         var streamName = $"{Constants.EventSourcedStreamPrefix}-{key:N}";
-        var streamId = StreamId.Create(Constants.EventSourcedStreamPrefix, key.ToString("N"));
+        var streamId = StreamId.Create(Constants.EventSourcedStreamNamespace, key.ToString("N"));
 
         var collector = _fixture.Cluster.Client.GetGrain<ICollectorGrain>(Guid.NewGuid());
         await collector.Subscribe(streamId);

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -8,7 +9,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Map{T, K}(in Maybe{T}, Func{T, K})"/>
         public static async ValueTask<Maybe<K>> Map<T, K>(this ValueTask<Maybe<T>> valueTask, Func<T, K> selector)
         {
-            Maybe<T> maybe = await valueTask;
+            Maybe<T> maybe = await valueTask.DefaultAwait();
             return maybe.Map(selector);
         }
 
@@ -19,7 +20,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             TContext context
         )
         {
-            Maybe<T> maybe = await valueTask;
+            Maybe<T> maybe = await valueTask.DefaultAwait();
             return maybe.Map(selector, context);
         }
     }

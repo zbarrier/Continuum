@@ -33,8 +33,7 @@ public class SiloKurrentDBStreamConfigurator : SiloRecoverableStreamConfigurator
                         .AddTransient<IConfigurationValidator>(sp => new KurrentDBStreamCacheBufferPoolOptionsValidator(sp.GetOptionsByName<KurrentDBStreamCacheBufferPoolOptions>(name), name))
                         .ConfigureNamedOptionForLogging<KurrentDBDataAdapterOptions>(name)
                         .AddTransient<IConfigurationValidator>(sp => new KurrentDBOptionsValidator(sp.GetOptionsByName<KurrentDBOptions>(name), name))
-                        .AddTransient<IConfigurationValidator>(sp => new KurrentDBDataAdapterOptionsValidator(sp.GetOptionsByName<KurrentDBDataAdapterOptions>(name), name))
-                        .AddTransient<IConfigurationValidator>(sp => new KurrentDBStreamPullingAgentOptionsValidator(sp.GetOptionsByName<StreamPullingAgentOptions>(name), name));
+                        .AddTransient<IConfigurationValidator>(sp => new KurrentDBDataAdapterOptionsValidator(sp.GetOptionsByName<KurrentDBDataAdapterOptions>(name), name));
             });
     }
 }

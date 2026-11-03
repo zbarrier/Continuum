@@ -48,8 +48,24 @@ public interface ILogConsistentStorage
     /// <param name="grainId">The grain ID.</param>
     /// <param name="entries">The entries to append atomically.</param>
     /// <param name="expectedVersion">The event count the log must currently have; 0 means the log must not exist.</param>
+    /// <param name="transactionId">
+    ///     The transaction ID to store on every appended entry, which <see cref="GetTransactionIdAsync" /> returns.
+    /// </param>
     /// <typeparam name="TLogEntry">The log entry type.</typeparam>
     /// <returns>The event count after the append.</returns>
     /// <exception cref="global::Orleans.Storage.InconsistentStateException">The log does not have <paramref name="expectedVersion"/> events.</exception>
-    Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion);
+    Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId);
+
+    /// <summary>
+    ///     Gets the transaction ID stored on the entry that produced a version.
+    /// </summary>
+    /// <remarks>
+    ///     Used to find out whether an append whose outcome is unknown was committed: if the entry that produces
+    ///     expectedVersion + 1 has the append's transaction ID, the whole append was committed.
+    /// </remarks>
+    /// <param name="grainTypeName">The grain type name.</param>
+    /// <param name="grainId">The grain ID.</param>
+    /// <param name="version">The version the entry produced; the first entry produces version 1.</param>
+    /// <returns>The transaction ID, or <see langword="null" /> if there is no such entry or it has no transaction ID.</returns>
+    Task<Guid?> GetTransactionIdAsync(string grainTypeName, GrainId grainId, int version);
 }

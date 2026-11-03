@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions
 {
@@ -16,8 +17,8 @@ namespace Continuum.CSharpFunctionalExtensions
         )
         {
             return maybe.HasValue
-                ? await Some(maybe.GetValueOrThrow(), cancellationToken)
-                : await None(cancellationToken);
+                ? await Some(maybe.GetValueOrThrow(), cancellationToken).DefaultAwait()
+                : await None(cancellationToken).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TE, T, TContext}(in Maybe{T}, Func{T, TContext, TE}, Func{TContext, TE}, TContext)"/>
@@ -30,8 +31,8 @@ namespace Continuum.CSharpFunctionalExtensions
         )
         {
             return maybe.HasValue
-                ? await Some(maybe.GetValueOrThrow(), context, cancellationToken)
-                : await None(context, cancellationToken);
+                ? await Some(maybe.GetValueOrThrow(), context, cancellationToken).DefaultAwait()
+                : await None(context, cancellationToken).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{T}(in Maybe{T}, Action{T}, Action)"/>
@@ -43,9 +44,9 @@ namespace Continuum.CSharpFunctionalExtensions
         )
         {
             if (maybe.HasValue)
-                await Some(maybe.GetValueOrThrow(), cancellationToken);
+                await Some(maybe.GetValueOrThrow(), cancellationToken).DefaultAwait();
             else
-                await None(cancellationToken);
+                await None(cancellationToken).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{T, TContext}(in Maybe{T}, Action{T, TContext}, Action{TContext}, TContext)"/>
@@ -58,9 +59,9 @@ namespace Continuum.CSharpFunctionalExtensions
         )
         {
             if (maybe.HasValue)
-                await Some(maybe.GetValueOrThrow(), context, cancellationToken);
+                await Some(maybe.GetValueOrThrow(), context, cancellationToken).DefaultAwait();
             else
-                await None(context, cancellationToken);
+                await None(context, cancellationToken).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TE, TKey, TValue}(in Maybe{KeyValuePair{TKey, TValue}}, Func{TKey, TValue, TE}, Func{TE})"/>
@@ -76,8 +77,8 @@ namespace Continuum.CSharpFunctionalExtensions
                     maybe.GetValueOrThrow().Key,
                     maybe.GetValueOrThrow().Value,
                     cancellationToken
-                )
-                : await None.Invoke(cancellationToken);
+                ).DefaultAwait()
+                : await None.Invoke(cancellationToken).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TE, TKey, TValue, TContext}(in Maybe{KeyValuePair{TKey, TValue}}, Func{TKey, TValue, TContext, TE}, Func{TContext, TE}, TContext)"/>
@@ -95,8 +96,8 @@ namespace Continuum.CSharpFunctionalExtensions
                     maybe.GetValueOrThrow().Value,
                     context,
                     cancellationToken
-                )
-                : await None.Invoke(context, cancellationToken);
+                ).DefaultAwait()
+                : await None.Invoke(context, cancellationToken).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.Match{TKey, TValue}(in Maybe{KeyValuePair{TKey, TValue}}, Action{TKey, TValue}, Action)"/>
@@ -113,11 +114,11 @@ namespace Continuum.CSharpFunctionalExtensions
                     maybe.GetValueOrThrow().Key,
                     maybe.GetValueOrThrow().Value,
                     cancellationToken
-                );
+                ).DefaultAwait();
             }
             else
             {
-                await None.Invoke(cancellationToken);
+                await None.Invoke(cancellationToken).DefaultAwait();
             }
         }
 
@@ -137,11 +138,11 @@ namespace Continuum.CSharpFunctionalExtensions
                     maybe.GetValueOrThrow().Value,
                     context,
                     cancellationToken
-                );
+                ).DefaultAwait();
             }
             else
             {
-                await None.Invoke(context, cancellationToken);
+                await None.Invoke(context, cancellationToken).DefaultAwait();
             }
         }
     }

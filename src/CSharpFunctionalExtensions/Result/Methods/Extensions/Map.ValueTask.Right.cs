@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -13,7 +14,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            K value = await valueTask(result.Value);
+            K value = await valueTask(result.Value).DefaultAwait();
 
             return Result.Success(value);
         }
@@ -30,7 +31,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            K value = await valueTask(result.Value, context);
+            K value = await valueTask(result.Value, context).DefaultAwait();
 
             return Result.Success(value);
         }
@@ -43,7 +44,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            Result<K> value = await valueTask(result.Value);
+            Result<K> value = await valueTask(result.Value).DefaultAwait();
             return value;
         }
 
@@ -59,7 +60,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            Result<K> value = await valueTask(result.Value, context);
+            Result<K> value = await valueTask(result.Value, context).DefaultAwait();
             return value;
         }
 
@@ -71,7 +72,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            K value = await valueTask();
+            K value = await valueTask().DefaultAwait();
 
             return Result.Success(value);
         }
@@ -88,7 +89,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return Result.Failure<K>(result.Error);
 
-            K value = await valueTask(context);
+            K value = await valueTask(context).DefaultAwait();
 
             return Result.Success(value);
         }

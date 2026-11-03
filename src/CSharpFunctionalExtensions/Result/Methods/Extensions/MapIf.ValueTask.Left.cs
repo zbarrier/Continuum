@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -8,7 +9,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.MapIf{T}(Result{T}, bool, Func{T, T})"/>
         public static async ValueTask<Result<T>> MapIf<T>(this ValueTask<Result<T>> resultTask, bool condition, Func<T, T> valueTask)
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             return result.MapIf(condition, valueTask);
         }
 
@@ -20,14 +21,14 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             TContext context
         )
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             return result.MapIf(condition, valueTask, context);
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.MapIf{T}(Result{T}, Func{T, bool}, Func{T, T})"/>
         public static async ValueTask<Result<T>> MapIf<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, T> valueTask)
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             return result.MapIf(predicate, valueTask);
         }
 
@@ -39,7 +40,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             TContext context
         )
         {
-            var result = await resultTask;
+            var result = await resultTask.DefaultAwait();
             return result.MapIf(predicate, valueTask, context);
         }
     }

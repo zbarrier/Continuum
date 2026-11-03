@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 
+using Continuum.Orleans.Events;
 using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 using Continuum.Streaming.Orleans.KurrentDB.Monitors;
 
@@ -124,7 +125,7 @@ internal sealed class KurrentDBCatchupBatchReceiver
             {
                 lastStreamPosition = streamedEvent.Cursor.ToKurrentDBPosition(streamedEvent.StreamName.Value);
 
-                if (ReferenceEquals(streamedEvent.Event, KurrentDBStreamedEventConversions.CheckpointMarker))
+                if (streamedEvent.Event is CheckpointMarker)
                 {
                     continue;
                 }

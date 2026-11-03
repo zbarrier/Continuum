@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -9,7 +10,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<T> GetValueOrDefault<T>(this Result<T> result, Func<ValueTask<T>> valueTask)
         {
             if (result.IsFailure)
-                return await valueTask();
+                return await valueTask().DefaultAwait();
 
             return result.Value;
         }
@@ -19,7 +20,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             Func<ValueTask<K>> valueTask)
         {
             if (result.IsFailure)
-                return await valueTask();
+                return await valueTask().DefaultAwait();
 
             return selector(result.Value);
         }
@@ -31,7 +32,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return defaultValue;
 
-            return await valueTask(result.Value);
+            return await valueTask(result.Value).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.GetValueOrDefault{T, K}(in Result{T}, Func{T, K}, Func{K})"/>
@@ -39,9 +40,9 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             Func<ValueTask<K>> defaultValue)
         {
             if (result.IsFailure)
-                return await defaultValue();
+                return await defaultValue().DefaultAwait();
 
-            return await valueTask(result.Value);
+            return await valueTask(result.Value).DefaultAwait();
         }
     }
 }

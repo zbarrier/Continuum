@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -13,7 +14,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            if (!await predicate(result.Value))
+            if (!await predicate(result.Value).DefaultAwait())
                 return Result.Failure<T>(error);
 
             return result;
@@ -27,7 +28,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            if (!await predicate(result.Value))
+            if (!await predicate(result.Value).DefaultAwait())
                 return Result.Failure<T>(errorPredicate());
 
             return result;
@@ -41,7 +42,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            if (!await predicate(result.Value))
+            if (!await predicate(result.Value).DefaultAwait())
                 return Result.Failure<T>(errorPredicate(result.Value));
 
             return result;
@@ -55,8 +56,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            if (!await predicate(result.Value))
-                return Result.Failure<T>(await errorPredicate(result.Value));
+            if (!await predicate(result.Value).DefaultAwait())
+                return Result.Failure<T>(await errorPredicate(result.Value).DefaultAwait());
 
             return result;
         }
@@ -69,7 +70,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            if (!await predicate())
+            if (!await predicate().DefaultAwait())
                 return Result.Failure(error);
 
             return result;
@@ -83,7 +84,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            if (!await predicate())
+            if (!await predicate().DefaultAwait())
                 return Result.Failure(errorPredicate());
 
             return result;
@@ -97,7 +98,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            var predicateResult = await predicate();
+            var predicateResult = await predicate().DefaultAwait();
           
             if (predicateResult.IsFailure)
                 return Result.Failure(predicateResult.Error);
@@ -113,7 +114,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            var predicateResult = await predicate();
+            var predicateResult = await predicate().DefaultAwait();
           
             if (predicateResult.IsFailure)
                 return Result.Failure<T>(predicateResult.Error);
@@ -129,7 +130,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            var predicateResult = await predicate();
+            var predicateResult = await predicate().DefaultAwait();
           
             if (predicateResult.IsFailure)
                 return Result.Failure<T>(predicateResult.Error);
@@ -145,7 +146,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            var predicateResult = await predicate();
+            var predicateResult = await predicate().DefaultAwait();
           
             if (predicateResult.IsFailure)
                 return Result.Failure<T>(predicateResult.Error);
@@ -161,7 +162,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            var predicateResult = await predicate(result.Value);
+            var predicateResult = await predicate(result.Value).DefaultAwait();
           
             if (predicateResult.IsFailure)
                 return Result.Failure<T>(predicateResult.Error);
@@ -177,7 +178,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (result.IsFailure)
                 return result;
 
-            var predicateResult = await predicate(result.Value);
+            var predicateResult = await predicate(result.Value).DefaultAwait();
           
             if (predicateResult.IsFailure)
                 return Result.Failure<T>(predicateResult.Error);

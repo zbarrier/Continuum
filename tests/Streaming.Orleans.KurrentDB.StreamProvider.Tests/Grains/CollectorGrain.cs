@@ -20,7 +20,7 @@ public class CollectorGrain : Grain, ICollectorGrain
     /// <inheritdoc />
     public async Task Subscribe(StreamId streamId, string? providerName = null)
     {
-        var stream = this.GetStreamProvider(providerName ?? Constants.AllStreamProviderName).GetStream<IStreamedEvent<object>>(streamId);
+        var stream = this.GetStreamProvider(providerName ?? Constants.CatchUpProviderName).GetStream<IStreamedEvent<object>>(streamId);
         _subscription = await stream.SubscribeAsync(HandleNextAsync, HandleExceptionAsync);
     }
 

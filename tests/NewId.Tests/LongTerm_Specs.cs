@@ -1,4 +1,4 @@
-﻿// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
+// Portions of this file are adapted from NewId (https://github.com/phatboyg/NewId).
 // Copyright 2007-2019 Chris Patterson.
 // Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for details.
 //
@@ -13,7 +13,7 @@ public class Generating_ids_over_time
     [Fact]
     public void Should_keep_them_ordered_for_sql_server()
     {
-        var generator = new NewIdGenerator(new TimeLapseTickProvider(), new NetworkAddressWorkerIdProvider());
+        var generator = new NewIdGenerator(new TimeLapseTimeProvider(), new NetworkAddressWorkerIdProvider());
         generator.Next();
 
         var limit = 1024;
@@ -26,8 +26,8 @@ public class Generating_ids_over_time
         {
             Assert.NotEqual(ids[i + 1], ids[i]);
 
-            SqlGuid left = ids[i].ToGuid();
-            SqlGuid right = ids[i + 1].ToGuid();
+            SqlGuid left = ids[i].ToSqlServerGuid();
+            SqlGuid right = ids[i + 1].ToSqlServerGuid();
             Assert.True(left.CompareTo(right) < 0);
             if (i % 128 == 0)
                 Console.WriteLine("Normal: {0} Sql: {1}", left, ids[i].ToSequentialGuid());
@@ -35,20 +35,17 @@ public class Generating_ids_over_time
     }
 
 
-    class TimeLapseTickProvider :
-        ITickProvider
+    class TimeLapseTimeProvider :
+        TimeProvider
     {
         TimeSpan _interval = TimeSpan.FromSeconds(2);
-        DateTime _previous = DateTime.UtcNow;
+        DateTimeOffset _previous = DateTimeOffset.UtcNow;
 
-        public long Ticks
+        public override DateTimeOffset GetUtcNow()
         {
-            get
-            {
-                _previous = _previous + _interval;
-                _interval = TimeSpan.FromSeconds((long)_interval.TotalSeconds + 30);
-                return _previous.Ticks;
-            }
+            _previous = _previous + _interval;
+            _interval = TimeSpan.FromSeconds((long)_interval.TotalSeconds + 30);
+            return _previous;
         }
     }
 }

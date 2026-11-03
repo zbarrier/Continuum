@@ -5,30 +5,33 @@ using Orleans.Storage;
 namespace Continuum.EventSourcing.Orleans.CosmosDB;
 
 /// <summary>
-///     A log-consistency provider that stores the latest view in primary storage, using any standard storage provider.
-///     Supports multiple clusters connecting to the same primary storage (doing optimistic concurrency control via e-tags)
+///     A log-consistency provider that appends events to an <see cref="ILogConsistentStorage" /> event log and stores the
+///     latest view as a snapshot in any standard grain storage provider.
 ///     <para>
-///         The log itself is actually saved to storage - the latest view (snapshot) and metadata (the log position, and write flags)
-///         and all log entries are stored in the primary.
+///         The event log is the source of truth; the snapshot is only a cache. See <see cref="LogViewAdaptor{TLogView,TLogEntry}" />.
 ///     </para>
 /// </summary>
 public class LogConsistencyProvider : ILogViewAdaptorFactory
 {
     private readonly ILogConsistentStorage _logConsistentStorage;
     private readonly DeepCopier _deepCopier;
+    private readonly ITransactionIdGenerator _transactionIdGenerator;
 
     /// <summary>
     ///     Initializes a new instance of LogConsistencyProvider class
     /// </summary>
     /// <param name="logConsistentStorage"></param>
     /// <param name="deepCopier"></param>
-    public LogConsistencyProvider(ILogConsistentStorage logConsistentStorage, DeepCopier deepCopier)
+    /// <param name="transactionIdGenerator">Creates the transaction ID stored on every entry of an append.</param>
+    public LogConsistencyProvider(ILogConsistentStorage logConsistentStorage, DeepCopier deepCopier, ITransactionIdGenerator transactionIdGenerator)
     {
         ArgumentNullException.ThrowIfNull(logConsistentStorage);
         ArgumentNullException.ThrowIfNull(deepCopier);
+        ArgumentNullException.ThrowIfNull(transactionIdGenerator);
 
         _logConsistentStorage = logConsistentStorage;
         _deepCopier = deepCopier;
+        _transactionIdGenerator = transactionIdGenerator;
     }
 
     /// <inheritdoc />
@@ -37,7 +40,7 @@ public class LogConsistencyProvider : ILogViewAdaptorFactory
         where TLogView : class, new()
         where TLogEntry : class
     {
-        return new LogViewAdaptor<TLogView, TLogEntry>(hostGrain, initialState, grainStorage!, grainTypeName, services, _logConsistentStorage, _deepCopier);
+        return new LogViewAdaptor<TLogView, TLogEntry>(hostGrain, initialState, grainStorage!, grainTypeName, services, _logConsistentStorage, _deepCopier, _transactionIdGenerator);
     }
 
     /// <inheritdoc />

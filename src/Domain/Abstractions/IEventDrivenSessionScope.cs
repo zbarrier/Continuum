@@ -21,7 +21,7 @@ public interface IEventDrivenSessionScope<TState, TEventBase>
     /// <summary>Saves the uncommitted events of a session.</summary>
     /// <param name="session">The session to save.</param>
     /// <returns>The save response, or a failure.</returns>
-    Task<Result<ISaveChangesResponse>> SaveChanges(IEventDrivenSession<TState, TEventBase> session);
+    Task<Result<ISessionSaveResponse>> SaveChanges(IEventDrivenSession<TState, TEventBase> session);
 }
 
 /// <summary>Creates sessions for a state machine backed entity and saves their uncommitted events.</summary>
@@ -45,5 +45,5 @@ public interface IEventDrivenStateMachineSessionScope<TState, TEventBase, TStatu
     /// <summary>Saves the uncommitted events of a session.</summary>
     /// <param name="session">The session to save.</param>
     /// <returns>The save response, or a failure.</returns>
-    Task<Result<ISaveChangesResponse>> SaveChanges(IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand> session);
+    Task<Result<ISessionSaveResponse>> SaveChanges(IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand> session);
 }

@@ -12,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using Continuum.Orleans.Events;
+
 using Orleans.Storage;
 using Continuum.Streams;
 
@@ -66,6 +68,7 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
     private readonly CosmosDBCatchupSubscriptionMetrics _metrics;
     private volatile CosmosDBCatchupSubscriptionState _state = CosmosDBCatchupSubscriptionState.Starting;
     private readonly HashSet<string> _failingLeases = [];
+    private bool _infrastructureFailing;
     private readonly Lock _leaseLock = new();
 
     /// <summary>Creates the subscription, resolving its options and dependencies from the service provider.</summary>
@@ -104,6 +107,7 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
         lock (_leaseLock)
         {
             _failingLeases.Clear();
+            _infrastructureFailing = false;
         }
 
         SetState(CosmosDBCatchupSubscriptionState.Starting);
@@ -126,18 +130,31 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             case StartingPositionType.FromDateTime:
                 builder.WithStartTime(_options.StartingPositionDateTime!.Value.ToUniversalTime());
                 break;
-            default:
-                // Do nothing
+            case StartingPositionType.Latest:
+                // Set explicitly rather than relying on the SDK default, which delivered existing changes.
+                // Like any start time, it only applies when the leases are first created.
+                builder.WithStartTime(DateTime.UtcNow);
                 break;
-        }   
+        }
 
         builder
             .WithPollInterval(TimeSpan.FromMilliseconds(_options.PollingIntervalInMilliseconds))
             .WithMaxItems(_options.MaxItemsPerPoll);
 
-        _changeFeedProcessor = builder.Build();
+        var processor = builder.Build();
 
-        await _changeFeedProcessor.StartAsync().ConfigureAwait(false);
+        try
+        {
+            await processor.StartAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // A processor that failed to start is not kept, so a later stop does not act on it.
+            SetState(CosmosDBCatchupSubscriptionState.Stopped, "The change feed processor failed to start.", ex);
+            throw;
+        }
+
+        _changeFeedProcessor = processor;
         SetState(CosmosDBCatchupSubscriptionState.Running);
 
         _logger.SubscriptionStarted(SubscriptionName, _options.InstanceName);
@@ -166,7 +183,10 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
         // Checking the failing leases and updating the state happen under one lock so a concurrent failure cannot be overwritten.
         lock (_leaseLock)
         {
-            if (_failingLeases.Remove(context.LeaseToken) && _failingLeases.Count == 0 && _state == CosmosDBCatchupSubscriptionState.Retrying)
+            var recovered = _failingLeases.Remove(context.LeaseToken) | _infrastructureFailing;
+            // An infrastructure error may move the failing lease to another instance, so any successful batch clears it.
+            _infrastructureFailing = false;
+            if (recovered && _failingLeases.Count == 0 && _state == CosmosDBCatchupSubscriptionState.Retrying)
             {
                 SetState(CosmosDBCatchupSubscriptionState.Running);
             }
@@ -188,6 +208,11 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
         else
         {
             _metrics.Error(SubscriptionName);
+            lock (_leaseLock)
+            {
+                _infrastructureFailing = true;
+                SetState(CosmosDBCatchupSubscriptionState.Retrying, $"Lease {leaseToken} failed.", exception);
+            }
         }
         return OnErrorAsync(leaseToken, exception);
     }
@@ -214,14 +239,14 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             {
                 continue;
             }
-            if (change.Type == EventItemType.Header ? _options.IgnoreHeaderEvents : change.Type != EventItemType.Event)
+            if (change.Type != EventItemType.Event)
             {
-                // Snapshots are derived state, not facts, so only events (and headers when opted in) are delivered.
+                // Headers and snapshots are bookkeeping and derived state, not facts, so only events are delivered.
                 continue;
             }
             if (!_typeMapper.TryGetType(change.DataType, out var type))
             {
-                _logger.SkippingUnknownDataType(change.DataType);
+                _logger.SkippingUnknownDataType(change.DataType, change.Id, change.StreamName);
                 continue;
             }
 
@@ -263,7 +288,8 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             streamVersion: eventItem.Version,
             cursor: new StreamedEventCursor(_options.ConnectionName, _options.MonitoredContainerName, context.LeaseToken, eventItem.LogicalSequenceNumber, eventItem.SubSequenceNumber),
             timestamp: timestamp,
-            @event: deserializedEvent);
+            @event: deserializedEvent,
+            metadata: eventItem.Metadata is { Count: > 0 } metadata ? EventMetadata.Create(metadata!) : null);
 
         return streamEvent;
     }
@@ -306,13 +332,13 @@ internal static partial class CosmosDBCatchupSubscriptionLog
     [LoggerMessage(Level = LogLevel.Warning, Message = "Subscription {SubscriptionName} for instance {InstanceName} has stopped.")]
     public static partial void SubscriptionStopped(this ILogger logger, string subscriptionName, string instanceName);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Skipping change with unknown data type {DataType}.")]
-    public static partial void SkippingUnknownDataType(this ILogger logger, string dataType);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Skipping change {Id} in stream {StreamName} with unknown data type {DataType}.")]
+    public static partial void SkippingUnknownDataType(this ILogger logger, string dataType, string id, string streamName);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Skipping change {Id} in stream {StreamName} on lease {LeaseToken} at logical sequence number {LogicalSequenceNumber}: its id or stream name is malformed.")]
     public static partial void SkippingMalformedChange(this ILogger logger, Exception exception, string id, string streamName, string leaseToken, long logicalSequenceNumber);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Processed {Count} changes using {RequestCharge} RUs.")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Processed {Count} changes using {RequestCharge} RUs.")]
     public static partial void ChangesProcessed(this ILogger logger, int count, double requestCharge);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Lease {LeaseToken} processing failed with an unhandled exception from the user delegate.")]

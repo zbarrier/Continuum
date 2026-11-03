@@ -27,7 +27,7 @@ public class KurrentDBCatchupBatchReceiverTests
     {
         public List<ulong> Stored { get; } = [];
 
-        public Task<ulong> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) => Task.FromResult(0UL);
+        public Task<ulong?> GetLastCheckpointAsync(string subscriptionName, string partitionId, CancellationToken cancellationToken = default) => Task.FromResult<ulong?>(null);
 
         public Task StoreCheckpointAsync(string subscriptionName, string partitionId, ulong streamPosition, CancellationToken cancellationToken = default)
         {

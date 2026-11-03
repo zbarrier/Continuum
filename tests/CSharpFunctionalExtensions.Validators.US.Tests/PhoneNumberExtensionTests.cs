@@ -56,6 +56,8 @@ public class PhoneNumberExtensionTests
     [InlineData("111")]
     [InlineData("(336) 555--123)")]
     [InlineData("336555123")]
+    [InlineData("336555123a")]
+    [InlineData("３３６５５５１２３４")]
     public void IsUSPhoneNumber_InvalidValue_Failure(string value)
     {
         //Arrange
@@ -73,6 +75,8 @@ public class PhoneNumberExtensionTests
     [InlineData("111")]
     [InlineData("(336) 555--123)")]
     [InlineData("336555123")]
+    [InlineData("336555123a")]
+    [InlineData("３３６５５５１２３４")]
     public void IsUSPhoneNumberMultiPart_InvalidValue_Failure(string value)
     {
         //Arrange

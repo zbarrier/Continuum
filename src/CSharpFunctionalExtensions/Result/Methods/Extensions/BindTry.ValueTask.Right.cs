@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using System;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -20,7 +21,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)
-                : await Result.Try<ValueTask<Result<K>>>(() => valueTask(result.Value), errorHandler).Bind(r => r);
+                : await Result.Try<ValueTask<Result<K>>>(() => valueTask(result.Value), errorHandler).Bind(r => r).DefaultAwait();
         }
 
         /// <summary>
@@ -37,7 +38,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         {
             return result.IsFailure
                 ? Result.Failure<K>(result.Error)
-                : await Result.Try<ValueTask<Result<K>>>(() => valueTask(), errorHandler).Bind(r => r);
+                : await Result.Try<ValueTask<Result<K>>>(() => valueTask(), errorHandler).Bind(r => r).DefaultAwait();
         }
 
         /// <summary>
@@ -54,7 +55,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         {
             return result.IsFailure
                 ? Result.Failure(result.Error)
-                : await Result.Try<ValueTask<Result>>(() => valueTask(result.Value), errorHandler).Bind(r => r);
+                : await Result.Try<ValueTask<Result>>(() => valueTask(result.Value), errorHandler).Bind(r => r).DefaultAwait();
         }
 
         /// <summary>
@@ -70,7 +71,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         {
             return result.IsFailure
                 ? Result.Failure(result.Error)
-                : await Result.Try<ValueTask<Result>>(() => valueTask(), errorHandler).Bind(r => r);
+                : await Result.Try<ValueTask<Result>>(() => valueTask(), errorHandler).Bind(r => r).DefaultAwait();
         }
     }
 }

@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Orleans.EventSourcing.Common;
 
 namespace Continuum.EventSourcing.Orleans;
 
@@ -55,7 +54,7 @@ public sealed class SnapshotWithMetaDataAndETag<TView> : IGrainState<SnapshotWit
     /// </summary>
     public override string ToString()
     {
-        return $"v{State.SnapshotVersion} Flags={State.WriteVector} ETag={ETag} Data={State.Snapshot}";
+        return $"v{State.SnapshotVersion} ETag={ETag} Data={State.Snapshot}";
     }
 }
 
@@ -75,7 +74,6 @@ public sealed class SnapshotWithMetaData<TView>
     {
         Snapshot = new TView();
         SnapshotVersion = -1;
-        WriteVector = string.Empty;
     }
 
     /// <summary>
@@ -85,7 +83,6 @@ public sealed class SnapshotWithMetaData<TView>
     {
         Snapshot = initialState;
         SnapshotVersion = -1;
-        WriteVector = string.Empty;
     }
 
     /// <summary>
@@ -99,35 +96,4 @@ public sealed class SnapshotWithMetaData<TView>
     /// </summary>
     [Id(1)]
     public int SnapshotVersion { get; set; }
-
-    /// <summary>
-    ///     Metadata that is used to avoid duplicate appends.
-    ///     Logically, this is a (string->bit) map, the keys being replica ids
-    ///     But this map is represented compactly as a simple string to reduce serialization/deserialization overhead
-    ///     Bits are read by <see cref="GetBit" /> and flipped by  <see cref="FlipBit" />.
-    ///     Bits are toggled when writing, so that the retry logic can avoid appending an entry twice
-    ///     when retrying a failed append.
-    /// </summary>
-    [Id(2)]
-    public string WriteVector { get; set; }
-
-    /// <summary>
-    ///     Gets one of the bits in <see cref="WriteVector" />
-    /// </summary>
-    /// <param name="replica">The replica for which we want to look up the bit.</param>
-    /// <returns></returns>
-    public bool GetBit(string replica) => StringEncodedWriteVector.GetBit(WriteVector, replica);
-
-    /// <summary>
-    ///     Toggle one of the bits in <see cref="WriteVector" /> and return the new value.
-    /// </summary>
-    /// <param name="replica">The replica for which we want to flip the bit.</param>
-    /// <returns>The state of the bit after flipping it.</returns>
-    public bool FlipBit(string replica)
-    {
-        var str = WriteVector;
-        var rVal = StringEncodedWriteVector.FlipBit(ref str, replica);
-        WriteVector = str;
-        return rVal;
-    }
 }

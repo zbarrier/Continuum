@@ -65,8 +65,14 @@ public abstract class TypeMapper : ITypeMapper
     }
 
     /// <inheritdoc/>
+    public void AddType<T>(string typeName) => AddType(typeof(T), typeName);
+
+    /// <inheritdoc/>
     public void AddType(Type type, string typeName)
     {
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
+
         lock (_lock)
         {
             ThrowIfFrozen();
@@ -88,13 +94,16 @@ public abstract class TypeMapper : ITypeMapper
     }
 
     /// <inheritdoc/>
-    public void RemoveType<T>()
+    public void RemoveType<T>() => RemoveType(typeof(T));
+
+    /// <inheritdoc/>
+    public void RemoveType(Type type)
     {
         lock (_lock)
         {
             ThrowIfFrozen();
-            var name = GetTypeName<T>();
-            _typeMap.Remove(typeof(T));
+            var name = GetTypeName(type);
+            _typeMap.Remove(type);
             _typeNameMap.Remove(name);
         }
     }
@@ -128,7 +137,7 @@ public abstract class TypeMapper : ITypeMapper
     /// <inheritdoc/>
     public void RegisterKnownAttributeTypes(TypeMapKinds typeMapKinds)
     {
-        foreach (var registration in TypeMapRegistry.GetRegistrations(typeMapKinds))
+        foreach (var registration in TypeMapRegistry.GetRegistrations(typeMapKinds | TypeMapKinds.Framework))
         {
             AddType(registration.Type, registration.TypeIdentifier);
         }

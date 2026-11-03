@@ -45,7 +45,7 @@ public sealed class TelemetryTests(ClusterFixture fixture) : IDisposable
     {
         var grainId = NewGrainId();
 
-        await Storage.AppendAsync(_grainTypeName, grainId, CreateEvents(3), 0);
+        await Storage.AppendAsync(_grainTypeName, grainId, CreateEvents(3), 0, Guid.NewGuid());
         await Storage.ReadAsync<SnackEvent>(_grainTypeName, grainId, 0, 10);
         await Storage.GetLastVersionAsync(_grainTypeName, grainId);
 
@@ -79,7 +79,7 @@ public sealed class TelemetryTests(ClusterFixture fixture) : IDisposable
     {
         var grainId = NewGrainId();
 
-        await Assert.ThrowsAsync<InconsistentStateException>(() => Storage.AppendAsync(_grainTypeName, grainId, CreateEvents(1), 1));
+        await Assert.ThrowsAsync<InconsistentStateException>(() => Storage.AppendAsync(_grainTypeName, grainId, CreateEvents(1), 1, Guid.NewGuid()));
 
         var span = Assert.Single(_telemetry.SpansFor(grainId));
         Assert.Equal(ActivityStatusCode.Error, span.Status);

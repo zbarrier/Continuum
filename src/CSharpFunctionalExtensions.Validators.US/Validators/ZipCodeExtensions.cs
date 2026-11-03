@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -36,7 +36,7 @@ public static partial class USZipCodeValidatorExtensions
 
             bool isValidChar = i == HyphenIndex
                 ? c == '-'
-                : char.IsDigit(c);
+                : char.IsAsciiDigit(c);
 
             if (!isValidChar)
             {
@@ -71,7 +71,7 @@ public static partial class USZipCodeValidatorExtensions
 
             bool isValidChar = i == HyphenIndex
                 ? c == '-'
-                : char.IsDigit(c);
+                : char.IsAsciiDigit(c);
 
             if (!isValidChar)
             {

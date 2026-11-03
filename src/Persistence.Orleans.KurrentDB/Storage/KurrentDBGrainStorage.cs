@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 using Continuum.Orleans.KurrentDB;
 using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
@@ -15,7 +13,7 @@ using Orleans.Configuration;
 namespace Orleans.Storage;
 
 /// <summary>
-///     KurrentDB-based grain storage provider
+///     KurrentDB-based grain storage provider.
 /// </summary>
 public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloLifecycle>
 {
@@ -36,23 +34,23 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
     /// <summary>
     ///     Creates a new instance of the <see cref="KurrentDBGrainStorage" /> type.
     /// </summary>
-    public KurrentDBGrainStorage(IServiceProvider serviceProvider, 
+    public KurrentDBGrainStorage(IServiceProvider serviceProvider,
         string name,
-        KurrentDBGrainStorageOptions storageOptions, 
-        IOptions<ClusterOptions> clusterOptions, 
+        KurrentDBGrainStorageOptions storageOptions,
+        IOptions<ClusterOptions> clusterOptions,
         ILogger<KurrentDBGrainStorage> logger)
     {
         ArgumentNullException.ThrowIfNull(logger, nameof(logger));
         ArgumentException.ThrowIfNullOrEmpty(name, nameof(name));
         ArgumentNullException.ThrowIfNull(clusterOptions, nameof(clusterOptions));
         ArgumentNullException.ThrowIfNull(storageOptions, nameof(storageOptions));
-       
+
         _logger = logger;
         _name = name;
         _serviceId = clusterOptions.Value.ServiceId;
         _storageOptions = storageOptions;
         _storageSerializer = _storageOptions.GrainStorageSerializer;
-        
+
         bool isJsonSerializer = _storageSerializer is TypeMappedJsonGrainStorageSerializer ||
                                 _storageSerializer is SystemTextJsonGrainStorageSerializer ||
                                 _storageSerializer is JsonGrainStorageSerializer;
@@ -66,9 +64,10 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
     }
 
     /// <summary>
+    ///     Gets the KurrentDB stream name for a grain.
     /// </summary>
-    /// <param name="grainId"></param>
-    /// <returns></returns>
+    /// <param name="grainId">The grain whose stream name is returned.</param>
+    /// <returns>The stream name produced by <see cref="KurrentDBGrainStorageOptions.StreamNameFormatter"/>.</returns>
     private string GetStreamName(GrainId grainId) => _streamNameFormatter(_serviceId, _name, grainId);
 
     #region Lifecycle Participant
@@ -82,29 +81,17 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
 
     private Task Init(CancellationToken cancellationToken)
     {
-        var timer = Stopwatch.StartNew();
-        try
-        {
-            _logger.StorageInitializing(_name, _serviceId);
-            _initialized = true;
-            timer.Stop();
-            _logger.StorageInitialized(_name, _serviceId, timer.Elapsed.TotalMilliseconds);
-        }
-        catch (Exception ex)
-        {
-            timer.Stop();
-            _logger.StorageInitializationFailed(ex, _name, _serviceId, timer.Elapsed.TotalMilliseconds);
-            throw new KurrentDBStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
-        }
+        // The client is resolved from the container in the constructor, and KurrentDB has no container or schema to
+        // validate, so there is nothing to connect or create here. The client reconnects on its own and grain
+        // activation retries reads, so a startup connectivity check would only make silo startup fragile.
+        _initialized = true;
+        _logger.StorageInitialized(_name, _serviceId);
         return Task.CompletedTask;
     }
 
-    private Task Close(CancellationToken cancellationToken)
-    {
-        // We don't need to dispose the client because it's a singleton, could be used by
-        // other providers and will be disposed by the container.
-        return Task.CompletedTask;
-    }
+    // The KurrentDBClient is a keyed singleton that other providers may share, so the DI container disposes it, not
+    // this provider. There is nothing else to release.
+    private static Task Close(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>
     ///     Initializes a storage that is created after the silo has started, such as a tenant's storage.
@@ -360,14 +347,8 @@ public class KurrentDBGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloL
 
 internal static partial class KurrentDBGrainStorageLog
 {
-    [LoggerMessage(Level = LogLevel.Debug, Message = "KurrentDBGrainStorage {Name} is initializing: ServiceId={ServiceId}")]
-    public static partial void StorageInitializing(this ILogger logger, string name, string serviceId);
-
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Init: Name={Name} ServiceId={ServiceId}, initialized in {ElapsedMilliseconds} ms")]
-    public static partial void StorageInitialized(this ILogger logger, string name, string serviceId, double elapsedMilliseconds);
-
-    [LoggerMessage(Level = LogLevel.Error, Message = "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms")]
-    public static partial void StorageInitializationFailed(this ILogger logger, Exception exception, string name, string serviceId, double elapsedMilliseconds);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Init: Name={Name} ServiceId={ServiceId}, initialized")]
+    public static partial void StorageInitialized(this ILogger logger, string name, string serviceId);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read grain state for {GrainType} grain with ID {GrainId} and stream key {Key}")]
     public static partial void ReadStateFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string key);

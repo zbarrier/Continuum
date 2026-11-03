@@ -1,5 +1,7 @@
 ﻿#nullable enable
 
+using System.Collections.Frozen;
+
 namespace Continuum.CSharpFunctionalExtensions;
 
 /// <summary>
@@ -7,7 +9,7 @@ namespace Continuum.CSharpFunctionalExtensions;
 /// </summary>
 public static partial class USStateAbbreviationValidators
 {
-    private static HashSet<string> USPostalStateAbbreviations = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly FrozenSet<string> USPostalStateAbbreviations = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 
     {
 
@@ -35,7 +37,7 @@ public static partial class USStateAbbreviationValidators
 
         "VI"  // U.S. Virgin Islands
 
-    };
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     extension(Result)
     {

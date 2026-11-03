@@ -35,7 +35,7 @@ public sealed class EventDrivenStateMachineSession<TState, TEventBase, TStatus, 
     public TState State { get; private set; }
 
     /// <inheritdoc/>
-    public IReadOnlyCollection<TEventBase> UncommittedEvents => _uncommittedEventsView;
+    public IReadOnlyList<TEventBase> UncommittedEvents => _uncommittedEventsView;
 
     /// <inheritdoc/>
     public void Apply<TEvent>(TEvent evt) where TEvent : TEventBase

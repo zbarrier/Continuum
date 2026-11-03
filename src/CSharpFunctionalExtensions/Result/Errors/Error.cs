@@ -62,13 +62,13 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
     public GrpcStatusCodeEnum GrpcStatusCode { get; }
 
     /// <summary>
-    ///     Gets the message localized for
+    ///     Gets the message formatted for the current culture.
     /// </summary>
     public abstract string GetFormattedMessage();
 
     /// <summary>
     ///     Gets the message localized and formatted for <paramref name="culture"/>.
-    ///     Uses <see cref="ErrorLocalization.Default"/> when <paramref name="localizer"/> is null.
+    ///     The base implementation ignores both arguments and returns <see cref="GetFormattedMessage()"/>; derived types override it to localize.
     /// </summary>
     /// <param name="culture">The culture used to select the message template and to format arguments.</param>
     /// <param name="localizer">The localizer used to resolve message templates, or null to use the default.</param>
@@ -122,11 +122,11 @@ public abstract class Error : IEquatable<Error>, IComparable<Error>
     }
 
     /// <summary>
-    ///     Compares errors by <see cref="PriorityCode"/>. The more severe error (lower priority code) sorts first; null sorts last.
+    ///     Compares errors by <see cref="PriorityCode"/>. The more severe error (lower priority code) sorts first; null sorts last because it is less significant than any error. This deliberately differs from the usual .NET convention, where null sorts first.
     /// </summary>
     /// <param name="other">The error to compare with.</param>
     /// <returns>A negative value when this error is more severe than <paramref name="other"/>, zero when equal, otherwise positive.</returns>
-    public int CompareTo(Error? other) => other is null ? 1 : PriorityCode.CompareTo(other.PriorityCode);
+    public int CompareTo(Error? other) => other is null ? -1 : PriorityCode.CompareTo(other.PriorityCode);
 
     /// <summary>Determines whether two errors are equal.</summary>
     public static bool operator ==(Error? left, Error? right) => left is null ? right is null : left.Equals(right);

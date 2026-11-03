@@ -12,10 +12,13 @@ namespace Continuum.CSharpFunctionalExtensions.Orleans.Tests;
 
 public sealed class SurrogateRoundTripTests
 {
-    private static readonly Serializer Serializer = new ServiceCollection()
+    private static readonly IServiceProvider Services = new ServiceCollection()
         .AddSerializer()
-        .BuildServiceProvider()
-        .GetRequiredService<Serializer>();
+        .BuildServiceProvider();
+
+    private static readonly Serializer Serializer = Services.GetRequiredService<Serializer>();
+
+    private static readonly DeepCopier Copier = Services.GetRequiredService<DeepCopier>();
 
     private static T RoundTrip<T>(T value) => Serializer.Deserialize<T>(Serializer.SerializeToArray(value))!;
 
@@ -143,6 +146,28 @@ public sealed class SurrogateRoundTripTests
 
         Assert.Equal(argument.Kind, copy.Kind);
         Assert.Equal(argument, copy);
+    }
+
+    [Fact]
+    public void ResultT_DeepCopy_CopiesMutableValue()
+    {
+        var original = Result.Success(new List<int> { 1, 2 });
+
+        var copy = Copier.Copy(original);
+
+        Assert.NotSame(original.Value, copy.Value);
+        Assert.Equal(original.Value, copy.Value);
+    }
+
+    [Fact]
+    public void Maybe_DeepCopy_CopiesMutableValue()
+    {
+        var original = Maybe.From(new List<int> { 1, 2 });
+
+        var copy = Copier.Copy(original);
+
+        Assert.NotSame(original.Value, copy.Value);
+        Assert.Equal(original.Value, copy.Value);
     }
 
     [Fact]

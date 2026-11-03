@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -8,7 +9,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.GetValueOrDefault{T}(in Maybe{T}, Func{T})"/>
         public static async ValueTask<T> GetValueOrDefault<T>(this ValueTask<Maybe<T>> maybeTask, Func<T> defaultValue)
         {
-            var maybe = await maybeTask;
+            var maybe = await maybeTask.DefaultAwait();
             return maybe.GetValueOrDefault(defaultValue);
         }
         
@@ -16,7 +17,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<K?> GetValueOrDefault<T, K>(this ValueTask<Maybe<T>> maybeTask, Func<T, K> selector,
             K? defaultValue = default)
         {
-            var maybe = await maybeTask;
+            var maybe = await maybeTask.DefaultAwait();
             return maybe.GetValueOrDefault(selector, defaultValue);
         }
 
@@ -24,7 +25,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<K> GetValueOrDefault<T, K>(this ValueTask<Maybe<T>> maybeTask, Func<T, K> selector,
             Func<K> defaultValue)
         {
-            var maybe = await maybeTask;
+            var maybe = await maybeTask.DefaultAwait();
             return maybe.GetValueOrDefault(selector, defaultValue);
         }
     }

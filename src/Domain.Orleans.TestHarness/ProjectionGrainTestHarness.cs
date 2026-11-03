@@ -39,9 +39,10 @@ public abstract class ProjectionGrainTestHarness<TGrainInterface, TProjection, T
     /// <inheritdoc/>
     protected override Task LoadGivenEvents(TEventBase[] events) => Grain.LoadGivenEvents(events);
 
-    /// <summary>Runs the query under test and captures its result or exception.</summary>
+    /// <summary>Runs the query under test and captures its result or exception. Call once per test.</summary>
     /// <param name="func">The query to run.</param>
     /// <returns>A task that completes when the query has run.</returns>
+    /// <exception cref="InvalidOperationException"><c>When</c> has already been called in this test.</exception>
     protected Task When(Func<Task<Result<TProjection>>> func) => Capture(func);
 
     /// <summary>Asserts the query succeeded and checks the returned projection.</summary>

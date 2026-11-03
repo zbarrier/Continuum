@@ -63,6 +63,29 @@ public sealed class TypeMapRegistrationGeneratorTests
     }
 
     [Fact]
+    public void Skips_types_the_generated_class_cannot_access()
+    {
+        var compilation = CompilationFactory.Create("""
+            public static class Outer
+            {
+                [DomainEventType("private-event")]
+                private sealed class PrivateEvent;
+
+                [DomainEventType("internal-event")]
+                internal sealed class InternalEvent;
+            }
+            """);
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new TypeMapRegistrationGenerator());
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var output, out _, TestContext.Current.CancellationToken);
+
+        Assert.Empty(output.GetDiagnostics(TestContext.Current.CancellationToken).Where(d => d.Severity == DiagnosticSeverity.Error));
+        var generated = string.Concat(driver.GetRunResult().GeneratedTrees.Select(t => t.ToString()));
+        Assert.Contains("\"internal-event\"", generated);
+        Assert.DoesNotContain("private-event", generated);
+    }
+
+    [Fact]
     public void Unrelated_edit_does_not_regenerate_output()
     {
         var compilation = CompilationFactory.Create("""

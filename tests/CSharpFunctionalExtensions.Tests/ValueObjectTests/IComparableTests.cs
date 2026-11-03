@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
@@ -8,6 +8,24 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ValueObjectTests
 {
     public class IComparableTests
     {
+        [Fact]
+        public void CompareTo_object_of_wrong_type_throws_ArgumentException()
+        {
+            IComparable suffix = new NameSuffix(1);
+
+            Action act = () => suffix.CompareTo("not a value object");
+
+            act.Should().Throw<ArgumentException>().Which.ParamName.Should().Be("other");
+        }
+
+        [Fact]
+        public void CompareTo_null_object_sorts_null_first()
+        {
+            IComparable suffix = new NameSuffix(1);
+
+            suffix.CompareTo(null).Should().BePositive();
+        }
+
         [Fact]
         public void Can_sort_simple_value_objects()
         {

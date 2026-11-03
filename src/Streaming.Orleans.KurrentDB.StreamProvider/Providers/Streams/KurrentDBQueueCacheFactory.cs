@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.StatisticMonitors;
@@ -21,6 +21,7 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     private readonly KurrentDBMonitorAggregationDimensions _sharedDimensions;
     private readonly OrleansInstruments _instruments;
     private readonly TimePurgePredicate _timePurge;
+    private readonly IKurrentDBReceiverFactory _strategy;
 
     private IObjectPool<FixedSizeBuffer>? _bufferPool;
     private string? _bufferPoolId;
@@ -28,7 +29,8 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     /// <summary>
     ///     Initializes a new instance of the <see cref="KurrentDBQueueCacheFactory" /> class.
     /// </summary>
-    public KurrentDBQueueCacheFactory(KurrentDBStreamCachePressureOptions pressureOptions,
+    public KurrentDBQueueCacheFactory(IKurrentDBReceiverFactory strategy,
+                                       KurrentDBStreamCachePressureOptions pressureOptions,
                                        KurrentDBStreamCacheBufferPoolOptions bufferPoolOptions,
                                        StreamCacheEvictionOptions evictionOptions,
                                        StreamStatisticOptions statisticOptions,
@@ -39,6 +41,7 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
                                        Func<KurrentDBCacheMonitorDimensions, ILoggerFactory, ICacheMonitor>? cacheMonitorFactory = null,
                                        Func<KurrentDBBlockPoolMonitorDimensions, ILoggerFactory, IBlockPoolMonitor>? blockPoolMonitorFactory = null)
     {
+        ArgumentNullException.ThrowIfNull(strategy, nameof(strategy));
         ArgumentNullException.ThrowIfNull(pressureOptions, nameof(pressureOptions));
         ArgumentNullException.ThrowIfNull(bufferPoolOptions, nameof(bufferPoolOptions));
         ArgumentNullException.ThrowIfNull(evictionOptions, nameof(evictionOptions));
@@ -55,6 +58,7 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
         _dataAdater = dataAdater;
         _sharedDimensions = sharedDimensions;
         _instruments = instruments;
+        _strategy = strategy;
         _timePurge = new TimePurgePredicate(evictionOptions.DataMinTimeInCache, evictionOptions.DataMaxAgeInCache);
         CacheMonitorFactory = cacheMonitorFactory ?? ((dimensions, _) => new DefaultKurrentDBCacheMonitor(dimensions, _instruments));
         BlockPoolMonitorFactory = blockPoolMonitorFactory ?? ((dimensions, _) => new DefaultKurrentDBBlockPoolMonitor(dimensions, _instruments));
@@ -73,7 +77,7 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     public Func<KurrentDBBlockPoolMonitorDimensions, ILoggerFactory, IBlockPoolMonitor> BlockPoolMonitorFactory { get; set; }
 
     /// <summary>
-    ///     Function which create an KurrentDBQueueCache, which by default will configure the KurrentDBQueueCache using configuration in CreateBufferPool function
+    ///     Creates the selected strategy's queue cache, configured using the CreateBufferPool function
     ///     and AddCachePressureMonitors function.
     /// </summary>
     /// <returns></returns>
@@ -81,12 +85,12 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     {
         var blockPool = CreateBufferPool(_statisticOptions, loggerFactory, _sharedDimensions, out var blockPoolId);
         var cache = CreateCache(queue, _dataAdater, _statisticOptions, _evictionOptions, loggerFactory, blockPool, blockPoolId, _timePurge, _sharedDimensions);
-        AddCachePressureMonitors(cache, _pressureOptions, loggerFactory.CreateLogger($"{typeof(KurrentDBQueueCache).FullName}.{_sharedDimensions.Name}.{queue}"));
+        AddCachePressureMonitors(cache, _pressureOptions, loggerFactory.CreateLogger($"{cache.GetType().FullName}.{_sharedDimensions.Name}.{queue}"));
         return cache;
     }
 
     /// <summary>
-    ///     Function used to configure BufferPool for KurrentDBQueueCache.
+    ///     Function used to configure BufferPool for the queue caches.
     ///     User can override this function to provide more customization on BufferPool creation
     /// </summary>
     protected virtual IObjectPool<FixedSizeBuffer> CreateBufferPool(StreamStatisticOptions statisticOptions, ILoggerFactory loggerFactory, KurrentDBMonitorAggregationDimensions sharedDimensions, out string blockPoolId)
@@ -106,7 +110,7 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     }
 
     /// <summary>
-    ///     Function used to configure cache pressure monitors for KurrentDBQueueCache.
+    ///     Function used to configure cache pressure monitors for the queue caches.
     ///     User can override this function to provide more customization on cache pressure monitors
     /// </summary>
     /// <param name="cache"></param>
@@ -136,7 +140,7 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     }
 
     /// <summary>
-    ///     Default function to be called to create an KurrentDBQueueCache in IKurrentDBQueueCacheFactory.CreateCache method. User can
+    ///     Default function to be called to create the strategy's queue cache in IKurrentDBQueueCacheFactory.CreateCache method. User can
     ///     override this method to add more customization.
     /// </summary>
     protected virtual IKurrentDBQueueCache CreateCache(string queue,
@@ -151,10 +155,18 @@ public class KurrentDBQueueCacheFactory : IKurrentDBQueueCacheFactory
     {
         var cacheMonitorDimensions = new KurrentDBCacheMonitorDimensions(sharedDimensions, queue, blockPoolId);
         var cacheMonitor = CacheMonitorFactory(cacheMonitorDimensions, loggerFactory);
-        var logger = loggerFactory.CreateLogger($"{typeof(KurrentDBQueueCache).FullName}.{sharedDimensions.Name}.{queue}");
-        var cursorTracker = new KurrentDBCursorTracker();
-        var evictionStrategy = new KurrentDBEvictionStrategy(logger, timePurge, cacheMonitor, statisticOptions.StatisticMonitorWriteInterval, dataAdatper, cursorTracker);
-        return new KurrentDBQueueCache(queue, KurrentDBQueueAdapterReceiver.MaxMessagesPerRead, bufferPool, dataAdatper, evictionStrategy, cursorTracker, logger, cacheMonitor, statisticOptions.StatisticMonitorWriteInterval, cacheEvictionOptions.MetadataMinTimeInCache);
+        return _strategy.CreateQueueCache(new KurrentDBQueueCacheContext
+        {
+            Queue = queue,
+            DataAdapter = dataAdatper,
+            BufferPool = bufferPool,
+            TimePurge = timePurge,
+            CacheMonitor = cacheMonitor,
+            LoggerFactory = loggerFactory,
+            LoggerNameSuffix = $"{sharedDimensions.Name}.{queue}",
+            StatisticMonitorWriteInterval = statisticOptions.StatisticMonitorWriteInterval,
+            MetadataMinTimeInCache = cacheEvictionOptions.MetadataMinTimeInCache,
+        });
     }
 
 }

@@ -14,6 +14,7 @@ internal sealed class LogConsistentStorageInstrumentation
     internal const string ReadOperation = "read";
     internal const string GetLastVersionOperation = "get_last_version";
     internal const string AppendOperation = "append";
+    internal const string GetTransactionIdOperation = "get_transaction_id";
 
     private static readonly ActivitySource ActivitySource = new(EventSourcingTelemetry.ActivitySourceName);
     private static readonly Lazy<Meter> FallbackMeter = new(() => new Meter(EventSourcingTelemetry.MeterName));

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -11,7 +12,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (maybe.HasNoValue)
                 return Maybe<T>.None;
 
-            if (await predicate(maybe.GetValueOrThrow()))
+            if (await predicate(maybe.GetValueOrThrow()).DefaultAwait())
                 return maybe;
 
             return Maybe<T>.None;

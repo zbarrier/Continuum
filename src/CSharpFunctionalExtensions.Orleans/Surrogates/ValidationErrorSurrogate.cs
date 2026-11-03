@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Collections.Immutable;
 
 using Orleans;
@@ -62,7 +63,7 @@ public sealed class ValidationErrorSurrogateConverter : IConverter<ValidationErr
                 Target = item.Target,
                 Code = item.Code,
                 Format = item.Format,
-                Arguments = [.. item.Arguments],
+                Arguments = ImmutableCollectionsMarshal.AsArray(item.Arguments),
             });
         }
 

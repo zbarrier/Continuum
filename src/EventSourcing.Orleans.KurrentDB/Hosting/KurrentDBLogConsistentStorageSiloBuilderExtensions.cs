@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 
 using Orleans.Configuration;
 using Orleans.Providers;
@@ -6,6 +6,7 @@ using Orleans.Providers;
 namespace Orleans.Hosting;
 
 /// <summary>
+///     Extensions for registering the KurrentDB log-consistency provider on an <see cref="ISiloBuilder"/>.
 /// </summary>
 public static class KurrentDBLogConsistentStorageSiloBuilderExtensions
 {

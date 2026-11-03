@@ -66,7 +66,7 @@ namespace Continuum.CSharpFunctionalExtensions
         }
 
         /// <summary>
-        ///     Determines whether two value objects are equal. Two
+        ///     Determines whether two value objects are equal. Two null references are equal.
         /// </summary>
         public static bool operator ==(ValueObject a, ValueObject b)
         {

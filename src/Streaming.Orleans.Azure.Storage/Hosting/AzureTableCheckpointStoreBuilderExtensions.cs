@@ -24,7 +24,7 @@ public static class AzureTableCheckpointStoreBuilderExtensions
     /// </param>
     /// <returns>The <paramref name="builder"/>, for chaining.</returns>
     public static IHostApplicationBuilder AddAzureTableCheckpointStore<TPosition>(this IHostApplicationBuilder builder, string connectionName)
-        where TPosition : IComparable<TPosition>, ISpanFormattable, IParsable<TPosition>
+        where TPosition : struct, IComparable<TPosition>, ISpanFormattable, IParsable<TPosition>
     {
         builder.Services.AddKeyedSingleton<ICheckpointStore<TPosition>>(connectionName, (provider, _) =>
             new AzureTableCheckpointStore<TPosition>(provider.GetRequiredKeyedService<TableServiceClient>(connectionName)));
@@ -43,7 +43,7 @@ public static class AzureTableCheckpointStoreBuilderExtensions
     /// </param>
     /// <returns>The <paramref name="builder"/>, for chaining.</returns>
     public static IHostApplicationBuilder AddAzureTableCheckpointStoreAsDefault<TPosition>(this IHostApplicationBuilder builder, string connectionName)
-        where TPosition : IComparable<TPosition>, ISpanFormattable, IParsable<TPosition>
+        where TPosition : struct, IComparable<TPosition>, ISpanFormattable, IParsable<TPosition>
     {
         builder.AddAzureTableCheckpointStore<TPosition>(connectionName);
         builder.Services.AddSingleton(provider => provider.GetRequiredKeyedService<ICheckpointStore<TPosition>>(connectionName));

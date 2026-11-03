@@ -1,4 +1,4 @@
-﻿# Continuum.EventSourcing.Orleans.KurrentDB
+# Continuum.EventSourcing.Orleans.KurrentDB
 
 A [KurrentDB](https://www.kurrent.io/) (formerly EventStoreDB) log-consistency provider
 
@@ -19,14 +19,14 @@ siloBuilder.AddKurrentDBBasedLogConsistencyProviderAsDefault(options =>
 });
 ```
 
-Options can also be bound from configuration under `Orleans:EventSourcing:KurrentDB:{providerName}`.
+Options can also be bound from configuration under `Orleans:EventSourcing:KurrentDB:{providerName}`. `GrainStorageSerializer`, `TypeMapper`, `StreamNameFormatter` and `EventIdGenerator` cannot be bound; set them in code or let them be resolved from `ConnectionName` and the defaults.
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `ConnectionName` | (required) | Key used to resolve the client, serializer and type mapper. |
 | `Credentials` | `UseDefault = true` | Connection default credentials, or an auth token / username and password. |
 | `StreamNameFormatter` | `{GrainType}-{GrainKey}` | Stream name for a grain. The grain type becomes the KurrentDB category. |
-| `EventIdGenerator` | `NewId.NextSequentialGuid` | Event id for each appended event. |
+| `EventIdGenerator` | `Guid.CreateVersion7` | Event id for each appended event. |
 | `TypeMapKinds` | `DomainEvent` | Which type map is used to name stored events. |
 | `InitStage` | `ApplicationServices` | Silo lifecycle stage the provider initializes in. |
 
@@ -80,7 +80,7 @@ Versions are event counts, as in Orleans: version 0 means no events and version 
 
 ## Transaction metadata
 
-regroup events committed together. See `Continuum.EventSourcing.Orleans.KurrentDB.Abstractions`.
+Each appended event's metadata records the append's transaction ID, the number of events in the append and the event's index within it, so subscribers can regroup events committed together. See `Continuum.EventSourcing.Orleans.KurrentDB.Abstractions`.
 
 ## Telemetry
 
@@ -94,7 +94,7 @@ builder.Services.AddOpenTelemetry()
 
 | Metric | Unit | Description |
 | --- | --- | --- |
-| `continuum.eventsourcing.operation.duration` | `s` | Duration of read, get-last-version and append operations. |
-| `continuum.eventsourcing.events` | `{event}` | Events read or appended. |
+| `continuum.eventsourcing.operation.duration` | `s` | Duration of read, get-last-version, append and get-transaction-id operations. |
+| `continuum.eventsourcing.events` | `{event}` | Events read or appended; use the `db.operation.name` tag to separate reads from appends. |
 
 Metrics are tagged with `db.system.name`, `db.operation.name`, `continuum.provider.name`, `continuum.grain.type` and, on failure, `error.type`. Each operation also produces a span that additionally carries the grain id, stream name and event count.

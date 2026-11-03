@@ -34,7 +34,7 @@ siloBuilder.AddKurrentDBGrainStorage("kurrent", options =>
 | `MaxStateEventCount` | `5` | Events KurrentDB keeps per state stream. `null` keeps every event. See [Retention](#retention). |
 | `ContentType` | inferred | Content type recorded on each event. `application/json` for the Continuum and Orleans JSON serializers, `application/octet-stream` otherwise. Set it for a custom JSON serializer. |
 | `StreamNameFormatter` | `state__{GrainType}-{GrainKey}` | Stream name for a grain. |
-| `EventIdGenerator` | `NewId.NextSequentialGuid` | Event id for each appended event. |
+| `EventIdGenerator` | `Guid.CreateVersion7` | Event id for each appended event. |
 | `TypeMapKinds` | `Snapshot` | Which type map is used to name stored state events. |
 | `InitStage` | `ApplicationServices` | Silo lifecycle stage the provider initializes in. |
 

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -13,8 +14,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             Func<T, ValueTask<Result<TK>>> valueTask,
             Func<T, TK, TR> project)
         {
-            Result<T> result = await resultTask;
-            return await result.SelectMany(valueTask, project);
+            Result<T> result = await resultTask.DefaultAwait();
+            return await result.SelectMany(valueTask, project).DefaultAwait();
         }
     }
 }

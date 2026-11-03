@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -8,7 +9,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Maybe{T}.GetValueOrThrow(string)"/>
         public static async ValueTask<T> GetValueOrThrow<T>(this ValueTask<Maybe<T>> maybeTask)
         {
-            var maybe = await maybeTask;
+            var maybe = await maybeTask.DefaultAwait();
             return maybe.GetValueOrThrow();
         }
 
@@ -19,7 +20,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <exception cref="InvalidOperationException">Maybe has no value.</exception>
         public static async ValueTask<T> GetValueOrThrow<T>(this ValueTask<Maybe<T>> maybeTask, string errorMessage)
         {
-            var maybe = await maybeTask;
+            var maybe = await maybeTask.DefaultAwait();
             return maybe.GetValueOrThrow(errorMessage);
         }
     }

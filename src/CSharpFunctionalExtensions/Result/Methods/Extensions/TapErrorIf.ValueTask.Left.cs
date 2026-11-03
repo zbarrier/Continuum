@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -62,7 +63,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> TapErrorIf(this ValueTask<Result> resultTask, Func<Error, bool> predicate, Action action)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
 
             if (result.IsFailure && predicate(result.Error))
             {
@@ -77,7 +78,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> TapErrorIf(this ValueTask<Result> resultTask, Func<Error, bool> predicate, Action<Error> action)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
 
             if (result.IsFailure && predicate(result.Error))
             {
@@ -92,7 +93,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> TapErrorIf<T>(this ValueTask<Result<T>> resultTask, Func<Error, bool> predicate, Action action)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsFailure && predicate(result.Error))
             {
@@ -107,7 +108,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> TapErrorIf<T>(this ValueTask<Result<T>> resultTask, Func<Error, bool> predicate, Action<Error> action)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
 
             if (result.IsFailure && predicate(result.Error))
             {

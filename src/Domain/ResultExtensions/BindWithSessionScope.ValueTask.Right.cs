@@ -16,7 +16,7 @@ public static partial class ResultSessionScopeExtensions
     /// <param name="sessionScope">The session scope used to create and save the session.</param>
     /// <param name="f">The operation to run against the session.</param>
     /// <returns>The result of saving the session, or the failure of the source result or operation.</returns>
-    public static Task<Result<ISaveChangesResponse>> BindWithSessionScope<TState, TEventBase>(this Result self,
+    public static Task<Result<ISessionSaveResponse>> BindWithSessionScope<TState, TEventBase>(this Result self,
             IEventDrivenSessionScope<TState, TEventBase> sessionScope,
             Func<IEventDrivenSession<TState, TEventBase>, ValueTask<Result>> f)
         where TState : IEventDrivenState<TState, TEventBase>, new()
@@ -24,7 +24,7 @@ public static partial class ResultSessionScopeExtensions
     {
         if (self.IsFailure)
         {
-            return Task.FromResult(Result.Failure<ISaveChangesResponse>(self.Error));
+            return Task.FromResult(Result.Failure<ISessionSaveResponse>(self.Error));
         }
         return WithSessionScope(sessionScope, f);
     }
@@ -40,7 +40,7 @@ public static partial class ResultSessionScopeExtensions
     /// <param name="sessionScope">The session scope used to create and save the session.</param>
     /// <param name="f">The operation to run against the session.</param>
     /// <returns>The result of saving the session, or the failure of the source result or operation.</returns>
-    public static Task<Result<ISaveChangesResponse>> BindWithSessionScope<TState, TEventBase, T>(this Result<T> self,
+    public static Task<Result<ISessionSaveResponse>> BindWithSessionScope<TState, TEventBase, T>(this Result<T> self,
             IEventDrivenSessionScope<TState, TEventBase> sessionScope,
             Func<IEventDrivenSession<TState, TEventBase>, T, ValueTask<Result>> f)
         where TState : IEventDrivenState<TState, TEventBase>, new()
@@ -48,7 +48,7 @@ public static partial class ResultSessionScopeExtensions
     {
         if (self.IsFailure)
         {
-            return Task.FromResult(Result.Failure<ISaveChangesResponse>(self.Error));
+            return Task.FromResult(Result.Failure<ISessionSaveResponse>(self.Error));
         }
         return WithSessionScope(sessionScope, f, self.Value);
     }

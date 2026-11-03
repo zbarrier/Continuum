@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -14,7 +15,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <returns></returns>
         public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, T fallback)
         {
-            Maybe<T> maybe = await maybeTask;
+            Maybe<T> maybe = await maybeTask.DefaultAwait();
 
             if (maybe.HasNoValue)
                 return Maybe<T>.From(fallback);
@@ -31,7 +32,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <returns></returns>
         public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, Func<T> fallbackOperation)
         {
-            Maybe<T> maybe = await maybeTask;
+            Maybe<T> maybe = await maybeTask.DefaultAwait();
 
             if (maybe.HasNoValue)
                 return Maybe<T>.From(fallbackOperation());
@@ -48,7 +49,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <returns></returns>
         public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, Maybe<T> fallback)
         {
-            Maybe<T> maybe = await maybeTask;
+            Maybe<T> maybe = await maybeTask.DefaultAwait();
 
             if (maybe.HasNoValue)
                 return fallback;
@@ -65,7 +66,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <returns></returns>
         public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, Func<Maybe<T>> fallbackOperation)
         {
-            Maybe<T> maybe = await maybeTask;
+            Maybe<T> maybe = await maybeTask.DefaultAwait();
 
             if (maybe.HasNoValue)
                 return fallbackOperation();

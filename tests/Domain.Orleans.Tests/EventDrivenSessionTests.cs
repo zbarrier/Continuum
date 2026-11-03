@@ -2,7 +2,7 @@ namespace Continuum.Domain.Orleans.Tests;
 
 public class EventDrivenSessionTests
 {
-    private static EventDrivenSession<CounterState, CounterEvent> Create(CounterState? s = null) => new("counter-1", TestServices.Copier<CounterState>(), s ?? new CounterState());
+    private static EventDrivenSession<CounterState, CounterEvent> Create(CounterState? s = null) => new(TestServices.Copier<CounterState>(), s ?? new CounterState());
 
     [Fact]
     public void Apply_UpdatesStateAndTracksEvent()

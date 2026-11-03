@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FluentAssertions;
 using Xunit;
 
@@ -19,6 +19,18 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ValueObjectTests
             display.Should().Be(testEnum.Id);
         }
         
+        [Fact]
+        public void GivenNullId_WhenCallingFromId_ThenNoneIsReturned()
+        {
+            TestEnumValueObject.FromId(null!).HasNoValue.Should().BeTrue();
+        }
+
+        [Fact]
+        public void GivenUnknownId_WhenCallingFromId_ThenNoneIsReturned()
+        {
+            TestEnumValueObject.FromId("Missing").HasNoValue.Should().BeTrue();
+        }
+
         [Fact]
         public void GivenEnumValueObject_WhenCallingAll_ThenAllPartsAreReturned()
         {

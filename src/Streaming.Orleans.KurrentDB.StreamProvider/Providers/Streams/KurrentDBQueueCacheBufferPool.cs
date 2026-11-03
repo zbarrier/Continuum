@@ -74,12 +74,13 @@ internal sealed class KurrentDBQueueCacheBufferPool : IObjectPool<FixedSizeBuffe
 
     public FixedSizeBuffer Allocate()
     {
-        FixedSizeBuffer block;
+        FixedSizeBuffer? block;
         lock (_lock)
         {
-            if (!_free.TryPop(out block!))
+            if (!_free.TryPop(out block))
             {
-                block = _factory();
+                // Counted now so trimming sees the block as in use, but created outside the lock below so other
+                // pulling agents are not held up while a large block is allocated and zeroed.
                 _allocated++;
             }
             _inUse++;
@@ -88,6 +89,22 @@ internal sealed class KurrentDBQueueCacheBufferPool : IObjectPool<FixedSizeBuffe
                 _windowPeak = _inUse;
             }
             TryTrim();
+        }
+        if (block is null)
+        {
+            try
+            {
+                block = _factory();
+            }
+            catch
+            {
+                lock (_lock)
+                {
+                    _allocated--;
+                    _inUse--;
+                }
+                throw;
+            }
         }
         block.Pool = this;
         _monitor?.TrackObjectAllocated();

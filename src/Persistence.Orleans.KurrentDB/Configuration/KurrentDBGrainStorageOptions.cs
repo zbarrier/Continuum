@@ -40,20 +40,20 @@ public class KurrentDBGrainStorageOptions : IStorageProviderSerializerOptions
     public int InitStage { get; set; } = ServiceLifecycleStage.ApplicationServices;
 
     /// <summary>
-    ///     The name of the KurrentDB connection used to get the KurrentDBClient. 
+    ///     The name of the KurrentDB connection used to get the KurrentDBClient.
     ///     Must be set to a valid KurrentDB connection name.
     /// </summary>
     public string ConnectionName { get; set; } = default!;
 
     /// <summary>
-    ///     The credentials that have permissions to append/read events. 
-    ///     UseDefault should be true for Insecure localhost connections.
+    ///     The credentials that have permissions to append/read events.
+    ///     UseDefault should be true for insecure localhost connections.
     /// </summary>
     [Redact]
     public KurrentDBCredentialsOptions Credentials { get; set; } = new();
 
     /// <summary>
-    ///     The serializer used in serialize state to an KurrentDB stream.
+    ///     The serializer used to serialize state to a KurrentDB stream.
     ///     Gets set based on the connection name.
     /// </summary>
     public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;
@@ -91,13 +91,13 @@ public class KurrentDBGrainStorageOptions : IStorageProviderSerializerOptions
     public Func<Guid> EventIdGenerator { get; set; } = Guid.CreateVersion7;
 
     /// <summary>
-    ///    The type of EventData to store in the KurrentDB. 
-    ///    Defaults to state since this is about grain state persistence.
+    ///    The type of EventData to store in KurrentDB.
+    ///    Defaults to Snapshot since this is about grain state persistence.
     /// </summary>
     public TypeMapKinds TypeMapKinds { get; set; } = TypeMapKinds.Snapshot;
 
     /// <summary>
-    ///     Used to set the EventData.Type property to the provided name instead of the CLR 
+    ///     Used to set the EventData.Type property to the provided name instead of the CLR
     ///     type name. Allows us to rename state classes without breaking deserialization.
     ///     Gets set based on the connection name and type map kinds.
     /// </summary>

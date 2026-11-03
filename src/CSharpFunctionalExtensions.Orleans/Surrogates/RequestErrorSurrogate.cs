@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Net;
 
 using Orleans;
@@ -49,7 +50,7 @@ public sealed class RequestErrorSurrogateConverter : IConverter<RequestError, Re
         GrpcStatusCode = value.GrpcStatusCode,
         Code = value.Code,
         Format = value.Format,
-        Arguments = [.. value.Arguments],
+        Arguments = ImmutableCollectionsMarshal.AsArray(value.Arguments),
         Target = value.Target,
         RetryAfter = value.RetryAfter,
     };

@@ -33,6 +33,25 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
     }
 
     [Fact]
+    public async Task Should_Return_The_Transaction_Id_Of_Each_Append()
+    {
+        var grainId = NewGrainId();
+        var events = CreateEvents(5);
+        var firstTransactionId = Guid.NewGuid();
+        var secondTransactionId = Guid.NewGuid();
+
+        await Storage.AppendAsync(GrainTypeName, grainId, events[..3], 0, firstTransactionId);
+        await Storage.AppendAsync(GrainTypeName, grainId, events[3..], 3, secondTransactionId);
+
+        Assert.Equal(firstTransactionId, await Storage.GetTransactionIdAsync(GrainTypeName, grainId, 1));
+        Assert.Equal(firstTransactionId, await Storage.GetTransactionIdAsync(GrainTypeName, grainId, 3));
+        Assert.Equal(secondTransactionId, await Storage.GetTransactionIdAsync(GrainTypeName, grainId, 4));
+        Assert.Equal(secondTransactionId, await Storage.GetTransactionIdAsync(GrainTypeName, grainId, 5));
+        Assert.Null(await Storage.GetTransactionIdAsync(GrainTypeName, grainId, 6));
+        Assert.Null(await Storage.GetTransactionIdAsync(GrainTypeName, NewGrainId(), 1));
+    }
+
+    [Fact]
     public async Task Should_Report_Zero_Version_And_No_Events_For_Missing_Stream()
     {
         var grainId = NewGrainId();
@@ -47,8 +66,8 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
         var grainId = NewGrainId();
         var events = CreateEvents(5);
 
-        Assert.Equal(3, await Storage.AppendAsync(GrainTypeName, grainId, events[..3], 0));
-        Assert.Equal(5, await Storage.AppendAsync(GrainTypeName, grainId, events[3..], 3));
+        Assert.Equal(3, await Storage.AppendAsync(GrainTypeName, grainId, events[..3], 0, Guid.NewGuid()));
+        Assert.Equal(5, await Storage.AppendAsync(GrainTypeName, grainId, events[3..], 3, Guid.NewGuid()));
         Assert.Equal(5, await Storage.GetLastVersionAsync(GrainTypeName, grainId));
     }
 
@@ -56,9 +75,9 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
     public async Task Should_Return_Current_Version_When_Appending_Nothing()
     {
         var grainId = NewGrainId();
-        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(2), 0);
+        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(2), 0, Guid.NewGuid());
 
-        Assert.Equal(2, await Storage.AppendAsync(GrainTypeName, grainId, Array.Empty<SnackEvent>(), 2));
+        Assert.Equal(2, await Storage.AppendAsync(GrainTypeName, grainId, Array.Empty<SnackEvent>(), 2, Guid.NewGuid()));
     }
 
     [Fact]
@@ -66,7 +85,7 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
     {
         var grainId = NewGrainId();
         var events = CreateEvents(5);
-        await Storage.AppendAsync(GrainTypeName, grainId, events, 0);
+        await Storage.AppendAsync(GrainTypeName, grainId, events, 0, Guid.NewGuid());
 
         Assert.Equal(events, await Storage.ReadAsync<SnackEvent>(GrainTypeName, grainId, 0, 5));
 
@@ -83,7 +102,7 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
         var grainId = NewGrainId();
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Storage.ReadAsync<SnackEvent>(GrainTypeName, grainId, -1, 1));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(1), -1));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(1), -1, Guid.NewGuid()));
     }
 
     [Fact]
@@ -92,10 +111,10 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
         var grainId = NewGrainId();
 
         // The default BatchSize is 100 and the stream header takes one operation.
-        await Assert.ThrowsAnyAsync<Exception>(() => Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(100), 0));
+        await Assert.ThrowsAnyAsync<Exception>(() => Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(100), 0, Guid.NewGuid()));
         Assert.Equal(0, await Storage.GetLastVersionAsync(GrainTypeName, grainId));
 
-        Assert.Equal(99, await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(99), 0));
+        Assert.Equal(99, await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(99), 0, Guid.NewGuid()));
     }
 
     [Theory]
@@ -105,9 +124,9 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
     public async Task Should_Throw_InconsistentState_On_Version_Conflict(int expectedVersion)
     {
         var grainId = NewGrainId();
-        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(2), 0);
+        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(2), 0, Guid.NewGuid());
 
-        await Assert.ThrowsAsync<InconsistentStateException>(() => Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(1), expectedVersion));
+        await Assert.ThrowsAsync<InconsistentStateException>(() => Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(1), expectedVersion, Guid.NewGuid()));
         Assert.Equal(2, await Storage.GetLastVersionAsync(GrainTypeName, grainId));
     }
 
@@ -115,7 +134,7 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
     public async Task Should_Store_Header_And_Events_In_The_Stream_Partition()
     {
         var grainId = NewGrainId();
-        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(3), 0);
+        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(3), 0, Guid.NewGuid());
 
         var client = SiloServices.GetRequiredKeyedService<CosmosClient>(TestSiloConfigurations.ConnectionName);
         var container = client.GetContainer(ClusterFixture.DatabaseName, ClusterFixture.ContainerName);
@@ -143,10 +162,10 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
     public async Task Should_Reject_Null_Entries_On_Append()
     {
         var grainId = NewGrainId();
-        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(1), 0);
+        await Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(1), 0, Guid.NewGuid());
 
         SnackEvent[] entries = [CreateEvents(1)[0], null!];
-        await Assert.ThrowsAsync<CosmosDBLogConsistentStorageException>(() => Storage.AppendAsync(GrainTypeName, grainId, entries, 1));
+        await Assert.ThrowsAsync<CosmosDBLogConsistentStorageException>(() => Storage.AppendAsync(GrainTypeName, grainId, entries, 1, Guid.NewGuid()));
         Assert.Equal(1, await Storage.GetLastVersionAsync(GrainTypeName, grainId));
     }
 

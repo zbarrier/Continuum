@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -13,7 +14,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<K>> Bind<T, K>(this ValueTask<Result<T>> resultTask, Func<T, Result<K>> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.Bind(valueTask);
         }
 
@@ -22,7 +23,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<K>> Bind<K>(this ValueTask<Result> resultTask, Func<Result<K>> valueTask)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.Bind(valueTask);
         }
 
@@ -31,7 +32,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> Bind<T>(this ValueTask<Result<T>> resultTask, Func<T, Result> valueTask)
         {
-            Result<T> result = await resultTask;
+            Result<T> result = await resultTask.DefaultAwait();
             return result.Bind(valueTask);
         }
 
@@ -40,7 +41,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> Bind(this ValueTask<Result> resultTask, Func<Result> valueTask)
         {
-            Result result = await resultTask;
+            Result result = await resultTask.DefaultAwait();
             return result.Bind(valueTask);
         }
     }

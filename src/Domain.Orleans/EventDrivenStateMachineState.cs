@@ -15,7 +15,7 @@ public abstract class EventDrivenStateMachineState<TState, TEventBase, TStatus, 
     where TStatus : notnull
     where TCommand : notnull
 {
-    [NonSerialized] private readonly Dictionary<Type, Action<IStateMachineEvent<TCommand>>> _handlers = new();
+    [NonSerialized] private readonly Dictionary<Type, Action<TEventBase>> _handlers = new();
 
     [NonSerialized] private readonly StateMachine<TStatus, TCommand> _stateMachine;
 
@@ -43,7 +43,7 @@ public abstract class EventDrivenStateMachineState<TState, TEventBase, TStatus, 
     /// <param name="handler">The handler to invoke.</param>
     /// <exception cref="ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">A handler is already registered for <typeparamref name="TEvent"/>.</exception>
-    protected void On<TEvent>(Action<TEvent> handler) where TEvent : IStateMachineEvent<TCommand>
+    protected void On<TEvent>(Action<TEvent> handler) where TEvent : TEventBase
     {
         if (handler is null)
         {
@@ -57,7 +57,7 @@ public abstract class EventDrivenStateMachineState<TState, TEventBase, TStatus, 
 
     /// <inheritdoc/>
     /// <remarks>Only the handler registered for the exact runtime type of the event is invoked; handlers for base types are not matched. Events without a handler are ignored.</remarks>
-    public virtual void When(IStateMachineEvent<TCommand> evt)
+    public virtual void When(TEventBase evt)
     {
         var eventType = evt.GetType();
         if (_handlers.TryGetValue(eventType, out var handler))

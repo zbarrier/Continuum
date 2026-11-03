@@ -11,14 +11,14 @@ namespace Continuum.Domain.Orleans.Tests;
 
 public interface ICounterGrain : IEventDrivenGrain
 {
-    Task<Result<ISaveChangesResponse>> Increment(int by, bool failBeforeSave);
+    Task<Result<ISessionSaveResponse>> Increment(int by, bool failBeforeSave);
     Task<int> GetCount();
     Task<int> GetVersion();
 }
 
 public interface IDoorGrain : IEventDrivenStateMachineGrain
 {
-    Task<Result<ISaveChangesResponse>> Open(bool failBeforeSave);
+    Task<Result<ISessionSaveResponse>> Open(bool failBeforeSave);
     Task<DoorStatus> GetStatus();
     Task<int> GetOpenCount();
 }
@@ -28,7 +28,7 @@ public interface IDoorGrain : IEventDrivenStateMachineGrain
 public sealed class CounterGrain(IServiceProvider serviceProvider)
     : EventDrivenGrain<CounterState, CounterEvent>(serviceProvider, GrainTestSiloConfigurator.TypeMapperKey), ICounterGrain
 {
-    public async Task<Result<ISaveChangesResponse>> Increment(int by, bool failBeforeSave)
+    public async Task<Result<ISessionSaveResponse>> Increment(int by, bool failBeforeSave)
     {
         using var session = CreateSession();
         session.Apply(new CounterIncremented(by));
@@ -48,7 +48,7 @@ public sealed class CounterGrain(IServiceProvider serviceProvider)
 public sealed class DoorGrain(IServiceProvider serviceProvider)
     : EventDrivenStateMachineGrain<DoorState, DoorEvent, DoorStatus, DoorCommand>(serviceProvider, GrainTestSiloConfigurator.TypeMapperKey), IDoorGrain
 {
-    public async Task<Result<ISaveChangesResponse>> Open(bool failBeforeSave)
+    public async Task<Result<ISessionSaveResponse>> Open(bool failBeforeSave)
     {
         using var session = CreateSession();
         session.Apply(new DoorOpened());

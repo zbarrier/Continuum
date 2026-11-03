@@ -10,9 +10,11 @@ public partial struct Result
     public static class Configuration
     {
         /// <summary>
-        ///     The <c>continueOnCapturedContext</c> value used when awaiting inside async extensions. Defaults to <see langword="false"/>.
+        ///     The <c>continueOnCapturedContext</c> value used when awaiting inside async extensions. Defaults to <see langword="true"/> so that
+        ///     continuations and user callbacks stay on the caller's context, such as an Orleans grain's task scheduler. Set to <see langword="false"/>
+        ///     only in processes that never call these extensions from a grain or other context-bound code.
         /// </summary>
-        public static bool DefaultConfigureAwait = false;
+        public static bool DefaultConfigureAwait = true;
 
         /// <summary>
         ///     Maps an exception caught by <c>Try</c> to an <see cref="Error"/> when no handler is supplied. Defaults to an unknown error carrying the exception message.

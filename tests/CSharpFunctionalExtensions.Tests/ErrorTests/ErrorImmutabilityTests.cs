@@ -52,11 +52,11 @@ public class ErrorImmutabilityTests
     }
 
     [Fact]
-    public void CompareTo_Null_ReturnsPositive()
+    public void CompareTo_Null_ReturnsNegative_SoNullSortsLast()
     {
         Error error = new RequestError(HttpStatusCode.BadRequest, Grpc.Core.StatusCode.InvalidArgument, "code");
 
-        Assert.True(error.CompareTo(null) > 0);
+        Assert.True(error.CompareTo(null) < 0);
     }
 
     [Fact]

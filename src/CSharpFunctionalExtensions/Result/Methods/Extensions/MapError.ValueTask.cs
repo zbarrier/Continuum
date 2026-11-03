@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -10,8 +11,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result> MapError(this ValueTask<Result> resultTask, Func<Error, ValueTask<Error>> errorFactory)
         {
-            var result = await resultTask;
-            return await result.MapError(errorFactory);
+            var result = await resultTask.DefaultAwait();
+            return await result.MapError(errorFactory).DefaultAwait();
         }
 
         /// <summary>
@@ -23,8 +24,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             TContext context
         )
         {
-            var result = await resultTask;
-            return await result.MapError(errorFactory, context);
+            var result = await resultTask.DefaultAwait();
+            return await result.MapError(errorFactory, context).DefaultAwait();
         }
 
         /// <summary>
@@ -32,8 +33,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// </summary>
         public static async ValueTask<Result<T>> MapError<T>(this ValueTask<Result<T>> resultTask, Func<Error, ValueTask<Error>> errorFactory)
         {
-            var result = await resultTask;
-            return await result.MapError(errorFactory);
+            var result = await resultTask.DefaultAwait();
+            return await result.MapError(errorFactory).DefaultAwait();
         }
 
         /// <summary>
@@ -45,8 +46,8 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             TContext context
         )
         {
-            var result = await resultTask;
-            return await result.MapError(errorFactory, context);
+            var result = await resultTask.DefaultAwait();
+            return await result.MapError(errorFactory, context).DefaultAwait();
         }
     }
 }

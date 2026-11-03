@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -11,29 +12,29 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.BindIf(Result, bool, Func{Result})"/>
         public static async ValueTask<Result> BindIf(this ValueTask<Result> resultTask, bool condition, Func<ValueTask<Result>> valueTask)
         {
-            var result = await resultTask;
-            return await result.BindIf(condition, valueTask);
+            var result = await resultTask.DefaultAwait();
+            return await result.BindIf(condition, valueTask).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.BindIf{T}(Result{T}, bool, Func{T, Result{T}})"/>
         public static async ValueTask<Result<T>> BindIf<T>(this ValueTask<Result<T>> resultTask, bool condition, Func<T, ValueTask<Result<T>>> valueTask)
         {
-            var result = await resultTask;
-            return await result.BindIf(condition, valueTask);
+            var result = await resultTask.DefaultAwait();
+            return await result.BindIf(condition, valueTask).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.BindIf(Result, Func{bool}, Func{Result})"/>
         public static async ValueTask<Result> BindIf(this ValueTask<Result> resultTask, Func<bool> predicate, Func<ValueTask<Result>> valueTask)
         {
-            var result = await resultTask;
-            return await result.BindIf(predicate, valueTask);
+            var result = await resultTask.DefaultAwait();
+            return await result.BindIf(predicate, valueTask).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.ResultExtensions.BindIf{T}(Result{T}, Func{T, bool}, Func{T, Result{T}})"/>
         public static async ValueTask<Result<T>> BindIf<T>(this ValueTask<Result<T>> resultTask, Func<T, bool> predicate, Func<T, ValueTask<Result<T>>> valueTask)
         {
-            var result = await resultTask;
-            return await result.BindIf(predicate, valueTask);
+            var result = await resultTask.DefaultAwait();
+            return await result.BindIf(predicate, valueTask).DefaultAwait();
         }
     }
 }

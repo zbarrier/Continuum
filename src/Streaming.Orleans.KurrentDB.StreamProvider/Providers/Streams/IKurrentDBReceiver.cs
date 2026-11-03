@@ -1,10 +1,11 @@
 using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
 /// <summary>
-///     Abstraction on KurrentDBReceiver class, used to configure KurrentDBReceiver class in KurrentDBQueueAdapterReceiver,
-///     also used to configure KurrentDBGeneratorReceiver in KurrentDBQueueAdapterReceiver for testing purpose
+///     Abstraction on KurrentDBReceiver class, used to configure KurrentDBReceiver class in KurrentDBCatchUpQueueAdapterReceiver,
+///     also used to configure KurrentDBGeneratorReceiver in KurrentDBCatchUpQueueAdapterReceiver for testing purpose
 /// </summary>
 public interface IKurrentDBReceiver
 {
@@ -31,7 +32,7 @@ public interface IKurrentDBReceiver
     ///     <c>$all</c> strategy this is the global commit position, which cannot be recovered from the event record
     ///     once link resolution is enabled, so it must be captured here rather than further down the pipeline.
     /// </remarks>
-    List<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount);
+    IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount);
 
     /// <summary>
     ///     Notifies the receiver that every event up to <paramref name="commitPosition" /> has been delivered to all

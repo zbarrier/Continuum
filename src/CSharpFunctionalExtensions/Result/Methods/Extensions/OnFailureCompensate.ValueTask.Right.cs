@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -9,7 +10,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<T>> OnFailureCompensate<T>(this Result<T> result, Func<ValueTask<Result<T>>> valueTask)
         {
             if (result.IsFailure)
-                return await valueTask();
+                return await valueTask().DefaultAwait();
 
             return result;
         }
@@ -18,7 +19,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result> OnFailureCompensate(this Result result, Func<ValueTask<Result>> valueTask)
         {
             if (result.IsFailure)
-                return await valueTask();
+                return await valueTask().DefaultAwait();
 
             return result;
         }
@@ -27,7 +28,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<T>> OnFailureCompensate<T>(this Result<T> result, Func<Error, ValueTask<Result<T>>> valueTask)
         {
             if (result.IsFailure)
-                return await valueTask(result.Error);
+                return await valueTask(result.Error).DefaultAwait();
 
             return result;
         }
@@ -36,7 +37,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result> OnFailureCompensate(this Result result, Func<Error, ValueTask<Result>> valueTask)
         {
             if (result.IsFailure)
-                return await valueTask(result.Error);
+                return await valueTask(result.Error).DefaultAwait();
 
             return result;
         }

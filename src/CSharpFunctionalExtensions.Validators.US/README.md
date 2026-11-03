@@ -16,7 +16,7 @@ dotnet add package Continuum.CSharpFunctionalExtensions.Validators.US
 | `IsUSPhoneNumberExtension` | `us_phone_number_extension` |
 | `IsUSZipCode` | `us_zip_code` |
 | `IsUSPostalStateAbbreviation` | `us_state_abbreviation` |
-| `IsUSTaxId` | `us_tax_id`, `us_ein_format`, `us_ssn_format`, `us_itin_format` |
+| `IsUSTaxId` | `us_tax_id`, `us_tax_id_format` |
 | `IsUSEinTaxId` | `us_ein_format` |
 | `IsUSSsnTaxId` | `us_ssn`, `us_ssn_format` |
 | `IsUSItinTaxId` | `us_itin`, `us_itin_format` |

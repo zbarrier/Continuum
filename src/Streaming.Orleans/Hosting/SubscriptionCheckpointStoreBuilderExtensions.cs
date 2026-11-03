@@ -22,7 +22,7 @@ public static class SubscriptionCheckpointStoreBuilderExtensions
     /// <param name="connectionName">The service key for the checkpoint store.</param>
     /// <returns>The service collection.</returns>
     public static IServiceCollection AddSubscriptionCheckpointStore<TPosition>(this IServiceCollection services, string connectionName)
-        where TPosition : IComparable<TPosition>
+        where TPosition : struct, IComparable<TPosition>
     {
         services.AddKeyedSingleton<ICheckpointStore<TPosition>>(connectionName,
             (sp, _) => new SubscriptionCheckpointStore<TPosition>(sp.GetRequiredService<IGrainFactory>()));
@@ -34,7 +34,7 @@ public static class SubscriptionCheckpointStoreBuilderExtensions
     /// <param name="connectionName">The service key for the checkpoint store.</param>
     /// <returns>The host application builder.</returns>
     public static IHostApplicationBuilder AddSubscriptionCheckpointStore<TPosition>(this IHostApplicationBuilder builder, string connectionName)
-        where TPosition : IComparable<TPosition>
+        where TPosition : struct, IComparable<TPosition>
     {
         _ = builder.Services.AddSubscriptionCheckpointStore<TPosition>(connectionName);
         return builder;

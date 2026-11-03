@@ -42,6 +42,7 @@ public class ZipCodeTests
     [InlineData("111")]
     [InlineData("5555")]
     [InlineData("123451234")]
+    [InlineData("１２３４５")]
     public void IsUSPostalZipCode_InvalidValue_Failure(string value)
     {
         //Arrange
@@ -58,6 +59,7 @@ public class ZipCodeTests
     [InlineData("111")]
     [InlineData("5555")]
     [InlineData("123451234")]
+    [InlineData("１２３４５")]
     public void IsUSPostalZipCodeMultiPart_InvalidValue_Failure(string value)
     {
         //Arrange

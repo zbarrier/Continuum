@@ -15,6 +15,7 @@ public static class LogConsistencyProviderFactory
     public static LogConsistencyProvider Create(IServiceProvider serviceProvider, string name)
     {
         var logConsistentStorage = serviceProvider.GetRequiredKeyedService<ILogConsistentStorage>(name);
-        return new LogConsistencyProvider(logConsistentStorage, serviceProvider.GetRequiredService<DeepCopier>());
+        return new LogConsistencyProvider(logConsistentStorage, serviceProvider.GetRequiredService<DeepCopier>(),
+            serviceProvider.GetRequiredService<ITransactionIdGenerator>());
     }
 }

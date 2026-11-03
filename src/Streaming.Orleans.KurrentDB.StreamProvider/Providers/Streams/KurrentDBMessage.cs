@@ -69,7 +69,7 @@ public class KurrentDBMessage
         EventType = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         Data = SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset);
         // Tracing and transaction values travel inside the metadata document rather than as their own fields.
-        Metadata = KurrentDBEventMetadataCodec.Read(SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset).ToArray());
+        Metadata = KurrentDBEventMetadataCodec.Read(SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset).AsSpan());
         Timestamp = new DateTime(unchecked((long)ReadUInt64(cachedMessage.Segment, ref readOffset)), DateTimeKind.Utc);
     }
 

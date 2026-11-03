@@ -151,7 +151,8 @@ public class ChannelGrainTests
 
         // Act
         var streamId = await channelGrain.Join(nickname);
-        await subscriberGrain.Subscribe(streamId);
+        // The provider delivers on the provider-qualified namespace, not the one the producer wrote to.
+        await subscriberGrain.Subscribe(StreamId.Create($"{Constants.StreamProviderName}:{streamId.GetNamespace()}", streamId.GetKeyAsString()));
         for (var i = 0; i < 5; i++)
         {
             await channelGrain.SendMessage(new ChatMessage(nickname, $"{messageText} {i}", DateTimeOffset.UtcNow));

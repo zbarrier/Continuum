@@ -1,4 +1,4 @@
-﻿#region License and Terms
+#region License and Terms
 // MoreLINQ - Extensions to LINQ to Objects
 // Copyright (c) 2009 Atif Aziz. All rights reserved.
 //
@@ -16,6 +16,8 @@
 #endregion
 
 // Source: https://github.com/morelinq/MoreLINQ/blob/master/MoreLinq/Batch.cs
+// Intentionally kept even though nothing uses it now: the logic that batched appends was removed, but it may be
+// needed again.
 
 using System;
 using System.Collections.Generic;
@@ -37,7 +39,7 @@ static partial class MoreEnumerable
     /// (buckets are streamed but their content buffered).</para>
     /// <para>
     /// When more than one bucket is streamed, all buckets except the last
-    /// is guaranteed to have <paramref name="size"/> elements. The last
+    /// are guaranteed to have <paramref name="size"/> elements. The last
     /// bucket may be smaller depending on the remaining elements in the
     /// <paramref name="source"/> sequence.</para>
     /// <para>
@@ -48,7 +50,6 @@ static partial class MoreEnumerable
     /// (<see cref="OutOfMemoryException"/>).
     /// </para>
     /// </remarks>
-
     public static IEnumerable<IEnumerable<TSource>> Batch<TSource>(this IEnumerable<TSource> source, uint size)
     {
         return Batch(source, size, x => x);
@@ -63,27 +64,28 @@ static partial class MoreEnumerable
     /// <param name="size">Size of buckets.</param>
     /// <param name="resultSelector">The projection to apply to each bucket.</param>
     /// <returns>A sequence of projections on equally sized buckets containing elements of the source collection.</returns>
+    /// <remarks>
     /// <para>
     /// This operator uses deferred execution and streams its results
     /// (buckets are streamed but their content buffered).</para>
     /// <para>
-    /// <para>
     /// When more than one bucket is streamed, all buckets except the last
-    /// is guaranteed to have <paramref name="size"/> elements. The last
+    /// are guaranteed to have <paramref name="size"/> elements. The last
     /// bucket may be smaller depending on the remaining elements in the
     /// <paramref name="source"/> sequence.</para>
+    /// <para>
     /// Each bucket is pre-allocated to <paramref name="size"/> elements.
     /// If <paramref name="size"/> is set to a very large value, e.g.
     /// <see cref="int.MaxValue"/> to effectively disable batching by just
     /// hoping for a single bucket, then it can lead to memory exhaustion
     /// (<see cref="OutOfMemoryException"/>).
     /// </para>
-
+    /// </remarks>
     public static IEnumerable<TResult> Batch<TSource, TResult>(this IEnumerable<TSource> source, uint size,
         Func<IEnumerable<TSource>, TResult> resultSelector)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
-        if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
+        if (size == 0) throw new ArgumentOutOfRangeException(nameof(size));
         if (resultSelector == null) throw new ArgumentNullException(nameof(resultSelector));
 
         switch (source)

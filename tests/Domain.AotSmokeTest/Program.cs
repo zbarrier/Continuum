@@ -36,14 +36,14 @@ door.When(new DoorOpened());
 door.When(new DoorClosed());
 Check("State machine transitions", door.StateMachine.State == DoorStatus.Closed && door.OpenCount == 1);
 
-// SaveChangesResponseConverter with source-generated JSON metadata
+// SessionSaveResponseConverter with source-generated JSON metadata
 var mapper = new SmokeTypeMapper();
 var options = new JsonSerializerOptions { TypeInfoResolver = SmokeJsonContext.Default };
-options.Converters.Add(new SaveChangesResponseConverter(mapper));
-var responseInfo = (JsonTypeInfo<SaveChangesResponse>)options.GetTypeInfo(typeof(SaveChangesResponse));
-var json = JsonSerializer.Serialize(new SaveChangesResponse([new Change("smoke.counter-incremented", new CounterIncremented(7))], 4), responseInfo);
+options.Converters.Add(new SessionSaveResponseConverter(mapper));
+var responseInfo = (JsonTypeInfo<SessionSaveResponse>)options.GetTypeInfo(typeof(SessionSaveResponse));
+var json = JsonSerializer.Serialize(new SessionSaveResponse([new Change("smoke.counter-incremented", new CounterIncremented(7))], 4), responseInfo);
 var back = JsonSerializer.Deserialize(json, responseInfo);
-Check("SaveChangesResponse round-trip", back is { Version: 4 } && back.Changes.Single().Event is CounterIncremented { By: 7 });
+Check("SessionSaveResponse round-trip", back is { Version: 4 } && back.Changes.Single().Event is CounterIncremented { By: 7 });
 
 // Result pipeline extensions
 var scope = new SmokeScope();
@@ -109,14 +109,14 @@ internal sealed class SmokeScope : IEventDrivenSessionScope<CounterState, Counte
 
     public IEventDrivenSession<CounterState, CounterEvent> CreateSession() => new SmokeSession();
 
-    public Task<Result<ISaveChangesResponse>> SaveChanges(IEventDrivenSession<CounterState, CounterEvent> session)
+    public Task<Result<ISessionSaveResponse>> SaveChanges(IEventDrivenSession<CounterState, CounterEvent> session)
     {
-        ISaveChangesResponse response = new SaveChangesResponse(session.UncommittedEvents.Select(e => (IChange)new Change(e.GetType().Name, e)).ToList(), session.UncommittedEvents.Count);
+        ISessionSaveResponse response = new SessionSaveResponse(session.UncommittedEvents.Select(e => (IChange)new Change(e.GetType().Name, e)).ToList(), session.UncommittedEvents.Count);
         return Task.FromResult(Result.Success(response));
     }
 }
 
-[JsonSerializable(typeof(SaveChangesResponse))]
+[JsonSerializable(typeof(SessionSaveResponse))]
 [JsonSerializable(typeof(CounterIncremented))]
 internal sealed partial class SmokeJsonContext : JsonSerializerContext;
 

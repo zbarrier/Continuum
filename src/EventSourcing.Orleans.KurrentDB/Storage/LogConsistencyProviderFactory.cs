@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 using Orleans.Serialization;
 
@@ -10,11 +10,12 @@ namespace Continuum.EventSourcing.Orleans.KurrentDB;
 public static class LogConsistencyProviderFactory
 {
     /// <summary>
-    ///     Creates a KurrentDB log consistent storage instance.
+    ///     Creates a log consistency provider backed by the KurrentDB log consistent storage registered under the name.
     /// </summary>
     public static LogConsistencyProvider Create(IServiceProvider serviceProvider, string name)
     {
         var logConsistentStorage = serviceProvider.GetRequiredKeyedService<ILogConsistentStorage>(name);
-        return new LogConsistencyProvider(logConsistentStorage, serviceProvider.GetRequiredService<DeepCopier>());
+        return new LogConsistencyProvider(logConsistentStorage, serviceProvider.GetRequiredService<DeepCopier>(),
+            serviceProvider.GetRequiredService<ITransactionIdGenerator>());
     }
 }

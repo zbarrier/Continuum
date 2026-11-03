@@ -5,5 +5,5 @@ namespace Continuum.EventSourcing.Orleans.KurrentDB.Tests.Responses;
 
 [Immutable]
 [GenerateSerializer]
-public sealed class SnackRemoveResponse(IEnumerable<IChange> changes, int version)
-    : EventSourcedCommandResponseBase(changes, version);
+public sealed class SnackRemoveResponse(IReadOnlyList<IChange> changes, int version)
+    : CommandResponseWithChangesBase(changes, version);

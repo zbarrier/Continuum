@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 using Continuum.Events;
 using Continuum.Orleans.KurrentDB;
 using Continuum.Serialization.Orleans;
@@ -93,40 +91,17 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
 
     private Task Init(CancellationToken cancellationToken)
     {
-        var startTimestamp = Stopwatch.GetTimestamp();
-        try
-        {
-            // The client is resolved from the container in the constructor, so there is nothing to connect or
-            // create here. This is where startup work such as a connectivity check would go.
-            _initialized = true;
-            _logger.StorageInitialized(_name, _serviceId, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
-        }
-        catch (Exception ex)
-        {
-            _logger.StorageInitializationFailed(ex, _name, _serviceId, Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds);
-            throw new KurrentDBStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
-        }
+        // The client is resolved from the container in the constructor, and KurrentDB has no container or schema to
+        // validate, so there is nothing to connect or create here. The client reconnects on its own and grain
+        // activation retries reads, so a startup connectivity check would only make silo startup fragile.
+        _initialized = true;
+        _logger.StorageInitialized(_name, _serviceId);
         return Task.CompletedTask;
     }
 
-    private async Task Close(CancellationToken cancellationToken)
-    {
-        if (_initialized == false)
-        {
-            return;
-        }
-        try
-        {
-            // We don't need to dispose the client because it's a singleton, could be used by
-            // other providers and will be disposed by the container.
-            //await _client.DisposeAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.StorageCloseFailed(ex, _name, _serviceId);
-            throw new KurrentDBStorageException(FormattableString.Invariant($"{ex.GetType()}: {ex.Message}"), ex);
-        }
-    }
+    // The KurrentDBClient is a keyed singleton that other providers may share, so the DI container disposes it, not
+    // this provider. There is nothing else to release.
+    private static Task Close(CancellationToken cancellationToken) => Task.CompletedTask;
 
     #endregion
 
@@ -195,7 +170,7 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
     }
 
     /// <inheritdoc />
-    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion)
+    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId)
     {
         EnsureInitialized();
         ArgumentNullException.ThrowIfNull(entries);
@@ -220,8 +195,8 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
             // Every entry of this append is committed together, but KurrentDB reports the same position for all of
             // them, so a subscriber cannot recover the grouping later. Recording it here is what lets a projection
             // apply the whole append at once instead of briefly serving a half applied state. A grain writes to its
-            // own stream, so all of these entries belong to one stream and the two counts are the same.
-            var transactionId = Guid.CreateVersion7();
+            // own stream, so all of these entries belong to one stream and the two counts are the same. The writer
+            // supplies the transaction ID so it can check whether an append that failed was actually committed.
             var serializedEntries = new EventData[entries.Count];
             for (var index = 0; index < serializedEntries.Length; index++)
             {
@@ -246,6 +221,35 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
             operation.Fail(ex);
             _logger.WriteLogEntriesFailed(ex, grainTypeName, grainId, streamName);
             throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to write log entries for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<Guid?> GetTransactionIdAsync(string grainTypeName, GrainId grainId, int version)
+    {
+        EnsureInitialized();
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(version);
+        var streamName = GetStreamName(grainId);
+        using var operation = _instrumentation.Start(LogConsistentStorageInstrumentation.GetTransactionIdOperation, grainTypeName, grainId, streamName);
+        try
+        {
+            // The entry that produces a version is at the zero based revision one less.
+            var readResult = _client.ReadStreamAsync(Direction.Forwards, streamName, StreamPosition.FromInt64(version - 1), 1, false, null, _userCredentials);
+            if (await readResult.ReadState == ReadState.StreamNotFound)
+            {
+                return null;
+            }
+            await foreach (var resolvedEvent in readResult)
+            {
+                return KurrentDBEventMetadataCodec.Read(resolvedEvent.Event.Metadata.Span).TransactionId;
+            }
+            return null;
+        }
+        catch (Exception ex)
+        {
+            operation.Fail(ex);
+            _logger.ReadTransactionIdFailed(ex, grainTypeName, grainId, streamName, version);
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to read the transaction ID of version {version} for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
         }
     }
 
@@ -296,14 +300,8 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
 
 internal static partial class KurrentDBLogConsistentStorageLog
 {
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Init: Name={Name} ServiceId={ServiceId}, initialized in {ElapsedMilliseconds} ms")]
-    public static partial void StorageInitialized(this ILogger logger, string name, string serviceId, double elapsedMilliseconds);
-
-    [LoggerMessage(Level = LogLevel.Error, Message = "Init: Name={Name} ServiceId={ServiceId}, errored in {ElapsedMilliseconds} ms")]
-    public static partial void StorageInitializationFailed(this ILogger logger, Exception exception, string name, string serviceId, double elapsedMilliseconds);
-
-    [LoggerMessage(Level = LogLevel.Error, Message = "Close: Name={Name} ServiceId={ServiceId}")]
-    public static partial void StorageCloseFailed(this ILogger logger, Exception exception, string name, string serviceId);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Init: Name={Name} ServiceId={ServiceId}, initialized")]
+    public static partial void StorageInitialized(this ILogger logger, string name, string serviceId);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
     public static partial void ReadLogEntriesFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName);
@@ -313,4 +311,7 @@ internal static partial class KurrentDBLogConsistentStorageLog
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to write log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
     public static partial void WriteLogEntriesFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read the transaction ID of version {Version} for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
+    public static partial void ReadTransactionIdFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName, int version);
 }

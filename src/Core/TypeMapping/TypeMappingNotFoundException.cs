@@ -13,7 +13,7 @@ public sealed class TypeMappingNotFoundException : Exception
 
     /// <summary>Initializes a new instance for an unmapped CLR type.</summary>
     /// <param name="type">The unmapped type.</param>
-    public TypeMappingNotFoundException(Type type) : base(string.Format(MessageFormat, type.Name)) { }
+    public TypeMappingNotFoundException(Type type) : base(string.Format(MessageFormat, type.FullName ?? type.Name)) { }
 
     /// <summary>Initializes a new instance for an unmapped type name.</summary>
     /// <param name="typeName">The unmapped type name.</param>

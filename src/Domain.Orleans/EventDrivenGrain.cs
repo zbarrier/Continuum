@@ -1,4 +1,5 @@
 using Continuum.CSharpFunctionalExtensions;
+using Continuum.Errors;
 using Continuum.TypeMapping;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -40,11 +41,8 @@ public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TSta
     where TState : EventDrivenState<TState, TEventBase>, new()
     where TEventBase : class
 {
-    /// <summary>The message used when events cannot be saved to storage.</summary>
-    protected const string StorageErrorMessage = "Storage temporarily unavailable. Unable to save changes.";
-
-    /// <summary>The error returned when events cannot be saved to storage.</summary>
-    protected static readonly Error StorageFailureError = RequestErrors.NewUnavailable(StorageErrorMessage);
+    /// <summary>The error returned when events cannot be saved because of an optimistic concurrency conflict.</summary>
+    protected static readonly Error ConcurrencyConflictError = ContinuumErrors.NewOptimisticConcurrencyConflict();
 
     /// <summary>The copier used to isolate session state from grain state.</summary>
     protected readonly DeepCopier<TState> _deepCopier;
@@ -95,21 +93,21 @@ public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TSta
 
     /// <inheritdoc/>
     public IEventDrivenSession<TState, TEventBase> CreateSession()
-        => new EventDrivenSession<TState, TEventBase>(this.GetPrimaryKeyString(), _deepCopier, State);
+        => new EventDrivenSession<TState, TEventBase>(_deepCopier, State);
 
     /// <inheritdoc/>
-    public async Task<Result<ISaveChangesResponse>> SaveChanges(IEventDrivenSession<TState, TEventBase> session)
+    public async Task<Result<ISessionSaveResponse>> SaveChanges(IEventDrivenSession<TState, TEventBase> session)
     {
         if (session.UncommittedEvents.Count == 0)
         {
-            ISaveChangesResponse noChangesResponse = new SaveChangesResponse(SaveChangesResponse.NoChanges, Version);
+            ISessionSaveResponse noChangesResponse = new SessionSaveResponse(SessionSaveResponse.NoChanges, Version);
             return Result.Success(noChangesResponse);
         }
 
         var success = await RaiseConditionalEvents(session.UncommittedEvents);
         if (!success)
         {
-            return Result.Failure<ISaveChangesResponse>(StorageFailureError);
+            return Result.Failure<ISessionSaveResponse>(ConcurrencyConflictError);
         }
 
         var changes = new List<IChange>(session.UncommittedEvents.Count);
@@ -120,7 +118,7 @@ public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TSta
             changes.Add(change);
         }
 
-        ISaveChangesResponse changesResponse = new SaveChangesResponse(changes, Version);
+        ISessionSaveResponse changesResponse = new SessionSaveResponse(changes, Version);
         return Result.Success(changesResponse);
     }
 

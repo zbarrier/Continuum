@@ -46,7 +46,7 @@ public static class SubscriptionCheckpointGrain
 /// </remarks>
 [Reentrant]
 public sealed class SubscriptionCheckpointGrain<TPosition> : Grain, ISubscriptionCheckpointGrain<TPosition>, IDisposable
-    where TPosition : IComparable<TPosition>
+    where TPosition : struct, IComparable<TPosition>
 {
     private readonly IPersistentState<SubscriptionCheckpointState<TPosition>> _storage;
     private readonly ILogger<SubscriptionCheckpointGrain<TPosition>> _logger;
@@ -89,12 +89,12 @@ public sealed class SubscriptionCheckpointGrain<TPosition> : Grain, ISubscriptio
     }
 
     /// <inheritdoc/>
-    public Task<TPosition> GetCheckpointAsync(CancellationToken cancellationToken = default) => Task.FromResult(State.Position);
+    public Task<TPosition?> GetCheckpointAsync(CancellationToken cancellationToken = default) => Task.FromResult(State.Position);
 
     /// <inheritdoc/>
     public Task StoreCheckpointAsync(TPosition position, CancellationToken cancellationToken = default)
     {
-        if (State.Position is null || position.CompareTo(State.Position) > 0)
+        if (State.Position is not { } current || position.CompareTo(current) > 0)
         {
             State.Position = position;
             _isDirty = true;
@@ -125,7 +125,7 @@ public sealed class SubscriptionCheckpointGrain<TPosition> : Grain, ISubscriptio
             await _storage.WriteStateAsync(cancellationToken);
 
             // A checkpoint stored during the write stays dirty for the next flush.
-            _isDirty = State.Position.CompareTo(written) != 0;
+            _isDirty = !Nullable.Equals(State.Position, written);
         }
         finally
         {
@@ -140,12 +140,13 @@ public sealed class SubscriptionCheckpointGrain<TPosition> : Grain, ISubscriptio
 /// <typeparam name="TPosition">The provider-specific stream position type.</typeparam>
 [Alias("Continuum.Streaming.SubscriptionCheckpointState.V1`1"), GenerateSerializer]
 public sealed class SubscriptionCheckpointState<TPosition>
+    where TPosition : struct
 {
     /// <summary>
     /// The last processed position.
     /// </summary>
     [Id(0)]
-    public TPosition Position { get; set; } = default!;
+    public TPosition? Position { get; set; }
 }
 
 internal static partial class SubscriptionCheckpointGrainLog

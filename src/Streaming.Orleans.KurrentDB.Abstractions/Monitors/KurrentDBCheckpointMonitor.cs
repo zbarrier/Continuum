@@ -100,11 +100,7 @@ public sealed class KurrentDBCheckpointMonitor
             return _currentPosition;
         }
 
-        // ICheckpointStore<ulong> cannot express 'no checkpoint', it returns the default position instead.
-        // Map that back to null so callers subscribe from the start rather than from just after position 0,
-        // which would silently skip the first event of the stream.
-        var storedPosition = await _checkpointStore.GetLastCheckpointAsync(_subscriptionName, KurrentDBStreamedEventConversions.DefaultPartitionId, cancellationToken);
-        _currentPosition = storedPosition == default ? null : storedPosition;
+        _currentPosition = await _checkpointStore.GetLastCheckpointAsync(_subscriptionName, KurrentDBStreamedEventConversions.DefaultPartitionId, cancellationToken);
         return _currentPosition;
     }
 
@@ -168,6 +164,22 @@ public sealed class KurrentDBCheckpointMonitor
         Reset();
 
         return true;
+    }
+
+    /// <summary>
+    ///     Commits a starting position immediately, bypassing the commit cadence.
+    /// </summary>
+    /// <remarks>
+    ///     Used when a subscription has no checkpoint and starts from a known position, so a reconnect or restart before
+    ///     the first regular commit resumes from that position instead of choosing a new one.
+    /// </remarks>
+    /// <param name="position">The position to commit.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task CommitInitialCheckpointAsync(ulong position, CancellationToken cancellationToken = default)
+    {
+        _currentPosition = position;
+        await CommitCheckpointAsync(cancellationToken);
+        Reset();
     }
 
     /// <summary>

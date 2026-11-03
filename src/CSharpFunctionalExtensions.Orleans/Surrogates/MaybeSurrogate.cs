@@ -6,7 +6,7 @@ namespace Continuum.CSharpFunctionalExtensions.Orleans;
 ///     Orleans surrogate for <see cref="Maybe{T}"/>.
 /// </summary>
 /// <typeparam name="T">The type of the value.</typeparam>
-[GenerateSerializer, Immutable, Alias("Continuum.Maybe`1")]
+[GenerateSerializer, Alias("Continuum.Maybe`1")]
 public struct MaybeSurrogate<T>
 {
     /// <summary>Whether a value is present.</summary>

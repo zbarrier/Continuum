@@ -111,7 +111,8 @@ public static class KurrentDBLogConsistentStorageServiceCollectionExtensions
             return grainContext => new DefaultProtocolServices(grainContext, loggerFactory, deepCopier, siloDetails);
         });
 
-        // Configure log view adaptor.
+        // Configure log view adaptor. TryAdd lets an application register its own transaction ID generator.
+        services.TryAddSingleton<ITransactionIdGenerator, DefaultTransactionIdGenerator>();
         services.AddKeyedSingleton<ILogViewAdaptorFactory>(name, (sp, n) =>
         {
             return n is string strName

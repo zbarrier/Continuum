@@ -6,23 +6,23 @@ using Microsoft.Extensions.Options;
 namespace Orleans.Configuration;
 
 /// <summary>
-///     Resolves the checkpoint store for <see cref="KurrentDBAllStreamReceiverOptions" /> from the configured
+///     Resolves the checkpoint store for <see cref="KurrentDBCatchUpSubscriptionReceiverOptions" /> from the configured
 ///     checkpoint connection name.
 /// </summary>
-public class DefaultKurrentDBAllStreamReceiverOptionsConfigurator : IPostConfigureOptions<KurrentDBAllStreamReceiverOptions>
+public class DefaultKurrentDBCatchUpSubscriptionReceiverOptionsConfigurator : IPostConfigureOptions<KurrentDBCatchUpSubscriptionReceiverOptions>
 {
     private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
-    ///     Creates a new <see cref="DefaultKurrentDBAllStreamReceiverOptionsConfigurator" />.
+    ///     Creates a new <see cref="DefaultKurrentDBCatchUpSubscriptionReceiverOptionsConfigurator" />.
     /// </summary>
-    public DefaultKurrentDBAllStreamReceiverOptionsConfigurator(IServiceProvider serviceProvider)
+    public DefaultKurrentDBCatchUpSubscriptionReceiverOptionsConfigurator(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc />
-    public void PostConfigure(string? name, KurrentDBAllStreamReceiverOptions options)
+    public void PostConfigure(string? name, KurrentDBCatchUpSubscriptionReceiverOptions options)
     {
         if (options.CheckpointStore is null)
         {

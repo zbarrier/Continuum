@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -11,7 +12,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result> Tap(this Result result, Func<ValueTask> valueTask)
         {
             if (result.IsSuccess)
-                await valueTask();
+                await valueTask().DefaultAwait();
 
             return result;
         }
@@ -22,7 +23,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<T>> Tap<T>(this Result<T> result, Func<ValueTask> valueTask)
         {
             if (result.IsSuccess)
-                await valueTask();
+                await valueTask().DefaultAwait();
 
             return result;
         }
@@ -33,7 +34,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<T>> Tap<T>(this Result<T> result, Func<T, ValueTask> valueTask)
         {
             if (result.IsSuccess)
-                await valueTask(result.Value);
+                await valueTask(result.Value).DefaultAwait();
 
             return result;
         }

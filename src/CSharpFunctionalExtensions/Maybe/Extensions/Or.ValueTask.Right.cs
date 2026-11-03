@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -15,7 +16,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Maybe<T>> Or<T>(this Maybe<T> maybe, Func<ValueTask<T>> valueTaskFallbackOperation)
         {
             if (maybe.HasNoValue)
-                return await valueTaskFallbackOperation();
+                return await valueTaskFallbackOperation().DefaultAwait();
 
             return maybe;
         }
@@ -30,7 +31,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Maybe<T>> Or<T>(this Maybe<T> maybe, ValueTask<Maybe<T>> valueTaskFallback)
         {
             if (maybe.HasNoValue)
-                return await valueTaskFallback;
+                return await valueTaskFallback.DefaultAwait();
 
             return maybe;
         }
@@ -45,7 +46,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Maybe<T>> Or<T>(this Maybe<T> maybe, Func<ValueTask<Maybe<T>>> valueTaskFallbackOperation)
         {
             if (maybe.HasNoValue)
-                return await valueTaskFallbackOperation();
+                return await valueTaskFallbackOperation().DefaultAwait();
 
             return maybe;
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -9,7 +10,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<T> GetValueOrDefault<T>(this Maybe<T> maybe, Func<ValueTask<T>> valueTask)
         {
             if (maybe.HasNoValue)
-                return await valueTask();
+                return await valueTask().DefaultAwait();
 
             return maybe.GetValueOrThrow();
         }
@@ -19,7 +20,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             Func<ValueTask<K>> valueTask)
         {
             if (maybe.HasNoValue)
-                return await valueTask();
+                return await valueTask().DefaultAwait();
 
             return selector(maybe.GetValueOrThrow());
         }
@@ -31,7 +32,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             if (maybe.HasNoValue)
                 return defaultValue;
 
-            return await valueTask(maybe.GetValueOrThrow());
+            return await valueTask(maybe.GetValueOrThrow()).DefaultAwait();
         }
 
         /// <inheritdoc cref="Continuum.CSharpFunctionalExtensions.MaybeExtensions.GetValueOrDefault{T, K}(in Maybe{T}, Func{T, K}, Func{K})"/>
@@ -39,9 +40,9 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
             Func<ValueTask<K>> defaultValue)
         {
             if (maybe.HasNoValue)
-                return await defaultValue();
+                return await defaultValue().DefaultAwait();
 
-            return await valueTask(maybe.GetValueOrThrow());
+            return await valueTask(maybe.GetValueOrThrow()).DefaultAwait();
         }
     }
 }

@@ -50,8 +50,8 @@ public static class KurrentDBEventMetadataCodec
     ///     The metadata name the producing transaction's identifier is written under.
     /// </summary>
     /// <remarks>
-    ///     KurrentDB reports the same commit and prepare position for every event of an append, so the grouping cannot
-    ///     be recovered from the log and has to be recorded by the producer. These names are unreserved so that they
+    ///     Every event has its own <c>$all</c> position, and the log does not record which events were appended
+    ///     together, so the grouping has to be recorded by the producer. These names are unreserved so that they
     ///     survive a read/write round trip and stay readable by anything consuming the log directly.
     /// </remarks>
     public const string TransactionIdName = "transactionId";

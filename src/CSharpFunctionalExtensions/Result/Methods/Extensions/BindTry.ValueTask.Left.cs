@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using System;
+using Continuum.CSharpFunctionalExtensions.ValueTasks;
 
 namespace Continuum.CSharpFunctionalExtensions.ValueTasks
 {
@@ -16,7 +17,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result> BindTry(this ValueTask<Result> resultValueTask, Func<Result> valueTask,
             Func<Exception, Error>? errorHandler = null)
         {
-            var result = await resultValueTask;
+            var result = await resultValueTask.DefaultAwait();
             return result.BindTry(valueTask, errorHandler);
         }
 
@@ -32,7 +33,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<K>> BindTry<K>(this ValueTask<Result> resultValueTask, Func<Result<K>> valueTask,
             Func<Exception, Error>? errorHandler = null)
         {
-            var result = await resultValueTask;
+            var result = await resultValueTask.DefaultAwait();
             return result.BindTry(valueTask, errorHandler);
         }
 
@@ -48,7 +49,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result> BindTry<T>(this ValueTask<Result<T>> resultValueTask, Func<T, Result> valueTask,
             Func<Exception, Error>? errorHandler = null)
         {
-            var result = await resultValueTask;
+            var result = await resultValueTask.DefaultAwait();
             return result.BindTry(valueTask, errorHandler);
         }
 
@@ -65,7 +66,7 @@ namespace Continuum.CSharpFunctionalExtensions.ValueTasks
         public static async ValueTask<Result<K>> BindTry<T, K>(this ValueTask<Result<T>> resultValueTask, Func<T, Result<K>> valueTask,
             Func<Exception, Error>? errorHandler = null)
         {
-            var result = await resultValueTask;
+            var result = await resultValueTask.DefaultAwait();
             return result.BindTry(valueTask, errorHandler);
         }       
     }

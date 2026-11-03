@@ -220,6 +220,18 @@ public sealed class ArrayPoolUtilitiesTests
     }
 
     [Fact]
+    public void InitializeArrayPool_fills_each_bucket_with_arrays_of_that_bucket_length()
+    {
+        // Warming smallest-first matters: an empty bucket falls back to larger buckets, so warming larger buckets
+        // first would hand larger arrays to smaller rentals and leave the smaller buckets unfilled.
+        var pool = new RecordingArrayPool<byte>(ArrayPool<byte>.Create(maxArrayLength: 1024, maxArraysPerBucket: 3));
+
+        ArrayPoolUtilities.InitializeArrayPool(pool, maxRentArrayLength: 1024, maxArrayInstancesPerBucket: 3);
+
+        Assert.Equal(pool.RentedLengths, pool.Rented.Select(array => array.Length));
+    }
+
+    [Fact]
     public void InitializeArrayPool_returns_every_rented_array()
     {
         var pool = new RecordingArrayPool<byte>(ArrayPool<byte>.Create());

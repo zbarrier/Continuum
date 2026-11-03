@@ -40,7 +40,7 @@ public interface IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TC
     TState State { get; }
 
     /// <summary>Gets the events applied in this session that have not yet been saved.</summary>
-    IReadOnlyCollection<TEventBase> UncommittedEvents { get; }
+    IReadOnlyList<TEventBase> UncommittedEvents { get; }
 
     /// <summary>Records an event and applies it to the state.</summary>
     /// <typeparam name="TEvent">The event type.</typeparam>
