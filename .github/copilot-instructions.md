@@ -23,9 +23,10 @@
 
 ## Multi-Tenancy Design
 - Continuum multi-tenancy design (planned, not implemented): use Orleans.Multitenant. Grain keys are "{TenantId}|{Key}". Stream names are "{GrainType}-{TenantId}|{Key}" (non-tenant: "{GrainType}-{Key}"), i.e. GrainType + "-" + Orleans grain key. GrainTypes cannot contain '-' or '|'; keys may contain '-' (GUIDs) but never '|'; tenant IDs must be non-empty and contain no '|'. A '|' after the category means tenant-qualified, so one parser handles both.
-- Subscriptions stay tenant-unaware (KurrentDB $ce-{GrainType} spans tenants); Orleans.Multitenant filters enforce tenant isolation. The Continuum KurrentDB stream provider subscribes to the $all stream (not $ce-{GrainType} category subscriptions). Orleans.Multitenant tenant isolation filters are left for consuming apps to add themselves; Continuum only needs to follow a naming scheme compatible with Orleans.Multitenant.
+- Subscriptions stay tenant-unaware (KurrentDB $ce-{GrainType} spans tenants); Orleans.Multitenant filters enforce tenant isolation. Orleans.Multitenant tenant isolation filters are left for consuming apps to add themselves; Continuum only needs to follow a naming scheme compatible with Orleans.Multitenant. KurrentDB catch-up subscriptions in Continuum (Orleans stream provider and self-hosted) must subscribe to either $all (optionally prefix-filtered) or a single stream such as $ce-{Category} or a custom projection stream, never both at the same time.
 - Per-tenant storage providers set ConnectionName via configureTenantOptions so tenants sharing a database share one keyed KurrentDBClient; dedicated tenants use their own connection name.
 - Cross-tenant/cross-source reports consume integration events from EventHub/Kafka/Kinesis, never direct from multiple KurrentDB databases.
+- Continuum multi-stream transactions cannot span tenants; TenantLogConsistentStorage rejects multi-stream appends whose grains belong to different tenants. Transaction abstractions must be store-agnostic (no KurrentDB-specific types/exceptions exposed to grains).
 
 ## Streaming Cursors and Checkpoints
 - Continuum streaming cursors and checkpoints use an explicit SourceConnectionName as the first key segment (SourceConnectionName -> Topic -> Partition -> SequenceNumber -> SubSequenceNumber; SourceConnectionName -> SubscriptionName -> Partition -> position), not hidden in the partition. CheckpointConnectionName only selects where checkpoints are stored. Connection names are permanent logical identifiers that must never be renamed.
@@ -44,3 +45,9 @@
 
 ## Domain Events
 - Continuum domain events use `InitiatedBy` (Guid) and `OccurredAt` (DateTimeOffset). `InitiatedBy` comes from the validated Orleans.Identity identity in RequestContext, never from command input; in-silo automations run as dedicated system users stored in the identity store, and the original user is traced through the correlation ID.
+
+## Helper Overloads
+- In Continuum, only add helper overload variations that are actually needed. BindWithMultiStreamTransactionScope callbacks always return Task<Result> (they await participant prepares), so no ValueTask/sync/Action callback variants.
+
+## Value Object Creation
+- For value objects that wrap a non-string type which is commonly parsed from a string (e.g., Guid), provide Create overloads for both the raw type (with its own validation, e.g., NotEmpty for Guid) and string (parse + validate, e.g., IsGuidAndNotEmpty), each with propertyName and PropertyPath/member variants.

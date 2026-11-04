@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Numerics;
 
@@ -21,13 +21,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is valid BigInteger.
     /// </summary>
-    public static Result<BigInteger> IsBigInteger(this Result<string> result, string propertyNameFormat, params object[] arguments)
+    public static Result<BigInteger> IsBigInteger(this Result<string> result, PropertyPath path, string member)
     {
         if (result.IsFailure) return Result.Failure<BigInteger>(result.Error);
 
         if (!BigInteger.TryParse(result.Value, out BigInteger bigIntegerValue))
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 

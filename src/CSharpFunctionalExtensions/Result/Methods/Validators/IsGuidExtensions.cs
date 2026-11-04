@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -19,13 +19,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is valid Guid.
     /// </summary>
-    public static Result<Guid> IsGuid(this Result<string> result, string propertyNameFormat, params object[] arguments)
+    public static Result<Guid> IsGuid(this Result<string> result, PropertyPath path, string member)
     {
         if (result.IsFailure) return Result.Failure<Guid>(result.Error);
 
         if (!Guid.TryParse(result.Value, out Guid guidValue))
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 

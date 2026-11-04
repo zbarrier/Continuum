@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Text.RegularExpressions;
 
@@ -13,7 +13,6 @@ public class MatchesRegularExpressionTests
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     [Theory]
@@ -58,7 +57,7 @@ public class MatchesRegularExpressionTests
         //Arrange
 
         //Act
-        var result = Result.MatchesRegularExpression(value, pattern, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MatchesRegularExpression(value, pattern, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -75,7 +74,7 @@ public class MatchesRegularExpressionTests
         var regex = new Regex(pattern);
 
         //Act
-        var result = Result.MatchesRegularExpression(value, regex, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MatchesRegularExpression(value, regex, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -124,12 +123,12 @@ public class MatchesRegularExpressionTests
         //Arrange
 
         //Act
-        var result = Result.MatchesRegularExpression(value, pattern, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MatchesRegularExpression(value, pattern, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 
@@ -143,12 +142,12 @@ public class MatchesRegularExpressionTests
         var regex = new Regex(pattern);
 
         //Act
-        var result = Result.MatchesRegularExpression(value, regex, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MatchesRegularExpression(value, regex, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

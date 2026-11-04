@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -14,7 +14,7 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid int.
     /// </summary>
-    public static Result<int> IsInt32(string? value, string propertyNameFormat, params object[] arguments)
-    => Result.NotNullOrEmpty(value, propertyNameFormat, arguments)
-        .IsInt32(propertyNameFormat, arguments);
+    public static Result<int> IsInt32(string? value, PropertyPath path, string member)
+    => Result.NotNullOrEmpty(value, path, member)
+        .IsInt32(path, member);
 }

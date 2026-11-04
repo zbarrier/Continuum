@@ -4,8 +4,7 @@ public class PhoneNumberExtensionValidatorTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
-    const string MultiPartPropertyNameFormat = "{0} {1}";
-    const string MultiPartPropertyName = MyPropertyName + " " + MyPropertyNameTwo;
+    const string MultiPartPropertyName = MyPropertyName + "." + MyPropertyNameTwo;
 
     static ValidationError Expected(string propertyName) =>
         new(propertyName, ExpectedUSValidationErrorCodes.PhoneNumberExtension, ExpectedUSValidatorErrorStrings.PhoneNumberExtension, propertyName);
@@ -39,7 +38,7 @@ public class PhoneNumberExtensionValidatorTests
     [InlineData("12a")]
     public void IsUSPhoneNumberExtensionMultiPart_InvalidValue_UsesFormattedPropertyName(string value)
     {
-        var result = Result.IsUSPhoneNumberExtension(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSPhoneNumberExtension(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName), result.Error);
     }
@@ -68,7 +67,7 @@ public class PhoneNumberExtensionValidatorTests
     [Fact]
     public void IsUSPhoneNumberExtensionChainedMultiPart_InvalidValue_UsesFormattedPropertyName()
     {
-        var result = Result.Success("12a").IsUSPhoneNumberExtension(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Success("12a").IsUSPhoneNumberExtension(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName), result.Error);
     }

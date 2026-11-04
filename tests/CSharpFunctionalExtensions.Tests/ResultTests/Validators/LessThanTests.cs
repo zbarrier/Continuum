@@ -10,7 +10,6 @@ public class LessThanTests
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     #region T
@@ -48,7 +47,7 @@ public class LessThanTests
         var expectedValue = new TestClass(expectedId);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, TestClassComparer.Default, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, TestClassComparer.Default, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -88,12 +87,12 @@ public class LessThanTests
         var expectedValue = new TestClass(expectedId);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, TestClassComparer.Default, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, TestClassComparer.Default, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
@@ -128,7 +127,7 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -166,12 +165,12 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -208,7 +207,7 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -244,12 +243,246 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region ushort
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void LessThan_UShortOfLessThanValue_Success(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void LessThanMultiPart_UShortOfLessThanValue_Success(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 2)]
+    [InlineData(13, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 254)]
+    public void LessThan_UShortOfGreaterThanOrEqualValue_Failure(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 2)]
+    [InlineData(13, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 254)]
+    public void LessThanMultiPart_UShortOfGreaterThanOrEqualValue_Failure(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region uint
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void LessThan_UIntOfLessThanValue_Success(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void LessThanMultiPart_UIntOfLessThanValue_Success(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 2)]
+    [InlineData(13, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 254)]
+    public void LessThan_UIntOfGreaterThanOrEqualValue_Failure(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 2)]
+    [InlineData(13, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 254)]
+    public void LessThanMultiPart_UIntOfGreaterThanOrEqualValue_Failure(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region ulong
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void LessThan_ULongOfLessThanValue_Success(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void LessThanMultiPart_ULongOfLessThanValue_Success(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 2)]
+    [InlineData(13, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 254)]
+    public void LessThan_ULongOfGreaterThanOrEqualValue_Failure(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 2)]
+    [InlineData(13, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 254)]
+    public void LessThanMultiPart_ULongOfGreaterThanOrEqualValue_Failure(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -286,7 +519,7 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -324,12 +557,12 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -370,7 +603,7 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -412,12 +645,12 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -462,7 +695,7 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -508,12 +741,12 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -550,7 +783,7 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -586,12 +819,12 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -632,7 +865,7 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -672,12 +905,12 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -722,7 +955,7 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -766,12 +999,12 @@ public class LessThanTests
         //Arrange
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -820,7 +1053,7 @@ public class LessThanTests
         var expectedValue = BigInteger.Parse(expectedValueStr);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -868,12 +1101,12 @@ public class LessThanTests
         var expectedValue = BigInteger.Parse(expectedValueStr);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -914,7 +1147,7 @@ public class LessThanTests
         var expectedValue = TimeSpan.Parse(expectedValueStr);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -954,12 +1187,12 @@ public class LessThanTests
         var expectedValue = TimeSpan.Parse(expectedValueStr);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -998,7 +1231,7 @@ public class LessThanTests
         var expectedValue = DateTime.Parse(expectedValueStr);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1036,12 +1269,12 @@ public class LessThanTests
         var expectedValue = DateTime.Parse(expectedValueStr);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 
@@ -1080,7 +1313,7 @@ public class LessThanTests
         var expectedValue = DateTimeOffset.Parse(expectedValueStr);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1118,12 +1351,12 @@ public class LessThanTests
         var expectedValue = DateTimeOffset.Parse(expectedValueStr);
 
         //Act
-        var result = Result.LessThan(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.LessThan(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.LessThan, ExpectedValidatorErrorStrings.LessThan, multiPartPropertyName, expectedValue));
     }
 

@@ -44,6 +44,8 @@ public static class ValidationErrorCodes
     public const string MinLength = "min_length";
     /// <summary>The value is null, empty, or the default value.</summary>
     public const string NotEmpty = "not_empty";
+    /// <summary>The value is equal to the disallowed value.</summary>
+    public const string NotEqual = "not_equal";
     /// <summary>The value is null.</summary>
     public const string NotNull = "not_null";
     /// <summary>The value exceeds the allowed scale or precision.</summary>

@@ -4,7 +4,7 @@ namespace Continuum.Domain.Orleans;
 /// <param name="Changes">The changes (events) that were saved.</param>
 /// <param name="Version">The version of the event stream after the changes were saved.</param>
 [GenerateSerializer, Immutable]
-public sealed record SessionSaveResponse(IReadOnlyList<IChange> Changes, int Version) : ISessionSaveResponse
+public sealed record StreamTransactionResponse(IReadOnlyList<IChange> Changes, int Version) : IStreamTransactionResponse
 {
     /// <summary>An empty set of changes.</summary>
     public static readonly IReadOnlyList<IChange> NoChanges = [];

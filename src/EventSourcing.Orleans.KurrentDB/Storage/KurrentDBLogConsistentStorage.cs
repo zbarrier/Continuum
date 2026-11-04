@@ -17,7 +17,7 @@ namespace Continuum.EventSourcing.Orleans.KurrentDB;
 /// <summary>
 ///     KurrentDB-based log consistent storage provider
 /// </summary>
-public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecycleParticipant<ISiloLifecycle>
+public class KurrentDBLogConsistentStorage : IMultiStreamLogConsistentStorage, ILifecycleParticipant<ISiloLifecycle>
 {
     private readonly ILogger<KurrentDBLogConsistentStorage> _logger;
     private readonly string _name;
@@ -225,6 +225,111 @@ public class KurrentDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePa
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<int>> AppendAsync<TLogEntry>(IReadOnlyList<LogStream> streams, IReadOnlyList<LogRecord<TLogEntry>> records, Guid transactionId)
+    {
+        EnsureInitialized();
+        ArgumentNullException.ThrowIfNull(streams);
+        ArgumentNullException.ThrowIfNull(records);
+        if (streams.Count == 0)
+        {
+            throw new ArgumentException("At least one stream is required.", nameof(streams));
+        }
+        if (records.Count == 0)
+        {
+            throw new ArgumentException("At least one record is required.", nameof(records));
+        }
+        var streamNames = new string[streams.Count];
+        var seenStreams = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < streams.Count; index++)
+        {
+            var stream = streams[index] ?? throw new ArgumentException("Streams cannot contain null.", nameof(streams));
+            if (stream.ExpectedVersion < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(streams), FormattableString.Invariant($"The expected version of {stream.GrainTypeName} with ID {stream.GrainId} cannot be negative."));
+            }
+            streamNames[index] = GetStreamName(stream.GrainId);
+            if (!seenStreams.Add(streamNames[index]))
+            {
+                throw new ArgumentException(FormattableString.Invariant($"{stream.GrainTypeName} with ID {stream.GrainId} appears more than once."), nameof(streams));
+            }
+        }
+        var partitionCounts = new int[streams.Count];
+        foreach (var record in records)
+        {
+            if (record is null || (uint)record.StreamIndex >= (uint)streams.Count)
+            {
+                throw new ArgumentException("Every record must refer to one of the streams.", nameof(records));
+            }
+            if (record.Entry is null)
+            {
+                var stream = streams[record.StreamIndex];
+                throw new ArgumentException(FormattableString.Invariant($"Cannot append null entries for {stream.GrainTypeName} with ID {stream.GrainId}."), nameof(records));
+            }
+            partitionCounts[record.StreamIndex]++;
+        }
+
+        using var operation = _instrumentation.Start(LogConsistentStorageInstrumentation.AppendOperation, streams[0].GrainTypeName, streams[0].GrainId, streamNames[0]);
+        try
+        {
+            // Records are sent in the order they were generated. Each stream is a partition of the transaction, so a
+            // single-stream subscriber can still regroup its own events.
+            var appendRecords = new List<AppendRecord>(records.Count);
+            var partitionIndexes = new int[streams.Count];
+            foreach (var record in records)
+            {
+                var index = record.StreamIndex;
+                var transaction = new TransactionInfo(transactionId, records.Count, partitionCounts[index], partitionIndexes[index]++);
+                appendRecords.Add(new AppendRecord(streamNames[index], SerializeEvent(record.Entry, transaction)));
+            }
+            var checks = new List<ConsistencyCheck>();
+            for (var index = 0; index < streams.Count; index++)
+            {
+                if (streams[index].ExpectedVersion is { } expectedVersion)
+                {
+                    checks.Add(new ConsistencyCheck.StreamStateCheck(streamNames[index], ToStreamState(expectedVersion)));
+                }
+            }
+
+            var response = await _client.AppendRecordsAsync(appendRecords, checks);
+            operation.SetEventCount(appendRecords.Count);
+
+            var revisions = (response.Responses ?? []).ToDictionary(r => r.Stream, r => r.StreamRevision, StringComparer.Ordinal);
+            var versions = new int[streams.Count];
+            for (var index = 0; index < streams.Count; index++)
+            {
+                // A check-only stream has no response, and its version is unchanged.
+                versions[index] = revisions.TryGetValue(streamNames[index], out var revision)
+                    ? checked((int)(revision + 1))
+                    : streams[index].ExpectedVersion ?? await GetLastVersionAsync(streams[index].GrainTypeName, streams[index].GrainId);
+            }
+            return versions;
+        }
+        catch (AppendConsistencyViolationException ex)
+        {
+            operation.Fail(ex);
+            var conflicts = ex.Violations.Select(violation =>
+            {
+                var stream = streams[Array.IndexOf(streamNames, violation.Stream)];
+                return new LogAppendConflict(stream.GrainTypeName, stream.GrainId, stream.ExpectedVersion ?? 0, ToVersion(violation.ActualState));
+            }).ToList();
+            throw new LogAppendConflictException(conflicts, ex);
+        }
+        catch (Exception ex) when (ex is not InconsistentStateException)
+        {
+            operation.Fail(ex);
+            _logger.WriteMultiStreamLogEntriesFailed(ex, string.Join(", ", streamNames));
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to write log entries to streams {string.Join(", ", streamNames)}. {ex.GetType()}: {ex.Message}"), ex);
+        }
+    }
+
+    // Versions are event counts; KurrentDB expects the zero based revision of the last event.
+    private static StreamState ToStreamState(int version) =>
+        version == 0 ? StreamState.NoStream : StreamState.StreamRevision((ulong)(version - 1));
+
+    private static int ToVersion(StreamState state) =>
+        state.HasPosition ? checked((int)(state.ToInt64() + 1)) : 0;
+
+    /// <inheritdoc />
     public async Task<Guid?> GetTransactionIdAsync(string grainTypeName, GrainId grainId, int version)
     {
         EnsureInitialized();
@@ -311,6 +416,9 @@ internal static partial class KurrentDBLogConsistentStorageLog
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to write log entries for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
     public static partial void WriteLogEntriesFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to write log entries to streams {StreamNames}")]
+    public static partial void WriteMultiStreamLogEntriesFailed(this ILogger logger, Exception exception, string streamNames);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to read the transaction ID of version {Version} for {GrainType} grain with ID {GrainId} and stream {StreamName}")]
     public static partial void ReadTransactionIdFailed(this ILogger logger, Exception exception, string grainType, GrainId grainId, string streamName, int version);

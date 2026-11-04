@@ -1,11 +1,10 @@
-﻿namespace Continuum.CSharpFunctionalExtensions.Validators.US.Tests;
+namespace Continuum.CSharpFunctionalExtensions.Validators.US.Tests;
 
 public class StateAbbreviationTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     [Theory]
@@ -31,7 +30,7 @@ public class StateAbbreviationTests
         //Arrange
 
         //Act
-        var result = Result.IsUSPostalStateAbbreviation(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSPostalStateAbbreviation(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -61,12 +60,12 @@ public class StateAbbreviationTests
         //Arrange
 
         //Act
-        var result = Result.IsUSPostalStateAbbreviation(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSPostalStateAbbreviation(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedUSValidationErrorCodes.StateAbbreviation, ExpectedUSValidatorErrorStrings.StateAbbreviation, multiPartPropertyName));
     }
 }

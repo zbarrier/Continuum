@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Collections.Frozen;
 
@@ -54,11 +54,11 @@ public static partial class USStateAbbreviationValidators
         /// <summary>
         ///     Ensure value is valid US postal state abbreviation.
         /// </summary>
-        public static Result<string> IsUSPostalStateAbbreviation(string value, string propertyNameFormat, params object[] arguments)
+        public static Result<string> IsUSPostalStateAbbreviation(string value, PropertyPath path, string member)
         {
             if (!USPostalStateAbbreviations.Contains(value))
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.StateAbbreviation, USValidatorErrorStrings.StateAbbreviation, propertyName));
             }
             return Result.Success(value);

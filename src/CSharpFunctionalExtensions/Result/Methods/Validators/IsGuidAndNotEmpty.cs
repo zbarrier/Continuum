@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -14,7 +14,7 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid Guid.
     /// </summary>
-    public static Result<Guid> IsGuidAndNotEmpty(string? value, string propertyNameFormat, params object[] arguments)
-    => Result.NotNullOrEmpty(value, propertyNameFormat, arguments)
-        .IsGuidAndNotEmpty(propertyNameFormat, arguments);
+    public static Result<Guid> IsGuidAndNotEmpty(string? value, PropertyPath path, string member)
+    => Result.NotNullOrEmpty(value, path, member)
+        .IsGuidAndNotEmpty(path, member);
 }

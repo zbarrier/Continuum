@@ -50,7 +50,7 @@ public static partial class USPhoneNumberValidators
         /// <summary>
         ///     Ensure value is valid US phone number.
         /// </summary>
-        public static Result<string> IsUSPhoneNumber(string value, string propertyNameFormat, params object[] arguments)
+        public static Result<string> IsUSPhoneNumber(string value, PropertyPath path, string member)
         {
             // Strip unnecessary characters
             string strippedValue = value.Length <= PhoneNumberLength
@@ -61,7 +61,7 @@ public static partial class USPhoneNumberValidators
             bool isValidLength = strippedValue.Length == PhoneNumberLength;
             if (!isValidLength)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.PhoneNumber, USValidatorErrorStrings.PhoneNumber, propertyName));
             }
 
@@ -71,7 +71,7 @@ public static partial class USPhoneNumberValidators
                 bool isValidChar = char.IsAsciiDigit(strippedValue[i]);
                 if (!isValidChar)
                 {
-                    var propertyName = string.Format(propertyNameFormat, arguments);
+                    var propertyName = path.Format(member);
                     return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.PhoneNumber, USValidatorErrorStrings.PhoneNumber, propertyName));
                 }
             }
@@ -104,12 +104,12 @@ public static partial class USPhoneNumberValidators
         }
 
         /// <inheritdoc cref="IsUSPhoneNumberExtension(string, string)"/>
-        public static Result<string> IsUSPhoneNumberExtension(string value, string propertyNameFormat, params object[] arguments)
+        public static Result<string> IsUSPhoneNumberExtension(string value, PropertyPath path, string member)
         {
             bool isValidLength = value.Length <= PhoneNumberExtensionMaxLength;
             if (!isValidLength)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.PhoneNumberExtension, USValidatorErrorStrings.PhoneNumberExtension, propertyName));
             }
 
@@ -119,7 +119,7 @@ public static partial class USPhoneNumberValidators
                 bool isValidChar = char.IsAsciiDigit(value[i]);
                 if (!isValidChar)
                 {
-                    var propertyName = string.Format(propertyNameFormat, arguments);
+                    var propertyName = path.Format(member);
                     return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.PhoneNumberExtension, USValidatorErrorStrings.PhoneNumberExtension, propertyName));
                 }
             }

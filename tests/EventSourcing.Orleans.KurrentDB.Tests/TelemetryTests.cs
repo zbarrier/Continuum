@@ -2,7 +2,8 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
-using Continuum.EventSourcing.Orleans.KurrentDB.Tests.Events;
+using Continuum.EventSourcing.Orleans.KurrentDB.Tests.SingleStream.Snacks;
+using Continuum.EventSourcing.Orleans.KurrentDB.Tests.Cluster;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,10 +33,10 @@ public sealed class TelemetryTests(ClusterFixture fixture) : IDisposable
     {
         var id = Guid.NewGuid();
         var events = new SnackEvent[count];
-        events[0] = new SnackInitializedEvent(id, "Name0", Guid.NewGuid(), DateTimeOffset.UtcNow, "Test", 1);
+        events[0] = new SnackInitializedEvent(id, "Name0", DateTimeOffset.UtcNow);
         for (var index = 1; index < count; index++)
         {
-            events[index] = new SnackNameChangedEvent(id, $"Name{index}", Guid.NewGuid(), DateTimeOffset.UtcNow, "Test", index + 1);
+            events[index] = new SnackNameChangedEvent(id, $"Name{index}", DateTimeOffset.UtcNow);
         }
         return events;
     }

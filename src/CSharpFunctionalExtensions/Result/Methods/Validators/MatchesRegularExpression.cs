@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Text.RegularExpressions;
 
@@ -17,9 +17,9 @@ public partial struct Result
     /// <summary>
     ///     Ensure value matches regular expression.
     /// </summary>
-    public static Result<string> MatchesRegularExpression(string? value, string pattern, string propertyNameFormat, params object[] arguments)
-    => Result.NotNullOrEmpty(value, propertyNameFormat, arguments)
-        .MatchesRegularExpression(pattern, propertyNameFormat, arguments);
+    public static Result<string> MatchesRegularExpression(string? value, string pattern, PropertyPath path, string member)
+    => Result.NotNullOrEmpty(value, path, member)
+        .MatchesRegularExpression(pattern, path, member);
 
     /// <summary>
     ///     Ensure value matches regular expression.
@@ -31,7 +31,7 @@ public partial struct Result
     /// <summary>
     ///     Ensure value matches regular expression.
     /// </summary>
-    public static Result<string> MatchesRegularExpression(string? value, Regex regex, string propertyNameFormat, params object[] arguments)
-    => Result.NotNullOrEmpty(value, propertyNameFormat, arguments)
-        .MatchesRegularExpression(regex, propertyNameFormat, arguments);
+    public static Result<string> MatchesRegularExpression(string? value, Regex regex, PropertyPath path, string member)
+    => Result.NotNullOrEmpty(value, path, member)
+        .MatchesRegularExpression(regex, path, member);
 }

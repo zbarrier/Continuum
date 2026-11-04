@@ -9,7 +9,6 @@ public class CombineForValidationTests
     const string FirstNameProperty = "FirstName";
     const string LastNameProperty = "LastName";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     static readonly Exception CombineNotSupportedException = new NotSupportedException("Only validation errors can be combined.");

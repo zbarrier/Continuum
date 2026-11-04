@@ -1,5 +1,6 @@
 using Continuum.CSharpFunctionalExtensions;
 using Continuum.Errors;
+using Continuum.Orleans.Transactions;
 using Continuum.TypeMapping;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -10,14 +11,26 @@ using Orleans.Serialization;
 
 namespace Continuum.Domain.Orleans;
 
-/// <summary>A grain whose state is built from events.</summary>
-public interface IEventDrivenGrain : IGrainWithStringKey
+/// <summary>A grain whose state is built from a saved event log.</summary>
+public interface IEventLogGrain : IGrainWithStringKey
 {
     /// <summary>FOR TESTING ONLY. Applies the given events to set up the initial state for Given/When/Then tests.</summary>
     /// <param name="events">The given events used to set up the initial state.</param>
     /// <returns>A task that completes when the events have been applied.</returns>
     Task LoadGivenEvents(params object[] events);
+
+    /// <summary>FOR TESTING ONLY. Gets the version of the grain's saved event log for Given/When/Then tests.</summary>
+    /// <returns>The saved version, after reading any events saved by others.</returns>
+    Task<int> GetSavedVersion();
+
+    /// <summary>FOR TESTING ONLY. Gets the saved events after a version for Given/When/Then tests.</summary>
+    /// <param name="version">The version to read after.</param>
+    /// <returns>The saved events after <paramref name="version"/>, after reading any events saved by others.</returns>
+    Task<object[]> GetSavedEventsSince(int version);
 }
+
+/// <summary>A grain whose state is built from events.</summary>
+public interface IEventDrivenGrain : IEventLogGrain;
 
 /// <summary>An <see cref="EventDrivenGrain{TState, TEventBase}"/> whose events derive from <see cref="object"/>.</summary>
 /// <typeparam name="TState">The state type.</typeparam>
@@ -37,7 +50,8 @@ public abstract class EventDrivenGrain<TState> : EventDrivenGrain<TState, object
 /// <typeparam name="TEventBase">The base type of events applied to the state.</typeparam>
 public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TState, TEventBase>,
     IEventDrivenGrain,
-    IEventDrivenSessionScope<TState, TEventBase>
+    ITransactionParticipant,
+    ITransactionSubmissionSource
     where TState : EventDrivenState<TState, TEventBase>, new()
     where TEventBase : class
 {
@@ -50,8 +64,13 @@ public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TSta
     /// <summary>The type mapper used to name events.</summary>
     protected readonly ITypeMapper _typeMapper;
 
-    /// <inheritdoc/>
+    private readonly TransactionParticipation<IStreamTransaction<TState, TEventBase>> _transactions;
+    private readonly TransactionCoordination _coordination = new();
 
+    /// <inheritdoc/>
+    TransactionSubmission? ITransactionSubmissionSource.PendingTransaction => _coordination.PendingTransaction;
+
+    /// <summary>Gets the grain's logger.</summary>
     public ILogger Logger { get; }
 
 
@@ -63,7 +82,10 @@ public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TSta
         _deepCopier = serviceProvider.GetRequiredService<DeepCopier<TState>>(); //deepCopier;
         _typeMapper = serviceProvider.GetRequiredKeyedService<ITypeMapper>(connectionName); //typeMapper;
         Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
+        _transactions = new TransactionParticipation<IStreamTransaction<TState, TEventBase>>(
+            this, CreateParticipantTransaction, transaction => transaction.UncommittedEvents, () => Version, RefreshNow);
     }
+
 
     /// <summary>
     /// FOR TESTING ONLY!!! Used for Given, When, Then tests.
@@ -92,35 +114,87 @@ public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TSta
     }
 
     /// <inheritdoc/>
-    public IEventDrivenSession<TState, TEventBase> CreateSession()
-        => new EventDrivenSession<TState, TEventBase>(_deepCopier, State);
+    public async Task<int> GetSavedVersion()
+    {
+        await RefreshNow();
+        return Version;
+    }
 
     /// <inheritdoc/>
-    public async Task<Result<ISessionSaveResponse>> SaveChanges(IEventDrivenSession<TState, TEventBase> session)
+    public async Task<object[]> GetSavedEventsSince(int version)
     {
-        if (session.UncommittedEvents.Count == 0)
+        await RefreshNow();
+        var events = await RetrieveConfirmedEvents(version, Version);
+        return events.Cast<object>().ToArray();
+    }
+
+    private IStreamTransaction<TState, TEventBase> CreateParticipantTransaction()
+        => new EventDrivenSession<TState, TEventBase>(_deepCopier, State);
+
+    /// <summary>
+    ///     Begins a stream transaction over a copy of the grain's state. Events applied through it go to the grain's own
+    ///     stream, and participants can be prepared through it. Save it with
+    ///     <see cref="SaveChanges(ICoordinatingStreamTransaction{TState, TEventBase})"/>. Disposing it without a
+    ///     successful save rolls back every participant prepared so far.
+    /// </summary>
+    /// <param name="timeout">How long the transaction may take when participants are prepared; defaults to 30 seconds.</param>
+    /// <returns>The transaction.</returns>
+    protected internal ICoordinatingStreamTransaction<TState, TEventBase> BeginStreamTransaction(TimeSpan? timeout = null)
+        => new CoordinatingStreamTransaction<TState, TEventBase>(this, CreateParticipantTransaction(), _coordination, timeout);
+
+    /// <summary>
+    ///     Saves the transaction's events. When participants were prepared, their events are saved together with the
+    ///     grain's own events in one atomic append, in the order they were generated, then the participants are told the
+    ///     transaction was committed.
+    /// </summary>
+    /// <param name="transaction">A transaction begun by this grain.</param>
+    /// <returns>The save response, or a concurrency conflict.</returns>
+    /// <exception cref="ArgumentException"><paramref name="transaction"/> was not begun by this grain.</exception>
+    protected internal async Task<Result<IStreamTransactionResponse>> SaveChanges(ICoordinatingStreamTransaction<TState, TEventBase> transaction)
+    {
+        if (transaction is not CoordinatingStreamTransaction<TState, TEventBase> coordinating || !ReferenceEquals(coordinating.Owner, this))
         {
-            ISessionSaveResponse noChangesResponse = new SessionSaveResponse(SessionSaveResponse.NoChanges, Version);
+            throw new ArgumentException("The transaction was not begun by this grain.", nameof(transaction));
+        }
+
+        var result = await _coordination.SaveAsync(coordinating.Scope, transaction.UncommittedEvents, RaiseConditionalEvents);
+        if (result.IsFailure)
+        {
+            return Result.Failure<IStreamTransactionResponse>(result.Error);
+        }
+        if (transaction.UncommittedEvents.Count == 0)
+        {
+            IStreamTransactionResponse noChangesResponse = new StreamTransactionResponse(StreamTransactionResponse.NoChanges, Version);
             return Result.Success(noChangesResponse);
         }
 
-        var success = await RaiseConditionalEvents(session.UncommittedEvents);
-        if (!success)
+        var changes = new List<IChange>(transaction.UncommittedEvents.Count);
+        foreach (var evt in transaction.UncommittedEvents)
         {
-            return Result.Failure<ISessionSaveResponse>(ConcurrencyConflictError);
+            changes.Add(new Change(_typeMapper.GetTypeName(evt.GetType()), evt));
         }
-
-        var changes = new List<IChange>(session.UncommittedEvents.Count);
-        foreach (var evt in session.UncommittedEvents)
-        {
-            var typeName = _typeMapper.GetTypeName(evt.GetType());
-            var change = new Change(typeName, evt);
-            changes.Add(change);
-        }
-
-        ISessionSaveResponse changesResponse = new SessionSaveResponse(changes, Version);
+        IStreamTransactionResponse changesResponse = new StreamTransactionResponse(changes, Version);
         return Result.Success(changesResponse);
     }
+
+    /// <summary>Lets commands of type <typeparamref name="TCommand"/> take part in transactions coordinated by another grain.</summary>
+    /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <param name="handler">Runs the command against the session. Its events are returned to the coordinator, not saved.</param>
+    /// <param name="checkVersion">Whether the append must fail if this grain's log changed after it prepared.</param>
+    /// <exception cref="InvalidOperationException">A handler is already registered for <typeparamref name="TCommand"/>.</exception>
+    protected void OnTransaction<TCommand>(Func<TCommand, IStreamTransaction<TState, TEventBase>, Task<Result>> handler, bool checkVersion = true)
+        => _transactions.Register(handler, checkVersion);
+
+    /// <inheritdoc/>
+    public Task<Result<PreparedTransaction>> PrepareAsync(Guid transactionId, object command, TimeSpan remaining)
+        => _transactions.PrepareAsync(transactionId, command, remaining);
+
+    /// <inheritdoc/>
+    public Task CommitAsync(Guid transactionId) => _transactions.CommitAsync(transactionId);
+
+    /// <inheritdoc/>
+    public Task RollbackAsync(Guid transactionId) => _transactions.RollbackAsync(transactionId);
+
 
     /// <inheritdoc/>
     protected override void TransitionState(TState state, TEventBase evt)

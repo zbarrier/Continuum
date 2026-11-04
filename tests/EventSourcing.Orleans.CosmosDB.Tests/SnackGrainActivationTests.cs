@@ -1,6 +1,4 @@
-﻿using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Commands;
-using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Events;
-using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Grains;
+using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Snacks;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,25 +14,27 @@ public class SnackGrainActivationTests(ClusterFixture fixture)
     {
         var snackId = Guid.NewGuid();
 
-        // Seed the log before the grain is ever activated, so there is no snapshot and state must come from Cosmos DB.
+        // Seed the log before the grain is ever activated, so there is no snapshot and state must come from CosmosDB.
         var siloServices = (fixture.Cluster.Primary as InProcessSiloHandle ?? throw new InvalidOperationException("The primary silo is not running in process.")).SiloHost.Services;
         var storage = siloServices.GetRequiredService<ILogConsistentStorage>();
         SnackEvent[] seeded =
         [
-            new SnackInitializedEvent(snackId, "Apple", Guid.NewGuid(), DateTimeOffset.UtcNow, "Seed", 1),
-            new SnackNameChangedEvent(snackId, "Orange", Guid.NewGuid(), DateTimeOffset.UtcNow, "Seed", 2),
+            new SnackInitializedEvent(snackId, "Apple", DateTimeOffset.UtcNow),
+            new SnackNameChangedEvent(snackId, "Orange", DateTimeOffset.UtcNow),
         ];
-        await storage.AppendAsync("snack", GrainId.Create("snack", snackId.ToString("N")), seeded, 0, Guid.NewGuid());
+        await storage.AppendAsync("snack", GrainId.Create("snack", snackId.ToString()), seeded, 0, Guid.NewGuid());
 
         var grainFactory = fixture.Cluster.ServiceProvider.GetRequiredService<IGrainFactory>();
-        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId);
+        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId.ToString());
 
         var getResult = await snackGrain.GetAsync();
         Assert.True(getResult.IsSuccess);
         Assert.Equal("Orange", getResult.Value.Name);
-        Assert.False(await snackGrain.CanInitializeAsync());
 
-        var changeNameResult = await snackGrain.ChangeNameAsync(new SnackChangeNameCommand("Banana", Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Rebuild_State_From_Existing_Log_On_Activation"));
+        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple"));
+        Assert.True(initializeResult.IsFailure);
+
+        var changeNameResult = await snackGrain.ChangeNameAsync(new SnackChangeNameCommand("Banana"));
         Assert.True(changeNameResult.IsSuccess);
         Assert.Equal(3, changeNameResult.Value.Version);
     }

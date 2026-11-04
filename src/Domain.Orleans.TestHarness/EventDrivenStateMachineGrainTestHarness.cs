@@ -26,4 +26,15 @@ public abstract class EventDrivenStateMachineGrainTestHarness<TGrainInterface, T
 	/// <inheritdoc/>
 	protected override Task LoadGivenEvents(TEventBase[] events) =>
 		Cluster.GrainFactory.GetGrain<TGrainInterface>(GrainId).LoadGivenEvents(events);
+
+	/// <inheritdoc/>
+	private protected override bool GrainUnderTestHasEventLog => true;
+
+	/// <inheritdoc/>
+	private protected override Task<int> GetGrainUnderTestSavedVersion() =>
+		Cluster.GrainFactory.GetGrain<TGrainInterface>(GrainId).GetSavedVersion();
+
+	/// <inheritdoc/>
+	private protected override Task<object[]> GetGrainUnderTestSavedEventsSince(int version) =>
+		Cluster.GrainFactory.GetGrain<TGrainInterface>(GrainId).GetSavedEventsSince(version);
 }

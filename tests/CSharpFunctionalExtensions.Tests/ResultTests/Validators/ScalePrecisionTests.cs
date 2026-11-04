@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Xunit.Sdk;
@@ -10,7 +10,6 @@ public class ScalePrecisionTests
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     [Fact]
@@ -71,7 +70,7 @@ public class ScalePrecisionTests
 
         //Act
         var result = Result.ScalePrecision(value, expectedScale, expectedPrecision, false, 
-            MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -114,12 +113,12 @@ public class ScalePrecisionTests
 
         //Act
         var result = Result.ScalePrecision(value, expectedScale, expectedPrecision, false, 
-            MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.ScalePrecision, ExpectedValidatorErrorStrings.ScalePrecision, multiPartPropertyName, expectedPrecision, expectedScale, digits, actualScale));
     }
 }

@@ -1,4 +1,6 @@
-﻿#nullable enable
+#nullable enable
+
+using System.Globalization;
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -11,24 +13,24 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return Result.Failure<DateOnly>(result.Error);
 
-        return DateOnly.TryParse(result.Value, out DateOnly dateValue)
-            ? Result.Success(dateValue)
+        return DateOnly.TryParse(result.Value, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly parsedValue)
+            ? Result.Success(parsedValue)
             : Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
     ///     Ensure value is valid DateOnly.
     /// </summary>
-    public static Result<DateOnly> IsDateOnly(this Result<string> result, string propertyNameFormat, params object[] arguments)
+    public static Result<DateOnly> IsDateOnly(this Result<string> result, PropertyPath path, string member)
     {
         if (result.IsFailure) return Result.Failure<DateOnly>(result.Error);
 
-        if (!DateOnly.TryParse(result.Value, out DateOnly dateValue))
+        if (!DateOnly.TryParse(result.Value, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly parsedValue))
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
-        return Result.Success(dateValue);
+        return Result.Success(parsedValue);
     }
 }

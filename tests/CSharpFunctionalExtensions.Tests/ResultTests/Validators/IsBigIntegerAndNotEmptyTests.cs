@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Microsoft.Extensions.Hosting;
@@ -12,7 +12,6 @@ public class IsBigIntegerAndNotEmptyTests
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     [Theory]
@@ -48,7 +47,7 @@ public class IsBigIntegerAndNotEmptyTests
         //Arrange
 
         //Act
-        var result = Result.IsBigIntegerAndNotEmpty(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsBigIntegerAndNotEmpty(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -106,12 +105,12 @@ public class IsBigIntegerAndNotEmptyTests
         //Arrange
 
         //Act
-        var result = Result.IsBigIntegerAndNotEmpty(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsBigIntegerAndNotEmpty(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, multiPartPropertyName));
     }
 }

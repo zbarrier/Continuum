@@ -4,8 +4,7 @@ public class TaxIdTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
-    const string MultiPartPropertyNameFormat = "{0} {1}";
-    const string MultiPartPropertyName = MyPropertyName + " " + MyPropertyNameTwo;
+    const string MultiPartPropertyName = MyPropertyName + "." + MyPropertyNameTwo;
 
     static ValidationError Expected(string propertyName, string code, string template) =>
         new(propertyName, code, template, propertyName);
@@ -54,7 +53,7 @@ public class TaxIdTests
     [Fact]
     public void IsUSTaxIdMultiPart_InvalidValue_UsesFormattedPropertyName()
     {
-        var result = Result.IsUSTaxId("12-345678a", MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSTaxId("12-345678a", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName, ExpectedUSValidationErrorCodes.TaxIdFormat, ExpectedUSValidatorErrorStrings.TaxIdFormat), result.Error);
     }
@@ -73,7 +72,7 @@ public class TaxIdTests
     [Fact]
     public void IsUSTaxIdExtension_InvalidLength_TaxIdError()
     {
-        var result = Result.Success("123").IsUSTaxId(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Success("123").IsUSTaxId(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName, ExpectedUSValidationErrorCodes.TaxId, ExpectedUSValidatorErrorStrings.TaxId), result.Error);
     }
@@ -114,7 +113,7 @@ public class TaxIdTests
     [Fact]
     public void IsUSEinTaxIdMultiPart_InvalidValue_UsesFormattedPropertyName()
     {
-        var result = Result.IsUSEinTaxId("12-34567-8", MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSEinTaxId("12-34567-8", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName, ExpectedUSValidationErrorCodes.EinFormat, ExpectedUSValidatorErrorStrings.EinFormat), result.Error);
     }
@@ -136,7 +135,7 @@ public class TaxIdTests
     [Fact]
     public void IsUSEinTaxIdExtensionMultiPart_InvalidValue_UsesFormattedPropertyName()
     {
-        var result = Result.Success("1").IsUSEinTaxId(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Success("1").IsUSEinTaxId(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName, ExpectedUSValidationErrorCodes.EinFormat, ExpectedUSValidatorErrorStrings.EinFormat), result.Error);
     }
@@ -176,7 +175,7 @@ public class TaxIdTests
     [Fact]
     public void IsUSSsnTaxIdMultiPart_StartsWithNine_UsesFormattedPropertyName()
     {
-        var result = Result.IsUSSsnTaxId("912-34-5678", MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSSsnTaxId("912-34-5678", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName, ExpectedUSValidationErrorCodes.Ssn, ExpectedUSValidatorErrorStrings.Ssn), result.Error);
     }
@@ -202,7 +201,7 @@ public class TaxIdTests
     [Fact]
     public void IsUSSsnTaxIdExtensionMultiPart_InvalidLength_UsesFormattedPropertyName()
     {
-        var result = Result.Success("123").IsUSSsnTaxId(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Success("123").IsUSSsnTaxId(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName, ExpectedUSValidationErrorCodes.SsnFormat, ExpectedUSValidatorErrorStrings.SsnFormat), result.Error);
     }
@@ -242,7 +241,7 @@ public class TaxIdTests
     [Fact]
     public void IsUSItinTaxIdMultiPart_DoesNotStartWithNine_UsesFormattedPropertyName()
     {
-        var result = Result.IsUSItinTaxId("123-45-6789", MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSItinTaxId("123-45-6789", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName, ExpectedUSValidationErrorCodes.Itin, ExpectedUSValidatorErrorStrings.Itin), result.Error);
     }
@@ -268,7 +267,7 @@ public class TaxIdTests
     [Fact]
     public void IsUSItinTaxIdExtensionMultiPart_InvalidLength_UsesFormattedPropertyName()
     {
-        var result = Result.Success("9").IsUSItinTaxId(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Success("9").IsUSItinTaxId(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(Expected(MultiPartPropertyName, ExpectedUSValidationErrorCodes.ItinFormat, ExpectedUSValidatorErrorStrings.ItinFormat), result.Error);
     }

@@ -1,11 +1,10 @@
-﻿namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
+namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
 
 public class MinLengthExtensionTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
@@ -52,8 +51,8 @@ public class MinLengthExtensionTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.NotEmpty(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .MinLength(minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .MinLength(minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -69,7 +68,7 @@ public class MinLengthExtensionTests
 
         //Act
         var result = Result.Failure<IEnumerable<int>>(PreviousFailureError)
-            .MinLength(minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .MinLength(minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -100,8 +99,8 @@ public class MinLengthExtensionTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.NotEmpty(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .MinLength(minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .MinLength(minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -132,13 +131,13 @@ public class MinLengthExtensionTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.NotEmpty(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .MinLength(minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .MinLength(minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MinCount, ExpectedValidatorErrorStrings.MinCount, multiPartPropertyName, minLength, value.Count()));
     }
 
@@ -194,8 +193,8 @@ public class MinLengthExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .MinLength(minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .MinLength(minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -213,7 +212,7 @@ public class MinLengthExtensionTests
 
         //Act
         var result = Result.Failure<string>(PreviousFailureError)
-            .MinLength(minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .MinLength(minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -250,13 +249,13 @@ public class MinLengthExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .MinLength(minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .MinLength(minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MinLength, ExpectedValidatorErrorStrings.MinLength, multiPartPropertyName, minLength, value.Length));
     }
 

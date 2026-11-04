@@ -1,16 +1,15 @@
-﻿namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
+namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
 
 public class CreditCardExtensionTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     static readonly Error CreditCardError = new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.CreditCard, ExpectedValidatorErrorStrings.CreditCard, MyPropertyName);
 
-    static readonly string MultiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+    static readonly string MultiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
     static readonly Error MultiPartCreditCardError = new ValidationError(MultiPartPropertyName, ExpectedValidationErrorCodes.CreditCard, ExpectedValidatorErrorStrings.CreditCard, MultiPartPropertyName);
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
@@ -59,8 +58,8 @@ public class CreditCardExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotEmpty(creditCardNumber, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsCreditCard(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(creditCardNumber, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsCreditCard(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -74,7 +73,7 @@ public class CreditCardExtensionTests
 
         //Act
         var result = Result.Failure<string>(PreviousFailureError)
-            .IsCreditCard(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .IsCreditCard(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -103,8 +102,8 @@ public class CreditCardExtensionTests
         string creditCardNumber = "411111111111111";
 
         //Act
-        var result = Result.NotEmpty(creditCardNumber, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsCreditCard(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(creditCardNumber, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsCreditCard(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -133,8 +132,8 @@ public class CreditCardExtensionTests
         string creditCardNumber = "41111111111111111";
 
         //Act
-        var result = Result.NotEmpty(creditCardNumber, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsCreditCard(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(creditCardNumber, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsCreditCard(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -163,8 +162,8 @@ public class CreditCardExtensionTests
         string creditCardNumber = "4111111111a11111";
 
         //Act
-        var result = Result.NotEmpty(creditCardNumber, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsCreditCard(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(creditCardNumber, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsCreditCard(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -193,8 +192,8 @@ public class CreditCardExtensionTests
         string creditCardNumber = "3111111111111111";
 
         //Act
-        var result = Result.NotEmpty(creditCardNumber, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsCreditCard(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(creditCardNumber, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsCreditCard(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);

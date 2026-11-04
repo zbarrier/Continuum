@@ -1,11 +1,10 @@
-﻿namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
+namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
 
 public class ExactLengthTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     #region IEnumerable
@@ -33,7 +32,7 @@ public class ExactLengthTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.ExactLength(value, length, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.ExactLength(value, length, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -63,12 +62,12 @@ public class ExactLengthTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.ExactLength(value, length, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.ExactLength(value, length, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.ExactCount, ExpectedValidatorErrorStrings.ExactCount, multiPartPropertyName, length, value.Count()));
     }
 
@@ -105,7 +104,7 @@ public class ExactLengthTests
         //Arrange
 
         //Act
-        var result = Result.ExactLength(value, length, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.ExactLength(value, length, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -141,12 +140,12 @@ public class ExactLengthTests
         //Arrange
 
         //Act
-        var result = Result.ExactLength(value, length, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.ExactLength(value, length, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.ExactLength, ExpectedValidatorErrorStrings.ExactLength, multiPartPropertyName, length, value.Length));
     }
 

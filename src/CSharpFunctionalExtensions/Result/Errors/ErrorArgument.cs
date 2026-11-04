@@ -116,7 +116,7 @@ public readonly struct ErrorArgument : IEquatable<ErrorArgument>, IFormattable
         byte u8 => From(u8),
         ushort u16 => From(u16),
         uint u32 => From(u32),
-        ulong u64 when u64 <= long.MaxValue => From((long)u64),
+        ulong u64 => FromUInt64(u64),
         double d => From(d),
         float f => From(f),
         decimal m => From(m),
@@ -134,13 +134,18 @@ public readonly struct ErrorArgument : IEquatable<ErrorArgument>, IFormattable
         _ => From(value.ToString()),
     };
 
+    static ErrorArgument FromUInt64(ulong value)
+        => value <= long.MaxValue ? From((long)value) : From(new System.Numerics.BigInteger(value));
+
 #pragma warning disable CS1591
     public static implicit operator ErrorArgument(string? value) => From(value);
     public static implicit operator ErrorArgument(int value) => From(value);
     public static implicit operator ErrorArgument(long value) => From(value);
     public static implicit operator ErrorArgument(short value) => From(value);
     public static implicit operator ErrorArgument(byte value) => From(value);
+    public static implicit operator ErrorArgument(ushort value) => From(value);
     public static implicit operator ErrorArgument(uint value) => From(value);
+    public static implicit operator ErrorArgument(ulong value) => FromUInt64(value);
     public static implicit operator ErrorArgument(double value) => From(value);
     public static implicit operator ErrorArgument(float value) => From(value);
     public static implicit operator ErrorArgument(decimal value) => From(value);

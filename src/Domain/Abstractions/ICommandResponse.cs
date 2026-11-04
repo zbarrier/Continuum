@@ -1,7 +1,7 @@
 namespace Continuum.Domain;
 
-/// <summary>The result of persisting the uncommitted events of a session.</summary>
-public interface ISessionSaveResponse : IResponse
+/// <summary>The result of persisting the uncommitted events of a stream transaction.</summary>
+public interface IStreamTransactionResponse : IResponse
 {
     /// <summary>Gets the changes (events) that were saved.</summary>
     IReadOnlyList<IChange> Changes { get; }

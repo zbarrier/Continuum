@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
@@ -12,7 +12,6 @@ public class NotNullExtensionTests
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
@@ -57,7 +56,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -72,7 +71,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<IEnumerable<int>>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -102,7 +101,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -132,12 +131,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -190,7 +189,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -204,7 +203,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<string>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -234,7 +233,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -264,12 +263,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -320,7 +319,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -334,7 +333,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<byte>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -364,7 +363,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -394,12 +393,402 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
+    }
+
+    #endregion
+
+    #region ushort
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(255)]
+    public void NotNull_NonEmptyUShort_Success(ushort value)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNull_UShortPreviousError_Failure()
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<ushort>(PreviousFailureError)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(255)]
+    public void NotNullMultiPart_NonEmptyUShort_Success(ushort value)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNullMultiPart_UShortPreviousError_Failure()
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<ushort>(PreviousFailureError)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Fact]
+    public void NotNull_DefaultUShort_Success()
+    {
+        //Arrange
+        ushort? value = 0;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNullMultiPart_DefaultUShort_Success()
+    {
+        //Arrange
+        ushort? value = 0;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNull_NullUShort_Failure()
+    {
+        //Arrange
+        ushort? value = null;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, MyPropertyName));
+    }
+
+    [Fact]
+    public void NotNullMultiPart_NullUShort_Failure()
+    {
+        //Arrange
+        ushort? value = null;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
+    }
+
+    #endregion
+
+    #region uint
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(255)]
+    public void NotNull_NonEmptyUInt_Success(uint value)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNull_UIntPreviousError_Failure()
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<uint>(PreviousFailureError)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(255)]
+    public void NotNullMultiPart_NonEmptyUInt_Success(uint value)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNullMultiPart_UIntPreviousError_Failure()
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<uint>(PreviousFailureError)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Fact]
+    public void NotNull_DefaultUInt_Success()
+    {
+        //Arrange
+        uint? value = 0;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNullMultiPart_DefaultUInt_Success()
+    {
+        //Arrange
+        uint? value = 0;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNull_NullUInt_Failure()
+    {
+        //Arrange
+        uint? value = null;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, MyPropertyName));
+    }
+
+    [Fact]
+    public void NotNullMultiPart_NullUInt_Failure()
+    {
+        //Arrange
+        uint? value = null;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
+    }
+
+    #endregion
+
+    #region ulong
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(255)]
+    public void NotNull_NonEmptyULong_Success(ulong value)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNull_ULongPreviousError_Failure()
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<ulong>(PreviousFailureError)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(255)]
+    public void NotNullMultiPart_NonEmptyULong_Success(ulong value)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNullMultiPart_ULongPreviousError_Failure()
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<ulong>(PreviousFailureError)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Fact]
+    public void NotNull_DefaultULong_Success()
+    {
+        //Arrange
+        ulong? value = 0;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNullMultiPart_DefaultULong_Success()
+    {
+        //Arrange
+        ulong? value = 0;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Fact]
+    public void NotNull_NullULong_Failure()
+    {
+        //Arrange
+        ulong? value = null;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, MyPropertyName));
+    }
+
+    [Fact]
+    public void NotNullMultiPart_NullULong_Failure()
+    {
+        //Arrange
+        ulong? value = null;
+
+        //Act
+        var result = Result.Success(value)
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -452,7 +841,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -466,7 +855,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<short>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -496,7 +885,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -526,12 +915,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -586,7 +975,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -600,7 +989,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<int>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -630,7 +1019,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -660,12 +1049,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -724,7 +1113,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -738,7 +1127,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<long>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -768,7 +1157,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -798,12 +1187,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -854,7 +1243,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -868,7 +1257,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<float>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -898,7 +1287,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -928,12 +1317,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -988,7 +1377,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1002,7 +1391,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<double>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1032,7 +1421,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1062,12 +1451,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -1126,7 +1515,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1140,7 +1529,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<decimal>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1170,7 +1559,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1200,12 +1589,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -1275,7 +1664,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1298,7 +1687,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<BigInteger>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1328,7 +1717,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1358,12 +1747,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -1424,7 +1813,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1444,7 +1833,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<TimeSpan>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1474,7 +1863,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1504,12 +1893,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -1567,7 +1956,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1586,7 +1975,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<DateTime>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1616,7 +2005,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1646,12 +2035,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 
@@ -1709,7 +2098,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1728,7 +2117,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Failure<DateTimeOffset>(PreviousFailureError)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1758,7 +2147,7 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1788,12 +2177,12 @@ public class NotNullExtensionTests
 
         //Act
         var result = Result.Success(value)
-            .NotNull(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .NotNull(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.NotNull, ExpectedValidatorErrorStrings.NotNull, multiPartPropertyName));
     }
 

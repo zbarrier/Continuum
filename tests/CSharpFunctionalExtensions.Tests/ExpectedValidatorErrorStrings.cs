@@ -23,6 +23,7 @@ public static class ExpectedValidatorErrorStrings
     public const string MaxLength = "The length of '{0}' must be {1} characters or fewer.";
     public const string MinLength = "The length of '{0}' must be at least {1} characters.";
     public const string NotEmpty = "'{0}' must not be empty.";
+    public const string NotEqual = "'{0}' must not be equal to '{1}'.";
     public const string NotNull = "'{0}' must not be empty.";
     public const string ScalePrecision = "'{0}' must not be more than {1} digits in total, with allowance for {2} decimals. {3} digits and {4} decimals were found.";
 }

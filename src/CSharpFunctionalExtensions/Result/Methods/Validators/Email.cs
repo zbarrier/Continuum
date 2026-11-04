@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Text.RegularExpressions;
 
@@ -25,9 +25,9 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid email.
     /// </summary>
-    public static Result<string> IsEmail(string value, string propertyNameFormat, params object[] arguments)
+    public static Result<string> IsEmail(string value, PropertyPath path, string member)
     {
-        var result = Result.MaxLength(value, EmailValidation.MaxEmailLength, propertyNameFormat, arguments);
+        var result = Result.MaxLength(value, EmailValidation.MaxEmailLength, path, member);
         if (result.IsFailure)
         {
             return result;
@@ -37,7 +37,7 @@ public partial struct Result
             return Result.Success(value);
         }
             
-        var propertyName = string.Format(propertyNameFormat, arguments);
+        var propertyName = path.Format(member);
         return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.Email, ValidatorErrorStrings.Email, propertyName));
     }
 
@@ -56,14 +56,14 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is ASP.NET Core compatible email.
     /// </summary>
-    public static Result<string> IsAspNetCoreCompatibleEmail(string value, string propertyNameFormat, params object[] arguments)
+    public static Result<string> IsAspNetCoreCompatibleEmail(string value, PropertyPath path, string member)
     {
         int index = value.IndexOf('@');
 
         if (index > 0 && index != value.Length - 1 && index == value.LastIndexOf('@'))
             return Result.Success(value);
 
-        var propertyName = string.Format(propertyNameFormat, arguments);
+        var propertyName = path.Format(member);
         return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.Email, ValidatorErrorStrings.Email, propertyName));
     }
 }

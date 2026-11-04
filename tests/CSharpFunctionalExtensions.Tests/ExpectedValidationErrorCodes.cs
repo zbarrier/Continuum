@@ -23,6 +23,7 @@ public static class ExpectedValidationErrorCodes
     public const string MinCount = "min_count";
     public const string MinLength = "min_length";
     public const string NotEmpty = "not_empty";
+    public const string NotEqual = "not_equal";
     public const string NotNull = "not_null";
     public const string ScalePrecision = "scale_precision";
 }

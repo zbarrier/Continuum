@@ -1,11 +1,10 @@
-﻿namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
+namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
 
 public class MaxLengthTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     #region IEnumerable
@@ -33,7 +32,7 @@ public class MaxLengthTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.MaxLength(value, maxLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MaxLength(value, maxLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -63,7 +62,7 @@ public class MaxLengthTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.MaxLength(value, maxLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MaxLength(value, maxLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -93,12 +92,12 @@ public class MaxLengthTests
         var value = new List<int> { 1, 2, 3, 4 };
 
         //Act
-        var result = Result.MaxLength(value, maxLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MaxLength(value, maxLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MaxCount, ExpectedValidatorErrorStrings.MaxCount, multiPartPropertyName, maxLength, value.Count()));
     }
 
@@ -135,7 +134,7 @@ public class MaxLengthTests
         //Arrange
 
         //Act
-        var result = Result.MaxLength(value, maxLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MaxLength(value, maxLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -171,12 +170,12 @@ public class MaxLengthTests
         //Arrange
 
         //Act
-        var result = Result.MaxLength(value, maxLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MaxLength(value, maxLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MaxLength, ExpectedValidatorErrorStrings.MaxLength, multiPartPropertyName, maxLength, value.Length));
     }
 

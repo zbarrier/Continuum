@@ -47,6 +47,8 @@ public static class ValidatorErrorStrings
     public const string MinLength = "The length of '{0}' must be at least {1} characters.";
     /// <summary>{0} property.</summary>
     public const string NotEmpty = "'{0}' must not be empty.";
+    /// <summary>{0} property, {1} disallowed value.</summary>
+    public const string NotEqual = "'{0}' must not be equal to '{1}'.";
     /// <summary>{0} property.</summary>
     public const string NotNull = "'{0}' must not be empty.";
     /// <summary>{0} property, {1} expected precision, {2} expected scale, {3} actual integer digits, {4} actual scale.</summary>

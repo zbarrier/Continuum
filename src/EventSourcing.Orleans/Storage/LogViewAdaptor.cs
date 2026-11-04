@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 
+using Continuum.Orleans.Transactions;
+
 using Microsoft.Extensions.Logging;
 
 using Orleans.EventSourcing;
@@ -20,7 +22,7 @@ namespace Continuum.EventSourcing.Orleans;
 /// </summary>
 /// <typeparam name="TLogView">Type of log view</typeparam>
 /// <typeparam name="TLogEntry">Type of log entry</typeparam>
-internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<TLogView, TLogEntry, SubmissionEntry<TLogEntry>>
+internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<TLogView, TLogEntry, LogViewAdaptor<TLogView, TLogEntry>.TransactionSubmissionEntry>
     where TLogView : class, new()
     where TLogEntry : class
 {
@@ -88,8 +90,35 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
         => _logStorage.ReadAsync<TLogEntry>(_grainTypeName, Services.GrainId, fromVersion, toVersion - fromVersion);
 
     /// <inheritdoc />
-    protected override SubmissionEntry<TLogEntry> MakeSubmissionEntry(TLogEntry entry)
-        => new SubmissionEntry<TLogEntry> { Entry = entry };
+    /// <remarks>
+    ///     Orleans submits a batch synchronously, so the host's pending transaction (if any) belongs to this entry. Only
+    ///     the entry's own event is applied to the view; the participants' events are only appended.
+    /// </remarks>
+    protected override TransactionSubmissionEntry MakeSubmissionEntry(TLogEntry entry)
+        => new() { Entry = entry, Transaction = (Host as ITransactionSubmissionSource)?.PendingTransaction };
+
+    /// <summary>A submission entry that may belong to a multi-stream transaction.</summary>
+    internal sealed class TransactionSubmissionEntry : SubmissionEntry<TLogEntry>
+    {
+        /// <summary>The transaction the entry belongs to, or <see langword="null"/> for a normal submission.</summary>
+        public TransactionSubmission? Transaction { get; init; }
+    }
+
+    /// <summary>
+    ///     Gets the batch to write: the leading normal entries, or the entries of the leading transaction. A transaction
+    ///     is always written on its own so its ID and participants apply only to its entries.
+    /// </summary>
+    private TransactionSubmissionEntry[] GetNextBatch()
+    {
+        var updates = GetCurrentBatchOfUpdates();
+        var transaction = updates[0].Transaction;
+        var count = 1;
+        while (count < updates.Length && ReferenceEquals(updates[count].Transaction, transaction))
+        {
+            count++;
+        }
+        return count == updates.Length ? updates : updates[..count];
+    }
 
     private void UpdateConfirmedView(IReadOnlyList<TLogEntry> logEntries)
     {
@@ -160,23 +189,36 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
     {
         enter_operation("WriteAsync");
 
-        var updates = GetCurrentBatchOfUpdates();
+        var updates = GetNextBatch();
+        var transaction = updates[0].Transaction;
         var expectedVersion = _globalVersion;
-        // A new ID for every attempt: an unknown outcome is always settled within this call, so a retry never needs
-        // to recognize an earlier attempt.
-        var transactionId = _transactionIdGenerator.NewTransactionId();
+        // A new ID for every normal attempt: an unknown outcome is always settled within this call, so a retry never
+        // needs to recognize an earlier attempt. A transaction keeps its own ID, which participants were told about.
+        var transactionId = transaction?.TransactionId ?? _transactionIdGenerator.NewTransactionId();
         var batchAppended = false;
 
         try
         {
             var logEntries = updates.Select(x => x.Entry!).ToImmutableList();
-            _globalVersion = await _logStorage.AppendAsync(_grainTypeName, Services.GrainId, logEntries, expectedVersion, transactionId);
+            _globalVersion = transaction is null
+                ? await _logStorage.AppendAsync(_grainTypeName, Services.GrainId, logEntries, expectedVersion, transactionId)
+                : await AppendTransactionAsync(transaction, logEntries, expectedVersion);
             // The log is the source of truth and the snapshot is only a cache, so the batch is written once the append
             // succeeds. Reporting a failed snapshot write as a failed batch would make Orleans retry and append the
             // same entries again.
             batchAppended = true;
             Services.Log(LogLevel.Debug, "write success {0}", logEntries);
             UpdateConfirmedView(logEntries);
+        }
+        catch (Exception ex) when (transaction is not null && IsTransactionRejected(ex))
+        {
+            // Retrying cannot succeed and the grain's own version did not change, so Orleans would keep resubmitting.
+            // The entries are dropped instead, and the grain reads the failure from the transaction.
+            Services.Log(LogLevel.Debug, "transaction rejected {0}", ex);
+            transaction.Failure = ex;
+            transaction.IsConflict = ex is LogAppendConflictException;
+            exit_operation("WriteAsync");
+            return updates.Length;
         }
         catch (Exception ex)
         {
@@ -258,7 +300,57 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
     #endregion
 
     /// <summary>
-    ///     Re-reads the stored snapshot's ETag after a failed snapshot write, so the next write is not rejected because
+    ///     Appends the grain's entries and the participants' entries in one atomic write, in the order the business
+    ///     logic generated them.
+    /// </summary>
+    /// <returns>The grain's log version after the append.</returns>
+    private async Task<int> AppendTransactionAsync(TransactionSubmission transaction, IList<TLogEntry> logEntries, int expectedVersion)
+    {
+        if (_logStorage is not IMultiStreamLogConsistentStorage multiStreamStorage)
+        {
+            throw new NotSupportedException("The log-consistent storage does not support multi-stream appends.");
+        }
+        // Stream 0 is this grain; participant i is stream i + 1.
+        var streams = new List<LogStream>(transaction.Participants.Count + 1)
+        {
+            new(_grainTypeName, Services.GrainId, expectedVersion)
+        };
+        foreach (var participant in transaction.Participants)
+        {
+            streams.Add(new(participant.GrainId.Type.ToString()!, participant.GrainId, participant.ExpectedVersion));
+        }
+        // Participants may use a different event base type, so entries are appended as objects; they are serialized
+        // by their runtime type.
+        var records = new List<LogRecord<object>>(transaction.Records.Count);
+        var nextEntry = 0;
+        foreach (var record in transaction.Records)
+        {
+            records.Add(record.Participant is { } participant
+                ? new(participant + 1, record.Event!)
+                : new(0, logEntries[nextEntry++]));
+        }
+        if (nextEntry != logEntries.Count)
+        {
+            throw new ArgumentException("The transaction's records do not match the grain's submitted events.");
+        }
+        var versions = await multiStreamStorage.AppendAsync(streams, records, transaction.TransactionId);
+        return versions[0];
+    }
+
+    /// <summary>
+    ///     Whether a failed transaction append can never succeed by retrying: a participant's log moved (the grain's own
+    ///     conflict is left to Orleans, which drops stale conditional entries after re-reading), or the transaction is
+    ///     not valid for this storage.
+    /// </summary>
+    private bool IsTransactionRejected(Exception ex) => ex switch
+    {
+        LogAppendConflictException conflict => conflict.Conflicts.All(c => c.GrainId != Services.GrainId),
+        ArgumentException or NotSupportedException => true,
+        _ => false,
+    };
+
+    /// <summary>
+    ///     Re-reads the stored snapshot's ETag
     ///     the failed write actually reached storage. The in-memory view is kept, since it already includes the
     ///     appended entries. A failed read is only recorded; the next write will try again.
     /// </summary>

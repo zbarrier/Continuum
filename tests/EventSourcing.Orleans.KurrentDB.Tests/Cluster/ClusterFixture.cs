@@ -7,7 +7,7 @@ using KurrentDB.Client;
 
 using Orleans.TestingHost;
 
-namespace Continuum.EventSourcing.Orleans.KurrentDB.Tests;
+namespace Continuum.EventSourcing.Orleans.KurrentDB.Tests.Cluster;
 
 public sealed class ClusterFixture : IAsyncLifetime
 {
@@ -17,7 +17,7 @@ public sealed class ClusterFixture : IAsyncLifetime
 
     // Pinned so a new KurrentDB release cannot change test behavior unnoticed.
     // A random host port lets parallel runs and leftover containers coexist.
-    private readonly IContainer _container = new ContainerBuilder("docker.kurrent.io/kurrent-latest/kurrentdb:25.1")
+    private readonly IContainer _container = new ContainerBuilder("docker.kurrent.io/kurrent-latest/kurrentdb:26.1")
         .WithPortBinding(KurrentDBPort, true)
         .WithEnvironment("KURRENTDB_INSECURE", "true")
         .WithEnvironment("KURRENTDB_MEM_DB", "true")

@@ -1,4 +1,4 @@
-﻿using Xunit.Sdk;
+using Xunit.Sdk;
 
 namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
 
@@ -7,12 +7,11 @@ public class EmailExtensionTests
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     static readonly Error EmailError = new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Email, ExpectedValidatorErrorStrings.Email, MyPropertyName);
 
-    static readonly string MultiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+    static readonly string MultiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
     static readonly Error MultiPartEmailError = new ValidationError(MultiPartPropertyName, ExpectedValidationErrorCodes.Email, ExpectedValidatorErrorStrings.Email, MultiPartPropertyName);
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
@@ -54,8 +53,8 @@ public class EmailExtensionTests
         var emailAddress = "simple@example.com";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -70,7 +69,7 @@ public class EmailExtensionTests
 
         //Act
         var result = Result.Failure<string>(PreviousFailureError)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -99,8 +98,8 @@ public class EmailExtensionTests
         var emailAddress = "very.common@example.com";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -129,8 +128,8 @@ public class EmailExtensionTests
         var emailAddress = "a@example.com";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -159,8 +158,8 @@ public class EmailExtensionTests
         var emailAddress = "user.name+tag+sorting@example.com";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -189,8 +188,8 @@ public class EmailExtensionTests
         var emailAddress = "name/surname@example.com";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -219,8 +218,8 @@ public class EmailExtensionTests
         var emailAddress = "long.email-address-with-hyphens@and.subdomains.example.com";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -249,8 +248,8 @@ public class EmailExtensionTests
         var emailAddress = "example@s.example";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -279,8 +278,8 @@ public class EmailExtensionTests
         var emailAddress = "\" \"@example.org";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -309,8 +308,8 @@ public class EmailExtensionTests
         var emailAddress = "\"john..doe\"@example.org";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -339,8 +338,8 @@ public class EmailExtensionTests
         var emailAddress = "mailhost!username@example.org";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -369,8 +368,8 @@ public class EmailExtensionTests
         var emailAddress = "user%example.com@example.org";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -399,8 +398,8 @@ public class EmailExtensionTests
         var emailAddress = "user-@example.org";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -433,8 +432,8 @@ public class EmailExtensionTests
         var emailAddress = "postmaster@[123.123.123.123]";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -467,8 +466,8 @@ public class EmailExtensionTests
         var emailAddress = "postmaster@[IPv6:2001:0db8:85a3:0000:0000:8a2e:0370:7334]";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -501,8 +500,8 @@ public class EmailExtensionTests
         var emailAddress = "\"very.(),:;<> []\".VERY.\"very@\\ \"very\".unusual\"@strange.example.com";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -535,8 +534,8 @@ public class EmailExtensionTests
         var emailAddress = "admin@example";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -565,8 +564,8 @@ public class EmailExtensionTests
         var emailAddress = "admin.example.com";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -595,8 +594,8 @@ public class EmailExtensionTests
         var emailAddress = "admin@abc@example.com";
 
         //Act
-        var result = Result.NotEmpty(emailAddress, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotEmpty(emailAddress, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);

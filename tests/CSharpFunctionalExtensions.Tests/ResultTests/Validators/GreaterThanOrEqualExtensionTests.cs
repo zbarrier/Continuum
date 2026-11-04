@@ -10,7 +10,6 @@ public class GreaterThanOrEqualExtensionTests
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     static readonly Error PreviousFailureError = RequestErrors.NewInvalidArg("Previous failure.");
@@ -81,8 +80,8 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = new TestClass(expectedId);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, TestClassComparer.Default, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, TestClassComparer.Default, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -106,7 +105,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<TestClass>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, TestClassComparer.Default, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, TestClassComparer.Default, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -147,13 +146,13 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = new TestClass(expectedId);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, TestClassComparer.Default, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, TestClassComparer.Default, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
@@ -214,8 +213,8 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -234,7 +233,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<string>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -267,13 +266,13 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -338,8 +337,8 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -360,7 +359,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<byte>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -397,13 +396,403 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region ushort
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 1)]
+    [InlineData(13, 12)]
+    [InlineData(128, 127)]
+    [InlineData(128, 128)]
+    [InlineData(255, 254)]
+    [InlineData(255, 255)]
+    public void GreaterThanOrEqual_UShortOfGreaterThanOrEqualValue_Success(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, MyPropertyName)
+            .GreaterThanOrEqual(expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(128)]
+    [InlineData(254)]
+    [InlineData(255)]
+    public void GreaterThanOrEqual_UShortOfPreviousError_Failure(ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<ushort>(PreviousFailureError)
+            .GreaterThanOrEqual(expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 1)]
+    [InlineData(13, 12)]
+    [InlineData(128, 127)]
+    [InlineData(128, 128)]
+    [InlineData(255, 254)]
+    [InlineData(255, 255)]
+    public void GreaterThanOrEqualMultiPart_UShortOfGreaterThanOrEqualValue_Success(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(128)]
+    [InlineData(254)]
+    [InlineData(255)]
+    public void GreaterThanOrEqualMultiPart_UShortOfPreviousError_Failure(ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<ushort>(PreviousFailureError)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void GreaterThanOrEqual_UShortOfLessThanValue_Failure(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, MyPropertyName)
+            .GreaterThanOrEqual(expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void GreaterThanOrEqualMultiPart_UShortOfLessThanValue_Failure(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region uint
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 1)]
+    [InlineData(13, 12)]
+    [InlineData(128, 127)]
+    [InlineData(128, 128)]
+    [InlineData(255, 254)]
+    [InlineData(255, 255)]
+    public void GreaterThanOrEqual_UIntOfGreaterThanOrEqualValue_Success(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, MyPropertyName)
+            .GreaterThanOrEqual(expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(128)]
+    [InlineData(254)]
+    [InlineData(255)]
+    public void GreaterThanOrEqual_UIntOfPreviousError_Failure(uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<uint>(PreviousFailureError)
+            .GreaterThanOrEqual(expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 1)]
+    [InlineData(13, 12)]
+    [InlineData(128, 127)]
+    [InlineData(128, 128)]
+    [InlineData(255, 254)]
+    [InlineData(255, 255)]
+    public void GreaterThanOrEqualMultiPart_UIntOfGreaterThanOrEqualValue_Success(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(128)]
+    [InlineData(254)]
+    [InlineData(255)]
+    public void GreaterThanOrEqualMultiPart_UIntOfPreviousError_Failure(uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<uint>(PreviousFailureError)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void GreaterThanOrEqual_UIntOfLessThanValue_Failure(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, MyPropertyName)
+            .GreaterThanOrEqual(expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void GreaterThanOrEqualMultiPart_UIntOfLessThanValue_Failure(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region ulong
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 1)]
+    [InlineData(13, 12)]
+    [InlineData(128, 127)]
+    [InlineData(128, 128)]
+    [InlineData(255, 254)]
+    [InlineData(255, 255)]
+    public void GreaterThanOrEqual_ULongOfGreaterThanOrEqualValue_Success(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, MyPropertyName)
+            .GreaterThanOrEqual(expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(128)]
+    [InlineData(254)]
+    [InlineData(255)]
+    public void GreaterThanOrEqual_ULongOfPreviousError_Failure(ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<ulong>(PreviousFailureError)
+            .GreaterThanOrEqual(expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 1)]
+    [InlineData(13, 12)]
+    [InlineData(128, 127)]
+    [InlineData(128, 128)]
+    [InlineData(255, 254)]
+    [InlineData(255, 255)]
+    public void GreaterThanOrEqualMultiPart_ULongOfGreaterThanOrEqualValue_Success(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(12)]
+    [InlineData(127)]
+    [InlineData(128)]
+    [InlineData(254)]
+    [InlineData(255)]
+    public void GreaterThanOrEqualMultiPart_ULongOfPreviousError_Failure(ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Failure<ulong>(PreviousFailureError)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, PreviousFailureError);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void GreaterThanOrEqual_ULongOfLessThanValue_Failure(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, MyPropertyName)
+            .GreaterThanOrEqual(expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void GreaterThanOrEqualMultiPart_ULongOfLessThanValue_Failure(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -470,8 +859,8 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -492,7 +881,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<short>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -529,13 +918,13 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -605,8 +994,8 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -629,7 +1018,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<int>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -670,13 +1059,13 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -752,8 +1141,8 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -777,7 +1166,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<long>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -822,13 +1211,13 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -892,8 +1281,8 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -913,7 +1302,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<float>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -950,13 +1339,13 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -1026,8 +1415,8 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1049,7 +1438,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<double>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1090,13 +1479,13 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -1165,8 +1554,8 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1189,7 +1578,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<decimal>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1234,13 +1623,13 @@ public class GreaterThanOrEqualExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -1315,8 +1704,8 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = BigInteger.Parse(expectedValueStr);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1341,7 +1730,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<BigInteger>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1390,13 +1779,13 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = BigInteger.Parse(expectedValueStr);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -1459,8 +1848,8 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = TimeSpan.Parse(expectedValueStr);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1481,7 +1870,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<TimeSpan>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1522,13 +1911,13 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = TimeSpan.Parse(expectedValueStr);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -1588,8 +1977,8 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = DateTime.Parse(expectedValueStr);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1609,7 +1998,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<DateTime>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1648,13 +2037,13 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = DateTime.Parse(expectedValueStr);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 
@@ -1714,8 +2103,8 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = DateTimeOffset.Parse(expectedValueStr);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1735,7 +2124,7 @@ public class GreaterThanOrEqualExtensionTests
 
         //Act
         var result = Result.Failure<DateTimeOffset>(PreviousFailureError)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
@@ -1774,13 +2163,13 @@ public class GreaterThanOrEqualExtensionTests
         var expectedValue = DateTimeOffset.Parse(expectedValueStr);
 
         //Act
-        var result = Result.NotNull(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .GreaterThanOrEqual(expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNull(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .GreaterThanOrEqual(expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.GreaterThanOrEqual, ExpectedValidatorErrorStrings.GreaterThanOrEqual, multiPartPropertyName, expectedValue));
     }
 

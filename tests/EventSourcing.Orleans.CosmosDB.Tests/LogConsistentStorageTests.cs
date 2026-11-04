@@ -1,4 +1,4 @@
-using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Events;
+using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Snacks;
 
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,10 +24,10 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
     {
         var id = Guid.NewGuid();
         var events = new SnackEvent[count];
-        events[0] = new SnackInitializedEvent(id, "Name0", Guid.NewGuid(), DateTimeOffset.UtcNow, "Test", 1);
+        events[0] = new SnackInitializedEvent(id, "Name0", DateTimeOffset.UtcNow);
         for (var index = 1; index < count; index++)
         {
-            events[index] = new SnackNameChangedEvent(id, $"Name{index}", Guid.NewGuid(), DateTimeOffset.UtcNow, "Test", index + 1);
+            events[index] = new SnackNameChangedEvent(id, $"Name{index}", DateTimeOffset.UtcNow);
         }
         return events;
     }

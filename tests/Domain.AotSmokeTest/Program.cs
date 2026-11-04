@@ -2,13 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
-using Continuum.CSharpFunctionalExtensions;
 using Continuum.Domain;
 using Continuum.Domain.Orleans;
 using Continuum.TypeMapping;
-
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 using Stateless;
 
@@ -36,21 +32,14 @@ door.When(new DoorOpened());
 door.When(new DoorClosed());
 Check("State machine transitions", door.StateMachine.State == DoorStatus.Closed && door.OpenCount == 1);
 
-// SessionSaveResponseConverter with source-generated JSON metadata
+// StreamTransactionResponseConverter with source-generated JSON metadata
 var mapper = new SmokeTypeMapper();
 var options = new JsonSerializerOptions { TypeInfoResolver = SmokeJsonContext.Default };
-options.Converters.Add(new SessionSaveResponseConverter(mapper));
-var responseInfo = (JsonTypeInfo<SessionSaveResponse>)options.GetTypeInfo(typeof(SessionSaveResponse));
-var json = JsonSerializer.Serialize(new SessionSaveResponse([new Change("smoke.counter-incremented", new CounterIncremented(7))], 4), responseInfo);
+options.Converters.Add(new StreamTransactionResponseConverter(mapper));
+var responseInfo = (JsonTypeInfo<StreamTransactionResponse>)options.GetTypeInfo(typeof(StreamTransactionResponse));
+var json = JsonSerializer.Serialize(new StreamTransactionResponse([new Change("smoke.counter-incremented", new CounterIncremented(7))], 4), responseInfo);
 var back = JsonSerializer.Deserialize(json, responseInfo);
-Check("SessionSaveResponse round-trip", back is { Version: 4 } && back.Changes.Single().Event is CounterIncremented { By: 7 });
-
-// Result pipeline extensions
-var scope = new SmokeScope();
-var saved = await Result.Success().BindWithSessionScope(scope, s => s.Apply(new CounterIncremented(1)));
-Check("BindWithSessionScope saves", saved.IsSuccess && saved.Value.Version == 1);
-var failed = await Result.Success().BindWithSessionScope(scope, (Action<IEventDrivenSession<CounterState, CounterEvent>>)(_ => throw new InvalidOperationException("boom")));
-Check("BindWithSessionScope converts exceptions", failed.IsFailure);
+Check("StreamTransactionResponse round-trip", back is { Version: 4 } && back.Changes.Single().Event is CounterIncremented { By: 7 });
 
 Console.WriteLine(failures == 0 ? "All checks passed." : $"{failures} check(s) failed.");
 return failures == 0 ? 0 : 1;
@@ -103,29 +92,6 @@ internal sealed class SmokeTypeMapper : TypeMapper
     public SmokeTypeMapper() => AddType(typeof(CounterIncremented), "smoke.counter-incremented");
 }
 
-internal sealed class SmokeScope : IEventDrivenSessionScope<CounterState, CounterEvent>
-{
-    public ILogger Logger => NullLogger.Instance;
-
-    public IEventDrivenSession<CounterState, CounterEvent> CreateSession() => new SmokeSession();
-
-    public Task<Result<ISessionSaveResponse>> SaveChanges(IEventDrivenSession<CounterState, CounterEvent> session)
-    {
-        ISessionSaveResponse response = new SessionSaveResponse(session.UncommittedEvents.Select(e => (IChange)new Change(e.GetType().Name, e)).ToList(), session.UncommittedEvents.Count);
-        return Task.FromResult(Result.Success(response));
-    }
-}
-
-[JsonSerializable(typeof(SessionSaveResponse))]
+[JsonSerializable(typeof(StreamTransactionResponse))]
 [JsonSerializable(typeof(CounterIncremented))]
 internal sealed partial class SmokeJsonContext : JsonSerializerContext;
-
-internal sealed class SmokeSession : IEventDrivenSession<CounterState, CounterEvent>
-{
-    private readonly List<CounterEvent> _events = [];
-    public CounterState State { get; } = new();
-    public IReadOnlyList<CounterEvent> UncommittedEvents => _events;
-    public void Apply<TEvent>(TEvent evt) where TEvent : CounterEvent { State.When(evt); _events.Add(evt); }
-    public (CounterState PreviousState, CounterState CurrentState) Evolve<TEvent>(TEvent evt) where TEvent : CounterEvent { Apply(evt); return (State, State); }
-    public void Dispose() { }
-}

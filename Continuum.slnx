@@ -53,7 +53,6 @@
     <Project Path="tests/CSharpFunctionalExtensions.Validators.US.Tests/Continuum.CSharpFunctionalExtensions.Validators.US.Tests.csproj" />
     <Project Path="tests/Domain.AotSmokeTest/Continuum.Domain.AotSmokeTest.csproj" />
     <Project Path="tests/Domain.Orleans.Tests/Continuum.Domain.Orleans.Tests.csproj" />
-    <Project Path="tests/Domain.Tests/Continuum.Domain.Tests.csproj" />
     <Project Path="tests/EventSourcing.AotSmokeTest/Continuum.EventSourcing.AotSmokeTest.csproj" />
     <Project Path="tests/EventSourcing.Orleans.CosmosDB.Tests/Continuum.EventSourcing.Orleans.CosmosDB.Tests.csproj" />
     <Project Path="tests/EventSourcing.Orleans.KurrentDB.Analyzers.Tests/Continuum.EventSourcing.Orleans.KurrentDB.Analyzers.Tests.csproj" />

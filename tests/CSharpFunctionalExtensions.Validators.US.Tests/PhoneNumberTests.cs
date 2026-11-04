@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 
 namespace Continuum.CSharpFunctionalExtensions.Validators.US.Tests;
 
@@ -7,7 +7,6 @@ public class PhoneNumberTests
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     [Theory]
@@ -41,7 +40,7 @@ public class PhoneNumberTests
         //Arrange
 
         //Act
-        var result = Result.IsUSPhoneNumber(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSPhoneNumber(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -75,12 +74,12 @@ public class PhoneNumberTests
         //Arrange
 
         //Act
-        var result = Result.IsUSPhoneNumber(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSPhoneNumber(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedUSValidationErrorCodes.PhoneNumber, ExpectedUSValidatorErrorStrings.PhoneNumber, multiPartPropertyName));
     }
 }

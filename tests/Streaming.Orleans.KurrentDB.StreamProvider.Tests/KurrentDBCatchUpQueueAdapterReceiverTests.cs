@@ -208,8 +208,8 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
         using var cursor = adapterReceiver.GetCacheCursor(StreamId.Create("ns", "key"), null);
         using var positioned = adapterReceiver.TryGetCacheCursorAtPosition(StreamId.Create("ns", "key"), StreamSubscriptionStartPosition.EarliestAvailable).Cursor;
 
-        Assert.False(cursor.MoveNext());
-        Assert.False(positioned!.MoveNext());
+        Assert.Equal(QueueCacheCursorMoveResultKind.NoData, cursor.MoveNextWithResult().Kind);
+        Assert.Equal(QueueCacheCursorMoveResultKind.NoData, positioned!.MoveNextWithResult().Kind);
     }
 
     /// <summary>

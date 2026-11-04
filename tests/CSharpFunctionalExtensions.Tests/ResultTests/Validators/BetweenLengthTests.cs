@@ -3,7 +3,6 @@ namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
 public class BetweenLengthTests
 {
     const string MyPropertyName = "myPropertyName";
-    const string MultiPartPropertyNameFormat = "{0} {1}";
     const string SecondPart = "secondPart";
 
     [Theory]
@@ -32,9 +31,9 @@ public class BetweenLengthTests
     [Fact]
     public void LengthBetweenMultiPart_OutsideRange_Failure()
     {
-        var result = Result.LengthBetween("a", 2, 4, MultiPartPropertyNameFormat, MyPropertyName, SecondPart);
+        var result = Result.LengthBetween("a", 2, 4, PropertyPath.Root.Append(MyPropertyName), SecondPart);
 
-        var propertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, SecondPart);
+        var propertyName = PropertyPath.Root.Append(MyPropertyName).Format(SecondPart);
         Assert.True(result.IsFailure);
         Assert.Equal(new ValidationError(propertyName, ExpectedValidationErrorCodes.LengthBetween, ExpectedValidatorErrorStrings.LengthBetween, propertyName, 2, 4, 1), result.Error);
     }
@@ -51,7 +50,7 @@ public class BetweenLengthTests
     [Fact]
     public void LengthBetweenExtension_WithinRange_Success()
     {
-        var result = Result.Success("abc").LengthBetween(2, 4, MultiPartPropertyNameFormat, MyPropertyName, SecondPart);
+        var result = Result.Success("abc").LengthBetween(2, 4, PropertyPath.Root.Append(MyPropertyName), SecondPart);
 
         Assert.True(result.IsSuccess);
     }
@@ -97,9 +96,9 @@ public class BetweenLengthTests
     {
         IEnumerable<int> value = new List<int> { 1 };
 
-        var result = Result.CountBetween(value, 2, 4, MultiPartPropertyNameFormat, MyPropertyName, SecondPart);
+        var result = Result.CountBetween(value, 2, 4, PropertyPath.Root.Append(MyPropertyName), SecondPart);
 
-        var propertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, SecondPart);
+        var propertyName = PropertyPath.Root.Append(MyPropertyName).Format(SecondPart);
         Assert.True(result.IsFailure);
         Assert.Equal(new ValidationError(propertyName, ExpectedValidationErrorCodes.CountBetween, ExpectedValidatorErrorStrings.CountBetween, propertyName, 2, 4, 1), result.Error);
     }
@@ -120,7 +119,7 @@ public class BetweenLengthTests
     {
         IEnumerable<int> value = new List<int> { 1, 2, 3 };
 
-        var result = Result.Success(value).CountBetween(2, 4, MultiPartPropertyNameFormat, MyPropertyName, SecondPart);
+        var result = Result.Success(value).CountBetween(2, 4, PropertyPath.Root.Append(MyPropertyName), SecondPart);
 
         Assert.True(result.IsSuccess);
     }

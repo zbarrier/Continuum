@@ -72,6 +72,10 @@ services.AddMultitenantAzureCosmosDBBasedLogConsistencyProvider("Default",
 - A tenant's storage is created on first use, which validates that its container exists. If that fails, the caller gets the exception, the next call retries, and the failure is logged as an error. Logging is throttled to once a minute only after a tenant has been failing for 5 minutes.
 - Orleans.Multitenant's `AddMultitenantGrainStorage` cannot be used with this provider.
 
+## Multi-stream transactions
+
+Multi-stream transactions are not supported. A Cosmos DB transactional batch is limited to one partition key, and each grain's stream is its own partition, so events for several grains cannot be saved atomically. A grain on this provider can still use `BindWithStreamTransaction` for its own events, but preparing a participant fails when the transaction is saved. Use the KurrentDB provider for grains that need multi-stream transactions.
+
 ## Telemetry
 
 The provider publishes metrics through `System.Diagnostics.Metrics` and traces through `ActivitySource`, so no OpenTelemetry package is required. Register the names with OpenTelemetry (for example in Aspire service defaults):

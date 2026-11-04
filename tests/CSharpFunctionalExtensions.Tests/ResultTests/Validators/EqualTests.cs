@@ -10,7 +10,6 @@ public class EqualTests
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     #region T
@@ -40,7 +39,7 @@ public class EqualTests
         var expectedValue = new TestClass(guidId, "testString");
 
         //Act
-        var result = Result.Equal(value, expectedValue, new TestClassEqualityComparer(), MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, new TestClassEqualityComparer(), PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -72,12 +71,12 @@ public class EqualTests
         var expectedValue = new TestClass(guidId, "testStringg");
 
         //Act
-        var result = Result.Equal(value, expectedValue, new TestClassEqualityComparer(), MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, new TestClassEqualityComparer(), PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, ErrorArgument.FromObject(expectedValue)));
     }
 
@@ -114,7 +113,7 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, StringComparison.OrdinalIgnoreCase, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, StringComparison.OrdinalIgnoreCase, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -150,12 +149,12 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, StringComparison.Ordinal, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, StringComparison.Ordinal, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -192,7 +191,7 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -228,12 +227,246 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region ushort
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(12, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 255)]
+    public void Equal_UShortOfEqualValue_Success(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(12, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 255)]
+    public void EqualMultiPart_UShortOfEqualValue_Success(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void Equal_UShortOfDifferingValue_Failure(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void EqualMultiPart_UShortOfDifferingValue_Failure(ushort value, ushort expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region uint
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(12, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 255)]
+    public void Equal_UIntOfEqualValue_Success(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(12, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 255)]
+    public void EqualMultiPart_UIntOfEqualValue_Success(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void Equal_UIntOfDifferingValue_Failure(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void EqualMultiPart_UIntOfDifferingValue_Failure(uint value, uint expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region ulong
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(12, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 255)]
+    public void Equal_ULongOfEqualValue_Success(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(12, 12)]
+    [InlineData(127, 127)]
+    [InlineData(255, 255)]
+    public void EqualMultiPart_ULongOfEqualValue_Success(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void Equal_ULongOfDifferingValue_Failure(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 2)]
+    [InlineData(12, 13)]
+    [InlineData(127, 128)]
+    [InlineData(254, 255)]
+    public void EqualMultiPart_ULongOfDifferingValue_Failure(ulong value, ulong expectedValue)
+    {
+        //Arrange
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -274,7 +507,7 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -314,12 +547,12 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -364,7 +597,7 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -408,12 +641,12 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -462,7 +695,7 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -510,12 +743,12 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -552,7 +785,7 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -588,12 +821,12 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -634,7 +867,7 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -674,12 +907,12 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -724,7 +957,7 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -768,12 +1001,12 @@ public class EqualTests
         //Arrange
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -822,7 +1055,7 @@ public class EqualTests
         var expectedValue = BigInteger.Parse(expectedValueStr);
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -870,12 +1103,12 @@ public class EqualTests
         var expectedValue = BigInteger.Parse(expectedValueStr);
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -916,7 +1149,7 @@ public class EqualTests
         var expectedValue = TimeSpan.Parse(expectedValueStr);
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -956,12 +1189,246 @@ public class EqualTests
         var expectedValue = TimeSpan.Parse(expectedValueStr);
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region Guid
+
+    [Theory]
+    [InlineData("00000000-0000-0000-0000-000000000000", "00000000-0000-0000-0000-000000000000")]
+    [InlineData("6f9619ff-8b86-d011-b42d-00c04fc964ff", "6f9619ff-8b86-d011-b42d-00c04fc964ff")]
+    [InlineData("f47ac10b-58cc-4372-a567-0e02b2c3d479", "f47ac10b-58cc-4372-a567-0e02b2c3d479")]
+    public void Equal_GuidOfEqualValue_Success(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = Guid.Parse(valueStr);
+        var expectedValue = Guid.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData("00000000-0000-0000-0000-000000000000", "00000000-0000-0000-0000-000000000000")]
+    [InlineData("6f9619ff-8b86-d011-b42d-00c04fc964ff", "6f9619ff-8b86-d011-b42d-00c04fc964ff")]
+    [InlineData("f47ac10b-58cc-4372-a567-0e02b2c3d479", "f47ac10b-58cc-4372-a567-0e02b2c3d479")]
+    public void EqualMultiPart_GuidOfEqualValue_Success(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = Guid.Parse(valueStr);
+        var expectedValue = Guid.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData("00000000-0000-0000-0000-000000000000", "00000000-0000-0000-0000-000000000001")]
+    [InlineData("6f9619ff-8b86-d011-b42d-00c04fc964ff", "6f9619ff-8b86-d011-b42d-00c04fc964fe")]
+    [InlineData("f47ac10b-58cc-4372-a567-0e02b2c3d479", "a47ac10b-58cc-4372-a567-0e02b2c3d479")]
+    public void Equal_GuidOfDifferingValue_Failure(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = Guid.Parse(valueStr);
+        var expectedValue = Guid.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData("00000000-0000-0000-0000-000000000000", "00000000-0000-0000-0000-000000000001")]
+    [InlineData("6f9619ff-8b86-d011-b42d-00c04fc964ff", "6f9619ff-8b86-d011-b42d-00c04fc964fe")]
+    [InlineData("f47ac10b-58cc-4372-a567-0e02b2c3d479", "a47ac10b-58cc-4372-a567-0e02b2c3d479")]
+    public void EqualMultiPart_GuidOfDifferingValue_Failure(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = Guid.Parse(valueStr);
+        var expectedValue = Guid.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region DateOnly
+
+    [Theory]
+    [InlineData("0001-01-01", "0001-01-01")]
+    [InlineData("2024-02-29", "2024-02-29")]
+    [InlineData("9999-12-31", "9999-12-31")]
+    public void Equal_DateOnlyOfEqualValue_Success(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = DateOnly.Parse(valueStr);
+        var expectedValue = DateOnly.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData("0001-01-01", "0001-01-01")]
+    [InlineData("2024-02-29", "2024-02-29")]
+    [InlineData("9999-12-31", "9999-12-31")]
+    public void EqualMultiPart_DateOnlyOfEqualValue_Success(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = DateOnly.Parse(valueStr);
+        var expectedValue = DateOnly.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData("0001-01-01", "0001-01-02")]
+    [InlineData("2024-02-29", "2024-03-01")]
+    [InlineData("9999-12-30", "9999-12-31")]
+    public void Equal_DateOnlyOfDifferingValue_Failure(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = DateOnly.Parse(valueStr);
+        var expectedValue = DateOnly.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData("0001-01-01", "0001-01-02")]
+    [InlineData("2024-02-29", "2024-03-01")]
+    [InlineData("9999-12-30", "9999-12-31")]
+    public void EqualMultiPart_DateOnlyOfDifferingValue_Failure(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = DateOnly.Parse(valueStr);
+        var expectedValue = DateOnly.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
+        Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
+    }
+
+    #endregion
+
+    #region TimeOnly
+
+    [Theory]
+    [InlineData("00:00:00", "00:00:00")]
+    [InlineData("12:30:45", "12:30:45")]
+    [InlineData("23:59:59", "23:59:59")]
+    public void Equal_TimeOnlyOfEqualValue_Success(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = TimeOnly.Parse(valueStr);
+        var expectedValue = TimeOnly.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData("00:00:00", "00:00:00")]
+    [InlineData("12:30:45", "12:30:45")]
+    [InlineData("23:59:59", "23:59:59")]
+    public void EqualMultiPart_TimeOnlyOfEqualValue_Success(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = TimeOnly.Parse(valueStr);
+        var expectedValue = TimeOnly.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(result.Value, value);
+    }
+
+    [Theory]
+    [InlineData("00:00:00", "00:00:01")]
+    [InlineData("12:30:45", "12:31:45")]
+    [InlineData("23:59:58", "23:59:59")]
+    public void Equal_TimeOnlyOfDifferingValue_Failure(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = TimeOnly.Parse(valueStr);
+        var expectedValue = TimeOnly.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, MyPropertyName);
+
+        //Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(result.Error, new ValidationError(MyPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, MyPropertyName, expectedValue));
+    }
+
+    [Theory]
+    [InlineData("00:00:00", "00:00:01")]
+    [InlineData("12:30:45", "12:31:45")]
+    [InlineData("23:59:58", "23:59:59")]
+    public void EqualMultiPart_TimeOnlyOfDifferingValue_Failure(string valueStr, string expectedValueStr)
+    {
+        //Arrange
+        var value = TimeOnly.Parse(valueStr);
+        var expectedValue = TimeOnly.Parse(expectedValueStr);
+
+        //Act
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        //Assert
+        Assert.True(result.IsFailure);
+
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -1000,7 +1467,7 @@ public class EqualTests
         var expectedValue = DateTime.Parse(expectedValueStr);
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1038,12 +1505,12 @@ public class EqualTests
         var expectedValue = DateTime.Parse(expectedValueStr);
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 
@@ -1082,7 +1549,7 @@ public class EqualTests
         var expectedValue = DateTimeOffset.Parse(expectedValueStr);
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -1120,12 +1587,12 @@ public class EqualTests
         var expectedValue = DateTimeOffset.Parse(expectedValueStr);
 
         //Act
-        var result = Result.Equal(value, expectedValue, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Equal(value, expectedValue, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.Equal, ExpectedValidatorErrorStrings.Equal, multiPartPropertyName, expectedValue));
     }
 

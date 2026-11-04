@@ -52,13 +52,13 @@ public static partial class USZipCodeValidators
         /// <summary>
         ///     Ensure value is valid US zip code.
         /// </summary>
-        public static Result<string> IsUSZipCode(string value, string propertyNameFormat, params object[] arguments)
+        public static Result<string> IsUSZipCode(string value, PropertyPath path, string member)
         {
             // Check length
             bool isValidLength = value.Length == NonHyphenLength || value.Length == HyphenLength;
             if (!isValidLength)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.ZipCode, USValidatorErrorStrings.ZipCode, propertyName));
             }
 
@@ -73,7 +73,7 @@ public static partial class USZipCodeValidators
 
                 if (!isValidChar)
                 {
-                    var propertyName = string.Format(propertyNameFormat, arguments);
+                    var propertyName = path.Format(member);
                     return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.ZipCode, USValidatorErrorStrings.ZipCode, propertyName));
                 }
             }

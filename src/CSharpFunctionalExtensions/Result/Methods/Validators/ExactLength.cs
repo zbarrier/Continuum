@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -21,12 +21,12 @@ public partial struct Result
     /// <summary>
     ///     Ensure collection count is equal to value.
     /// </summary>
-    public static Result<IEnumerable<T>> ExactLength<T>(IEnumerable<T> value, int length, string propertyNameFormat, params object[] arguments)
+    public static Result<IEnumerable<T>> ExactLength<T>(IEnumerable<T> value, int length, PropertyPath path, string member)
     {
         var count = value.Count();
         if (count != length)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.ExactCount, ValidatorErrorStrings.ExactCount, propertyName, length, count));
         }
 
@@ -50,12 +50,12 @@ public partial struct Result
     /// <summary>
     ///     Ensure string length is equal to value.
     /// </summary>
-    public static Result<string> ExactLength(string value, int length, string propertyNameFormat, params object[] arguments)
+    public static Result<string> ExactLength(string value, int length, PropertyPath path, string member)
     {
         var actualLength = value.Length;
         if (actualLength != length)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.ExactLength, ValidatorErrorStrings.ExactLength, propertyName, length, actualLength));
         }
 

@@ -1,4 +1,6 @@
-﻿#nullable enable
+#nullable enable
+
+using System.Globalization;
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -11,24 +13,24 @@ public static partial class ResultExtensions
     {
         if (result.IsFailure) return Result.Failure<DateTime>(result.Error);
 
-        return DateTime.TryParse(result.Value, out DateTime dtValue)
-            ? Result.Success(dtValue)
+        return DateTime.TryParse(result.Value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime parsedValue)
+            ? Result.Success(parsedValue)
             : Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
     }
 
     /// <summary>
     ///     Ensure value is valid DateTime.
     /// </summary>
-    public static Result<DateTime> IsDateTime(this Result<string> result, string propertyNameFormat, params object[] arguments)
+    public static Result<DateTime> IsDateTime(this Result<string> result, PropertyPath path, string member)
     {
         if (result.IsFailure) return Result.Failure<DateTime>(result.Error);
 
-        if (!DateTime.TryParse(result.Value, out DateTime dtValue))
+        if (!DateTime.TryParse(result.Value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime parsedValue))
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
-        return Result.Success(dtValue);
+        return Result.Success(parsedValue);
     }
 }

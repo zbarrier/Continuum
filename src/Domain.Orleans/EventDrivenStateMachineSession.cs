@@ -10,7 +10,7 @@ namespace Continuum.Domain.Orleans;
 /// <typeparam name="TStatus">The state machine status type.</typeparam>
 /// <typeparam name="TCommand">The state machine trigger type.</typeparam>
 public sealed class EventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand> :
-    IEventDrivenStateMachineSession<TState, TEventBase, TStatus, TCommand>
+    IStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>
     where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
     where TEventBase : StateMachineEvent<TCommand>
     where TStatus : notnull

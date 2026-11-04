@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Numerics;
 
@@ -22,13 +22,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is not null, empty or default.
     /// </summary>
-    public static Result<string> NotNullOrWhitespace(this Result<string> result, string propertyNameFormat, params object[] arguments)
+    public static Result<string> NotNullOrWhitespace(this Result<string> result, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (string.IsNullOrWhiteSpace(result.Value))
         {
-            string propertyName = string.Format(propertyNameFormat, arguments);
+            string propertyName = path.Format(member);
             return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
         }
             

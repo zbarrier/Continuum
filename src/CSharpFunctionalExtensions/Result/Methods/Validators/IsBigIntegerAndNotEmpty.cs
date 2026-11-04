@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Numerics;
 
@@ -16,7 +16,7 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid BigInteger and not equal to BigInteger.Zero.
     /// </summary>
-    public static Result<BigInteger> IsBigIntegerAndNotEmpty(string? value, string propertyNameFormat, params object[] arguments)
-    => Result.NotNullOrEmpty(value, propertyNameFormat, arguments)
-        .IsBigIntegerAndNotEmpty(propertyNameFormat, arguments);
+    public static Result<BigInteger> IsBigIntegerAndNotEmpty(string? value, PropertyPath path, string member)
+    => Result.NotNullOrEmpty(value, path, member)
+        .IsBigIntegerAndNotEmpty(path, member);
 }

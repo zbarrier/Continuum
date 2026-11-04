@@ -50,7 +50,7 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is valid credit card number.
     /// </summary>
-    public static Result<string> IsCreditCard(this Result<string> result, string propertyNameFormat, params object[] arguments)
+    public static Result<string> IsCreditCard(this Result<string> result, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
@@ -65,7 +65,7 @@ public static partial class ResultExtensions
 
             if (!char.IsDigit(digit))
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.CreditCard, ValidatorErrorStrings.CreditCard, propertyName));
             }
 
@@ -81,7 +81,7 @@ public static partial class ResultExtensions
 
         if (checksum % 10 != 0)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.CreditCard, ValidatorErrorStrings.CreditCard, propertyName));
         }
 

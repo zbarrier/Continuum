@@ -48,6 +48,7 @@ internal static class EnglishLanguage
         ValidationErrorCodes.MinCount => ValidatorErrorStrings.MinCount,
         ValidationErrorCodes.MinLength => ValidatorErrorStrings.MinLength,
         ValidationErrorCodes.NotEmpty => ValidatorErrorStrings.NotEmpty,
+        ValidationErrorCodes.NotEqual => ValidatorErrorStrings.NotEqual,
         ValidationErrorCodes.NotNull => ValidatorErrorStrings.NotNull,
         ValidationErrorCodes.ScalePrecision => ValidatorErrorStrings.ScalePrecision,
 

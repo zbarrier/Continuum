@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Numerics;
 
@@ -16,7 +16,7 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid BigInteger.
     /// </summary>
-    public static Result<BigInteger> IsBigInteger(string? value, string propertyNameFormat, params object[] arguments)
-    => Result.NotNullOrEmpty(value, propertyNameFormat, arguments)
-        .IsBigInteger(propertyNameFormat, arguments);
+    public static Result<BigInteger> IsBigInteger(string? value, PropertyPath path, string member)
+    => Result.NotNullOrEmpty(value, path, member)
+        .IsBigInteger(path, member);
 }

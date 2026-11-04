@@ -4,8 +4,7 @@ public class ParseValidatorTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
-    const string MultiPartPropertyNameFormat = "{0} {1}";
-    const string MultiPartPropertyName = MyPropertyName + " " + MyPropertyNameTwo;
+    const string MultiPartPropertyName = MyPropertyName + "." + MyPropertyNameTwo;
 
     static ValidationError InvalidFormat(string propertyName) =>
         new(propertyName, ExpectedValidationErrorCodes.InvalidFormat, ExpectedValidatorErrorStrings.InvalidFormat, propertyName);
@@ -50,7 +49,7 @@ public class ParseValidatorTests
     [Fact]
     public void IsDateTimeMultiPart_InvalidValue_UsesFormattedPropertyName()
     {
-        var result = Result.IsDateTime("not a date", MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsDateTime("not a date", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(InvalidFormat(MultiPartPropertyName), result.Error);
     }
@@ -58,7 +57,7 @@ public class ParseValidatorTests
     [Fact]
     public void IsDateTimeMultiPart_ValidValue_Success()
     {
-        var result = Result.IsDateTime("2024-01-15", MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsDateTime("2024-01-15", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(new DateTime(2024, 1, 15), result.Value);
     }
@@ -67,7 +66,7 @@ public class ParseValidatorTests
     public void IsDateTimeChained_FailedResult_ReturnsOriginalError()
     {
         Assert.Same(OtherError, Result.Failure<string>(OtherError).IsDateTime(MyPropertyName).Error);
-        Assert.Same(OtherError, Result.Failure<string>(OtherError).IsDateTime(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo).Error);
+        Assert.Same(OtherError, Result.Failure<string>(OtherError).IsDateTime(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo).Error);
     }
 
     // IsInt32
@@ -107,7 +106,7 @@ public class ParseValidatorTests
     [Fact]
     public void IsInt32MultiPart_InvalidValue_UsesFormattedPropertyName()
     {
-        var result = Result.IsInt32("abc", MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsInt32("abc", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(InvalidFormat(MultiPartPropertyName), result.Error);
     }
@@ -115,7 +114,7 @@ public class ParseValidatorTests
     [Fact]
     public void IsInt32MultiPart_ValidValue_Success()
     {
-        var result = Result.IsInt32("7", MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsInt32("7", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(7, result.Value);
     }
@@ -124,7 +123,7 @@ public class ParseValidatorTests
     public void IsInt32Chained_FailedResult_ReturnsOriginalError()
     {
         Assert.Same(OtherError, Result.Failure<string>(OtherError).IsInt32(MyPropertyName).Error);
-        Assert.Same(OtherError, Result.Failure<string>(OtherError).IsInt32(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo).Error);
+        Assert.Same(OtherError, Result.Failure<string>(OtherError).IsInt32(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo).Error);
     }
 
     // IsDateOnly (chained)
@@ -148,7 +147,7 @@ public class ParseValidatorTests
     [Fact]
     public void IsDateOnlyChainedMultiPart_InvalidValue_UsesFormattedPropertyName()
     {
-        var result = Result.Success("not a date").IsDateOnly(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.Success("not a date").IsDateOnly(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         Assert.Equal(InvalidFormat(MultiPartPropertyName), result.Error);
     }
@@ -157,7 +156,7 @@ public class ParseValidatorTests
     public void IsDateOnlyChained_FailedResult_ReturnsOriginalError()
     {
         Assert.Same(OtherError, Result.Failure<string>(OtherError).IsDateOnly(MyPropertyName).Error);
-        Assert.Same(OtherError, Result.Failure<string>(OtherError).IsDateOnly(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo).Error);
+        Assert.Same(OtherError, Result.Failure<string>(OtherError).IsDateOnly(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo).Error);
     }
 
     // IsAspNetCoreCompatibleEmail
@@ -169,9 +168,9 @@ public class ParseValidatorTests
     public void IsAspNetCoreCompatibleEmail_ValidValue_Success(string value)
     {
         Assert.Equal(value, Result.IsAspNetCoreCompatibleEmail(value, MyPropertyName).Value);
-        Assert.Equal(value, Result.IsAspNetCoreCompatibleEmail(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo).Value);
+        Assert.Equal(value, Result.IsAspNetCoreCompatibleEmail(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo).Value);
         Assert.Equal(value, Result.Success(value).IsAspNetCoreCompatibleEmail(MyPropertyName).Value);
-        Assert.Equal(value, Result.Success(value).IsAspNetCoreCompatibleEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo).Value);
+        Assert.Equal(value, Result.Success(value).IsAspNetCoreCompatibleEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo).Value);
     }
 
     [Theory]
@@ -183,9 +182,9 @@ public class ParseValidatorTests
     public void IsAspNetCoreCompatibleEmail_InvalidValue_EmailError(string value)
     {
         Assert.Equal(Email(MyPropertyName), Result.IsAspNetCoreCompatibleEmail(value, MyPropertyName).Error);
-        Assert.Equal(Email(MultiPartPropertyName), Result.IsAspNetCoreCompatibleEmail(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo).Error);
+        Assert.Equal(Email(MultiPartPropertyName), Result.IsAspNetCoreCompatibleEmail(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo).Error);
         Assert.Equal(Email(MyPropertyName), Result.Success(value).IsAspNetCoreCompatibleEmail(MyPropertyName).Error);
-        Assert.Equal(Email(MultiPartPropertyName), Result.Success(value).IsAspNetCoreCompatibleEmail(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo).Error);
+        Assert.Equal(Email(MultiPartPropertyName), Result.Success(value).IsAspNetCoreCompatibleEmail(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo).Error);
     }
 
     [Fact]

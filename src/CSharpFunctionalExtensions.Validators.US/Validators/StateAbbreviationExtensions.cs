@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -24,7 +24,7 @@ public static partial class USStateAbbreviationValidatorExtensions
     /// <summary>
     ///     Ensure value is valid US postal state abbreviation.
     /// </summary>
-    public static Result<string> IsUSPostalStateAbbreviation(this Result<string> result, string propertyNameFormat, params object[] arguments)
+    public static Result<string> IsUSPostalStateAbbreviation(this Result<string> result, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
@@ -32,7 +32,7 @@ public static partial class USStateAbbreviationValidatorExtensions
 
         if (!USPostalStateAbbreviations.Contains(value))
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.StateAbbreviation, USValidatorErrorStrings.StateAbbreviation, propertyName));
         }
         return Result.Success(value);

@@ -1,11 +1,10 @@
-﻿namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
+namespace Continuum.CSharpFunctionalExtensions.Tests.ResultTests.Validators;
 
 public class MinLengthTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     #region IEnumerable
@@ -33,7 +32,7 @@ public class MinLengthTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.MinLength(value, minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MinLength(value, minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -63,7 +62,7 @@ public class MinLengthTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.MinLength(value, minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MinLength(value, minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -93,12 +92,12 @@ public class MinLengthTests
         var value = new List<int> { 1, 2, 3 };
 
         //Act
-        var result = Result.MinLength(value, minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MinLength(value, minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MinCount, ExpectedValidatorErrorStrings.MinCount, multiPartPropertyName, minLength, value.Count()));
     }
 
@@ -135,7 +134,7 @@ public class MinLengthTests
         //Arrange
 
         //Act
-        var result = Result.MinLength(value, minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MinLength(value, minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -171,12 +170,12 @@ public class MinLengthTests
         //Arrange
 
         //Act
-        var result = Result.MinLength(value, minLength, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.MinLength(value, minLength, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedValidationErrorCodes.MinLength, ExpectedValidatorErrorStrings.MinLength, multiPartPropertyName, minLength, value.Length));
     }
 

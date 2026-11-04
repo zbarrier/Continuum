@@ -11,14 +11,14 @@ namespace Continuum.Domain.Orleans.Tests;
 
 public interface ICounterGrain : IEventDrivenGrain
 {
-    Task<Result<ISessionSaveResponse>> Increment(int by, bool failBeforeSave);
+    Task<Result<IStreamTransactionResponse>> Increment(int by, bool failBeforeSave);
     Task<int> GetCount();
     Task<int> GetVersion();
 }
 
 public interface IDoorGrain : IEventDrivenStateMachineGrain
 {
-    Task<Result<ISessionSaveResponse>> Open(bool failBeforeSave);
+    Task<Result<IStreamTransactionResponse>> Open(bool failBeforeSave);
     Task<DoorStatus> GetStatus();
     Task<int> GetOpenCount();
 }
@@ -28,15 +28,15 @@ public interface IDoorGrain : IEventDrivenStateMachineGrain
 public sealed class CounterGrain(IServiceProvider serviceProvider)
     : EventDrivenGrain<CounterState, CounterEvent>(serviceProvider, GrainTestSiloConfigurator.TypeMapperKey), ICounterGrain
 {
-    public async Task<Result<ISessionSaveResponse>> Increment(int by, bool failBeforeSave)
+    public async Task<Result<IStreamTransactionResponse>> Increment(int by, bool failBeforeSave)
     {
-        using var session = CreateSession();
-        session.Apply(new CounterIncremented(by));
+        await using var transaction = BeginStreamTransaction();
+        transaction.Apply(new CounterIncremented(by));
         if (failBeforeSave)
         {
             throw new InvalidOperationException("Simulated failure before save.");
         }
-        return await SaveChanges(session);
+        return await SaveChanges(transaction);
     }
 
     public Task<int> GetCount() => Task.FromResult(State.Count);
@@ -48,15 +48,15 @@ public sealed class CounterGrain(IServiceProvider serviceProvider)
 public sealed class DoorGrain(IServiceProvider serviceProvider)
     : EventDrivenStateMachineGrain<DoorState, DoorEvent, DoorStatus, DoorCommand>(serviceProvider, GrainTestSiloConfigurator.TypeMapperKey), IDoorGrain
 {
-    public async Task<Result<ISessionSaveResponse>> Open(bool failBeforeSave)
+    public async Task<Result<IStreamTransactionResponse>> Open(bool failBeforeSave)
     {
-        using var session = CreateSession();
-        session.Apply(new DoorOpened());
+        await using var transaction = BeginStreamTransaction();
+        transaction.Apply(new DoorOpened());
         if (failBeforeSave)
         {
             throw new InvalidOperationException("Simulated failure before save.");
         }
-        return await SaveChanges(session);
+        return await SaveChanges(transaction);
     }
 
     public Task<DoorStatus> GetStatus() => Task.FromResult(State.StateMachine.State);

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 
+using Continuum.EventSourcing.Orleans.KurrentDB.Tests.SingleStream.Snacks;
 using Continuum.Hosting;
 using Continuum.Hosting.Orleans;
 using Continuum.Orleans.KurrentDB;
@@ -13,7 +14,7 @@ using Microsoft.Extensions.Hosting;
 using Orleans.Configuration;
 using Orleans.TestingHost;
 
-namespace Continuum.EventSourcing.Orleans.KurrentDB.Tests;
+namespace Continuum.EventSourcing.Orleans.KurrentDB.Tests.Cluster;
 
 public class TestSiloConfigurations : ISiloConfigurator
 {

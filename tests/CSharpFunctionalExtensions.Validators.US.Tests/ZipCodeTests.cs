@@ -1,11 +1,10 @@
-﻿namespace Continuum.CSharpFunctionalExtensions.Validators.US.Tests;
+namespace Continuum.CSharpFunctionalExtensions.Validators.US.Tests;
 
 public class ZipCodeTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     [Theory]
@@ -31,7 +30,7 @@ public class ZipCodeTests
         //Arrange
 
         //Act
-        var result = Result.IsUSZipCode(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSZipCode(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -65,12 +64,12 @@ public class ZipCodeTests
         //Arrange
 
         //Act
-        var result = Result.IsUSZipCode(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.IsUSZipCode(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedUSValidationErrorCodes.ZipCode, ExpectedUSValidatorErrorStrings.ZipCode, multiPartPropertyName));
     }
 }

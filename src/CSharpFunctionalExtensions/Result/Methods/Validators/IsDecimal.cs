@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -14,7 +14,7 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid decimal.
     /// </summary>
-    public static Result<decimal> IsDecimal(string? value, string propertyNameFormat, params object[] arguments)
-    => Result.NotNullOrEmpty(value, propertyNameFormat, arguments)
-        .IsDecimal(propertyNameFormat, arguments);
+    public static Result<decimal> IsDecimal(string? value, PropertyPath path, string member)
+    => Result.NotNullOrEmpty(value, path, member)
+        .IsDecimal(path, member);
 }

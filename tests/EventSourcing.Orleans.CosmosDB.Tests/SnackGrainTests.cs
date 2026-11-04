@@ -1,6 +1,4 @@
-﻿using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Commands;
-using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Events;
-using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Grains;
+using Continuum.EventSourcing.Orleans.CosmosDB.Tests.Snacks;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,16 +22,26 @@ public class SnackGrainTests
         var snackId = Guid.NewGuid();
 
         var grainFactory = _fixture.Cluster.ServiceProvider.GetRequiredService<IGrainFactory>();
-        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId);
-        Assert.NotNull(snackGrain);       
+        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId.ToString());
+        Assert.NotNull(snackGrain);
 
-        var canInitialize = await snackGrain.CanInitializeAsync();  
-        Assert.True(canInitialize);
-
-        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple", Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Create_A_New_Snack"));
+        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple"));
         Assert.True(initializeResult.IsSuccess);
         Assert.Equal(1, initializeResult.Value.Version);
         Assert.IsType<SnackInitializedEvent>(Assert.Single(initializeResult.Value.Changes).Event);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+    public async Task Should_Not_Create_A_Snack_With_An_Invalid_Name(string name)
+    {
+        var grainFactory = _fixture.Cluster.ServiceProvider.GetRequiredService<IGrainFactory>();
+        var snackGrain = grainFactory.GetGrain<ISnackGrain>(Guid.NewGuid().ToString());
+
+        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand(name));
+        Assert.True(initializeResult.IsFailure);
     }
 
     [Fact]
@@ -42,16 +50,13 @@ public class SnackGrainTests
         var snackId = Guid.NewGuid();
 
         var grainFactory = _fixture.Cluster.ServiceProvider.GetRequiredService<IGrainFactory>();
-        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId);
+        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId.ToString());
         Assert.NotNull(snackGrain);
 
-        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple", Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Create_A_New_Snack"));
+        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple"));
         Assert.True(initializeResult.IsSuccess);
 
-        var canChangeName = await snackGrain.CanChangeNameAsync();
-        Assert.True(canChangeName);
-
-        var changeNameResult = await snackGrain.ChangeNameAsync(new SnackChangeNameCommand("Orange", Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Change_Name_Of_Snack"));
+        var changeNameResult = await snackGrain.ChangeNameAsync(new SnackChangeNameCommand("Orange"));
         Assert.True(changeNameResult.IsSuccess);
         Assert.Equal(2, changeNameResult.Value.Version);
         Assert.IsType<SnackNameChangedEvent>(Assert.Single(changeNameResult.Value.Changes).Event);
@@ -63,20 +68,19 @@ public class SnackGrainTests
         var snackId = Guid.NewGuid();
 
         var grainFactory = _fixture.Cluster.ServiceProvider.GetRequiredService<IGrainFactory>();
-        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId);
+        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId.ToString());
         Assert.NotNull(snackGrain);
 
-        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple", Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Create_A_New_Snack"));
+        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple"));
         Assert.True(initializeResult.IsSuccess);
 
-        var canRemove = await snackGrain.CanRemoveAsync();
-        Assert.True(canRemove);
-
-        var removeResult = await snackGrain.RemoveAsync(new SnackRemoveCommand(Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Remove_Snack"));
+        var removeResult = await snackGrain.RemoveAsync(new SnackRemoveCommand());
         Assert.True(removeResult.IsSuccess);
         Assert.Equal(2, removeResult.Value.Version);
         Assert.IsType<SnackRemovedEvent>(Assert.Single(removeResult.Value.Changes).Event);
-        Assert.False(await snackGrain.CanRemoveAsync());
+
+        var secondRemoveResult = await snackGrain.RemoveAsync(new SnackRemoveCommand());
+        Assert.True(secondRemoveResult.IsFailure);
     }
 
     [Fact]
@@ -85,13 +89,13 @@ public class SnackGrainTests
         var snackId = Guid.NewGuid();
 
         var grainFactory = _fixture.Cluster.ServiceProvider.GetRequiredService<IGrainFactory>();
-        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId);
+        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId.ToString());
         Assert.NotNull(snackGrain);
 
-        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple", Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Create_A_New_Snack"));
+        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple"));
         Assert.True(initializeResult.IsSuccess);
 
-        var changeNameResult = await snackGrain.ChangeNameAsync(new SnackChangeNameCommand("Orange", Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Change_Name_Of_Snack"));
+        var changeNameResult = await snackGrain.ChangeNameAsync(new SnackChangeNameCommand("Orange"));
         Assert.True(changeNameResult.IsSuccess);
 
         var getResult = await snackGrain.GetAsync();
@@ -107,13 +111,13 @@ public class SnackGrainTests
         var snackId = Guid.NewGuid();
 
         var grainFactory = _fixture.Cluster.ServiceProvider.GetRequiredService<IGrainFactory>();
-        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId);
+        var snackGrain = grainFactory.GetGrain<ISnackGrain>(snackId.ToString());
         Assert.NotNull(snackGrain);
 
-        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple", Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Create_A_New_Snack"));
+        var initializeResult = await snackGrain.InitializeAsync(new SnackInitializeCommand("Apple"));
         Assert.True(initializeResult.IsSuccess);
 
-        var changeNameResult = await snackGrain.ChangeNameAsync(new SnackChangeNameCommand("Orange", Guid.NewGuid(), DateTimeOffset.UtcNow, "Should_Change_Name_Of_Snack"));
+        var changeNameResult = await snackGrain.ChangeNameAsync(new SnackChangeNameCommand("Orange"));
         Assert.True(changeNameResult.IsSuccess);
 
         // Versions are event counts, so (0, 2) is the whole two-event log.

@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Text.RegularExpressions;
 
@@ -23,13 +23,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value matches regular expression.
     /// </summary>
-    public static Result<string> MatchesRegularExpression(this Result<string> result, string pattern, string propertyNameFormat, params object[] arguments)
+    public static Result<string> MatchesRegularExpression(this Result<string> result, string pattern, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (!Regex.IsMatch(result.Value, pattern, RegexOptions.None, RegexMatchTimeout))
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 
@@ -51,13 +51,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value matches regular expression.
     /// </summary>
-    public static Result<string> MatchesRegularExpression(this Result<string> result, Regex regex, string propertyNameFormat, params object[] arguments)
+    public static Result<string> MatchesRegularExpression(this Result<string> result, Regex regex, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (!regex.IsMatch(result.Value))
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.InvalidFormat, ValidatorErrorStrings.InvalidFormat, propertyName));
         }
 

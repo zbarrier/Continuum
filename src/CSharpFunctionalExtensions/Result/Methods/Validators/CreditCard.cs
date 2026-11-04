@@ -46,7 +46,7 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid credit card number.
     /// </summary>
-    public static Result<string> IsCreditCard(string value, string propertyNameFormat, params object[] arguments)
+    public static Result<string> IsCreditCard(string value, PropertyPath path, string member)
     {
         int checksum = 0;
         bool evenDigit = false;
@@ -57,7 +57,7 @@ public partial struct Result
 
             if (!char.IsDigit(digit))
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.CreditCard, ValidatorErrorStrings.CreditCard, propertyName));
             }
 
@@ -73,7 +73,7 @@ public partial struct Result
 
         if (checksum % 10 != 0)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.CreditCard, ValidatorErrorStrings.CreditCard, propertyName));
         }
 

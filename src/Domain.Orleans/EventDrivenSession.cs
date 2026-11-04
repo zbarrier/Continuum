@@ -7,7 +7,7 @@ namespace Continuum.Domain.Orleans;
 /// <summary>A session over a copy of an <see cref="EventDrivenState{TState, TEventBase}"/> that tracks uncommitted events.</summary>
 /// <typeparam name="TState">The state type.</typeparam>
 /// <typeparam name="TEventBase">The base type of events applied to the state.</typeparam>
-public sealed class EventDrivenSession<TState, TEventBase> : IEventDrivenSession<TState, TEventBase>
+public sealed class EventDrivenSession<TState, TEventBase> : IStreamTransaction<TState, TEventBase>
     where TState : EventDrivenState<TState, TEventBase>, new()
     where TEventBase : class
 {

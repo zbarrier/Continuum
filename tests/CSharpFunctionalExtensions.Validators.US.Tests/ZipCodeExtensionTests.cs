@@ -1,11 +1,10 @@
-﻿namespace Continuum.CSharpFunctionalExtensions.Validators.US.Tests;
+namespace Continuum.CSharpFunctionalExtensions.Validators.US.Tests;
 
 public class ZipCodeExtensionTests
 {
     const string MyPropertyName = "myPropertyName";
     const string MyPropertyNameTwo = "propertyNameSecondPart";
 
-    const string MultiPartPropertyNameFormat = "{0} {1}";
 
 
     [Theory]
@@ -32,8 +31,8 @@ public class ZipCodeExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNullOrEmpty(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsUSZipCode(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNullOrEmpty(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsUSZipCode(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsSuccess);
@@ -66,13 +65,13 @@ public class ZipCodeExtensionTests
         //Arrange
 
         //Act
-        var result = Result.NotNullOrEmpty(value, MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo)
-            .IsUSZipCode(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var result = Result.NotNullOrEmpty(value, PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo)
+            .IsUSZipCode(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
 
         //Assert
         Assert.True(result.IsFailure);
 
-        var multiPartPropertyName = string.Format(MultiPartPropertyNameFormat, MyPropertyName, MyPropertyNameTwo);
+        var multiPartPropertyName = PropertyPath.Root.Append(MyPropertyName).Format(MyPropertyNameTwo);
         Assert.Equal(result.Error, new ValidationError(multiPartPropertyName, ExpectedUSValidationErrorCodes.ZipCode, ExpectedUSValidatorErrorStrings.ZipCode, multiPartPropertyName));
     }
 }

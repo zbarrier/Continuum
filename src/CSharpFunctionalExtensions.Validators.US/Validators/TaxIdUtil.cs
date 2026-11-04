@@ -41,7 +41,7 @@ internal static class TaxIdUtil
         return Result.Success();
     }
 
-    internal static Result CheckEinHyphenPositions(string value, string taxIdErrorFormat, string propertyNameFormat, params object[] arguments)
+    internal static Result CheckEinHyphenPositions(string value, string taxIdErrorFormat, PropertyPath path, string member)
     {
         int firstHyphenIndex = value.IndexOf(HyphenChar);
         if (firstHyphenIndex == EIN_FirstHyphenIndex)
@@ -50,13 +50,13 @@ internal static class TaxIdUtil
             int lastHyphenIndex = value.LastIndexOf(HyphenChar);
             if (firstHyphenIndex != lastHyphenIndex)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure(new ValidationError(propertyName, GetTaxIdFormatCode(taxIdErrorFormat), taxIdErrorFormat, propertyName));
             }
         }
         else
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure(new ValidationError(propertyName, GetTaxIdFormatCode(taxIdErrorFormat), taxIdErrorFormat, propertyName));
         }
 
@@ -83,7 +83,7 @@ internal static class TaxIdUtil
         return Result.Success();
     }
 
-    internal static Result CheckSsnAndItinHyphenPositions(string value, string taxIdErrorFormat, string propertyNameFormat, params object[] arguments)
+    internal static Result CheckSsnAndItinHyphenPositions(string value, string taxIdErrorFormat, PropertyPath path, string member)
     {
         int firstHyphenIndex = value.IndexOf(HyphenChar);
         if (firstHyphenIndex == SSN_ITIN_FirstHyphenIndex)
@@ -91,13 +91,13 @@ internal static class TaxIdUtil
             int lastHyphenIndex = value.LastIndexOf(HyphenChar);
             if (lastHyphenIndex != SSN_ITIN_SecondHyphenIndex)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure(new ValidationError(propertyName, GetTaxIdFormatCode(taxIdErrorFormat), taxIdErrorFormat, propertyName));
             }
         }
         else
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure(new ValidationError(propertyName, GetTaxIdFormatCode(taxIdErrorFormat), taxIdErrorFormat, propertyName));
         }
 
@@ -124,7 +124,7 @@ internal static class TaxIdUtil
         return Result.Success(value);
     }
 
-    internal static Result<string> CheckEinDigits(string value, string taxIdErrorFormat, string propertyNameFormat, params object[] arguments)
+    internal static Result<string> CheckEinDigits(string value, string taxIdErrorFormat, PropertyPath path, string member)
     {
         for (int i = 0; i < value.Length; i++)
         {
@@ -136,7 +136,7 @@ internal static class TaxIdUtil
 
             if (!isValidChar)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, GetTaxIdFormatCode(taxIdErrorFormat), taxIdErrorFormat, propertyName));
             }
         }
@@ -164,7 +164,7 @@ internal static class TaxIdUtil
         return Result.Success(value);
     }
 
-    internal static Result<string> CheckSsnOrItinDigits(string value, string taxIdErrorFormat, string propertyNameFormat, params object[] arguments)
+    internal static Result<string> CheckSsnOrItinDigits(string value, string taxIdErrorFormat, PropertyPath path, string member)
     {
         for (int i = 0; i < value.Length; i++)
         {
@@ -176,7 +176,7 @@ internal static class TaxIdUtil
 
             if (!isValidChar)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, GetTaxIdFormatCode(taxIdErrorFormat), taxIdErrorFormat, propertyName));
             }
         }
@@ -210,7 +210,7 @@ internal static class TaxIdUtil
         return Result.Success(value);
     }
 
-    internal static Result<string> CheckSsnDigits(string value, string propertyNameFormat, params object[] arguments)
+    internal static Result<string> CheckSsnDigits(string value, PropertyPath path, string member)
     {
         for (int i = 0; i < value.Length; i++)
         {
@@ -219,7 +219,7 @@ internal static class TaxIdUtil
             bool isItin = i == 0 && c == '9';
             if (isItin)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.Ssn, USValidatorErrorStrings.Ssn, propertyName));
             }
 
@@ -229,7 +229,7 @@ internal static class TaxIdUtil
 
             if (!isValidChar)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.SsnFormat, USValidatorErrorStrings.SsnFormat, propertyName));
             }
         }
@@ -263,7 +263,7 @@ internal static class TaxIdUtil
         return Result.Success(value);
     }
 
-    internal static Result<string> CheckItinDigits(string value, string propertyNameFormat, params object[] arguments)
+    internal static Result<string> CheckItinDigits(string value, PropertyPath path, string member)
     {
         for (int i = 0; i < value.Length; i++)
         {
@@ -272,7 +272,7 @@ internal static class TaxIdUtil
             bool isSsn = i == 0 && c != '9';
             if (isSsn)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.Itin, USValidatorErrorStrings.Itin, propertyName));
             }
 
@@ -282,7 +282,7 @@ internal static class TaxIdUtil
 
             if (!isValidChar)
             {
-                var propertyName = string.Format(propertyNameFormat, arguments);
+                var propertyName = path.Format(member);
                 return Result.Failure<string>(new ValidationError(propertyName, USValidationErrorCodes.ItinFormat, USValidatorErrorStrings.ItinFormat, propertyName));
             }
         }

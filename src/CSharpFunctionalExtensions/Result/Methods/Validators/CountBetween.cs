@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 namespace Continuum.CSharpFunctionalExtensions;
 
@@ -21,12 +21,12 @@ public partial struct Result
     /// <summary>
     ///     Ensure collection count is between min and max (inclusive).
     /// </summary>
-    public static Result<IEnumerable<T>> CountBetween<T>(IEnumerable<T> value, int min, int max, string propertyNameFormat, params object[] arguments)
+    public static Result<IEnumerable<T>> CountBetween<T>(IEnumerable<T> value, int min, int max, PropertyPath path, string member)
     {
         var count = value.Count();
         if (count < min || count > max)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<IEnumerable<T>>(new ValidationError(propertyName, ValidationErrorCodes.CountBetween, ValidatorErrorStrings.CountBetween, propertyName, min, max, count));
         }
 

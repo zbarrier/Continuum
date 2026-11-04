@@ -26,7 +26,7 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<T> Equal<T>(this Result<T> result, T expectedValue, IEqualityComparer<T> comparer, string propertyNameFormat, params object[] arguments)
+    public static Result<T> Equal<T>(this Result<T> result, T expectedValue, IEqualityComparer<T> comparer, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
@@ -36,7 +36,7 @@ public static partial class ResultExtensions
 
         if (!success)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<T>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, ErrorArgument.FromObject(expectedValue)));
         }
 
@@ -59,13 +59,13 @@ public static partial class ResultExtensions
     ///     Ensure value is equal to given value.
     /// </summary>
     public static Result<string> Equal(this Result<string> result, string expectedValue, StringComparison stringComparisonType,
-        string propertyNameFormat, params object[] arguments)
+        PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (!result.Value.Equals(expectedValue, stringComparisonType))
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
@@ -87,13 +87,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<byte> Equal(this Result<byte> result, byte expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<byte> Equal(this Result<byte> result, byte expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<byte>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
@@ -115,13 +115,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<short> Equal(this Result<short> result, short expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<short> Equal(this Result<short> result, short expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
@@ -143,14 +143,98 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<int> Equal(this Result<int> result, int expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<int> Equal(this Result<int> result, int expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<int>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<ushort> Equal(this Result<ushort> result, ushort expectedValue, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value == expectedValue
+            ? result
+            : Result.Failure<ushort>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<ushort> Equal(this Result<ushort> result, ushort expectedValue, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value != expectedValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<ushort>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<uint> Equal(this Result<uint> result, uint expectedValue, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value == expectedValue
+            ? result
+            : Result.Failure<uint>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<uint> Equal(this Result<uint> result, uint expectedValue, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value != expectedValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<uint>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<ulong> Equal(this Result<ulong> result, ulong expectedValue, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value == expectedValue
+            ? result
+            : Result.Failure<ulong>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<ulong> Equal(this Result<ulong> result, ulong expectedValue, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value != expectedValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<ulong>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -171,13 +255,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<long> Equal(this Result<long> result, long expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<long> Equal(this Result<long> result, long expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<long>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
@@ -199,13 +283,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<float> Equal(this Result<float> result, float expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<float> Equal(this Result<float> result, float expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<float>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
@@ -227,13 +311,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<double> Equal(this Result<double> result, double expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<double> Equal(this Result<double> result, double expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<double>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
@@ -255,13 +339,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<decimal> Equal(this Result<decimal> result, decimal expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<decimal> Equal(this Result<decimal> result, decimal expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
@@ -283,13 +367,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<BigInteger> Equal(this Result<BigInteger> result, BigInteger expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<BigInteger> Equal(this Result<BigInteger> result, BigInteger expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<BigInteger>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
@@ -311,14 +395,98 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<TimeSpan> Equal(this Result<TimeSpan> result, TimeSpan expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<TimeSpan> Equal(this Result<TimeSpan> result, TimeSpan expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<TimeSpan>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<Guid> Equal(this Result<Guid> result, Guid expectedValue, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value == expectedValue
+            ? result
+            : Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<Guid> Equal(this Result<Guid> result, Guid expectedValue, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value != expectedValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<Guid>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<DateOnly> Equal(this Result<DateOnly> result, DateOnly expectedValue, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value == expectedValue
+            ? result
+            : Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<DateOnly> Equal(this Result<DateOnly> result, DateOnly expectedValue, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value != expectedValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<DateOnly>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<TimeOnly> Equal(this Result<TimeOnly> result, TimeOnly expectedValue, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value == expectedValue
+            ? result
+            : Result.Failure<TimeOnly>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
+    }
+
+    /// <summary>
+    ///     Ensure value is equal to given value.
+    /// </summary>
+    public static Result<TimeOnly> Equal(this Result<TimeOnly> result, TimeOnly expectedValue, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value != expectedValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<TimeOnly>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
         return result;
@@ -339,13 +507,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<DateTime> Equal(this Result<DateTime> result, DateTime expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<DateTime> Equal(this Result<DateTime> result, DateTime expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<DateTime>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 
@@ -367,13 +535,13 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is equal to given value.
     /// </summary>
-    public static Result<DateTimeOffset> Equal(this Result<DateTimeOffset> result, DateTimeOffset expectedValue, string propertyNameFormat, params object[] arguments)
+    public static Result<DateTimeOffset> Equal(this Result<DateTimeOffset> result, DateTimeOffset expectedValue, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
         if (result.Value != expectedValue)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             return Result.Failure<DateTimeOffset>(new ValidationError(propertyName, ValidationErrorCodes.Equal, ValidatorErrorStrings.Equal, propertyName, expectedValue));
         }
 

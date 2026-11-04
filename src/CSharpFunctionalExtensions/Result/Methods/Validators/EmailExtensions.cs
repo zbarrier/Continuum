@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Text.RegularExpressions;
 
@@ -24,16 +24,16 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is valid email.
     /// </summary>
-    public static Result<string> IsEmail(this Result<string> result, string propertyNameFormat, params object[] arguments)
+    public static Result<string> IsEmail(this Result<string> result, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
-        var maxLengthResult = Result.MaxLength(result.Value, EmailValidation.MaxEmailLength, propertyNameFormat, arguments);
+        var maxLengthResult = Result.MaxLength(result.Value, EmailValidation.MaxEmailLength, path, member);
         if (maxLengthResult.IsFailure) return maxLengthResult;
 
         if (EmailValidation.EmailRegex.IsMatch(result.Value)) return result;
             
-        var propertyName = string.Format(propertyNameFormat, arguments);
+        var propertyName = path.Format(member);
         return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.Email, ValidatorErrorStrings.Email, propertyName));
     }
 
@@ -56,7 +56,7 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is ASP.NET Core compatible email.
     /// </summary>
-    public static Result<string> IsAspNetCoreCompatibleEmail(this Result<string> result, string propertyNameFormat, params object[] arguments)
+    public static Result<string> IsAspNetCoreCompatibleEmail(this Result<string> result, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
@@ -66,7 +66,7 @@ public static partial class ResultExtensions
 
         if (index > 0 && index != value.Length - 1 && index == value.LastIndexOf('@')) return result;
 
-        var propertyName = string.Format(propertyNameFormat, arguments);
+        var propertyName = path.Format(member);
         return Result.Failure<string>(new ValidationError(propertyName, ValidationErrorCodes.Email, ValidatorErrorStrings.Email, propertyName));
     }
 }

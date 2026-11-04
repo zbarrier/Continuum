@@ -38,10 +38,10 @@ public static partial class ResultExtensions
     /// <param name="expectedScale">The expected number of digits after the decimal point.</param>
     /// <param name="expectedPrecision">The expected total number of digits.</param>
     /// <param name="ignoreTrailingZeroes">Ignore any trailing zeroes or not.</param>
-    /// <param name="propertyNameFormat">A composite format string for the name of the property being checked.</param>
-    /// <param name="arguments">The arguments used to format <paramref name="propertyNameFormat"/>.</param>
+    /// <param name="path">The path to the object that owns the property being checked.</param>
+    /// <param name="member">The name of the property being checked.</param>
     /// <returns>A success or failure result.</returns>
-    public static Result<decimal> ScalePrecision(this Result<decimal> result, int expectedScale, int expectedPrecision, bool ignoreTrailingZeroes, string propertyNameFormat, params object[] arguments)
+    public static Result<decimal> ScalePrecision(this Result<decimal> result, int expectedScale, int expectedPrecision, bool ignoreTrailingZeroes, PropertyPath path, string member)
     {
         if (result.IsFailure) return result;
 
@@ -51,7 +51,7 @@ public static partial class ResultExtensions
 
         if (actualScale > expectedScale || actualIntegerDigits > expectedIntegerDigits)
         {
-            var propertyName = string.Format(propertyNameFormat, arguments);
+            var propertyName = path.Format(member);
             var digits = actualIntegerDigits < 0 ? 0 : actualIntegerDigits;
             return Result.Failure<decimal>(new ValidationError(propertyName, ValidationErrorCodes.ScalePrecision, ValidatorErrorStrings.ScalePrecision, propertyName, expectedPrecision, expectedScale, digits, actualScale));
         }
