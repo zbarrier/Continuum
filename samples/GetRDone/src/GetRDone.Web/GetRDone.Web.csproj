@@ -6,6 +6,7 @@
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" />
 	<PackageReference Include="Microsoft.Orleans.Client" Version="$(OrleansVersion)" />
 	<PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(OrleansVersion)" />
+	<PackageReference Include="Microsoft.Orleans.Streaming" Version="$(OrleansVersion)" />
 	<PackageReference Include="Orleans.Multitenant" Version="5.0.1" />
   </ItemGroup>
 

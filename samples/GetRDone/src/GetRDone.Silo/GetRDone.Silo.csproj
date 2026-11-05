@@ -6,6 +6,7 @@
 	<PackageReference Include="ManagedCode.Orleans.Identity.Server" Version="10.4.6" />
 	<PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(OrleansVersion)" />
 	<PackageReference Include="Microsoft.Orleans.Server" Version="$(OrleansVersion)" />
+	<PackageReference Include="Microsoft.Orleans.Streaming" Version="$(OrleansVersion)" />
 	<PackageReference Include="Orleans.Multitenant" Version="5.0.1" />
   </ItemGroup>
 
