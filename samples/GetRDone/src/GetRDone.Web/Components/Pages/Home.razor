@@ -1,0 +1,55 @@
+@page "/"
+@attribute [Authorize]
+@using GetRDone.Hello
+@using Orleans.Multitenant
+@inject IClusterClient ClusterClient
+
+<h1>Get-R-Done</h1>
+
+<AuthorizeView>
+    <p>
+        Signed in as <strong>@context.User.Identity?.Name</strong>
+        (tenant <code>@context.User.FindFirst("tenant_id")?.Value</code>,
+        roles <code>@string.Join(", ", context.User.FindAll("role").Select(c => c.Value))</code>)
+    </p>
+    <form method="post" action="logout">
+        <AntiforgeryToken />
+        <button type="submit">Sign out</button>
+    </form>
+</AuthorizeView>
+
+<h2>Hello round trip</h2>
+<p>Temporary check that Web → Silo → KurrentDB works with the signed-in user and tenant.</p>
+
+<input @bind="_message" placeholder="Message" />
+<button @onclick="SayHelloAsync">Say hello</button>
+
+@if (_result is not null)
+{
+    <p>@_result</p>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string _message = "world";
+    private string? _result;
+
+    private async Task SayHelloAsync()
+    {
+        var user = (await AuthenticationState).User;
+        var tenantId = user.FindFirst("tenant_id")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            _result = "Your account has no tenant.";
+            return;
+        }
+
+        var grain = ClusterClient.ForTenant(tenantId).GetGrain<IHelloGrain>("greetings");
+        var result = await grain.SayHelloAsync(new SayHelloCommand(_message));
+        _result = result.IsSuccess
+            ? $"{result.Value.Greeting} (greeting #{result.Value.GreetingCount} for tenant '{tenantId}')"
+            : "The greeting could not be saved.";
+    }
+}

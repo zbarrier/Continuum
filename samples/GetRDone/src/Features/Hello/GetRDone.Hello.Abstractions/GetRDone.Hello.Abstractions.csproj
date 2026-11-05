@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+	<PackageReference Include="Microsoft.Orleans.Sdk" Version="$(OrleansVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="$(ContinuumSrc)Domain.Orleans\Continuum.Domain.Orleans.csproj" />
+	<ProjectReference Include="$(ContinuumSrc)CSharpFunctionalExtensions.Orleans\Continuum.CSharpFunctionalExtensions.Orleans.csproj" />
+	<ProjectReference Include="$(ContinuumSrc)Core.SourceGenerators\Continuum.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

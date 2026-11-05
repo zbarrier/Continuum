@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+	Get-R-Done sample settings. This file intentionally does not import the repository root
+	Directory.Build.props so the sample does not inherit Continuum's NuGet packaging rules.
+  -->
+  <PropertyGroup>
+	<TargetFramework>net10.0</TargetFramework>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+	<IsPackable>false</IsPackable>
+	<ContinuumSrc>$(MSBuildThisFileDirectory)..\..\src\</ContinuumSrc>
+	<!-- ManagedCode.Orleans.Identity 10.4.6 requires Orleans 10.4.2 or later. -->
+	<OrleansVersion>10.4.2</OrleansVersion>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+	<Project Path="src/GetRDone.AppHost/GetRDone.AppHost.csproj" />
+	<Project Path="src/GetRDone.ServiceDefaults/GetRDone.ServiceDefaults.csproj" />
+	<Project Path="src/GetRDone.Identity/GetRDone.Identity.csproj" />
+	<Project Path="src/GetRDone.Silo/GetRDone.Silo.csproj" />
+	<Project Path="src/GetRDone.Web/GetRDone.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/Features/Hello/">
+	<Project Path="src/Features/Hello/GetRDone.Hello.Abstractions/GetRDone.Hello.Abstractions.csproj" />
+	<Project Path="src/Features/Hello/GetRDone.Hello.Grains/GetRDone.Hello.Grains.csproj" />
+  </Folder>
+</Solution>

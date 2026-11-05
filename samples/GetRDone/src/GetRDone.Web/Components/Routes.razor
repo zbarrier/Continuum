@@ -1,0 +1,15 @@
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData">
+            <NotAuthorized>
+                <p>You must <a href="login?returnUrl=@Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)" data-enhance-nav="false">sign in</a> to continue.</p>
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>
+
+@code {
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+}

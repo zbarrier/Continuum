@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+	<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	<PackageReference Include="ManagedCode.Orleans.Identity.Core" Version="10.4.6" />
+	<PackageReference Include="Microsoft.Orleans.Sdk" Version="$(OrleansVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\GetRDone.Hello.Abstractions\GetRDone.Hello.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

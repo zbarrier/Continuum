@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+	<PackageReference Include="Aspire.Azure.Data.Tables" Version="13.6.4" />
+	<PackageReference Include="ManagedCode.Orleans.Identity.Client" Version="10.4.6" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" />
+	<PackageReference Include="Microsoft.Orleans.Client" Version="$(OrleansVersion)" />
+	<PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(OrleansVersion)" />
+	<PackageReference Include="Orleans.Multitenant" Version="5.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\GetRDone.ServiceDefaults\GetRDone.ServiceDefaults.csproj" />
+	<ProjectReference Include="..\Features\Hello\GetRDone.Hello.Abstractions\GetRDone.Hello.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
