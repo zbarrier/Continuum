@@ -7,6 +7,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/CSharpFunctionalExtensions.AspNetCore/Continuum.CSharpFunctionalExtensions.AspNetCore.csproj" />
     <Project Path="src/ArrayPools/Continuum.ArrayPools.csproj" />
     <Project Path="src/AsyncExtensions/Continuum.AsyncExtensions.csproj" />
     <Project Path="src/Core.Orleans/Continuum.Core.Orleans.csproj" />
@@ -47,6 +48,8 @@
     <Project Path="tests/Core.SourceGenerators.Tests/Continuum.Core.SourceGenerators.Tests.csproj" />
     <Project Path="tests/Core.Tests/Continuum.Core.Tests.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.AotSmokeTest/Continuum.CSharpFunctionalExtensions.AotSmokeTest.csproj" />
+    <Project Path="tests/CSharpFunctionalExtensions.AspNetCore.AotSmokeTest/Continuum.CSharpFunctionalExtensions.AspNetCore.AotSmokeTest.csproj" />
+    <Project Path="tests/CSharpFunctionalExtensions.AspNetCore.Tests/Continuum.CSharpFunctionalExtensions.AspNetCore.Tests.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.Benchmarks/Continuum.CSharpFunctionalExtensions.Benchmarks.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.Orleans.Tests/Continuum.CSharpFunctionalExtensions.Orleans.Tests.csproj" />
     <Project Path="tests/CSharpFunctionalExtensions.Tests/Continuum.CSharpFunctionalExtensions.Tests.csproj" />
