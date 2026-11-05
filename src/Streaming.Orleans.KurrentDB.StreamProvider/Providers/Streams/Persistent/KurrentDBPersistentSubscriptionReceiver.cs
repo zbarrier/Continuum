@@ -288,11 +288,11 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
             {
                 case SubscriptionDroppedReason.ServerError:
                     _logger.SubscriptionDroppedServerError(exception, subscription.SubscriptionId, _settings.QueueName);
-                    await ResubscribeAsync(subscription).ConfigureAwait(false);
+                    await ResubscribeAsync(subscription, exception).ConfigureAwait(false);
                     break;
                 case SubscriptionDroppedReason.SubscriberError:
                     _logger.SubscriptionDroppedClientError(exception, subscription.SubscriptionId, _settings.QueueName);
-                    await ResubscribeAsync(subscription).ConfigureAwait(false);
+                    await ResubscribeAsync(subscription, exception).ConfigureAwait(false);
                     break;
                 case SubscriptionDroppedReason.Disposed:
                     _logger.SubscriptionDisposed(subscription.SubscriptionId, _settings.QueueName);
@@ -309,7 +309,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
     ///     Replaces a dropped subscription, retrying with a capped exponential backoff until it succeeds or the
     ///     receiver is closed.
     /// </summary>
-    private async Task ResubscribeAsync(PersistentSubscription dropped)
+    private async Task ResubscribeAsync(PersistentSubscription dropped, Exception? exception)
     {
         CancellationToken cancellationToken;
         try
@@ -346,6 +346,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
                 return;
             }
             _subscription = null;
+            _settings.Diagnostics?.Reconnecting(exception);
 
             for (var attempt = 1; ; attempt++)
             {
@@ -358,6 +359,7 @@ public class KurrentDBPersistentSubscriptionReceiver : IKurrentDBReceiver
                         return;
                     }
                     _subscription = subscription;
+                    _settings.Diagnostics?.Reconnected();
                     _logger.Reconnected(_settings.QueueName, attempt);
                     return;
                 }

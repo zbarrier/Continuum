@@ -1,6 +1,6 @@
 using Orleans.Runtime;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 /// <summary>
 ///     Tracks how far each reading cache cursor has read so the cache never purges, and therefore never checkpoints,
@@ -10,8 +10,8 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 ///     <para>
 ///         The Orleans pooled cache purges purely on age, and the checkpoint is written from the purge callback. Without
 ///         this watermark a slow consumer would have its unread events aged out and checkpointed away, so a silo restart
-///         would skip them. Progress is tracked by <c>$all</c> commit position because that is the only value that orders
-///         events across every stream in the cache.
+///         would skip them. Progress is tracked by the subscription position, the <c>$all</c> commit position or the subscribed
+///         stream's revision, because that is the only value that orders events across every stream in the cache.
 ///     </para>
 ///     <para>
 ///         Cursors are either reading or caught up. Only reading cursors hold back purging. A caught-up cursor has read

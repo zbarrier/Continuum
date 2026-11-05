@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
 
 using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 using KurrentDB.Client;
 
@@ -15,25 +16,25 @@ using Orleans.Streams;
 
 using StreamPosition = Orleans.Streams.StreamPosition;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 /// <summary>
 ///     Receives batches of messages from a single queue of a message queue.
 /// </summary>
-internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterReceiver
+internal class KurrentDBCatchupQueueAdapterReceiver : IKurrentDBQueueAdapterReceiver
 {
     public const int MaxMessagesPerRead = 1000;
 
     private readonly KurrentDBReceiverSettings _settings;
     private readonly Func<string, ILoggerFactory, IKurrentDBQueueCache> _cacheFactory;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly ILogger<KurrentDBCatchUpQueueAdapterReceiver> _logger;
+    private readonly ILogger<KurrentDBCatchupQueueAdapterReceiver> _logger;
     private readonly IQueueAdapterReceiverMonitor _receiverMonitor;
     private readonly LoadSheddingOptions _loadSheddingOptions;
     private readonly IEnvironmentStatisticsProvider? _environmentStatisticsProvider;
     private readonly Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> _kurrentDBReceiverFactory;
 
-    private IKurrentDBCatchUpQueueCache? _cache;
+    private IKurrentDBCatchupQueueCache? _cache;
     private IKurrentDBReceiver? _receiver;
     private AggregatedQueueFlowController? _flowController;
     private readonly object _notifyLock = new();
@@ -49,12 +50,12 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     private const int ReceiverShutdown = 0;
     private const int ReceiverRunning = 1;
 
-    public KurrentDBCatchUpQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context)
+    public KurrentDBCatchupQueueAdapterReceiver(KurrentDBQueueAdapterReceiverContext context)
         : this(context.Settings, context.CacheFactory, context.LoggerFactory, context.ReceiverMonitor, context.LoadSheddingOptions, context.EnvironmentStatisticsProvider, context.ReceiverFactory)
     {
     }
 
-    public KurrentDBCatchUpQueueAdapterReceiver(KurrentDBReceiverSettings settings, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, ILoggerFactory loggerFactory, IQueueAdapterReceiverMonitor receiverMonitor, LoadSheddingOptions loadSheddingOptions, IEnvironmentStatisticsProvider? environmentStatisticsProvider, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> kurrentDBReceiverFactory)
+    public KurrentDBCatchupQueueAdapterReceiver(KurrentDBReceiverSettings settings, Func<string, ILoggerFactory, IKurrentDBQueueCache> cacheFactory, ILoggerFactory loggerFactory, IQueueAdapterReceiverMonitor receiverMonitor, LoadSheddingOptions loadSheddingOptions, IEnvironmentStatisticsProvider? environmentStatisticsProvider, Func<KurrentDBReceiverSettings, ILogger, IKurrentDBReceiver> kurrentDBReceiverFactory)
     {
         ArgumentNullException.ThrowIfNull(settings, nameof(settings));
         ArgumentNullException.ThrowIfNull(cacheFactory, nameof(cacheFactory));
@@ -67,7 +68,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
         _settings = settings;
         _cacheFactory = cacheFactory;
         _loggerFactory = loggerFactory;
-        _logger = loggerFactory.CreateLogger<KurrentDBCatchUpQueueAdapterReceiver>();
+        _logger = loggerFactory.CreateLogger<KurrentDBCatchupQueueAdapterReceiver>();
         _receiverMonitor = receiverMonitor;
         _loadSheddingOptions = loadSheddingOptions;
         _environmentStatisticsProvider = environmentStatisticsProvider;
@@ -112,6 +113,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     private async Task Initialize()
     {
         var watch = Stopwatch.StartNew();
+        _settings.Diagnostics?.Starting();
         try
         {
             if (_cache != null)
@@ -120,8 +122,8 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
                 _cache = null;
             }
             // The catch-up strategy creates both this receiver and its cache, so the cache always tracks cursors.
-            _cache = _cacheFactory(_settings.QueueName, _loggerFactory) as IKurrentDBCatchUpQueueCache
-                ?? throw new InvalidOperationException($"A catch-up receiver requires an {nameof(IKurrentDBCatchUpQueueCache)}.");
+            _cache = _cacheFactory(_settings.QueueName, _loggerFactory) as IKurrentDBCatchupQueueCache
+                ?? throw new InvalidOperationException($"A catch-up receiver requires an {nameof(IKurrentDBCatchupQueueCache)}.");
             // Purge is the point at which events are provably behind every cursor, so it is what drives the receiver's
             // checkpoint. Receive() is too early, since events there have only been buffered.
             _cache.OnCheckpointablePosition = commitPosition => NotifyDelivered(commitPosition);
@@ -142,6 +144,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
         {
             watch.Stop();
             _receiverMonitor.TrackInitialization(false, watch.Elapsed, ex);
+            _settings.Diagnostics?.InitializationFailed(ex);
             throw;
         }
     }
@@ -185,6 +188,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
             {
                 localCache?.Dispose();
             }
+            _settings.Diagnostics?.Stopped();
             watch.Stop();
             _receiverMonitor.TrackShutdown(true, watch.Elapsed, null);
         }
@@ -257,9 +261,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
         }
         // receiverMonitor message age
         var dequeueTimeUtc = DateTime.UtcNow;
-        var oldestMessageEnqueueTime = messages[0].Timestamp;
-        var newestMessageEnqueueTime = messages[^1].Timestamp;
-        _receiverMonitor.TrackMessagesReceived(messages.Count, oldestMessageEnqueueTime, newestMessageEnqueueTime);
+        TrackMessagesReceived(messages);
         var cache = _cache;
         if (cache == null)
         {
@@ -278,6 +280,28 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     public Task MessagesDeliveredAsync(IList<IBatchContainer> messages)
     {
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    ///     Reports received events to the receiver monitor. Checkpoint markers are made by the receiver rather than
+    ///     read from KurrentDB, and their timestamp is when they were made, so they are left out of the count and age.
+    /// </summary>
+    private void TrackMessagesReceived(IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> messages)
+    {
+        var count = 0;
+        DateTime? oldest = null;
+        DateTime? newest = null;
+        foreach (var message in messages)
+        {
+            if (string.Equals(message.StreamName.Value, KurrentDBStreamedEventConversions.CheckpointStreamName.Value, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            count++;
+            oldest ??= message.Timestamp;
+            newest = message.Timestamp;
+        }
+        _receiverMonitor.TrackMessagesReceived(count, oldest, newest);
     }
 
     /// <summary>
@@ -437,12 +461,12 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
 
     private class Cursor : IQueueCacheCursor
     {
-        private readonly IKurrentDBCatchUpQueueCache _cache;
+        private readonly IKurrentDBCatchupQueueCache _cache;
         private readonly object _cursor;
         private IBatchContainer _current;
         private bool _deliveryFailed;
 
-        public Cursor(IKurrentDBCatchUpQueueCache cache, object cursor)
+        public Cursor(IKurrentDBCatchupQueueCache cache, object cursor)
         {
             _cache = cache;
             _cursor = cursor;
@@ -509,7 +533,7 @@ internal class KurrentDBCatchUpQueueAdapterReceiver : IKurrentDBQueueAdapterRece
 
 }
 
-internal static partial class KurrentDBCatchUpQueueAdapterReceiverLog
+internal static partial class KurrentDBCatchupQueueAdapterReceiverLog
 {
     [LoggerMessage(Level = LogLevel.Information, Message = "Initializing KurrentDB receiver for queue {QueueName}.")] public static partial void AdapterReceiverInitializing(this ILogger logger, string queueName);
 

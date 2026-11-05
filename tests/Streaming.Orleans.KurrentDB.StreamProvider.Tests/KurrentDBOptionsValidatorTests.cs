@@ -1,4 +1,5 @@
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
+using Continuum.Streaming.Orleans.KurrentDB;
 using Continuum.Streaming.Orleans.KurrentDB.Monitors;
 using Continuum.TypeMapping;
 
@@ -18,6 +19,14 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 public class KurrentDBOptionsValidatorTests
 {
     private const string ProviderName = "KurrentDBProvider";
+
+    [Fact]
+    public void All_stream_catchup_filter_excludes_system_events_by_default()
+    {
+        var filter = new KurrentDBAllStreamCatchupSubscriptionReceiverOptions().Filter;
+
+        Assert.Equal(EventTypeFilter.ExcludeSystemEvents().ToString(), filter?.ToString());
+    }
 
     private sealed class TestTypeMapper : TypeMapper;
 
@@ -246,67 +255,97 @@ public class KurrentDBOptionsValidatorTests
 
     #endregion
 
-    #region KurrentDBCatchUpSubscriptionReceiverOptions
+    #region KurrentDBCatchupSubscriptionReceiverOptions
 
-    private static KurrentDBCatchUpSubscriptionReceiverOptions ValidCatchUpOptions() => new()
+    private static KurrentDBAllStreamCatchupSubscriptionReceiverOptions ValidCatchupOptions() => new()
     {
         CheckpointStore = new FakeCheckpointStore()
     };
 
-    [Fact]
-    public void CatchUpOptions_Accepts_a_complete_configuration()
+    private static KurrentDBOptions ValidAllStreamKurrentDBOptions()
     {
-        new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(ValidCatchUpOptions(), ValidKurrentDBOptions(), ProviderName).ValidateConfiguration();
+        var options = ValidKurrentDBOptions();
+        options.Queues = [KurrentDBStreams.All];
+        return options;
     }
 
     [Fact]
-    public void CatchUpOptions_Rejects_null_queues()
+    public void CatchupOptions_Accepts_a_complete_configuration()
     {
-        var kurrentDBOptions = ValidKurrentDBOptions();
+        new KurrentDBAllStreamCatchupSubscriptionReceiverOptionsValidator(ValidCatchupOptions(), ValidAllStreamKurrentDBOptions(), ProviderName).ValidateConfiguration();
+    }
+
+    [Fact]
+    public void CatchupOptions_Rejects_null_queues()
+    {
+        var kurrentDBOptions = ValidAllStreamKurrentDBOptions();
         kurrentDBOptions.Queues = null!;
 
-        AssertInvalid(new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(ValidCatchUpOptions(), kurrentDBOptions, ProviderName), nameof(KurrentDBOptions.Queues));
+        AssertInvalid(new KurrentDBAllStreamCatchupSubscriptionReceiverOptionsValidator(ValidCatchupOptions(), kurrentDBOptions, ProviderName), nameof(KurrentDBOptions.Queues));
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public void CatchUpOptions_Requires_exactly_one_queue(int queueCount)
+    public void CatchupOptions_Requires_exactly_one_queue(int queueCount)
     {
-        var kurrentDBOptions = ValidKurrentDBOptions();
+        var kurrentDBOptions = ValidAllStreamKurrentDBOptions();
         kurrentDBOptions.Queues = Enumerable.Range(0, queueCount).Select(i => $"queue-{i}").ToList();
 
-        AssertInvalid(new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(ValidCatchUpOptions(), kurrentDBOptions, ProviderName), nameof(KurrentDBOptions.Queues));
+        AssertInvalid(new KurrentDBAllStreamCatchupSubscriptionReceiverOptionsValidator(ValidCatchupOptions(), kurrentDBOptions, ProviderName), nameof(KurrentDBOptions.Queues));
     }
 
     [Fact]
-    public void CatchUpOptions_Rejects_a_missing_checkpoint_store()
+    public void CatchupOptions_Rejects_a_missing_checkpoint_store()
     {
-        var options = ValidCatchUpOptions();
+        var options = ValidCatchupOptions();
         options.CheckpointStore = null!;
 
-        AssertInvalid(new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(options, ValidKurrentDBOptions(), ProviderName), nameof(KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointStore));
+        AssertInvalid(new KurrentDBAllStreamCatchupSubscriptionReceiverOptionsValidator(options, ValidAllStreamKurrentDBOptions(), ProviderName), nameof(KurrentDBCatchupSubscriptionReceiverOptions.CheckpointStore));
     }
 
     [Fact]
-    public void CatchUpOptions_Rejects_missing_checkpoint_monitor_options()
+    public void CatchupOptions_Rejects_missing_checkpoint_monitor_options()
     {
-        var options = ValidCatchUpOptions();
+        var options = ValidCatchupOptions();
         options.CheckpointMonitorOptions = null!;
 
-        AssertInvalid(new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(options, ValidKurrentDBOptions(), ProviderName), nameof(KurrentDBCatchUpSubscriptionReceiverOptions.CheckpointMonitorOptions));
+        AssertInvalid(new KurrentDBAllStreamCatchupSubscriptionReceiverOptionsValidator(options, ValidAllStreamKurrentDBOptions(), ProviderName), nameof(KurrentDBCatchupSubscriptionReceiverOptions.CheckpointMonitorOptions));
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    [InlineData(int.MaxValue / KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead + 1)]
-    public void CatchUpOptions_Rejects_out_of_range_buffer_capacity_multiplier(int bufferCapacityMultiplier)
+    [InlineData(int.MaxValue / KurrentDBCatchupQueueAdapterReceiver.MaxMessagesPerRead + 1)]
+    public void CatchupOptions_Rejects_out_of_range_buffer_capacity_multiplier(int bufferCapacityMultiplier)
     {
-        var options = ValidCatchUpOptions();
+        var options = ValidCatchupOptions();
         options.BufferCapacityMultiplier = bufferCapacityMultiplier;
 
-        AssertInvalid(new KurrentDBCatchUpSubscriptionReceiverOptionsValidator(options, ValidKurrentDBOptions(), ProviderName), nameof(KurrentDBCatchUpSubscriptionReceiverOptions.BufferCapacityMultiplier));
+        AssertInvalid(new KurrentDBAllStreamCatchupSubscriptionReceiverOptionsValidator(options, ValidAllStreamKurrentDBOptions(), ProviderName), nameof(KurrentDBCatchupSubscriptionReceiverOptions.BufferCapacityMultiplier));
+    }
+
+    [Fact]
+    public void AllStreamCatchupOptions_Rejects_a_queue_other_than_all()
+    {
+        AssertInvalid(new KurrentDBAllStreamCatchupSubscriptionReceiverOptionsValidator(ValidCatchupOptions(), ValidKurrentDBOptions(), ProviderName), "$all");
+    }
+
+    [Theory]
+    [InlineData("$ce-snack")]
+    [InlineData("snack-projection")]
+    public void StreamCatchupOptions_Accepts_a_single_stream(string streamName)
+    {
+        var kurrentDBOptions = ValidKurrentDBOptions();
+        kurrentDBOptions.Queues = [streamName];
+
+        new KurrentDBStreamCatchupSubscriptionReceiverOptionsValidator(new KurrentDBStreamCatchupSubscriptionReceiverOptions { CheckpointStore = new FakeCheckpointStore() }, kurrentDBOptions, ProviderName).ValidateConfiguration();
+    }
+
+    [Fact]
+    public void StreamCatchupOptions_Rejects_the_all_stream()
+    {
+        AssertInvalid(new KurrentDBStreamCatchupSubscriptionReceiverOptionsValidator(new KurrentDBStreamCatchupSubscriptionReceiverOptions { CheckpointStore = new FakeCheckpointStore() }, ValidAllStreamKurrentDBOptions(), ProviderName), "$all");
     }
 
     #endregion
@@ -316,7 +355,7 @@ public class KurrentDBOptionsValidatorTests
     [Fact]
     public void PullingAgentOptions_Accepts_a_batch_size_of_one()
     {
-        new KurrentDBCatchUpPullingAgentOptionsValidator(new StreamPullingAgentOptions { BatchContainerBatchSize = 1 }, ProviderName).ValidateConfiguration();
+        new KurrentDBCatchupPullingAgentOptionsValidator(new StreamPullingAgentOptions { BatchContainerBatchSize = 1 }, ProviderName).ValidateConfiguration();
     }
 
     [Theory]
@@ -326,7 +365,7 @@ public class KurrentDBOptionsValidatorTests
     {
         var options = new StreamPullingAgentOptions { BatchContainerBatchSize = batchSize };
 
-        AssertInvalid(new KurrentDBCatchUpPullingAgentOptionsValidator(options, ProviderName), nameof(StreamPullingAgentOptions.BatchContainerBatchSize));
+        AssertInvalid(new KurrentDBCatchupPullingAgentOptionsValidator(options, ProviderName), nameof(StreamPullingAgentOptions.BatchContainerBatchSize));
     }
 
     #endregion

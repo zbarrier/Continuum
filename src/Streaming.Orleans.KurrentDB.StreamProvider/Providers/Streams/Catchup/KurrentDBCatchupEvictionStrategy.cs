@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 using Orleans.Providers.Streams.Common;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 /// <summary>
 ///     A <see cref="ChronologicalEvictionStrategy" /> that additionally refuses to purge events which have not been
@@ -14,12 +14,12 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
 ///     unread events be checkpointed away and lost on restart. Adding the cursor watermark makes purge, and therefore
 ///     the checkpoint, delivery safe while leaving the age based limits intact.
 /// </remarks>
-internal sealed class KurrentDBCatchUpEvictionStrategy : ChronologicalEvictionStrategy
+internal sealed class KurrentDBCatchupEvictionStrategy : ChronologicalEvictionStrategy
 {
     private readonly IKurrentDBDataAdapter _dataAdapter;
     private readonly KurrentDBCursorTracker _cursorTracker;
 
-    public KurrentDBCatchUpEvictionStrategy(ILogger logger, TimePurgePredicate timePurge, ICacheMonitor? cacheMonitor, TimeSpan? monitorWriteInterval,
+    public KurrentDBCatchupEvictionStrategy(ILogger logger, TimePurgePredicate timePurge, ICacheMonitor? cacheMonitor, TimeSpan? monitorWriteInterval,
         IKurrentDBDataAdapter dataAdapter, KurrentDBCursorTracker cursorTracker)
         : base(logger, timePurge, cacheMonitor, monitorWriteInterval)
     {

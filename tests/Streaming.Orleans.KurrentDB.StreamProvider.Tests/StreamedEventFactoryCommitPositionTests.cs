@@ -1,4 +1,4 @@
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 using KurrentDB.Client;
@@ -41,7 +41,7 @@ public class StreamedEventFactoryCommitPositionTests
     {
         var resolved = CreateEvent();
 
-        var carrier = KurrentDBCatchUpStreamedEventFactory.FromAllStream(resolved, Connection);
+        var carrier = KurrentDBCatchupStreamedEventFactory.FromAllStream(resolved, Connection);
 
         Assert.Equal(resolved.Event.EventId.ToGuid(), carrier.EventId);
         Assert.Equal("test-event", carrier.EventType);
@@ -55,7 +55,7 @@ public class StreamedEventFactoryCommitPositionTests
     [Fact]
     public void A_Catch_Up_Resolved_Link_Carries_The_Position_It_Was_Read_At()
     {
-        var carrier = KurrentDBCatchUpStreamedEventFactory.FromAllStream(CreateResolvedLink(), Connection);
+        var carrier = KurrentDBCatchupStreamedEventFactory.FromAllStream(CreateResolvedLink(), Connection);
 
         Assert.Equal(LinkCommitPosition, carrier.Cursor.SequenceNumber);
         // The rest of the carrier describes the linked event.
@@ -68,7 +68,7 @@ public class StreamedEventFactoryCommitPositionTests
     {
         var resolved = new ResolvedEvent(CreateRecord("order-1", 4, EventCommitPosition), null, null);
 
-        var carrier = KurrentDBCatchUpStreamedEventFactory.FromAllStream(resolved, Connection);
+        var carrier = KurrentDBCatchupStreamedEventFactory.FromAllStream(resolved, Connection);
 
         Assert.Equal(EventCommitPosition, carrier.Cursor.SequenceNumber);
     }

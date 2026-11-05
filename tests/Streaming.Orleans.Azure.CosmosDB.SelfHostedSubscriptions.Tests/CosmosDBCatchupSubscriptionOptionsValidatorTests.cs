@@ -109,28 +109,28 @@ public class CosmosDBCatchupSubscriptionOptionsValidatorTests
     public void Rejects_a_from_date_time_start_without_a_date_time()
     {
         var options = ValidOptions();
-        options.StartingPositionType = StartingPositionType.FromDateTime;
+        options.StartFrom = CosmosDBStartFrom.DateTime;
 
-        AssertRejected(options, nameof(CosmosDBCatchupSubscriptionOptions.StartingPositionDateTime));
+        AssertRejected(options, nameof(CosmosDBCatchupSubscriptionOptions.StartFromDateTime));
     }
 
     [Fact]
     public void Accepts_a_from_date_time_start_with_a_date_time()
     {
         var options = ValidOptions();
-        options.StartingPositionType = StartingPositionType.FromDateTime;
-        options.StartingPositionDateTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        options.StartFrom = CosmosDBStartFrom.DateTime;
+        options.StartFromDateTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         Validate(options);
     }
 
     [Theory]
-    [InlineData(StartingPositionType.BeginningOfTime)]
-    [InlineData(StartingPositionType.Latest)]
-    public void Accepts_other_starts_without_a_date_time(StartingPositionType startingPositionType)
+    [InlineData(CosmosDBStartFrom.Beginning)]
+    [InlineData(CosmosDBStartFrom.Now)]
+    public void Accepts_other_starts_without_a_date_time(CosmosDBStartFrom startFrom)
     {
         var options = ValidOptions();
-        options.StartingPositionType = startingPositionType;
+        options.StartFrom = startFrom;
 
         Validate(options);
     }
@@ -141,9 +141,18 @@ public class CosmosDBCatchupSubscriptionOptionsValidatorTests
     public void Rejects_a_polling_interval_out_of_range(int value)
     {
         var options = ValidOptions();
-        options.PollingIntervalInMilliseconds = value;
+        options.PollingInterval = TimeSpan.FromMilliseconds(value);
 
-        AssertRejected(options, nameof(CosmosDBCatchupSubscriptionOptions.PollingIntervalInMilliseconds));
+        AssertRejected(options, nameof(CosmosDBCatchupSubscriptionOptions.PollingInterval));
+    }
+
+    [Fact]
+    public void Rejects_an_undefined_unknown_event_type_behavior()
+    {
+        var options = ValidOptions();
+        options.UnknownEventTypeBehavior = (UnknownEventTypeBehavior)99;
+
+        AssertRejected(options, nameof(CosmosDBCatchupSubscriptionOptions.UnknownEventTypeBehavior));
     }
 
     [Theory]
@@ -163,7 +172,7 @@ public class CosmosDBCatchupSubscriptionOptionsValidatorTests
     public void Accepts_polling_settings_at_the_boundaries(int pollingIntervalInMilliseconds, int maxItemsPerPoll)
     {
         var options = ValidOptions();
-        options.PollingIntervalInMilliseconds = pollingIntervalInMilliseconds;
+        options.PollingInterval = TimeSpan.FromMilliseconds(pollingIntervalInMilliseconds);
         options.MaxItemsPerPoll = maxItemsPerPoll;
 
         Validate(options);

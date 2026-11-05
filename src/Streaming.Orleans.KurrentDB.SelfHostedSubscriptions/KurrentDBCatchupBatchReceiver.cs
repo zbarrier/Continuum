@@ -25,6 +25,7 @@ internal sealed class KurrentDBCatchupBatchReceiver
     private readonly ILogger _logger;
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _incompleteTransactionTimeout;
+    private readonly bool _groupTransactions;
 
     /// <summary>
     ///     The default time to wait for the rest of an open transaction before handing it off incomplete.
@@ -42,6 +43,10 @@ internal sealed class KurrentDBCatchupBatchReceiver
     /// <param name="logger">The logger recovery from failed batches is reported to.</param>
     /// <param name="timeProvider">The time provider used to measure how long a batch has been failing and how long a transaction has been waiting.</param>
     /// <param name="incompleteTransactionTimeout">How long to wait for the rest of an open transaction before handing it off incomplete, or <see langword="null" /> for <see cref="DefaultIncompleteTransactionTimeout" />.</param>
+    /// <param name="groupTransactions">
+    ///     Whether to keep the events of a transaction in one batch. Only <c>$all</c> keeps a transaction's events
+    ///     together, so a single-stream subscription, which may hold only part of a transaction, passes <see langword="false" />.
+    /// </param>
     public KurrentDBCatchupBatchReceiver(ChannelReader<StreamedEvent<object>> reader,
         KurrentDBCheckpointMonitor checkpointMonitor,
         Func<List<IStreamedEvent<object>>, Task> onNextBatchAsync,
@@ -49,7 +54,8 @@ internal sealed class KurrentDBCatchupBatchReceiver
         ResiliencePipeline? resiliencePipeline = null,
         ILogger? logger = null,
         TimeProvider? timeProvider = null,
-        TimeSpan? incompleteTransactionTimeout = null)
+        TimeSpan? incompleteTransactionTimeout = null,
+        bool groupTransactions = true)
     {
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentNullException.ThrowIfNull(checkpointMonitor);
@@ -64,6 +70,7 @@ internal sealed class KurrentDBCatchupBatchReceiver
         _logger = logger ?? NullLogger.Instance;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _incompleteTransactionTimeout = incompleteTransactionTimeout ?? DefaultIncompleteTransactionTimeout;
+        _groupTransactions = groupTransactions;
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_incompleteTransactionTimeout, TimeSpan.Zero, nameof(incompleteTransactionTimeout));
     }
 
@@ -138,7 +145,10 @@ internal sealed class KurrentDBCatchupBatchReceiver
                 }
 
                 eventBatch.Add(streamedEvent);
-                TrackTransaction(openTransactions, streamedEvent);
+                if (_groupTransactions)
+                {
+                    TrackTransaction(openTransactions, streamedEvent);
+                }
 
                 if (eventBatch.Count >= _maxBatchSize && openTransactions.Count == 0)
                 {

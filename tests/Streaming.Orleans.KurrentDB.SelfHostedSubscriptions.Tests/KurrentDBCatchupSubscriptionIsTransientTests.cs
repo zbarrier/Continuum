@@ -79,11 +79,9 @@ public class KurrentDBCatchupSubscriptionIsTransientTests
     }
 
     private sealed class ProbeCatchupSubscription(IServiceProvider serviceProvider)
-        : KurrentDBCatchupSubscription<ProbeCatchupSubscription, KurrentDBCatchupSubscriptionOptions>(serviceProvider)
+        : KurrentDBStreamCatchupSubscription<ProbeCatchupSubscription, KurrentDBCatchupSubscriptionOptions>(serviceProvider)
     {
         public override string StreamName => "probe";
-
-        public override IEventFilter? FilterOptions => null;
 
         public bool CallIsTransient(Exception exception) => IsTransient(exception);
 

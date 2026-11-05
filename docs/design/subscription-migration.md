@@ -55,7 +55,7 @@ Startup order:
 Notes:
 
 - **Do not wait in `InitAsync`.** Orleans limits receiver init time. Do the wait in the background pump
-  (`PumpAsync` in `KurrentDBCatchUpSubscriptionReceiver`), which runs in two stages: migration stream, then `$all`. The
+  (`PumpAsync` in `KurrentDBCatchupSubscriptionReceiver`), which runs in two stages: migration stream, then `$all`. The
   receiver returns no messages while waiting.
 - `After(P)` gives no gap and no overlap; events written during the handoff are picked up regardless of when the
   receiver starts.
@@ -85,7 +85,7 @@ Notes:
 |---|---|
 | React to `CaughtUp` in the self-hosted subscription | Only logged in `KurrentDBCatchupSubscription.SubscribeToAll`; no hook. |
 | Self-hosted checkpoint | Owned by the base class via `KurrentDBCheckpointMonitor`, keyed by subscription name and partition `"0"`; separate from SQL writes, so not atomic with them. Its key does not start with the connection name, unlike the repo's cursor convention (SourceConnectionName first); worth fixing. |
-| Choose where the provider starts | `KurrentDBCatchUpSubscriptionReceiver.GetStartPositionAsync`: checkpoint, else `StartFromNow` (default true), else from beginning. No migration mode or seeded position. |
+| Choose where the provider starts | `KurrentDBCatchupSubscriptionReceiver.GetStartPositionAsync`: checkpoint, else `StartFromNow` (default false), else from beginning. No migration mode or seeded position. |
 | Provider checkpoint key | `"{ConnectionName}-{ConsumerGroup}"`, partition `"0"`, `$all` commit position. |
 | Grains skip already-applied events | Supported via `ProjectionState.Watermarks`. |
 

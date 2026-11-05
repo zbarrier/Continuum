@@ -1,11 +1,11 @@
 using Continuum.Streaming.Orleans;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
 /// <summary>
-///     Abstraction on KurrentDBReceiver class, used to configure KurrentDBReceiver class in KurrentDBCatchUpQueueAdapterReceiver,
-///     also used to configure KurrentDBGeneratorReceiver in KurrentDBCatchUpQueueAdapterReceiver for testing purpose
+///     Abstraction on KurrentDBReceiver class, used to configure KurrentDBReceiver class in KurrentDBCatchupQueueAdapterReceiver,
+///     also used to configure KurrentDBGeneratorReceiver in KurrentDBCatchupQueueAdapterReceiver for testing purpose
 /// </summary>
 public interface IKurrentDBReceiver
 {

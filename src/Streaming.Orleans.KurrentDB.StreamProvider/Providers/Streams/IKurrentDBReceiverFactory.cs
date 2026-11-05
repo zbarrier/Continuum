@@ -11,7 +11,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 /// </summary>
 /// <remarks>
 ///     One implementation is registered as a keyed service per stream provider name by the
-///     <c>UsePersistentSubscriptions</c>/<c>UseCatchUpSubscription</c> configurator extensions. This keeps the
+///     <c>UsePersistentSubscriptions</c>/<c>UseAllStreamCatchupSubscription</c>/<c>UseStreamCatchupSubscription</c> configurator extensions. This keeps the
 ///     strategy selection out of the queue adapter factory and ensures only the selected strategy's options are
 ///     resolved and validated.
 /// </remarks>

@@ -107,6 +107,7 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
     private async Task Initialize()
     {
         var watch = Stopwatch.StartNew();
+        _settings.Diagnostics?.Starting();
         try
         {
             if (_cache != null)
@@ -127,6 +128,8 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
             var receiver = _kurrentDBReceiverFactory(_settings, _logger);
             await receiver.InitAsync();
             _receiver = receiver;
+            // A persistent subscription is live once subscribed; catch-up receivers report this on confirmation.
+            _settings.Diagnostics?.Running();
             watch.Stop();
             _receiverMonitor.TrackInitialization(true, watch.Elapsed, null);
         }
@@ -134,6 +137,7 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
         {
             watch.Stop();
             _receiverMonitor.TrackInitialization(false, watch.Elapsed, ex);
+            _settings.Diagnostics?.InitializationFailed(ex);
             throw;
         }
     }
@@ -169,6 +173,7 @@ internal class KurrentDBPersistentQueueAdapterReceiver : IKurrentDBQueueAdapterR
             {
                 localCache?.Dispose();
             }
+            _settings.Diagnostics?.Stopped();
             watch.Stop();
             _receiverMonitor.TrackShutdown(true, watch.Elapsed, null);
         }

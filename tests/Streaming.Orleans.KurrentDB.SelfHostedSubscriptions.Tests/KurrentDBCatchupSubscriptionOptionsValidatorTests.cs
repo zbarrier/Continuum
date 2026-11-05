@@ -42,7 +42,7 @@ public class KurrentDBCatchupSubscriptionOptionsValidatorTests
 
     private static void Validate(KurrentDBCatchupSubscriptionOptions options)
     {
-        new KurrentDBCatchupSubscriptionOptionsValidator(options, new KurrentDBCatchupSubscriptionInfo(SubscriptionName, typeof(object))).ValidateConfiguration();
+        new KurrentDBCatchupSubscriptionOptionsValidator(options, new KurrentDBStreamCatchupSubscriptionInfo(SubscriptionName, typeof(object))).ValidateConfiguration();
     }
 
     private static void AssertRejected(KurrentDBCatchupSubscriptionOptions options, string setting)
@@ -61,7 +61,7 @@ public class KurrentDBCatchupSubscriptionOptionsValidatorTests
     [Fact]
     public void Rejects_null_options()
     {
-        Assert.Throws<OrleansConfigurationException>(() => new KurrentDBCatchupSubscriptionOptionsValidator(null!, new KurrentDBCatchupSubscriptionInfo(SubscriptionName, typeof(object))));
+        Assert.Throws<OrleansConfigurationException>(() => new KurrentDBCatchupSubscriptionOptionsValidator(null!, new KurrentDBStreamCatchupSubscriptionInfo(SubscriptionName, typeof(object))));
     }
 
     [Theory]

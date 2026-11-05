@@ -3,7 +3,7 @@ using Continuum.Orleans.Events;
 using Orleans.Configuration;
 using Orleans.Storage;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 /// <summary>
 ///     The serialized form of <see cref="Continuum.Orleans.Events.CheckpointMarker" /> for a stream provider.

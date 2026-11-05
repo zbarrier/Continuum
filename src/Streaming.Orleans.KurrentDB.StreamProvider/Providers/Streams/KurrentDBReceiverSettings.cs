@@ -1,3 +1,5 @@
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Diagnostics;
+
 using Orleans.Configuration;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
@@ -36,4 +38,9 @@ public class KurrentDBReceiverSettings
     ///     The parser for the names of streams read by the receiver, or <see langword="null" /> for the default.
     /// </summary>
     public Continuum.Streams.IStreamNameParser? StreamNameParser { get; set; }
+
+    /// <summary>
+    ///     Reports the receiver status and metrics, or <see langword="null" /> when diagnostics are not registered.
+    /// </summary>
+    public KurrentDBQueueReceiverDiagnostics? Diagnostics { get; set; }
 }

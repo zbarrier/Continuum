@@ -1,15 +1,15 @@
-﻿using Continuum.Streaming.Orleans.KurrentDB.Extensions;
+using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 using KurrentDB.Client;
 
 using Continuum.Streams;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 /// <summary>
 ///     Builds the <see cref="StreamedEvent{T}" /> carriers a catch-up receiver hands to the queue cache.
 /// </summary>
-internal static class KurrentDBCatchUpStreamedEventFactory
+internal static class KurrentDBCatchupStreamedEventFactory
 {
     /// <summary>
     ///     Creates a carrier for an event read from a <c>$all</c> subscription.
@@ -26,6 +26,22 @@ internal static class KurrentDBCatchUpStreamedEventFactory
     {
         var commitPosition = (resolvedEvent.OriginalPosition ?? resolvedEvent.Event.Position).CommitPosition;
         return KurrentDBStreamedEventFactory.Create(resolvedEvent.Event, sourceConnectionName, commitPosition, nameParser);
+    }
+
+    /// <summary>
+    ///     Creates a carrier for an event read from a single stream subscription.
+    /// </summary>
+    /// <param name="resolvedEvent">The event as delivered by the subscription.</param>
+    /// <param name="sourceConnectionName">The logical connection the event was read from.</param>
+    /// <param name="nameParser">The parser for the event's stream name, or <see langword="null" /> for the default.</param>
+    /// <remarks>
+    ///     The position is the revision of the event in the subscribed stream, taken from
+    ///     <see cref="ResolvedEvent.OriginalEventNumber" />. A resolved link would otherwise report the revision of the
+    ///     linked event in its own stream, which is unrelated to the subscribed stream.
+    /// </remarks>
+    public static StreamedEvent<KurrentDBRawEvent> FromStream(ResolvedEvent resolvedEvent, string sourceConnectionName, IStreamNameParser? nameParser = null)
+    {
+        return KurrentDBStreamedEventFactory.Create(resolvedEvent.Event, sourceConnectionName, resolvedEvent.OriginalEventNumber.ToUInt64(), nameParser);
     }
 
     /// <summary>

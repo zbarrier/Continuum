@@ -1,6 +1,6 @@
 using Orleans.Runtime;
 
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 /// <summary>
 ///     A stable handle for a cache cursor. The underlying Orleans cache cursor can be replaced when a caught-up cursor

@@ -1,4 +1,4 @@
-﻿using Continuum.Streaming.Orleans.KurrentDB.Monitors;
+using Continuum.Streaming.Orleans.KurrentDB.Monitors;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Configuration;
 
@@ -65,6 +65,10 @@ public class KurrentDBCatchupSubscriptionOptionsValidator : IConfigurationValida
         if (_options.Credentials is null)
         {
             throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCatchupSubscriptionOptions)}.{nameof(_options.Credentials)} is required.");
+        }
+        if (!Enum.IsDefined(_options.UnknownEventTypeBehavior))
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for KurrentDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(KurrentDBCatchupSubscriptionOptions)}.{nameof(_options.UnknownEventTypeBehavior)} must be {UnknownEventTypeBehavior.Halt} or {UnknownEventTypeBehavior.Skip}.");
         }
         if (_options.RetryOptions is null)
         {

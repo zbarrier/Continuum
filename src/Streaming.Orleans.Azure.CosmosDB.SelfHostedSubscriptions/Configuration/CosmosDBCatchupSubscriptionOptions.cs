@@ -9,14 +9,14 @@ using Continuum.Streams;
 namespace Continuum.Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions.Configuration;
 
 /// <summary>Where a new subscription starts reading the change feed.</summary>
-public enum StartingPositionType
+public enum CosmosDBStartFrom
 {
     /// <summary>From the beginning of the change feed.</summary>
-    BeginningOfTime,
+    Beginning,
     /// <summary>From the configured starting date and time.</summary>
-    FromDateTime,
+    DateTime,
     /// <summary>From changes made after the subscription starts.</summary>
-    Latest
+    Now
 }
 
 /// <summary>Options for a Cosmos DB catch-up subscription.</summary>
@@ -41,16 +41,23 @@ public class CosmosDBCatchupSubscriptionOptions
     public string InstanceName { get; set; } = default!;
 
     /// <summary>Where a new subscription starts reading.</summary>
-    public StartingPositionType StartingPositionType { get; set; } = StartingPositionType.BeginningOfTime;
+    public CosmosDBStartFrom StartFrom { get; set; } = CosmosDBStartFrom.Beginning;
 
-    /// <summary>The start time when the starting position type is FromDateTime.</summary>
-    public DateTime? StartingPositionDateTime { get; set; } = null;
+    /// <summary>The start time when <see cref="StartFrom" /> is <see cref="CosmosDBStartFrom.DateTime" />.</summary>
+    public DateTime? StartFromDateTime { get; set; } = null;
 
     /// <summary>The delay between change feed polls.</summary>
-    public int PollingIntervalInMilliseconds { get; set; } = 5000;
+    public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>The maximum number of items read per poll.</summary>
     public int MaxItemsPerPoll { get; set; } = 500;
+
+    /// <summary>
+    ///     What the subscription does when it reads an event whose type the type mapper cannot resolve. Defaults to
+    ///     <see cref="UnknownEventTypeBehavior.Halt" />, which fails the batch so the change feed processor retries the
+    ///     lease without advancing past the event.
+    /// </summary>
+    public UnknownEventTypeBehavior UnknownEventTypeBehavior { get; set; } = UnknownEventTypeBehavior.Halt;
 
     /// <summary>Deserializes event payloads; resolved by connection name when not set.</summary>
     public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;

@@ -12,7 +12,37 @@ dotnet add package Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions
 
 ## Use
 
-Derive from `KurrentDBCatchupSubscription<TSubscription, TOptions>`, supply the stream to read (`KurrentDBStreams.All` for `$all`) and an optional filter, and handle each batch in `OnNextBatchAsync`. Register it as a hosted service with `AddKurrentDBCatchupSubscription`, and register a checkpoint store such as `AddKurrentDBCheckpointStore`.
+Each subscription reads exactly one source. Pick the base class and matching registration method for it, handle each batch in `OnNextBatchAsync`, and register a checkpoint store such as `AddKurrentDBCheckpointStore`.
+
+| Source | Derive from | Register with |
+| --- | --- | --- |
+| `$all`, optionally filtered by overriding `Filter` (any KurrentDB `IEventFilter`) | `KurrentDBAllStreamCatchupSubscription<TSubscription, TOptions>` | `AddKurrentDBAllStreamCatchupSubscription(MySubscription.Info)` |
+| One named stream, such as `$ce-{Category}` or a custom projection stream, by overriding `StreamName` | `KurrentDBStreamCatchupSubscription<TSubscription, TOptions>` | `AddKurrentDBStreamCatchupSubscription(MySubscription.Info)` |
+
+- `$all` subscriptions checkpoint the `$all` commit position and deliver events appended in one transaction in the same batch.
+- `$all` subscriptions exclude `$`-prefixed system events (links, metadata, checkpoints) by default with `EventTypeFilter.ExcludeSystemEvents()`. Overriding `Filter` replaces that default; prefer prefix filters over regular expressions, and return `null` only to read every event.
+- Stream subscriptions checkpoint the stream revision and must not name `$all`.
+- Link events are resolved to the events they point at (`ResolveLinkTos`, on by default), which `$ce-` and other projected link streams need.
+- With no stored checkpoint, a subscription reads from the beginning of its source. Set `StartFromNow` to start at the latest event instead; that position is saved as the checkpoint right away, and a stream that doesn't exist yet is read from its first event.
+- An event whose type can't be mapped stops the subscription (`UnknownEventTypeBehavior.Halt`, the default) without saving a checkpoint past it. Set `UnknownEventTypeBehavior.Skip` to log and continue. For `$all`, use `Filter` to read only the event types the subscription handles.
+
+Options are bound from `Continuum:KurrentDB:Subscriptions:{Name}`, where `{Name}` is the subscription name. Set `Enabled` to `false` to keep a registered subscription from starting.
+
+```json
+{
+  "Continuum": {
+    "KurrentDB": {
+      "Subscriptions": {
+        "Projections-V1": {
+          "Enabled": true,
+          "ConnectionName": "kurrentdb",
+          "StartFromNow": false
+        }
+      }
+    }
+  }
+}
+```
 
 ## Event size
 

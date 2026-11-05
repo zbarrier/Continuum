@@ -10,7 +10,7 @@ using Orleans.Runtime;
 using Orleans.Serialization;
 using Orleans.Storage;
 using Orleans.Streams;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
@@ -134,7 +134,7 @@ public class FactoryConstructorTests
     [Fact]
     public void The_Catch_Up_Subscription_Receiver_Factory_Rejects_A_Missing_Service_Provider()
     {
-        var exception = Assert.Throws<ArgumentNullException>(() => new KurrentDBCatchUpSubscriptionReceiverFactory(null!, "test"));
+        var exception = Assert.Throws<ArgumentNullException>(() => new KurrentDBCatchupSubscriptionReceiverFactory(null!, "test", new KurrentDBAllStreamCatchupSubscriptionReceiverOptions()));
 
         Assert.Equal("serviceProvider", exception.ParamName);
     }
@@ -147,7 +147,7 @@ public class FactoryConstructorTests
     {
         using var services = new ServiceCollection().BuildServiceProvider();
 
-        var exception = Assert.ThrowsAny<ArgumentException>(() => new KurrentDBCatchUpSubscriptionReceiverFactory(services, name!));
+        var exception = Assert.ThrowsAny<ArgumentException>(() => new KurrentDBCatchupSubscriptionReceiverFactory(services, name!, new KurrentDBAllStreamCatchupSubscriptionReceiverOptions()));
 
         Assert.Equal("name", exception.ParamName);
     }

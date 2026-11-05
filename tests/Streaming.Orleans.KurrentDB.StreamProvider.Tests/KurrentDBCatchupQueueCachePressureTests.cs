@@ -9,7 +9,7 @@ using Orleans.Providers.Streams.Common;
 using Orleans.Serialization;
 using Orleans.Storage;
 using Orleans.Streams;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
@@ -17,7 +17,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     Verifies that cache pressure is gated on the number of cached events, not on the spread of their commit
 ///     positions, which are byte offsets in the log.
 /// </summary>
-public class KurrentDBCatchUpQueueCachePressureTests
+public class KurrentDBCatchupQueueCachePressureTests
 {
     // Pressure is only measured once the cache holds 10 * maxAddCount events.
     private const int MaxAddCount = 1;
@@ -50,7 +50,7 @@ public class KurrentDBCatchUpQueueCachePressureTests
         public bool IsUnderPressure(DateTime utcNow) => false;
     }
 
-    private static (KurrentDBCatchUpQueueCache Cache, RecordingMonitor Monitor) CreateCache()
+    private static (KurrentDBCatchupQueueCache Cache, RecordingMonitor Monitor) CreateCache()
     {
         var adapter = new KurrentDBQueueDataAdapter(OrleansSerializer, new KurrentDBDataAdapterOptions
         {
@@ -63,8 +63,8 @@ public class KurrentDBCatchUpQueueCachePressureTests
         var bufferPool = new ObjectPool<FixedSizeBuffer>(() => new FixedSizeBuffer(1 << 20));
         var cursorTracker = new KurrentDBCursorTracker();
         var timePurge = new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2));
-        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
-        var cache = new KurrentDBCatchUpQueueCache("queue", MaxAddCount, bufferPool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
+        var evictionStrategy = new KurrentDBCatchupEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
+        var cache = new KurrentDBCatchupQueueCache("queue", MaxAddCount, bufferPool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
         var monitor = new RecordingMonitor();
         cache.AddCachePressureMonitor(monitor);
         return (cache, monitor);
@@ -76,7 +76,7 @@ public class KurrentDBCatchUpQueueCachePressureTests
                 new StreamedEventCursor("test", Stream.Category, Stream.Value, (ulong)(i + 1) * PositionGap, 0), DateTime.UtcNow, new KurrentDBRawEvent([1])))
             .ToList();
 
-    private static List<double> ReadFirst(KurrentDBCatchUpQueueCache cache, RecordingMonitor monitor, StreamId streamId)
+    private static List<double> ReadFirst(KurrentDBCatchupQueueCache cache, RecordingMonitor monitor, StreamId streamId)
     {
         var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
         Assert.True(cache.TryGetNextMessage(cursor, out _));

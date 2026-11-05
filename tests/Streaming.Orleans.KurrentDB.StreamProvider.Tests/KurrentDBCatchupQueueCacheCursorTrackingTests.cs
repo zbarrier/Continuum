@@ -11,7 +11,7 @@ using Orleans.Runtime;
 using Orleans.Serialization;
 using Orleans.Storage;
 using Orleans.Streams;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
@@ -19,7 +19,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     Verifies that a cursor still reading old events holds back both purging and the checkpoint, and that releasing it
 ///     lets both advance.
 /// </summary>
-public class KurrentDBCatchUpQueueCacheCursorTrackingTests
+public class KurrentDBCatchupQueueCacheCursorTrackingTests
 {
     private static readonly Serializer OrleansSerializer = new ServiceCollection().AddSerializer().BuildServiceProvider().GetRequiredService<Serializer>();
 
@@ -42,22 +42,22 @@ public class KurrentDBCatchUpQueueCacheCursorTrackingTests
         GrainStorageSerializer = new FakeSerializer(),
     });
 
-    private static KurrentDBCatchUpQueueCache CreateCache(KurrentDBQueueDataAdapter adapter)
+    private static KurrentDBCatchupQueueCache CreateCache(KurrentDBQueueDataAdapter adapter)
     {
         var logger = NullLogger.Instance;
         var bufferPool = new ObjectPool<FixedSizeBuffer>(() => new FixedSizeBuffer(1 << 20));
         var cursorTracker = new KurrentDBCursorTracker();
         // Zero limits purge every event that is older than the newest one, once nothing is still reading it.
         var timePurge = new TimePurgePredicate(TimeSpan.Zero, TimeSpan.Zero);
-        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
-        return new KurrentDBCatchUpQueueCache("queue", 100, bufferPool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
+        var evictionStrategy = new KurrentDBCatchupEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
+        return new KurrentDBCatchupQueueCache("queue", 100, bufferPool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
     }
 
     private static StreamedEvent<KurrentDBRawEvent> CreateEvent(ulong streamVersion, ulong commitPosition, DateTime timestamp) =>
         new(Guid.NewGuid(), "test-event", Stream, streamVersion, new StreamedEventCursor("test", Stream.Category, Stream.Value, commitPosition, 0),
             timestamp, new KurrentDBRawEvent([1]));
 
-    private static (KurrentDBCatchUpQueueCache Cache, StreamId StreamId, List<ulong> Checkpoints) CreateFilledCache()
+    private static (KurrentDBCatchupQueueCache Cache, StreamId StreamId, List<ulong> Checkpoints) CreateFilledCache()
     {
         var cache = CreateCache(CreateAdapter());
         var checkpoints = new List<ulong>();
@@ -72,7 +72,7 @@ public class KurrentDBCatchUpQueueCacheCursorTrackingTests
         return (cache, positions[0].StreamId, checkpoints);
     }
 
-    private static long OldestAvailable(KurrentDBCatchUpQueueCache cache, StreamId streamId)
+    private static long OldestAvailable(KurrentDBCatchupQueueCache cache, StreamId streamId)
     {
         var cursor = cache.GetCursorAtPosition(streamId, StreamSubscriptionStartPosition.EarliestAvailable);
         try

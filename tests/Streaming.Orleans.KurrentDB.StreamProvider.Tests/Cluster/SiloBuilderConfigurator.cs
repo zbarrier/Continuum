@@ -5,6 +5,7 @@ using Continuum.Hosting.Orleans;
 using Continuum.Orleans.KurrentDB;
 using Continuum.Streaming;
 using Continuum.Streaming.Orleans.KurrentDB;
+using Continuum.Streaming.Orleans.KurrentDB.Configuration;
 using Continuum.TypeMapping;
 
 using KurrentDB.Client;
@@ -42,7 +43,7 @@ public class TestSiloConfigurations : ISiloConfigurator
           .AddKurrentDBStreams(Constants.StreamProviderName, options =>
           {
               options.ConnectionName = Constants.StreamProviderName;
-              options.Credentials = new KurrentDBStreamCredentialsOptions()
+              options.Credentials = new KurrentDBSubscriptionCredentialsOptions()
               {
                   UseDefault = true,
               };
@@ -74,23 +75,23 @@ public class TestSiloConfigurations : ISiloConfigurator
 
         // A second provider reading $all. This is the shape the event sourcing storage is consumed through: the
         // events on those streams were not written by a stream provider, so they carry no Orleans metadata.
-        sb.AddKurrentDBStreams(Constants.CatchUpProviderName, configurator =>
+        sb.AddKurrentDBStreams(Constants.CatchupProviderName, configurator =>
         {
             configurator.ConfigureKurrentDB(ob => ob.Configure(options =>
             {
-                options.ConnectionName = Constants.CatchUpProviderName;
-                options.Credentials = new KurrentDBStreamCredentialsOptions { UseDefault = true };
-                options.Name = Constants.CatchUpProviderName;
+                options.ConnectionName = Constants.CatchupProviderName;
+                options.Credentials = new KurrentDBSubscriptionCredentialsOptions { UseDefault = true };
+                options.Name = Constants.CatchupProviderName;
                 // A $all subscription is global, so this strategy allows exactly one queue.
-                options.Queues = new List<string> { Constants.CatchUpQueueName };
+                options.Queues = new List<string> { KurrentDBStreams.All };
             }));
-            configurator.UseCatchUpSubscription(ob => ob.Configure(options =>
+            configurator.UseAllStreamCatchupSubscription(ob => ob.Configure(options =>
             {
-                options.CheckpointConnectionName = Constants.CatchUpProviderName;
+                options.CheckpointConnectionName = Constants.CatchupProviderName;
                 // Without a filter the subscription would also see the events the other provider and the pub/sub
                 // store write to the same container, which are unrelated to what these tests assert on. The prefix
                 // is unique per process, so a run only ever reads events it appended itself.
-                options.StreamFilterPrefix = Constants.EventSourcedStreamPrefix;
+                options.Filter = StreamFilter.Prefix(Constants.EventSourcedStreamPrefix);
                 // Reading the whole log is cheap because the filter scopes it to this run's own events, and it
                 // removes any dependence on the subscription being established before the test appends its event.
                 options.StartFromNow = false;
@@ -105,14 +106,14 @@ public class TestSiloConfigurations : ISiloConfigurator
             configurator.ConfigureKurrentDB(ob => ob.Configure(options =>
             {
                 options.ConnectionName = Constants.ImplicitProviderName;
-                options.Credentials = new KurrentDBStreamCredentialsOptions { UseDefault = true };
+                options.Credentials = new KurrentDBSubscriptionCredentialsOptions { UseDefault = true };
                 options.Name = Constants.ImplicitProviderName;
-                options.Queues = new List<string> { Constants.ImplicitQueueName };
+                options.Queues = new List<string> { KurrentDBStreams.All };
             }));
-            configurator.UseCatchUpSubscription(ob => ob.Configure(options =>
+            configurator.UseAllStreamCatchupSubscription(ob => ob.Configure(options =>
             {
                 options.CheckpointConnectionName = Constants.ImplicitProviderName;
-                options.StreamFilterPrefix = Constants.ImplicitStreamPrefix;
+                options.Filter = StreamFilter.Prefix(Constants.ImplicitStreamPrefix);
                 options.StartFromNow = false;
             }));
         });
@@ -130,13 +131,13 @@ public class TestSiloConfigurations : ISiloConfigurator
 
             // The $all provider needs the same client, serializer and type mapper so it can convert events written
             // by the event sourcing storage into the Orleans cache format.
-            services.AddKeyedSingleton<KurrentDBClient>(Constants.CatchUpProviderName, kurrentDBClient);
-            services.AddTypeMappedJsonGrainStorageSerializer(Constants.CatchUpProviderName);
-            services.AddDefaultTypeMapAttributeMappers(Constants.CatchUpProviderName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
+            services.AddKeyedSingleton<KurrentDBClient>(Constants.CatchupProviderName, kurrentDBClient);
+            services.AddTypeMappedJsonGrainStorageSerializer(Constants.CatchupProviderName);
+            services.AddDefaultTypeMapAttributeMappers(Constants.CatchupProviderName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
             // The catch-up strategy owns its read position, so it needs a checkpoint store keyed by the same name.
-            services.AddKeyedSingleton<ICheckpointStore<ulong>>(Constants.CatchUpProviderName, (provider, key) =>
+            services.AddKeyedSingleton<ICheckpointStore<ulong>>(Constants.CatchupProviderName, (provider, key) =>
             {
-                return new KurrentDBCheckpointStore(provider.GetRequiredKeyedService<KurrentDBClient>(Constants.CatchUpProviderName));
+                return new KurrentDBCheckpointStore(provider.GetRequiredKeyedService<KurrentDBClient>(Constants.CatchupProviderName));
             });
 
             // The implicit subscription provider needs the same set of keyed services.

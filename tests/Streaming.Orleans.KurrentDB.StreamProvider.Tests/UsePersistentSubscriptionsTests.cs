@@ -73,7 +73,7 @@ public class UsePersistentSubscriptionsTests
         var validators = services.GetServices<IConfigurationValidator>().ToList();
 
         Assert.Contains(validators, validator => validator is KurrentDBPersistentSubscriptionReceiverOptionsValidator);
-        Assert.DoesNotContain(validators, validator => validator is KurrentDBCatchUpSubscriptionReceiverOptionsValidator);
+        Assert.DoesNotContain(validators, validator => validator is KurrentDBCatchupSubscriptionReceiverOptionsValidator);
     }
 
     [Fact]

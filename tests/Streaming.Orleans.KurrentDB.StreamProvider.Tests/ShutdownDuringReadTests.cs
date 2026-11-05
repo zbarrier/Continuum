@@ -1,5 +1,5 @@
 using Continuum.Orleans.Streams;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 using Continuum.TypeMapping;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -77,8 +77,8 @@ public class ShutdownDuringReadTests
             GrainStorageSerializer = new FakeSerializer(),
         });
         var cursorTracker = new KurrentDBCursorTracker();
-        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(NullLogger.Instance, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
-        return new KurrentDBCatchUpQueueCache(queue, 100, pool, adapter, evictionStrategy, cursorTracker, NullLogger.Instance, null!, null, null);
+        var evictionStrategy = new KurrentDBCatchupEvictionStrategy(NullLogger.Instance, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
+        return new KurrentDBCatchupQueueCache(queue, 100, pool, adapter, evictionStrategy, cursorTracker, NullLogger.Instance, null!, null, null);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class ShutdownDuringReadTests
         // Arrange
         var receiver = new ShutdownDuringReceiveReceiver();
         var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
-        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null, (_, _) => receiver);
+        var adapterReceiver = new KurrentDBCatchupQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null, (_, _) => receiver);
         await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
         receiver.OnReceive = () => adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
 

@@ -217,16 +217,15 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
         var contoso = await AppendAsync(1, $"{category}-contoso|{key}");
         var untenanted = await AppendAsync(1, $"{category}-{key}");
         await AppendAsync(1);
-        harness.Settings.Streams[FirstCatchupSubscription.Name] = "$all";
-        harness.Settings.Filters[FirstCatchupSubscription.Name] = StreamFilter.Prefix($"{category}-");
+        harness.Settings.Filters[FilteredAllCatchupSubscription.Name] = StreamFilter.Prefix($"{category}-");
 
-        var subscription = new FirstCatchupSubscription(harness.Services);
+        var subscription = new FilteredAllCatchupSubscription(harness.Services);
         await subscription.StartAsync(TestContext.Current.CancellationToken);
-        await WaitUntilAsync(() => harness.Settings.ReceivedStreams(FirstCatchupSubscription.Name).Count == 3);
+        await WaitUntilAsync(() => harness.Settings.ReceivedStreams(FilteredAllCatchupSubscription.Name).Count == 3);
         await Task.Delay(500, TestContext.Current.CancellationToken);
         await subscription.StopAsync(TestContext.Current.CancellationToken);
 
-        var streams = harness.Settings.ReceivedStreams(FirstCatchupSubscription.Name).OrderBy(s => s.TenantId ?? string.Empty, StringComparer.Ordinal).ToList();
+        var streams = harness.Settings.ReceivedStreams(FilteredAllCatchupSubscription.Name).OrderBy(s => s.TenantId ?? string.Empty, StringComparer.Ordinal).ToList();
         Assert.Equal([untenanted, acme, contoso], streams.Select(s => s.Value));
         Assert.All(streams, s => Assert.Equal(category, s.Category));
         Assert.All(streams, s => Assert.Equal(key, s.Key));
@@ -258,6 +257,86 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
         Assert.Equal(2UL, harness.CheckpointStore.Positions[FirstCatchupSubscription.Name]);
     }
 
+    [Fact]
+    public async Task Starting_from_now_skips_existing_events_and_commits_the_starting_position()
+    {
+        await using var harness = CreateHarness(configure: options => options.StartFromNow = true);
+        var stream = await AppendAsync(2);
+        harness.Settings.Streams[FirstCatchupSubscription.Name] = stream;
+
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => harness.CheckpointStore.Positions.ContainsKey(FirstCatchupSubscription.Name));
+        Assert.Equal(1UL, harness.CheckpointStore.Positions[FirstCatchupSubscription.Name]);
+
+        await AppendAsync(1, stream, start: 2, expectedRevision: 1);
+        await WaitUntilAsync(() => harness.Settings.Received(FirstCatchupSubscription.Name).Count == 1);
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event-2"], harness.Settings.Received(FirstCatchupSubscription.Name));
+        Assert.Equal(2UL, harness.CheckpointStore.Positions[FirstCatchupSubscription.Name]);
+    }
+
+    [Fact]
+    public async Task Starting_from_now_on_a_missing_stream_reads_it_from_its_first_event()
+    {
+        await using var harness = CreateHarness(configure: options => options.StartFromNow = true);
+        var stream = $"test-{Guid.NewGuid():N}";
+        harness.Settings.Streams[FirstCatchupSubscription.Name] = stream;
+
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => harness.CheckpointStore.Positions.ContainsKey(FirstCatchupSubscription.Name));
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        // A restart before the first regular commit must still read the stream from its beginning.
+        await AppendAsync(2, stream);
+        await using var restarted = CreateHarness(harness.CheckpointStore, configure: options => options.StartFromNow = true);
+        restarted.Settings.Streams[FirstCatchupSubscription.Name] = stream;
+        var resumed = new FirstCatchupSubscription(restarted.Services);
+        await resumed.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => restarted.Settings.Received(FirstCatchupSubscription.Name).Count == 2);
+        await resumed.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event-0", "event-1"], restarted.Settings.Received(FirstCatchupSubscription.Name));
+    }
+
+    [Fact]
+    public async Task An_unknown_event_type_halts_the_subscription_without_checkpointing_past_it()
+    {
+        await using var harness = CreateHarness();
+        var stream = await AppendAsync(1);
+        await AppendAsync(1, stream, start: 1, expectedRevision: 0, eventType: "unknown-event");
+        await AppendAsync(1, stream, start: 2, expectedRevision: 1);
+        harness.Settings.Streams[FirstCatchupSubscription.Name] = stream;
+
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => harness.State(FirstCatchupSubscription.Name) == KurrentDBCatchupSubscriptionState.Faulted);
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain("event-2", harness.Settings.Received(FirstCatchupSubscription.Name));
+        Assert.True(!harness.CheckpointStore.Positions.TryGetValue(FirstCatchupSubscription.Name, out var position) || position < 1);
+    }
+
+    [Fact]
+    public async Task An_unknown_event_type_is_skipped_when_configured()
+    {
+        await using var harness = CreateHarness(configure: options => options.UnknownEventTypeBehavior = UnknownEventTypeBehavior.Skip);
+        var stream = await AppendAsync(1);
+        await AppendAsync(1, stream, start: 1, expectedRevision: 0, eventType: "unknown-event");
+        await AppendAsync(1, stream, start: 2, expectedRevision: 1);
+        harness.Settings.Streams[FirstCatchupSubscription.Name] = stream;
+
+        var subscription = new FirstCatchupSubscription(harness.Services);
+        await subscription.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => harness.Settings.Received(FirstCatchupSubscription.Name).Count == 2);
+        await subscription.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event-0", "event-2"], harness.Settings.Received(FirstCatchupSubscription.Name));
+        Assert.Equal(2UL, harness.CheckpointStore.Positions[FirstCatchupSubscription.Name]);
+    }
+
     private Harness CreateHarness(InMemoryCheckpointStore? checkpointStore = null, bool enabled = true,
         Action<KurrentDBCatchupSubscriptionOptions>? configure = null)
     {
@@ -273,7 +352,7 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
         services.AddSingleton<KurrentDBCatchupSubscriptionStatusRegistry>();
         services.AddSingleton(sp => new KurrentDBCatchupSubscriptionMetrics(sp.GetRequiredService<KurrentDBCatchupSubscriptionStatusRegistry>()));
         services.AddKeyedSingleton(ConnectionName, (_, _) => new KurrentDBClient(KurrentDBClientSettings.Create(fixture.ConnectionString)));
-        foreach (var name in new[] { FirstCatchupSubscription.Name, SecondCatchupSubscription.Name })
+        foreach (var name in new[] { FirstCatchupSubscription.Name, SecondCatchupSubscription.Name, FilteredAllCatchupSubscription.Name })
         {
             services.AddOptions<KurrentDBCatchupSubscriptionOptions>(name).Configure(options =>
             {
@@ -292,12 +371,12 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
         return new Harness(services.BuildServiceProvider(), checkpointStore);
     }
 
-    private async Task<string> AppendAsync(int count, string? stream = null, int start = 0, ulong? expectedRevision = null)
+    private async Task<string> AppendAsync(int count, string? stream = null, int start = 0, ulong? expectedRevision = null, string eventType = EventType)
     {
         stream ??= $"test-{Guid.NewGuid():N}";
         await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(fixture.ConnectionString));
         var events = Enumerable.Range(start, count)
-            .Select(i => new EventData(Uuid.NewUuid(), EventType, Encoding.UTF8.GetBytes($"event-{i}")))
+            .Select(i => new EventData(Uuid.NewUuid(), eventType, Encoding.UTF8.GetBytes($"event-{i}")))
             .ToList();
         var state = expectedRevision is { } revision ? StreamState.StreamRevision(revision) : StreamState.NoStream;
         await client.AppendToStreamAsync(stream, state, events, cancellationToken: TestContext.Current.CancellationToken);
@@ -347,6 +426,20 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
 
         public List<string> Received(string subscriptionName) => _received.GetOrAdd(subscriptionName, _ => new()).ToList();
 
+        public Task HandleAsync(string subscriptionName, IEnumerable<IStreamedEvent<object>> events)
+        {
+            if (Failing.Contains(subscriptionName))
+            {
+                throw new InvalidOperationException("The handler rejected the batch.");
+            }
+            if (TransientFailing.GetValueOrDefault(subscriptionName))
+            {
+                throw new TimeoutException("The handler timed out.");
+            }
+            Record(subscriptionName, events);
+            return Task.CompletedTask;
+        }
+
         public void Record(string subscriptionName, IEnumerable<IStreamedEvent<object>> events)
         {
             var received = _received.GetOrAdd(subscriptionName, _ => new());
@@ -360,33 +453,29 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
     }
 
     public abstract class TestCatchupSubscription<TSelf>(IServiceProvider serviceProvider)
-        : KurrentDBCatchupSubscription<TSelf, KurrentDBCatchupSubscriptionOptions>(serviceProvider)
+        : KurrentDBStreamCatchupSubscription<TSelf, KurrentDBCatchupSubscriptionOptions>(serviceProvider)
         where TSelf : TestCatchupSubscription<TSelf>
     {
         private readonly TestSubscriptionSettings _settings = serviceProvider.GetRequiredService<TestSubscriptionSettings>();
 
         public override string StreamName => _settings.Streams[Name];
 
-        public override IEventFilter? FilterOptions => _settings.Filters.GetValueOrDefault(Name);
-
-        protected override Task OnNextBatchAsync(List<IStreamedEvent<object>> streamEvents)
-        {
-            if (_settings.Failing.Contains(Name))
-            {
-                throw new InvalidOperationException("The handler rejected the batch.");
-            }
-            if (_settings.TransientFailing.GetValueOrDefault(Name))
-            {
-                throw new TimeoutException("The handler timed out.");
-            }
-            _settings.Record(Name, streamEvents);
-            return Task.CompletedTask;
-        }
+        protected override Task OnNextBatchAsync(List<IStreamedEvent<object>> streamEvents) => _settings.HandleAsync(Name, streamEvents);
     }
 
     public sealed class FirstCatchupSubscription(IServiceProvider serviceProvider) : TestCatchupSubscription<FirstCatchupSubscription>(serviceProvider);
 
     public sealed class SecondCatchupSubscription(IServiceProvider serviceProvider) : TestCatchupSubscription<SecondCatchupSubscription>(serviceProvider);
+
+    public sealed class FilteredAllCatchupSubscription(IServiceProvider serviceProvider)
+        : KurrentDBAllStreamCatchupSubscription<FilteredAllCatchupSubscription, KurrentDBCatchupSubscriptionOptions>(serviceProvider)
+    {
+        private readonly TestSubscriptionSettings _settings = serviceProvider.GetRequiredService<TestSubscriptionSettings>();
+
+        public override IEventFilter? Filter => _settings.Filters.TryGetValue(Name, out var filter) ? filter : base.Filter;
+
+        protected override Task OnNextBatchAsync(List<IStreamedEvent<object>> streamEvents) => _settings.HandleAsync(Name, streamEvents);
+    }
 
     public sealed class InMemoryCheckpointStore : ICheckpointStore<ulong>
     {

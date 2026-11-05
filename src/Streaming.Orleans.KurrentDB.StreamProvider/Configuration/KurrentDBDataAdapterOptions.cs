@@ -1,5 +1,6 @@
 using Continuum;
 using Continuum.Streaming;
+using Continuum.Streaming.Orleans;
 using Continuum.TypeMapping;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -77,11 +78,11 @@ public class KurrentDBDataAdapterOptions
     ///     What the provider does when an event's type cannot be resolved by <see cref="TypeMapper" />.
     /// </summary>
     /// <remarks>
-    ///     Defaults to <see cref="KurrentDBUnknownEventTypeBehavior.Halt" />, because an event that cannot be read is
+    ///     Defaults to <see cref="UnknownEventTypeBehavior.Halt" />, because an event that cannot be read is
     ///     usually a missing registration rather than a foreign event, and silently moving past it lets the checkpoint
     ///     advance beyond an event no consumer ever saw.
     /// </remarks>
-    public KurrentDBUnknownEventTypeBehavior UnknownEventTypeBehavior { get; set; } = KurrentDBUnknownEventTypeBehavior.Halt;
+    public UnknownEventTypeBehavior UnknownEventTypeBehavior { get; set; } = UnknownEventTypeBehavior.Halt;
 
     /// <summary>
     ///     Maps a KurrentDB stream name to the Orleans <see cref="StreamId" /> consumers subscribe to.

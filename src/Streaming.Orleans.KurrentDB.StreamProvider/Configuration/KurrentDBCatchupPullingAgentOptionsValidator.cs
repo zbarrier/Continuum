@@ -16,15 +16,15 @@ namespace Orleans.Configuration;
 ///     failures become ambiguous too, because one failure report covers a batch the cursor has already advanced
 ///     through. Failing at start up turns silent event loss after a restart into a configuration error.
 /// </remarks>
-public class KurrentDBCatchUpPullingAgentOptionsValidator : IConfigurationValidator
+public class KurrentDBCatchupPullingAgentOptionsValidator : IConfigurationValidator
 {
     private readonly StreamPullingAgentOptions _options;
     private readonly string _name;
 
     /// <summary>
-    ///     Creates a new <see cref="KurrentDBCatchUpPullingAgentOptionsValidator" />.
+    ///     Creates a new <see cref="KurrentDBCatchupPullingAgentOptionsValidator" />.
     /// </summary>
-    public KurrentDBCatchUpPullingAgentOptionsValidator(StreamPullingAgentOptions options, string name)
+    public KurrentDBCatchupPullingAgentOptionsValidator(StreamPullingAgentOptions options, string name)
     {
         _options = options;
         _name = name;

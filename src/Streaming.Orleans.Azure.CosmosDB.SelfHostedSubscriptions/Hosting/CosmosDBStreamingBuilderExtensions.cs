@@ -1,4 +1,4 @@
-﻿using Continuum.Streaming;
+using Continuum.Streaming;
 using Continuum.Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions;
 using System.Diagnostics.Metrics;
 
@@ -18,7 +18,7 @@ namespace Continuum.Orleans.Hosting;
 /// <summary>Registers Cosmos DB catch-up subscriptions.</summary>
 public static class CosmosDBStreamingBuilderExtensions
 {
-    const string CatchupSubscriptionsConfigKeyPrefix = "Continuum:Orleans:Streaming:CosmosDB:CatchupSubscriptions";
+    const string CatchupSubscriptionsConfigKeyPrefix = "Continuum:CosmosDB:Subscriptions";
 
     /// <summary>Registers a catch-up subscription, binding its options from configuration.</summary>
     public static IHostApplicationBuilder AddCosmosDBCatchupSubscription(this IHostApplicationBuilder builder,

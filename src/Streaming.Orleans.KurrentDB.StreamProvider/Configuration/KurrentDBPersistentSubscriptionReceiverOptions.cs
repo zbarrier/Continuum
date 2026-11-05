@@ -17,6 +17,14 @@ namespace Orleans.Configuration;
 public sealed class KurrentDBPersistentSubscriptionReceiverOptions : KurrentDBReceiverOptionsBase
 {
     /// <summary>
+    ///     Creates persistent subscription receiver options that start from now when the consumer group is new.
+    /// </summary>
+    public KurrentDBPersistentSubscriptionReceiverOptions()
+    {
+        StartFromNow = true;
+    }
+
+    /// <summary>
     ///     The KurrentDB persistent subscription settings.
     /// </summary>
     /// <remarks>

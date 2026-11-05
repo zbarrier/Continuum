@@ -41,6 +41,16 @@ public sealed class KurrentDBCheckpointMonitorOptions
 /// </summary>
 public sealed class KurrentDBCheckpointMonitor
 {
+    /// <summary>
+    ///     A checkpoint meaning the subscription starts before the first event of its stream.
+    /// </summary>
+    /// <remarks>
+    ///     A single stream subscription that starts from now on a stream that does not exist yet commits this, so a
+    ///     restart before the first regular commit still reads the stream from its beginning. Stream revisions never
+    ///     reach this value.
+    /// </remarks>
+    public const ulong StreamStartPosition = ulong.MaxValue;
+
     private readonly ILogger _logger;
     private readonly KurrentDBCheckpointMonitorOptions _options;
     private readonly ICheckpointStore<ulong> _checkpointStore;
@@ -139,7 +149,7 @@ public sealed class KurrentDBCheckpointMonitor
     {
         ArgumentOutOfRangeException.ThrowIfNegative(eventCount);
 
-        var hasBeenProcessed = _currentPosition.HasValue && position <= _currentPosition.Value;
+        var hasBeenProcessed = _currentPosition is { } currentPosition && currentPosition != StreamStartPosition && position <= currentPosition;
         if (hasBeenProcessed)
         {
             return ValueTask.FromResult(false);

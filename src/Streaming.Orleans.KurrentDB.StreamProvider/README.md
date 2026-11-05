@@ -5,9 +5,14 @@ An Orleans persistent stream provider for [KurrentDB](https://www.kurrent.io/). 
 There are two ways to read from KurrentDB:
 
 - **`$all` catch-up subscription** (recommended). Events are delivered in order, none are dropped, and the read position is checkpointed by the provider.
-- **Persistent subscription.** KurrentDB tracks the read position for a consumer group. Use it only for consumers that can tolerate dropped and out-of-order events.
+- **Single stream catch-up subscription.** The same guarantees, reading one stream such as `$ce-{Category}` or a custom projection stream instead of `$all`.
+- **Persistent subscription.**
 
 If you want to run the subscription yourself in a worker service, use `Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions` instead.
+
+## Stream providers and subscriptions
+
+In this README, a *stream provider* is one named Orleans stream provider registered with `AddKurrentDBStreams("Name", ...)`, not KurrentDB itself. Each stream provider runs exactly one subscription, and its name is that subscription's identity: it keys the checkpoint and qualifies the stream namespaces consumers use. One KurrentDB database can, and usually will, serve many stream providers. Providers that share a `ConnectionName` share one `KurrentDBClient`, so adding a subscription does not add a connection.
 
 ## Install
 
@@ -15,15 +20,41 @@ If you want to run the subscription yourself in a worker service, use `Continuum
 dotnet add package Continuum.Streaming.Orleans.KurrentDB.StreamProvider
 ```
 
+## Configuration from appsettings
+
+`Orleans:Streaming:{Name}`. The section name (`Projections-V1` below) is the stream provider name, which is also the subscription name. Add or remove a section to enable or disable that subscription.
+
+```json
+{
+  "Orleans": {
+    "Streaming": {
+      "Projections-V1": {
+        "ProviderType": "KurrentDB",
+        "SubscriptionType": "AllStreamCatchup",
+        "ConnectionName": "kurrentdb",
+        "Credentials": { "UseDefault": true },
+        "StartFromNow": false,
+        "ResolveLinkTos": true,
+        "BufferCapacityMultiplier": 10,
+        "CheckpointConnectionName": "kurrentdb",
+        "CheckpointMonitorOptions": { "MaxEventsBeforeCommit": 10000, "MaxTimeBeforeCommit": "00:00:20" }
+      }
+    }
+  }
+}
+```
+
+`SubscriptionType` is `Persistent` (default), `AllStreamCatchup`, or `StreamCatchup`. `Queues` holds the stream name for `StreamCatchup` and the queue names for `Persistent`. Persistent subscriptions also read `StartFromNow`, `UpdateExistingSubscription`, and `PrefetchCount`. `UnknownEventTypeBehavior` (`Halt` or `Skip`) applies to every strategy. `StartFromNow` defaults to `false` for catch-up subscriptions, so a new subscription reads its full history, and to `true` for persistent subscriptions. KurrentDB client types (`ClientSettings`, `SubscriptionSettings`) and the rest of the data adapter are not bindable and are only configurable in code.
+
 ## `$all` catch-up subscriptions
 
 ```csharp
 siloBuilder.AddKurrentDBStreams("KurrentDB", configurator =>
 {
-	configurator.ConfigureKurrentDB(ob => ob.Configure(options => options.Queues = ["all"]));
-	configurator.UseCatchUpSubscription(ob => ob.Configure(options =>
+	configurator.ConfigureKurrentDB(ob => ob.Configure(options => options.Queues = [KurrentDBStreams.All]));
+	configurator.UseAllStreamCatchupSubscription(ob => ob.Configure(options =>
 	{
-		options.StreamFilterPrefix = "snack-";
+		options.Filter = StreamFilter.Prefix("snack-");
 		options.StartFromNow = false;
 	}));
 });
@@ -31,19 +62,31 @@ siloBuilder.AddKurrentDBStreams("KurrentDB", configurator =>
 
 ### How it works
 
-The provider subscribes to `$all`, so it sees every event in the database in commit order. One subscription runs per provider, so `Queues` must have exactly one entry. Orleans runs that queue's pulling agent on one silo in the cluster and moves it to another silo if that silo stops.
+Each stream provider runs one subscription, so its `Queues` must have exactly one entry, `$all` (`KurrentDBStreams.All`). If `Queues` is empty it defaults to `$all`.
 
 Each event is delivered to the Orleans stream named after the KurrentDB stream it was written to. The name is split on the first `-`, so `snack-123` becomes stream namespace `snack` with key `123`. Keys can contain their own dashes, such as GUIDs. A tenant-qualified name such as `snack-tenantA|123` keeps the tenant in the key. To use a different naming convention, set `StreamIdMapper` on the data adapter options.
 
-Use `StreamFilterPrefix` to have KurrentDB send only the streams you need. Link events are resolved to the events they point to by default (`ResolveLinkTos`).
+Set `Filter` to have KurrentDB send only the events you need. It takes any KurrentDB `IEventFilter` and is set in code, not configuration:
+
+- `StreamFilter.Prefix("snack-")` for streams by name prefix.
+- `EventTypeFilter.Prefix("Snack")` for events by type prefix.
+- `StreamFilter.RegularExpression(...)` and `EventTypeFilter.RegularExpression(...)` when a prefix is not enough. Prefer prefixes: a regular expression is evaluated on the server against every event in `$all`.
+
+#### System events
+
+`$all` also holds system events, whose types start with `$`: link events (`$>`) written by projections such as `$by_category`, stream metadata, projection state, statistics and the checkpoints written by `KurrentDBCheckpointStore` (`$checkpoint`). By default `Filter` is `EventTypeFilter.ExcludeSystemEvents()`, so none of these are delivered.
+
+Setting your own filter replaces the default, because a subscription takes one filter, either by stream or by event type. A stream prefix such as `snack-` or an event type prefix such as `Snack` does not match system events anyway. A stream prefix that matches link streams, such as `$ce-snack`, delivers those links on purpose, resolved to their events. Set `Filter = null` only if you really want every event, including system events.
+
+Filtered `$all` subscriptions require an admin user. A filter applies from the subscription's checkpoint onwards, so changing it does not revisit events already passed. Link events are resolved to the events they point to by default (`ResolveLinkTos`).
 
 `BufferCapacityMultiplier` (default 10) limits how far the subscription reads from `$all` ahead of the cache, in Orleans reads of up to 1,000 events each, so 10,000 events by default.
 
-A resolved link carries the same event as the original, at a later `$all` position, and the catch-up subscription delivers every position it reads. If the filter matches both the original streams and the streams holding links to them (for example, no filter at all, which includes the `$ce-` and `$et-` system projection streams), each event is delivered once per match. Filter to either the original streams (for example `order-`) or the link streams (for example `$ce-order`), not both. Persistent subscriptions drop a redelivered event that is still queued, so this applies to catch-up subscriptions only.
+A resolved link carries the same event as the original, at a later `$all` position, and the catch-up subscription delivers every position it reads. If the filter matches both the original streams and the streams holding links to them (for example, `Filter = null`, which includes the `$ce-` and `$et-` system projection streams), each event is delivered once per match. Filter to either the original streams (for example `order-`) or the link streams (for example `$ce-order`), not both. Persistent subscriptions drop a redelivered event that is still queued, so this applies to catch-up subscriptions only.
 
 ### Checkpoints
 
-The provider stores the `$all` position in an `ICheckpointStore<ulong>`. Set `CheckpointConnectionName` to choose which registered store is used. When there is no checkpoint yet, `StartFromNow` (default `true`) chooses between reading only new events and reading from the beginning of `$all`.
+The provider stores the `$all` commit position in an `ICheckpointStore<ulong>`.
 
 The checkpoint only moves past an event once every active subscriber has read it and it has been purged from the cache, so a restart never skips an event a subscriber has not seen. Delivery is at least once, so after a restart some events may be delivered again.
 
@@ -55,7 +98,7 @@ A catch-up subscription is read only. Events are written by event sourcing, so w
 
 ### Multiple `$all` subscriptions
 
-You can run as many `$all` subscriptions against the same database as you need. Each one is its own stream provider with no filter, the same filter, or a different filter. Providers that use the same `ConnectionName` share one `KurrentDBClient`, and each subscription runs as a separate call on that client's connection.
+You can run as many `$all` subscriptions against the same database as you need. Add one stream provider per subscription, each with a distinct name and the default filter, the same filter, or a different filter. Providers that use the same `ConnectionName` share one `KurrentDBClient`, and each subscription runs as a separate call on that client's connection.
 
 ```csharp
 siloBuilder.AddKurrentDBStreams("Snacks", configurator =>
@@ -64,9 +107,9 @@ siloBuilder.AddKurrentDBStreams("Snacks", configurator =>
     {
         options.ConnectionName = "kurrentdb";
         options.Name = "Snacks";
-        options.Queues = ["all"];
+        options.Queues = [KurrentDBStreams.All];
     }));
-    configurator.UseCatchUpSubscription(ob => ob.Configure(options => options.StreamFilterPrefix = "snack-"));
+    configurator.UseAllStreamCatchupSubscription(ob => ob.Configure(options => options.Filter = StreamFilter.Prefix("snack-")));
 });
 
 siloBuilder.AddKurrentDBStreams("Reporting", configurator =>
@@ -75,9 +118,9 @@ siloBuilder.AddKurrentDBStreams("Reporting", configurator =>
     {
         options.ConnectionName = "kurrentdb";
         options.Name = "Reporting";
-        options.Queues = ["all"];
+        options.Queues = [KurrentDBStreams.All];
     }));
-    configurator.UseCatchUpSubscription();
+    configurator.UseAllStreamCatchupSubscription();
 });
 ```
 
@@ -91,7 +134,34 @@ var stream = this.GetStreamProvider("Snacks").GetStream<IStreamedEvent<object>>(
 
 When two subscriptions both match a KurrentDB stream, each delivers its events on its own provider and namespace, so subscribers of one never receive the other's deliveries. This also holds for implicit subscriptions.
 
-Each subscription reads `$all` and keeps its own cache, so use `StreamFilterPrefix` to keep each one to the streams it needs.
+so use `Filter` to keep each one to the events it needs.
+
+## Single stream catch-up subscriptions
+
+To read one stream instead of `$all`, such as a category stream built by the `$by_category` system projection or a stream your own projection links events into, name it as the only queue:
+
+```csharp
+siloBuilder.AddKurrentDBStreams("Snacks", configurator =>
+{
+    configurator.ConfigureKurrentDB(ob => ob.Configure(options => options.Queues = ["$ce-snack"]));
+    configurator.UseStreamCatchupSubscription(ob => ob.Configure(options => options.StartFromNow = false));
+});
+```
+
+- `Queues` must have exactly one entry, the stream name. `$all` is rejected; use `UseAllStreamCatchupSubscription` for it.
+- There is no `Filter`: the stream itself is the filter.
+- `$ce-` streams and custom projection streams hold link events, so keep `ResolveLinkTos` on (the default). `$ce-` streams only exist when the `$by_category` projection is running.
+- Each event is delivered to the Orleans stream named after the stream it was originally written to, so `$ce-snack` delivers `snack-123` on namespace `snack` with key `123`, the same as an `$all` subscription.
+- The checkpoint is the event's revision in the subscribed stream, not its `$all` position or its revision in its original stream.
+- A link whose target was deleted is skipped, and the checkpoint still moves past it.
+- Events are delivered one at a time, as with `$all`; nothing waits for the rest of a transaction.
+- With `StartFromNow`, a stream that does not exist yet is read from its first event, including after a restart before the first checkpoint.
+
+Checkpoints, cache behavior and the rules under [Checkpoints](#checkpoints) otherwise apply as for `$all`.
+
+### Changing what a subscription reads
+
+A subscription's checkpoint is only meaningful for the source it was written for: an `$all` commit position and a stream revision are different numbers. Treat a stream provider name as permanently bound to its source. To switch between `$all` and a stream, switch streams, or replay from the beginning, add a new stream provider with a new name (for example `Projections-V2`) instead of changing the existing one.
 
 ## Stream namespaces
 
@@ -170,3 +240,9 @@ If every event must be handled, use implicit subscriptions (`[ImplicitStreamSubs
 This applies to catch-up subscriptions, whose cache tracks how far each subscriber has read. A stream whose subscriber has read every cached event does not hold back purging, so idle streams do not make the cache grow, even while catching up on a backlog. When a new event for the stream is added, its cursor resumes from that event, which is kept until the subscriber reads it. A subscriber that has not finished reading, including one whose delivery failed, holds back purging until it catches up; unread events are never dropped.
 
 Orleans releases a stream after `StreamPullingAgentOptions.StreamInactivityPeriod` (Orleans default: 30 minutes) with no new events and no delivery in progress. Its subscriptions are kept, and the next event for the stream is delivered as normal; Orleans only has to look up the stream's subscribers again. A longer period means fewer lookups for streams with regular gaps, at the cost of a little memory per idle stream.
+
+## Health checks and metrics
+
+Add a silo health check with `builder.Services.AddHealthChecks().AddKurrentDBStreamProviderReceivers()`. It covers the catch-up and persistent queue receivers running on the silo. It reports Unhealthy when a receiver failed to start (Orleans retries it on the next read), Degraded while a receiver is starting or reconnecting after a dropped subscription, and Healthy otherwise. A queue that moves to another silo is removed from this silo's health check. A grain that fails to handle an event does not affect receiver health.
+
+The `Continuum.Streaming.Orleans.KurrentDB.StreamProvider` meter reports `continuum.queue.receiver.state`, `continuum.queue.receiver.reconnects`, and `continuum.queue.receiver.initialization.failures`. These are tagged with the stream provider name and queue name. The standard Orleans streaming receiver, cache, and block pool metrics are still reported as before.

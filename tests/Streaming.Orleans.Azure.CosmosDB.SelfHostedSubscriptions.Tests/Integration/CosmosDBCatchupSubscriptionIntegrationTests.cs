@@ -146,8 +146,8 @@ public class CosmosDBCatchupSubscriptionIntegrationTests(CosmosDBFixture fixture
 
         await using var harness = CreateHarness(containers, configure: options =>
         {
-            options.StartingPositionType = StartingPositionType.FromDateTime;
-            options.StartingPositionDateTime = startTime;
+            options.StartFrom = CosmosDBStartFrom.DateTime;
+            options.StartFromDateTime = startTime;
         });
         var subscription = new FirstCatchupSubscription(harness.Services);
         await subscription.StartAsync(TestContext.Current.CancellationToken);
@@ -167,7 +167,7 @@ public class CosmosDBCatchupSubscriptionIntegrationTests(CosmosDBFixture fixture
         // _ts has one second resolution, so the start time is kept clear of the earlier writes.
         await Task.Delay(1500, TestContext.Current.CancellationToken);
 
-        await using var harness = CreateHarness(containers, configure: options => options.StartingPositionType = StartingPositionType.Latest);
+        await using var harness = CreateHarness(containers, configure: options => options.StartFrom = CosmosDBStartFrom.Now);
         var subscription = new FirstCatchupSubscription(harness.Services);
         await subscription.StartAsync(TestContext.Current.CancellationToken);
         // The processor initializes its leases in the background; changes written before that would also be skipped.
@@ -260,7 +260,7 @@ public class CosmosDBCatchupSubscriptionIntegrationTests(CosmosDBFixture fixture
             options.MonitoredContainerName = containers.Monitored;
             options.LeaseContainerName = containers.Leases;
             options.InstanceName = "test-instance";
-            options.PollingIntervalInMilliseconds = 100;
+            options.PollingInterval = TimeSpan.FromMilliseconds(100);
             options.GrainStorageSerializer = new JsonStringSerializer();
             options.TypeMapper = typeMapper;
             options.StreamNameParser = new DefaultCosmosDBStreamNameParser();

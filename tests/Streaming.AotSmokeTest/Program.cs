@@ -31,7 +31,7 @@ void Check(string name, bool condition)
 // Catch-up subscription registration. Options resolution needs Orleans silo services (serializer, type mapper),
 // so only the registrations and diagnostics are checked here.
 var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
-builder.AddKurrentDBCatchupSubscription(SmokeKurrentDBCatchupSubscription.Info);
+builder.AddKurrentDBStreamCatchupSubscription(SmokeKurrentDBCatchupSubscription.Info);
 builder.AddCosmosDBCatchupSubscription(SmokeCosmosDBCatchupSubscription.Info);
 builder.Services.AddHealthChecks().AddKurrentDBCatchupSubscriptions().AddCosmosDBCatchupSubscriptions();
 Check("KurrentDB catch-up subscription registered", builder.Services.Any(s => s.ImplementationType == typeof(SmokeKurrentDBCatchupSubscription)));
@@ -57,11 +57,9 @@ Console.WriteLine(failures == 0 ? "All checks passed." : $"{failures} check(s) f
 return failures == 0 ? 0 : 1;
 
 internal sealed class SmokeKurrentDBCatchupSubscription(IServiceProvider serviceProvider)
-    : KurrentDBCatchupSubscription<SmokeKurrentDBCatchupSubscription, KurrentDBCatchupSubscriptionOptions>(serviceProvider)
+    : KurrentDBStreamCatchupSubscription<SmokeKurrentDBCatchupSubscription, KurrentDBCatchupSubscriptionOptions>(serviceProvider)
 {
     public override string StreamName => "smoke";
-
-    public override IEventFilter? FilterOptions => null;
 
     protected override Task OnNextBatchAsync(List<IStreamedEvent<object>> streamEvents) => Task.CompletedTask;
 }

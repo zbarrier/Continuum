@@ -26,7 +26,7 @@ public class CosmosDBCatchupSubscriptionCallbackTests
     [Fact]
     public async Task Counts_only_the_events_handed_to_the_handler()
     {
-        using var harness = new Harness();
+        using var harness = new Harness(UnknownEventTypeBehavior.Skip);
         long eventsProcessed = 0;
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, l) =>
@@ -48,6 +48,19 @@ public class CosmosDBCatchupSubscriptionCallbackTests
 
         Assert.Equal(["event-0", "event-1"], harness.Subscription.Received);
         Assert.Equal(2, Interlocked.Read(ref eventsProcessed));
+    }
+
+    [Fact]
+    public async Task Halts_the_batch_on_an_unknown_event_type_by_default()
+    {
+        using var harness = new Harness();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => harness.Subscription.HandleChangeStreamAsync(new LeaseContext("0"), Changes(
+            Event(1, "event-0"),
+            Item("evt", 2, "unknown-type", "\"unknown\""),
+            Event(3, "event-1")), CancellationToken.None));
+
+        Assert.Empty(harness.Subscription.Received);
     }
 
     [Fact]
@@ -179,7 +192,7 @@ public class CosmosDBCatchupSubscriptionCallbackTests
     {
         private readonly ServiceProvider _services;
 
-        public Harness()
+        public Harness(UnknownEventTypeBehavior unknownEventTypeBehavior = UnknownEventTypeBehavior.Halt)
         {
             var typeMapper = new TestTypeMapper();
             typeMapper.AddType(typeof(string), EventType);
@@ -199,6 +212,7 @@ public class CosmosDBCatchupSubscriptionCallbackTests
                 options.GrainStorageSerializer = new JsonStringSerializer();
                 options.TypeMapper = typeMapper;
                 options.StreamNameParser = new DefaultCosmosDBStreamNameParser();
+                options.UnknownEventTypeBehavior = unknownEventTypeBehavior;
             });
             _services = services.BuildServiceProvider();
             Subscription = new LeaseCatchupSubscription(_services);

@@ -111,16 +111,16 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
         if (!_options.TypeMapper.TryGetType(kurrentDBMessage.EventType, out var eventType))
         {
             var fault = $"The KurrentDB event of type \"{kurrentDBMessage.EventType}\" on stream \"{kurrentDBMessage.StreamId}\" could not be resolved. Register the event type with the type mapper for this stream provider.";
-            if (_options.UnknownEventTypeBehavior == KurrentDBUnknownEventTypeBehavior.Skip)
+            if (_options.UnknownEventTypeBehavior == UnknownEventTypeBehavior.Skip)
             {
-                _logger?.UnknownEventTypeSkipped(fault, nameof(KurrentDBDataAdapterOptions.UnknownEventTypeBehavior), nameof(KurrentDBUnknownEventTypeBehavior.Skip));
+                _logger?.UnknownEventTypeSkipped(fault, nameof(KurrentDBDataAdapterOptions.UnknownEventTypeBehavior), nameof(UnknownEventTypeBehavior.Skip));
                 return KurrentDBEventMaterialization.Suppressed();
             }
             // Orleans retries a faulted delivery repeatedly and only logs its own warning, so the cause is reported
             // here as an error, once per event, to keep a halted subscription from looking merely slow.
             if (_haltedEventReporter.ShouldReport(kurrentDBMessage.EventId))
             {
-                _logger?.UnknownEventTypeHalted(fault, nameof(KurrentDBDataAdapterOptions.UnknownEventTypeBehavior), nameof(KurrentDBUnknownEventTypeBehavior.Halt));
+                _logger?.UnknownEventTypeHalted(fault, nameof(KurrentDBDataAdapterOptions.UnknownEventTypeBehavior), nameof(UnknownEventTypeBehavior.Halt));
             }
             return KurrentDBEventMaterialization.Faulted(fault);
         }

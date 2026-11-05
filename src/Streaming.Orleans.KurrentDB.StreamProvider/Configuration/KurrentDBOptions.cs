@@ -1,4 +1,5 @@
-﻿using Continuum;
+using Continuum;
+using Continuum.Streaming.Orleans.KurrentDB.Configuration;
 
 using KurrentDB.Client;
 
@@ -31,7 +32,7 @@ public class KurrentDBOptions
     ///     <c>UseDefault</c> should be true for insecure localhost connections.
     /// </summary>
     [Redact]
-    public KurrentDBStreamCredentialsOptions Credentials { get; set; } = new();
+    public KurrentDBSubscriptionCredentialsOptions Credentials { get; set; } = new();
 
     /// <summary>
     ///     KurrentDB name for this connection, used in cache monitor.

@@ -1,7 +1,10 @@
 ﻿using Continuum.Orleans.KurrentDB;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider;
 
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Diagnostics;
+
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 using Orleans.Configuration;
@@ -27,6 +30,8 @@ public class SiloKurrentDBStreamConfigurator : SiloRecoverableStreamConfigurator
             {
                 services.AddTransient<IPostConfigureOptions<KurrentDBDataAdapterOptions>, DefaultKurrentDBDataAdapterOptionsConfigurator>();
                 services.AddKurrentDBExceptionSerialization();
+                services.TryAddSingleton<KurrentDBQueueReceiverStatusRegistry>();
+                services.TryAddSingleton<KurrentDBStreamProviderMetrics>();
                 services.ConfigureNamedOptionForLogging<KurrentDBOptions>(name)
                         .ConfigureNamedOptionForLogging<KurrentDBStreamCachePressureOptions>(name)
                         .ConfigureNamedOptionForLogging<KurrentDBStreamCacheBufferPoolOptions>(name)

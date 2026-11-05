@@ -10,7 +10,8 @@ using Orleans.Providers.Streams.Common;
 using Orleans.Serialization;
 using Orleans.Storage;
 using Orleans.Streams;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Diagnostics;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
@@ -18,7 +19,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     Verifies the catch-up queue adapter receiver's lifecycle: failed initialization is retried on the next read
 ///     rather than left half-initialized, and shutdown waits for in-flight work before disposing the cache.
 /// </summary>
-public class KurrentDBCatchUpQueueAdapterReceiverTests
+public class KurrentDBCatchupQueueAdapterReceiverTests
 {
     private static readonly Serializer OrleansSerializer = new ServiceCollection().AddSerializer().BuildServiceProvider().GetRequiredService<Serializer>();
 
@@ -96,8 +97,8 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
         });
         var logger = NullLogger.Instance;
         var cursorTracker = new KurrentDBCursorTracker();
-        var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
-        return new KurrentDBCatchUpQueueCache(queue, 100, pool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
+        var evictionStrategy = new KurrentDBCatchupEvictionStrategy(logger, new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2)), null, null, adapter, cursorTracker);
+        return new KurrentDBCatchupQueueCache(queue, 100, pool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
         // Arrange
         var created = new List<FlakyReceiver>();
         var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
-        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
+        var adapterReceiver = new KurrentDBCatchupQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
             (_, _) =>
             {
                 var receiver = new FlakyReceiver(failInit: created.Count == 0);
@@ -124,6 +125,37 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
         Assert.Single(messages);
 
         await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Failed_Initialization_Is_Reported_As_Faulted_And_Shutdown_Removes_The_Status()
+    {
+        // Arrange
+        var registry = new KurrentDBQueueReceiverStatusRegistry();
+        using var metrics = new KurrentDBStreamProviderMetrics(registry);
+        var settings = new KurrentDBReceiverSettings
+        {
+            QueueName = "queue",
+            Diagnostics = new KurrentDBQueueReceiverDiagnostics(registry, metrics, "provider", "queue")
+        };
+        var attempts = 0;
+        var adapterReceiver = new KurrentDBCatchupQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
+            (_, _) => new FlakyReceiver(failInit: attempts++ == 0));
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(() => adapterReceiver.Initialize(TimeSpan.FromSeconds(5)));
+
+        // Assert: faulted until a retry succeeds; the retry then reports starting until the subscription confirms.
+        Assert.True(registry.TryGetStatus("provider", "queue", out var faulted));
+        Assert.Equal(KurrentDBQueueReceiverState.Faulted, faulted!.State);
+        Assert.IsType<InvalidOperationException>(faulted.Exception);
+
+        await adapterReceiver.GetQueueMessagesAsync(10);
+        Assert.True(registry.TryGetStatus("provider", "queue", out var retried));
+        Assert.Equal(KurrentDBQueueReceiverState.Starting, retried!.State);
+
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+        Assert.Empty(registry.Statuses);
     }
 
     /// <summary>
@@ -147,7 +179,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var created = 0;
         var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
-        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
+        var adapterReceiver = new KurrentDBCatchupQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
             (_, _) =>
             {
                 Interlocked.Increment(ref created);
@@ -173,7 +205,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
         // Arrange
         var created = new List<FlakyReceiver>();
         var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
-        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
+        var adapterReceiver = new KurrentDBCatchupQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
             (_, _) =>
             {
                 var receiver = new FlakyReceiver(failInit: false);
@@ -200,7 +232,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
     public async Task Cache_Cursors_After_Shutdown_Read_As_Empty()
     {
         var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
-        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
+        var adapterReceiver = new KurrentDBCatchupQueueAdapterReceiver(settings, CreateCache, NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null,
             (_, _) => new FlakyReceiver(failInit: false));
         await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
         await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
@@ -233,7 +265,7 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
         var closeGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var pool = new KurrentDBQueueCacheBufferPool(() => new FixedSizeBuffer(4096), new KurrentDBStreamCacheBufferPoolOptions(), TimeProvider.System);
         var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
-        var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, (queue, loggerFactory) => CreateCache(queue, loggerFactory, pool), NullLoggerFactory.Instance,
+        var adapterReceiver = new KurrentDBCatchupQueueAdapterReceiver(settings, (queue, loggerFactory) => CreateCache(queue, loggerFactory, pool), NullLoggerFactory.Instance,
             new NullReceiverMonitor(), new LoadSheddingOptions(), null, (_, _) => new GatedCloseReceiver(closeGate.Task));
         await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
         Assert.Equal(1, pool.ActiveCaches);
@@ -293,9 +325,9 @@ public class KurrentDBCatchUpQueueAdapterReceiverTests
 		// Arrange
 		var deliveryGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var receiver = new GatedDeliveryReceiver(deliveryGate.Task);
-		IKurrentDBCatchUpQueueCache? cache = null;
+		IKurrentDBCatchupQueueCache? cache = null;
 		var settings = new KurrentDBReceiverSettings { QueueName = "queue" };
-		var adapterReceiver = new KurrentDBCatchUpQueueAdapterReceiver(settings, (queue, loggerFactory) => (IKurrentDBQueueCache)(cache = (IKurrentDBCatchUpQueueCache)CreateCache(queue, loggerFactory)),
+		var adapterReceiver = new KurrentDBCatchupQueueAdapterReceiver(settings, (queue, loggerFactory) => (IKurrentDBQueueCache)(cache = (IKurrentDBCatchupQueueCache)CreateCache(queue, loggerFactory)),
 			NullLoggerFactory.Instance, new NullReceiverMonitor(), new LoadSheddingOptions(), null, (_, _) => receiver);
 		await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
 

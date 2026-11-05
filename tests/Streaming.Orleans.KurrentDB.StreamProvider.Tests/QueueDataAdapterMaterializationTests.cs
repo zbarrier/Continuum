@@ -36,7 +36,7 @@ public class QueueDataAdapterMaterializationTests
 
     private static readonly Serializer OrleansSerializer = new ServiceCollection().AddSerializer().BuildServiceProvider().GetRequiredService<Serializer>();
 
-    private static IEnumerable<Tuple<IStreamedEvent<object>, StreamSequenceToken>> Materialize(string eventType, byte[] data, Func<BinaryData, object?> deserialize, KurrentDBUnknownEventTypeBehavior unknownBehavior = KurrentDBUnknownEventTypeBehavior.Halt)
+    private static IEnumerable<Tuple<IStreamedEvent<object>, StreamSequenceToken>> Materialize(string eventType, byte[] data, Func<BinaryData, object?> deserialize, UnknownEventTypeBehavior unknownBehavior = UnknownEventTypeBehavior.Halt)
     {
         var typeMapper = new FakeTypeMapper();
         typeMapper.AddType(typeof(KnownEvent), KnownType);
@@ -95,7 +95,7 @@ public class QueueDataAdapterMaterializationTests
     [Fact]
     public void Skips_unknown_type_when_configured_to_skip()
     {
-        var events = Materialize("unknown-type", Payload, _ => new KnownEvent("a"), KurrentDBUnknownEventTypeBehavior.Skip);
+        var events = Materialize("unknown-type", Payload, _ => new KnownEvent("a"), UnknownEventTypeBehavior.Skip);
 
         Assert.Empty(events);
     }

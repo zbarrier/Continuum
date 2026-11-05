@@ -18,6 +18,33 @@ public class KurrentDBCatchupSubscriptionOptions
     /// <summary>Whether the subscription runs.</summary>
     public bool Enabled { get; set; } = true;
 
+    /// <summary>
+    ///     When no checkpoint is found, whether the subscription starts from the most recent event or from the
+    ///     beginning of its source.
+    /// </summary>
+    /// <remarks>
+    ///     The starting position is committed right away, so a restart before the first regular checkpoint does not
+    ///     choose a new one. A stream subscription whose stream does not exist yet commits a position before the
+    ///     stream's first event. Defaults to <see langword="false" />, because self-hosted subscriptions are mostly used to
+    ///     catch up on history in batches.
+    /// </remarks>
+    public bool StartFromNow { get; set; }
+
+    /// <summary>
+    ///     What to do with an event whose type the type mapper cannot resolve. Defaults to
+    ///     <see cref="UnknownEventTypeBehavior.Halt" />, because skipping an event silently loses it.
+    /// </summary>
+    public UnknownEventTypeBehavior UnknownEventTypeBehavior { get; set; } = UnknownEventTypeBehavior.Halt;
+
+    /// <summary>
+    ///     Whether link events are resolved to the events they point at.
+    /// </summary>
+    /// <remarks>
+    ///     A resolved link is delivered as the event it points at, at the link's own position. Resolving links is
+    ///     required to receive the events of <c>$ce-</c> and other projected link streams.
+    /// </remarks>
+    public bool ResolveLinkTos { get; set; } = true;
+
     /// <summary>The keyed KurrentDB client connection name to read from.</summary>
     public string ConnectionName { get; set; } = default!;
 

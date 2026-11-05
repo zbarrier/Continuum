@@ -1,10 +1,10 @@
-namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 /// <summary>
 ///     A queue cache for catch-up subscriptions, which tracks how far each cursor has read so purging, and therefore
 ///     the client-side <c>$all</c> checkpoint, never advances past an event a consumer has not received.
 /// </summary>
-public interface IKurrentDBCatchUpQueueCache : IKurrentDBQueueCache
+public interface IKurrentDBCatchupQueueCache : IKurrentDBQueueCache
 {
     /// <summary>
     ///     Stop tracking a cursor that is no longer reading, so it no longer holds back purging.

@@ -1,5 +1,5 @@
 using Continuum.Orleans.Events;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Persistent;
 using Continuum.TypeMapping;
 
@@ -58,18 +58,18 @@ public class StreamProviderDirectionTests
     [Fact]
     public void The_Catch_Up_Strategy_Is_Read_Only()
     {
-        using var services = BuildServices(configurator => configurator.UseCatchUpSubscription());
+        using var services = BuildServices(configurator => configurator.UseAllStreamCatchupSubscription());
 
         var strategy = services.GetRequiredKeyedService<IKurrentDBReceiverFactory>(ProviderName);
 
-        Assert.IsType<KurrentDBCatchUpSubscriptionReceiverFactory>(strategy);
+        Assert.IsType<KurrentDBCatchupSubscriptionReceiverFactory>(strategy);
         Assert.Equal(StreamProviderDirection.ReadOnly, strategy.Direction);
     }
 
     [Fact]
     public void The_Catch_Up_Strategy_Refuses_To_Create_A_Producer()
     {
-        using var services = BuildServices(configurator => configurator.UseCatchUpSubscription());
+        using var services = BuildServices(configurator => configurator.UseAllStreamCatchupSubscription());
 
         var strategy = services.GetRequiredKeyedService<IKurrentDBReceiverFactory>(ProviderName);
 
@@ -90,7 +90,7 @@ public class StreamProviderDirectionTests
     [Fact]
     public void The_Adapter_Takes_Its_Direction_From_The_Strategy()
     {
-        using var catchUpServices = BuildServices(configurator => configurator.UseCatchUpSubscription());
+        using var catchUpServices = BuildServices(configurator => configurator.UseAllStreamCatchupSubscription());
         using var persistentServices = BuildServices(configurator => configurator.UsePersistentSubscriptions());
 
         var catchUp = CreateAdapter(catchUpServices, catchUpServices.GetRequiredKeyedService<IKurrentDBReceiverFactory>(ProviderName));
@@ -103,7 +103,7 @@ public class StreamProviderDirectionTests
     [Fact]
     public async Task A_Catch_Up_Adapter_Refuses_To_Queue_Events_Before_Converting_Them()
     {
-        using var services = BuildServices(configurator => configurator.UseCatchUpSubscription());
+        using var services = BuildServices(configurator => configurator.UseAllStreamCatchupSubscription());
         var adapter = CreateAdapter(services, services.GetRequiredKeyedService<IKurrentDBReceiverFactory>(ProviderName));
 
         // The data adapter throws if called, so this also proves nothing is converted or appended.
@@ -116,7 +116,7 @@ public class StreamProviderDirectionTests
     [Fact]
     public void The_Catch_Up_Strategy_Retries_Failed_Deliveries_Forever_By_Default()
     {
-        using var services = BuildServices(configurator => configurator.UseCatchUpSubscription());
+        using var services = BuildServices(configurator => configurator.UseAllStreamCatchupSubscription());
 
         var options = services.GetRequiredService<IOptionsMonitor<StreamPullingAgentOptions>>().Get(ProviderName);
 
@@ -130,11 +130,11 @@ public class StreamProviderDirectionTests
         using var configuredBefore = BuildServices(configurator =>
         {
             configurator.ConfigurePullingAgent(ob => ob.Configure(options => options.MaxEventDeliveryTime = limit));
-            configurator.UseCatchUpSubscription();
+            configurator.UseAllStreamCatchupSubscription();
         });
         using var configuredAfter = BuildServices(configurator =>
         {
-            configurator.UseCatchUpSubscription();
+            configurator.UseAllStreamCatchupSubscription();
             configurator.ConfigurePullingAgent(ob => ob.Configure(options => options.MaxEventDeliveryTime = limit));
         });
 

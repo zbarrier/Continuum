@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 
 using Orleans.Runtime;
 
@@ -48,17 +48,21 @@ public class CosmosDBCatchupSubscriptionOptionsValidator : IConfigurationValidat
         {
             throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.InstanceName)} is required.");
         }
-        if (_options.StartingPositionType == StartingPositionType.FromDateTime && _options.StartingPositionDateTime is null)
+        if (_options.StartFrom == CosmosDBStartFrom.DateTime && _options.StartFromDateTime is null)
         {
-            throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.StartingPositionDateTime)} is required when {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.StartingPositionType)} equals {StartingPositionType.FromDateTime}.");
+            throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.StartFromDateTime)} is required when {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.StartFrom)} equals {CosmosDBStartFrom.DateTime}.");
         }
-        if (_options.PollingIntervalInMilliseconds is < 100 or > 60_000)
+        if (_options.PollingInterval < TimeSpan.FromMilliseconds(100) || _options.PollingInterval > TimeSpan.FromMinutes(1))
         {
-            throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.PollingIntervalInMilliseconds)} must be between 100 and 60,000.");
+            throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.PollingInterval)} must be between 100 milliseconds and 1 minute.");
         }
         if (_options.MaxItemsPerPoll is < 1 or > 10_000)
         {
             throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.MaxItemsPerPoll)} must be between 1 and 10,000.");
+        }
+        if (!Enum.IsDefined(_options.UnknownEventTypeBehavior))
+        {
+            throw new OrleansConfigurationException($"Invalid configuration for CosmosDB catch-up subscription with name {_subscriptionInfo.Name}. {nameof(CosmosDBCatchupSubscriptionOptions)}.{nameof(_options.UnknownEventTypeBehavior)} is not a valid value.");
         }
         if (_options.GrainStorageSerializer is null)
         {

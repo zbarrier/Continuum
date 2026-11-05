@@ -23,18 +23,39 @@ namespace Continuum.Orleans.Hosting;
 /// </summary>
 public static class KurrentDBStreamingBuilderExtensions
 {
-    const string CatchupSubscriptionsConfigKeyPrefix = "Continuum:Orleans:Streaming:KurrentDB:CatchupSubscriptions";
+    const string CatchupSubscriptionsConfigKeyPrefix = "Continuum:KurrentDB:Subscriptions";
 
     /// <summary>
-    ///     Registers a catch-up subscription as a hosted service, binding its options from configuration.
+    ///     Registers a catch-up subscription to <c>$all</c> as a hosted service, binding its options from configuration.
     /// </summary>
     /// <param name="builder">The host builder.</param>
     /// <param name="subscriptionInfo">The subscription to register.</param>
     /// <param name="typeMapKinds">The kinds of mapped types the subscription resolves events with.</param>
     /// <returns>The host builder.</returns>
-    public static IHostApplicationBuilder AddKurrentDBCatchupSubscription(this IHostApplicationBuilder builder,
-        KurrentDBCatchupSubscriptionInfo subscriptionInfo,
+    public static IHostApplicationBuilder AddKurrentDBAllStreamCatchupSubscription(this IHostApplicationBuilder builder,
+        KurrentDBAllStreamCatchupSubscriptionInfo subscriptionInfo,
         TypeMapKinds typeMapKinds = TypeMapKinds.DomainEvent)
+    {
+        return builder.AddKurrentDBCatchupSubscription(subscriptionInfo, typeMapKinds);
+    }
+
+    /// <summary>
+    ///     Registers a catch-up subscription to a single stream as a hosted service, binding its options from configuration.
+    /// </summary>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="subscriptionInfo">The subscription to register.</param>
+    /// <param name="typeMapKinds">The kinds of mapped types the subscription resolves events with.</param>
+    /// <returns>The host builder.</returns>
+    public static IHostApplicationBuilder AddKurrentDBStreamCatchupSubscription(this IHostApplicationBuilder builder,
+        KurrentDBStreamCatchupSubscriptionInfo subscriptionInfo,
+        TypeMapKinds typeMapKinds = TypeMapKinds.DomainEvent)
+    {
+        return builder.AddKurrentDBCatchupSubscription(subscriptionInfo, typeMapKinds);
+    }
+
+    private static IHostApplicationBuilder AddKurrentDBCatchupSubscription(this IHostApplicationBuilder builder,
+        KurrentDBCatchupSubscriptionInfo subscriptionInfo,
+        TypeMapKinds typeMapKinds)
     {
         builder.Services.AddOptions<KurrentDBCatchupSubscriptionOptions>(subscriptionInfo.Name)
             .BindConfiguration($"{CatchupSubscriptionsConfigKeyPrefix}:{subscriptionInfo.Name}")

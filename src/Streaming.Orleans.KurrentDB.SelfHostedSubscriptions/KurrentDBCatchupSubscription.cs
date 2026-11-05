@@ -30,10 +30,28 @@ namespace Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions;
 /// </summary>
 /// <param name="Name">The subscription name, which is also its options name.</param>
 /// <param name="Type">The subscription type.</param>
-public record KurrentDBCatchupSubscriptionInfo(string Name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)][property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type Type);
+public abstract record KurrentDBCatchupSubscriptionInfo(string Name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)][property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type Type);
 
 /// <summary>
-///     A hosted catch-up subscription that reads a KurrentDB stream and delivers events in batches.
+///     Identifies a catch-up subscription to <c>$all</c> for registration.
+/// </summary>
+/// <param name="Name">The subscription name, which is also its options name.</param>
+/// <param name="Type">The subscription type.</param>
+public sealed record KurrentDBAllStreamCatchupSubscriptionInfo(string Name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type Type)
+    : KurrentDBCatchupSubscriptionInfo(Name, Type);
+
+/// <summary>
+///     Identifies a catch-up subscription to a single stream for registration.
+/// </summary>
+/// <param name="Name">The subscription name, which is also its options name.</param>
+/// <param name="Type">The subscription type.</param>
+public sealed record KurrentDBStreamCatchupSubscriptionInfo(string Name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type Type)
+    : KurrentDBCatchupSubscriptionInfo(Name, Type);
+
+/// <summary>
+///     The shared implementation of a hosted catch-up subscription that reads KurrentDB and delivers events in batches.
+///     Derive from <see cref="KurrentDBAllStreamCatchupSubscription{TSubscription, TOptions}" /> or
+///     <see cref="KurrentDBStreamCatchupSubscription{TSubscription, TOptions}" />.
 /// </summary>
 /// <typeparam name="TSubscription">The concrete subscription type.</typeparam>
 /// <typeparam name="TOptions">The subscription options type.</typeparam>
@@ -64,10 +82,6 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         }
         Name = name;
     }
-    /// <summary>
-    ///     The registration info for this subscription.
-    /// </summary>
-    public static KurrentDBCatchupSubscriptionInfo Info => new(Name, Type);
 
     private readonly IServiceProvider _serviceProvider;
 
@@ -99,7 +113,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
     ///     Initializes a new instance of the subscription.
     /// </summary>
     /// <param name="serviceProvider">The service provider used to resolve options and dependencies.</param>
-    public KurrentDBCatchupSubscription(IServiceProvider serviceProvider)
+    private protected KurrentDBCatchupSubscription(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<TSubscription>>();
@@ -131,14 +145,13 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
     public string SubscriptionName => Name;
 
     /// <summary>
-    ///     The stream the subscription reads, or <see cref="KurrentDBStreams.All" /> to read every stream.
+    ///     The stream the subscription reads; <see cref="KurrentDBStreams.All" /> for an all-stream subscription.
     /// </summary>
     public abstract string StreamName { get; }
 
-    /// <summary>
-    ///     The server-side filter applied when reading <c>$all</c>, or <see langword="null" /> for none.
-    /// </summary>
-    public abstract IEventFilter? FilterOptions { get; }
+    private protected abstract bool IsAllStream { get; }
+
+    private protected abstract IEventFilter? FilterOptions { get; }
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -149,12 +162,25 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             return;
         }
 
+        // A stream subscription reads exactly one named stream; $all is read by an all-stream subscription.
+        if (!IsAllStream)
+        {
+            if (string.IsNullOrWhiteSpace(StreamName))
+            {
+                throw new OrleansConfigurationException($"Invalid KurrentDB catch-up subscription {SubscriptionName}. {nameof(StreamName)} is required.");
+            }
+            if (KurrentDBStreams.IsAll(StreamName))
+            {
+                throw new OrleansConfigurationException($"Invalid KurrentDB catch-up subscription {SubscriptionName}. {nameof(StreamName)} must not be {KurrentDBStreams.All}; derive from KurrentDBAllStreamCatchupSubscription to read {KurrentDBStreams.All}.");
+            }
+        }
+
         SetState(KurrentDBCatchupSubscriptionState.Starting);
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _receivingTask = ReceiveAsync(stopping);
         try
         {
-            if (KurrentDBStreams.IsAll(StreamName))
+            if (IsAllStream)
             {
                 await SubscribeToAll(stopping.Token);
             }
@@ -242,7 +268,8 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         {
             var receiver = new KurrentDBCatchupBatchReceiver(_channel.Reader, _checkpointMonitor, HandleBatchAsync,
                 _options.BufferOptions.MaxEventsPerProcessLoop, CreateBatchResiliencePipeline(), _logger,
-                                incompleteTransactionTimeout: _options.BufferOptions.IncompleteTransactionTimeout);
+                                incompleteTransactionTimeout: _options.BufferOptions.IncompleteTransactionTimeout,
+                                groupTransactions: IsAllStream);
             await receiver.RunAsync(stopping.Token);
         }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested)
@@ -355,7 +382,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             // reflected in the checkpoint yet and would otherwise be read and handled twice.
             if (!checkpointLoaded)
             {
-                lastReceivedPosition = await _checkpointMonitor.GetLastCheckpointAsync(cancellationToken);
+                lastReceivedPosition = await GetStartPositionAsync(cancellationToken);
                 checkpointLoaded = true;
             }
             var startPosition = !lastReceivedPosition.HasValue ? FromAll.Start : FromAll.After(new Position(lastReceivedPosition.Value, lastReceivedPosition.Value));
@@ -363,7 +390,7 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                 ? new SubscriptionFilterOptions(FilterOptions, _options.CheckpointMonitorOptions.KurrentDBCheckpointInterval)
                 : null;
 
-            await using var subscription = _client.SubscribeToAll(startPosition, false, subscriptionFilterOptions, null, cancellationToken);
+            await using var subscription = _client.SubscribeToAll(startPosition, _options.ResolveLinkTos, subscriptionFilterOptions, null, cancellationToken);
 
             await foreach (var message in subscription.Messages)
             {
@@ -375,11 +402,14 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
                         {
                             SetState(KurrentDBCatchupSubscriptionState.Running);
                         }
-                        await EventAppearedFromAllStream(e, cancellationToken);
-                        if (e.OriginalPosition is { } eventPosition)
+                        if (e.OriginalPosition is not { } eventPosition)
                         {
-                            lastReceivedPosition = eventPosition.CommitPosition;
+                            // A $all subscription always reports a position. Skipping is safer than guessing one.
+                            _logger.EventWithoutPosition(SubscriptionName, e.OriginalEvent.EventId.ToGuid());
+                            break;
                         }
+                        await EventAppearedFromAllStream(e, cancellationToken);
+                        lastReceivedPosition = eventPosition.CommitPosition;
                         break;
 
                     case StreamMessage.AllStreamCheckpointReached(Position position):
@@ -430,6 +460,10 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         {
             _logger.SubscriptionCancelled(null, SubscriptionName);
         }
+        catch (UnknownEventTypeException ex)
+        {
+            HaltOnUnknownEventType(ex);
+        }
         catch (Exception ex)
         {
             if (await DelayBeforeReconnectAsync(ex, ++reconnectAttempt, cancellationToken))
@@ -446,13 +480,11 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         {
             return;
         }
-        var eventTypeNotMapped = !_typeMapper.TryGetType(resolvedEvent.Event!.EventType, out var eventType);
-        if (eventTypeNotMapped)
+        if (!TryResolveEventType(resolvedEvent, out var eventType))
         {
-            _logger.EventTypeNotMapped(resolvedEvent.Event.EventType, StreamName, SubscriptionName);
             return;
         }
-        if (!TryDeserialize(resolvedEvent, eventType!, out var deserializedEvent))
+        if (!TryDeserialize(resolvedEvent, eventType, out var deserializedEvent))
         {
             return;
         }
@@ -477,12 +509,12 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             // See SubscribeToAll: reconnects resume after the last position written to the channel.
             if (!checkpointLoaded)
             {
-                lastReceivedPosition = await _checkpointMonitor.GetLastCheckpointAsync(cancellationToken);
+                lastReceivedPosition = await GetStartPositionAsync(cancellationToken);
                 checkpointLoaded = true;
             }
             var startPosition = !lastReceivedPosition.HasValue ? FromStream.Start : FromStream.After(new StreamPosition(lastReceivedPosition.Value));
 
-            await using var subscription = _client.SubscribeToStream(StreamName, startPosition, true, null, cancellationToken);
+            await using var subscription = _client.SubscribeToStream(StreamName, startPosition, _options.ResolveLinkTos, null, cancellationToken);
 
             await foreach (var message in subscription.Messages)
             {
@@ -546,6 +578,10 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         {
             _logger.SubscriptionCancelled(null, SubscriptionName);
         }
+        catch (UnknownEventTypeException ex)
+        {
+            HaltOnUnknownEventType(ex);
+        }
         catch (Exception ex)
         {
             if (await DelayBeforeReconnectAsync(ex, ++reconnectAttempt, cancellationToken))
@@ -562,13 +598,11 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         {
             return;
         }
-        var eventTypeNotMapped = !_typeMapper.TryGetType(resolvedEvent.Event!.EventType, out var eventType);
-        if (eventTypeNotMapped)
+        if (!TryResolveEventType(resolvedEvent, out var eventType))
         {
-            _logger.EventTypeNotMapped(resolvedEvent.Event.EventType, StreamName, SubscriptionName);
             return;
         }
-        if (!TryDeserialize(resolvedEvent, eventType!, out var deserializedEvent))
+        if (!TryDeserialize(resolvedEvent, eventType, out var deserializedEvent))
         {
             return;
         }
@@ -585,6 +619,100 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
     }
 
     #endregion
+
+    /// <summary>
+    ///     Resolves where to start reading: the stored checkpoint, otherwise the current end when
+    ///     <see cref="KurrentDBCatchupSubscriptionOptions.StartFromNow" /> is set, otherwise the beginning
+    ///     (<see langword="null" />). For <c>$all</c> this is a commit position; for a single stream a stream revision.
+    /// </summary>
+    private async Task<ulong?> GetStartPositionAsync(CancellationToken cancellationToken)
+    {
+        var lastCheckpoint = await _checkpointMonitor.GetLastCheckpointAsync(cancellationToken);
+        if (lastCheckpoint == KurrentDBCheckpointMonitor.StreamStartPosition && !IsAllStream)
+        {
+            _logger.StartingFromBeginning(SubscriptionName);
+            return null;
+        }
+        if (lastCheckpoint.HasValue)
+        {
+            _logger.ResumingFromCheckpoint(SubscriptionName, lastCheckpoint.Value);
+            return lastCheckpoint.Value;
+        }
+        if (_options.StartFromNow && await ReadLastPositionAsync(cancellationToken) is { } lastPosition)
+        {
+            // Starting from the current end is turned into a real position and committed right away. Subscribing from
+            // the end instead would pick a new end on every reconnect or restart before the first checkpoint,
+            // skipping whatever was written in between.
+            _logger.StartingFromLatest(SubscriptionName, lastPosition);
+            await _checkpointMonitor.CommitInitialCheckpointAsync(lastPosition, cancellationToken);
+            return lastPosition;
+        }
+        // An empty database or missing stream has nothing to skip, so starting from now and from the beginning are the same.
+        _logger.StartingFromBeginning(SubscriptionName);
+        if (_options.StartFromNow && !IsAllStream)
+        {
+            // A missing stream is committed as starting before its first event, so a restart before the first regular
+            // commit does not mistake the events written meanwhile for history to skip.
+            await _checkpointMonitor.CommitInitialCheckpointAsync(KurrentDBCheckpointMonitor.StreamStartPosition, cancellationToken);
+        }
+        return null;
+    }
+
+    private async Task<ulong?> ReadLastPositionAsync(CancellationToken cancellationToken)
+    {
+        if (IsAllStream)
+        {
+            await foreach (var resolvedEvent in _client.ReadAllAsync(Direction.Backwards, Position.End, maxCount: 1, resolveLinkTos: false, cancellationToken: cancellationToken))
+            {
+                return resolvedEvent.OriginalPosition?.CommitPosition;
+            }
+            return null;
+        }
+        var readResult = _client.ReadStreamAsync(Direction.Backwards, StreamName, StreamPosition.End, maxCount: 1, resolveLinkTos: false, cancellationToken: cancellationToken);
+        if (await readResult.ReadState == ReadState.StreamNotFound)
+        {
+            return null;
+        }
+        await foreach (var resolvedEvent in readResult)
+        {
+            return resolvedEvent.OriginalEventNumber.ToUInt64();
+        }
+        return null;
+    }
+
+    private bool TryResolveEventType(ResolvedEvent resolvedEvent, [NotNullWhen(true)] out Type? eventType)
+    {
+        var record = resolvedEvent.Event;
+        if (_typeMapper.TryGetType(record.EventType, out eventType))
+        {
+            return true;
+        }
+        if (_options.UnknownEventTypeBehavior == UnknownEventTypeBehavior.Skip)
+        {
+            _logger.EventTypeNotMappedSkipped(record.EventType, record.EventStreamId, SubscriptionName);
+            return false;
+        }
+        // Throwing before the event reaches the channel keeps the checkpoint from advancing past it.
+        throw new UnknownEventTypeException(record.EventType, record.EventStreamId, resolvedEvent.OriginalEvent.Position.CommitPosition, record.EventNumber.ToUInt64());
+    }
+
+    private void HaltOnUnknownEventType(UnknownEventTypeException ex)
+    {
+        _logger.EventTypeNotMappedHalted(ex.EventType, ex.EventStreamId, SubscriptionName);
+        SetState(KurrentDBCatchupSubscriptionState.Faulted,
+            $"Event type '{ex.EventType}' from stream '{ex.EventStreamId}' (revision {ex.StreamRevision}, commit position {ex.CommitPosition}) is not mapped and {nameof(KurrentDBCatchupSubscriptionOptions.UnknownEventTypeBehavior)} is {UnknownEventTypeBehavior.Halt}. No checkpoint was recorded past the event.",
+            ex);
+        _metrics.Failed(SubscriptionName);
+    }
+
+    private sealed class UnknownEventTypeException(string eventType, string eventStreamId, ulong commitPosition, ulong streamRevision)
+        : Exception($"Event type '{eventType}' from stream '{eventStreamId}' is not mapped.")
+    {
+        public string EventType { get; } = eventType;
+        public string EventStreamId { get; } = eventStreamId;
+        public ulong CommitPosition { get; } = commitPosition;
+        public ulong StreamRevision { get; } = streamRevision;
+    }
 
     /// <summary>
     ///     Processes a batch of events read from the stream.
@@ -667,6 +795,21 @@ internal static partial class KurrentDBCatchupSubscriptionLog
 	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' was cancelled by the user.")]
 	public static partial void SubscriptionCancelledByUser(this ILogger logger, Exception exception, string subscriptionName);
 
-	[LoggerMessage(Level = LogLevel.Warning, Message = "Failed to map event type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'.")]
-	public static partial void EventTypeNotMapped(this ILogger logger, string eventType, string streamName, string subscriptionName);
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Failed to map event type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'. The event was skipped because UnknownEventTypeBehavior is Skip.")]
+	public static partial void EventTypeNotMappedSkipped(this ILogger logger, string eventType, string streamName, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Error, Message = "Failed to map event type '{EventType}' from stream '{StreamName}' in subscription '{SubscriptionName}'. The subscription is halted because UnknownEventTypeBehavior is Halt.")]
+	public static partial void EventTypeNotMappedHalted(this ILogger logger, string eventType, string streamName, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' is resuming from checkpoint {Position}.")]
+	public static partial void ResumingFromCheckpoint(this ILogger logger, string subscriptionName, ulong position);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' has no checkpoint and is starting from the latest position {Position}.")]
+	public static partial void StartingFromLatest(this ILogger logger, string subscriptionName, ulong position);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Subscription '{SubscriptionName}' is starting from the beginning.")]
+	public static partial void StartingFromBeginning(this ILogger logger, string subscriptionName);
+
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Subscription '{SubscriptionName}' skipped event {EventId} because it has no $all position.")]
+	public static partial void EventWithoutPosition(this ILogger logger, string subscriptionName, Guid eventId);
 }

@@ -1,4 +1,5 @@
-﻿using Continuum;
+using Continuum;
+using Continuum.Streaming.Orleans.KurrentDB.Configuration;
 
 using KurrentDB.Client;
 
@@ -10,7 +11,7 @@ namespace Orleans.Configuration;
 /// <remarks>
 ///     Mirrors <see cref="KurrentDBOptions" /> so that every KurrentDB backed component of this provider is configured
 ///     the same way: a <see cref="ConnectionName" /> that resolves the shared keyed <see cref="KurrentDBClient" />, and
-///     credentials expressed through <see cref="KurrentDBStreamCredentialsOptions" />.
+///     credentials expressed through <see cref="KurrentDBSubscriptionCredentialsOptions" />.
 /// </remarks>
 public class KurrentDBOperationOptions
 {
@@ -34,7 +35,7 @@ public class KurrentDBOperationOptions
     ///     <c>UseDefault</c> should be true for insecure localhost connections.
     /// </summary>
     [Redact]
-    public KurrentDBStreamCredentialsOptions Credentials { get; set; } = new();
+    public KurrentDBSubscriptionCredentialsOptions Credentials { get; set; } = new();
 }
 
 /// <summary>

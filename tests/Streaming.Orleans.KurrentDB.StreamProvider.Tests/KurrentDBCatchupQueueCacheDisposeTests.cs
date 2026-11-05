@@ -8,7 +8,7 @@ using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
 using Orleans.Serialization;
 using Orleans.Storage;
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
@@ -16,7 +16,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 ///     Verifies that a disposed queue cache gives its blocks back to the shared pool, so blocks are not stranded when a
 ///     queue leaves the silo and do not stop the pool from trimming.
 /// </summary>
-public class KurrentDBCatchUpQueueCacheDisposeTests
+public class KurrentDBCatchupQueueCacheDisposeTests
 {
 	private const int BlockSize = 4096;
 
@@ -33,7 +33,7 @@ public class KurrentDBCatchUpQueueCacheDisposeTests
 		public T Deserialize<T>(BinaryData input) => throw new NotSupportedException();
 	}
 
-	private static KurrentDBCatchUpQueueCache CreateCache(KurrentDBQueueCacheBufferPool pool)
+	private static KurrentDBCatchupQueueCache CreateCache(KurrentDBQueueCacheBufferPool pool)
 	{
 		var adapter = new KurrentDBQueueDataAdapter(OrleansSerializer, new KurrentDBDataAdapterOptions
 		{
@@ -45,8 +45,8 @@ public class KurrentDBCatchUpQueueCacheDisposeTests
 		var logger = NullLogger.Instance;
 		var cursorTracker = new KurrentDBCursorTracker();
 		var timePurge = new TimePurgePredicate(TimeSpan.FromHours(1), TimeSpan.FromHours(2));
-		var evictionStrategy = new KurrentDBCatchUpEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
-		return new KurrentDBCatchUpQueueCache("queue", 100, pool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
+		var evictionStrategy = new KurrentDBCatchupEvictionStrategy(logger, timePurge, null, null, adapter, cursorTracker);
+		return new KurrentDBCatchupQueueCache("queue", 100, pool, adapter, evictionStrategy, cursorTracker, logger, null!, null, null);
 	}
 
 	private static StreamedEvent<KurrentDBRawEvent> CreateEvent(ulong streamVersion, ulong commitPosition, int dataSize) =>

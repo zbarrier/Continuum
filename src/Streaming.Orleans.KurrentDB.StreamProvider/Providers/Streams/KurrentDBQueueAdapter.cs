@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Orleans.Configuration;
 using Orleans.Configuration.Overrides;
 using Orleans.Providers.Streams.Common;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Diagnostics;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.StatisticMonitors;
 using Orleans.Statistics;
 using Orleans.Streams;
@@ -148,13 +149,19 @@ public class KurrentDBQueueAdapter : IQueueAdapter, IQueueAdapterCache
 
     private IKurrentDBQueueAdapterReceiver MakeReceiver(QueueId queueId)
     {
+        var queueName = _streamQueueMapper.QueueToPartition(queueId);
+        var statusRegistry = _serviceProvider.GetService<KurrentDBQueueReceiverStatusRegistry>();
+        var metrics = _serviceProvider.GetService<KurrentDBStreamProviderMetrics>();
         var receiverSettings = new KurrentDBReceiverSettings
                                {
                                    Options = _options,
                                    ReceiverOptions = _receiverOptions,
                                    ConsumerGroup = _consumerGroup,
-                                   QueueName = _streamQueueMapper.QueueToPartition(queueId),
-                                   StreamNameParser = _serviceProvider.GetKeyedService<Continuum.Streams.IStreamNameParser>(_options.ConnectionName)
+                                   QueueName = queueName,
+                                   StreamNameParser = _serviceProvider.GetKeyedService<Continuum.Streams.IStreamNameParser>(_options.ConnectionName),
+                                   Diagnostics = statusRegistry != null && metrics != null
+                                       ? new KurrentDBQueueReceiverDiagnostics(statusRegistry, metrics, Name, queueName)
+                                       : null
                                };
         var receiverMonitorDimensions = new KurrentDBReceiverMonitorDimensions
                                         {

@@ -122,15 +122,15 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             .WithInstanceName(_options.InstanceName)
             .WithLeaseContainer(leaseContainer);
 
-        switch (_options.StartingPositionType)
+        switch (_options.StartFrom)
         {
-            case StartingPositionType.BeginningOfTime:
+            case CosmosDBStartFrom.Beginning:
                 builder.WithStartTime(DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc));
                 break;
-            case StartingPositionType.FromDateTime:
-                builder.WithStartTime(_options.StartingPositionDateTime!.Value.ToUniversalTime());
+            case CosmosDBStartFrom.DateTime:
+                builder.WithStartTime(_options.StartFromDateTime!.Value.ToUniversalTime());
                 break;
-            case StartingPositionType.Latest:
+            case CosmosDBStartFrom.Now:
                 // Set explicitly rather than relying on the SDK default, which delivered existing changes.
                 // Like any start time, it only applies when the leases are first created.
                 builder.WithStartTime(DateTime.UtcNow);
@@ -138,7 +138,7 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
         }
 
         builder
-            .WithPollInterval(TimeSpan.FromMilliseconds(_options.PollingIntervalInMilliseconds))
+            .WithPollInterval(_options.PollingInterval)
             .WithMaxItems(_options.MaxItemsPerPoll);
 
         var processor = builder.Build();
@@ -246,8 +246,14 @@ public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(Dy
             }
             if (!_typeMapper.TryGetType(change.DataType, out var type))
             {
-                _logger.SkippingUnknownDataType(change.DataType, change.Id, change.StreamName);
-                continue;
+                if (_options.UnknownEventTypeBehavior == UnknownEventTypeBehavior.Skip)
+                {
+                    _logger.SkippingUnknownDataType(change.DataType, change.Id, change.StreamName);
+                    continue;
+                }
+                // Failing the batch makes the change feed processor retry the lease without advancing past the event.
+                _logger.HaltingOnUnknownDataType(change.DataType, change.Id, change.StreamName, context.LeaseToken);
+                throw new InvalidOperationException($"Data type '{change.DataType}' of change '{change.Id}' in stream '{change.StreamName}' is not mapped and {nameof(CosmosDBCatchupSubscriptionOptions.UnknownEventTypeBehavior)} is {UnknownEventTypeBehavior.Halt}.");
             }
 
             if (!CosmosDBCatchupEventDeserializer.TryDeserialize(change, type, _grainStorageSerializer, _logger, out var deserializedEvent))
@@ -332,8 +338,11 @@ internal static partial class CosmosDBCatchupSubscriptionLog
     [LoggerMessage(Level = LogLevel.Warning, Message = "Subscription {SubscriptionName} for instance {InstanceName} has stopped.")]
     public static partial void SubscriptionStopped(this ILogger logger, string subscriptionName, string instanceName);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Skipping change {Id} in stream {StreamName} with unknown data type {DataType}.")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping change {Id} in stream {StreamName} with unknown data type {DataType}.")]
     public static partial void SkippingUnknownDataType(this ILogger logger, string dataType, string id, string streamName);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Halting lease {LeaseToken} at change {Id} in stream {StreamName}: data type {DataType} is not mapped.")]
+    public static partial void HaltingOnUnknownDataType(this ILogger logger, string dataType, string id, string streamName, string leaseToken);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Skipping change {Id} in stream {StreamName} on lease {LeaseToken} at logical sequence number {LogicalSequenceNumber}: its id or stream name is malformed.")]
     public static partial void SkippingMalformedChange(this ILogger logger, Exception exception, string id, string streamName, string leaseToken, long logicalSequenceNumber);

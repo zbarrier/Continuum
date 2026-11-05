@@ -22,7 +22,7 @@ public static class KurrentDBSiloBuilderExtensions
     /// <remarks>
     ///     This overload selects the persistent subscription strategy. Use the
     ///     <see cref="AddKurrentDBStreams(ISiloBuilder, string, Action{ISiloKurrentDBStreamConfigurator})" /> overload
-    ///     with <c>UseCatchUpSubscription</c> to consume <c>$all</c> instead.
+    ///     with <c>UseAllStreamCatchupSubscription</c> to consume <c>$all</c>, or <c>UseStreamCatchupSubscription</c> to consume a single stream, instead.
     /// </remarks>
     public static ISiloBuilder AddKurrentDBStreams(this ISiloBuilder builder, string name, Action<KurrentDBOptions> configureKurrentDB)
     {

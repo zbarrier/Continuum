@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.Metrics;
 
-using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.CatchUp;
+using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.StatisticMonitors;
 using Continuum.TypeMapping;
 
@@ -187,12 +187,12 @@ public class QueueCacheFactoryWiringTests
             options.GrainStorageSerializer = new FakeSerializer();
         });
         using var provider = services.BuildServiceProvider();
-        var strategy = new KurrentDBCatchUpSubscriptionReceiverFactory(provider, ProviderName);
+        var strategy = new KurrentDBCatchupSubscriptionReceiverFactory(provider, ProviderName, new KurrentDBAllStreamCatchupSubscriptionReceiverOptions());
         var factory = CreateFactory(strategy);
 
         using var cache = factory.CreateCache("queue-0", NullLoggerFactory.Instance);
 
-        Assert.IsType<KurrentDBCatchUpQueueCache>(cache);
-        Assert.Equal(KurrentDBCatchUpQueueAdapterReceiver.MaxMessagesPerRead, cache.GetMaxAddCount());
+        Assert.IsType<KurrentDBCatchupQueueCache>(cache);
+        Assert.Equal(KurrentDBCatchupQueueAdapterReceiver.MaxMessagesPerRead, cache.GetMaxAddCount());
     }
 }

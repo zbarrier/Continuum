@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
+using Continuum.Streaming.Orleans.KurrentDB.Configuration;
 using Continuum.Streams;
 
 using KurrentDB.Client;
@@ -297,7 +298,7 @@ public class KurrentDBPersistentSubscriptionReceiverTests
                 Name = $"persistenttest-{queueName}",
                 ConnectionName = Constants.StreamProviderName,
                 Queues = [queueName],
-                Credentials = new KurrentDBStreamCredentialsOptions { UseDefault = true },
+                Credentials = new KurrentDBSubscriptionCredentialsOptions { UseDefault = true },
             },
             ReceiverOptions = new KurrentDBPersistentSubscriptionReceiverOptions
             {
