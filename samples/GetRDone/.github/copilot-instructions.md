@@ -37,4 +37,7 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 
 ## Status
 - Done: scaffolding, OIDC sign-in, claim forwarding to grains, Hello event written to KurrentDB, type-map registration fix, Hello flow confirmed end to end after pinning Microsoft.Orleans.Streaming to $(OrleansVersion).
-- Next: implement notifications, design the system with Event Modeling, then implement the resulting event model slice by slice.
+- Next (infrastructure, independent of the event model):
+  - Switch the `GetRDone.Web` Blazor UI to MudBlazor.
+  - Replace the placeholder `GetRDone.Identity` UI (login, logout, consent, error pages) with a more standard, polished IdentityServer UI.
+- Next (domain): the user will create the event model; notifications are designed as part of it. After that, implement the model slice by slice.
