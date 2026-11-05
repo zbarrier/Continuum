@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Orleans.EventSourcing" Version="10.4.0" />
+    <PackageReference Include="Microsoft.Orleans.EventSourcing" Version="10.4.2" />
   </ItemGroup>
 
   <ItemGroup>

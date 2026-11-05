@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 using KurrentDB.Client;
 
@@ -218,7 +218,7 @@ public class CatchupTransactionContiguityTests
 
     private static async Task<Position> GetCurrentEndPositionAsync(KurrentDBClient client)
     {
-        var last = client.ReadAllAsync(Direction.Backwards, Position.End, maxCount: 1);
+        IAsyncEnumerable<ResolvedEvent> last = client.ReadAllAsync(Direction.Backwards, Position.End, maxCount: 1);
         await foreach (var resolved in last.ConfigureAwait(false))
         {
             return resolved.OriginalPosition ?? Position.Start;
@@ -234,7 +234,7 @@ public class CatchupTransactionContiguityTests
     {
         var entries = new List<(string AppendKey, int LogIndex)>();
         var index = 0;
-        await foreach (var resolved in client.ReadAllAsync(Direction.Forwards, startPosition).ConfigureAwait(false))
+        await foreach (var resolved in ((IAsyncEnumerable<ResolvedEvent>)client.ReadAllAsync(Direction.Forwards, startPosition)).ConfigureAwait(false))
         {
             if (resolved.Event.EventType != EventType)
             {

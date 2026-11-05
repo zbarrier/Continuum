@@ -18,11 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="KurrentDB.Client" Version="1.6.0" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.13" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.13" />
-    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.13" />
-    <PackageReference Include="Polly.Core" Version="8.8.0" />
+    <PackageReference Include="KurrentDB.Client" Version="1.6.1" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.14" />
+    <PackageReference Include="Polly.Core" Version="8.9.0" />
   </ItemGroup>
 
   <ItemGroup>

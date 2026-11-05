@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Channels;
 
@@ -300,7 +300,7 @@ public class KurrentDBCatchupSubscriptionReceiver : IKurrentDBReceiver
     {
         if (_allStreamOptions is not null)
         {
-            await foreach (var resolvedEvent in _client.ReadAllAsync(Direction.Backwards, Position.End, maxCount: 1, resolveLinkTos: false, userCredentials: _credentials).ConfigureAwait(false))
+            await foreach (var resolvedEvent in ((IAsyncEnumerable<ResolvedEvent>)_client.ReadAllAsync(Direction.Backwards, Position.End, maxCount: 1, resolveLinkTos: false, userCredentials: _credentials)).ConfigureAwait(false))
             {
                 return resolvedEvent.OriginalPosition?.CommitPosition;
             }
@@ -311,7 +311,7 @@ public class KurrentDBCatchupSubscriptionReceiver : IKurrentDBReceiver
         {
             return null;
         }
-        await foreach (var resolvedEvent in readResult.ConfigureAwait(false))
+        await foreach (var resolvedEvent in ((IAsyncEnumerable<ResolvedEvent>)readResult).ConfigureAwait(false))
         {
             return resolvedEvent.OriginalEventNumber.ToUInt64();
         }

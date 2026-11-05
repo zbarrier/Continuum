@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -38,7 +38,7 @@ public sealed class KurrentDBCheckpointStore : ICheckpointStore<ulong>
             return null;
         }
 
-        await foreach (var resolvedEvent in result.ConfigureAwait(false))
+        await foreach (var resolvedEvent in ((IAsyncEnumerable<ResolvedEvent>)result).ConfigureAwait(false))
         {
             var checkpoint = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, CheckpointJsonContext.Default.Checkpoint);
             return checkpoint?.Position;
