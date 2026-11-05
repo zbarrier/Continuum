@@ -4,7 +4,7 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 
 ## Project Guidelines
 - Do not commit or push without explicit approval; stage all changes (`git add -A`) and leave them for review.
-- The domain/event model will be supplied by the user later. The `Hello` feature is temporary and only proves the Web → Silo → KurrentDB round trip; replace it once the real model exists.
+- The system is designed with Event Modeling (screens/automations → commands → events → read models, organized into slices). The user will supply the event model; implement features slice by slice from it. The `Hello` feature
 
 ## Architecture
 - Aspire orchestrates everything (`GetRDone.AppHost`): Azurite tables for Orleans clustering, KurrentDB for event storage, Mailpit for local email capture, plus the Identity, Silo, and Web projects.
@@ -36,5 +36,5 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 - Stop the AppHost before rebuilding; a running Silo locks its output files.
 
 ## Status
-- Done: scaffolding, OIDC sign-in, claim forwarding to grains, Hello event written to KurrentDB, type-map registration fix.
-- Next: confirm the Hello flow end to end after the latest fixes, implement notifications, then build the user-supplied event model.
+- Done: scaffolding, OIDC sign-in, claim forwarding to grains, Hello event written to KurrentDB, type-map registration fix, Hello flow confirmed end to end after pinning Microsoft.Orleans.Streaming to $(OrleansVersion).
+- Next: implement notifications, design the system with Event Modeling, then implement the resulting event model slice by slice.
