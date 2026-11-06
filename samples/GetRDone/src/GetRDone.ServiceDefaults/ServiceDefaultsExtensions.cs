@@ -47,13 +47,15 @@ public static class ServiceDefaultsExtensions
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddMeter("Microsoft.Orleans");
+                    .AddMeter("Microsoft.Orleans")
+                    .AddMeter("Continuum.EventSourcing");
             })
             .WithTracing(tracing =>
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddSource("Microsoft.Orleans.Runtime")
                     .AddSource("Microsoft.Orleans.Application")
+                    .AddSource("Continuum.EventSourcing")
                     .AddAspNetCoreInstrumentation(options =>
                         options.Filter = context =>
                             !context.Request.Path.StartsWithSegments(HealthEndpointPath)

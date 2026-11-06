@@ -40,7 +40,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddOrleansIdentity();
 
 builder.AddKeyedAzureTableServiceClient("clustering");
-builder.UseOrleansClient();
+builder.UseOrleansClient(client => client.AddActivityPropagation());
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

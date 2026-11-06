@@ -31,6 +31,7 @@ builder.UseOrleans(silo =>
     // stored by the KurrentDB log-consistency provider, so a default (unused) provider is required.
     silo.AddMemoryGrainStorageAsDefault();
     silo.AddOrleansIdentity();
+    silo.AddActivityPropagation();
 });
 
 var app = builder.Build();
