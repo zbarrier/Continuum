@@ -1,0 +1,56 @@
+@page
+@model GetRDone.Identity.Pages.Account.Login.Index
+@{
+    ViewData["Title"] = "Sign in";
+}
+
+<div class="auth-card card shadow-sm mx-auto">
+    <div class="card-body p-4">
+        <h1 class="h4 mb-1">Sign in</h1>
+        <p class="text-muted mb-4">Sign in to your Get-R-Done account.</p>
+
+        <partial name="_ValidationSummary" />
+
+        @if (Model.View.EnableLocalLogin)
+        {
+            <form asp-page="/Account/Login/Index">
+                <input type="hidden" asp-for="Input.ReturnUrl" />
+
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Input.Username">Email</label>
+                    <input class="form-control" asp-for="Input.Username" autocomplete="username" autofocus>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Input.Password"></label>
+                    <input type="password" class="form-control" asp-for="Input.Password" autocomplete="current-password">
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    @if (Model.View.AllowRememberLogin)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" asp-for="Input.RememberLogin">
+                            <label class="form-check-label" asp-for="Input.RememberLogin">Remember me</label>
+                        </div>
+                    }
+                    <a class="small ms-auto" asp-page="/Account/ForgotPassword" asp-route-returnUrl="@Model.Input.ReturnUrl">Forgot password?</a>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary flex-grow-1" name="Input.Button" value="login">Sign in</button>
+                    <button class="btn btn-outline-secondary" name="Input.Button" value="cancel">Cancel</button>
+                </div>
+            </form>
+
+            <p class="text-center mt-4 mb-0 small">
+                Are you a vendor? <a asp-page="/Account/Register" asp-route-returnUrl="@Model.Input.ReturnUrl">Register here</a>
+            </p>
+        }
+        else
+        {
+            <div class="alert alert-warning" role="alert">
+                <strong>Invalid sign-in request.</strong> There are no sign-in options configured for this request.
+            </div>
+        }
+    </div>
+</div>

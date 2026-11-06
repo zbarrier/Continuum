@@ -1,0 +1,25 @@
+@page
+@model GetRDone.Identity.Pages.Index
+
+<div class="welcome-page">
+    <h1 class="h3">
+        Get-R-Done sign-in
+        <small class="text-muted fs-6">(Duende IdentityServer @Model.Version)</small>
+    </h1>
+
+    <ul class="ps-0">
+        <li>
+            The <a href="~/.well-known/openid-configuration">discovery document</a>
+            lists the endpoints and key material.
+        </li>
+        <li>
+            <a href="~/diagnostics">Diagnostics</a> shows the claims for your current session.
+        </li>
+        <li>
+            <a href="~/grants">Grants</a> lets you manage your stored grants.
+        </li>
+        <li>
+            Vendors can <a asp-page="/Account/Register">register</a> to join the vendor network.
+        </li>
+    </ul>
+</div>

@@ -1,0 +1,29 @@
+@using Duende.IdentityServer.Extensions
+@{
+    #nullable enable
+    string? name = null;
+    if (!true.Equals(ViewData["signed-out"]))
+    {
+        name = Context.User?.GetDisplayName();
+    }
+}
+
+<div class="nav-page">
+    <nav class="navbar navbar-expand navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <a href="~/" class="navbar-brand fw-semibold">Get-R-Done</a>
+
+            @if (!string.IsNullOrWhiteSpace(name))
+            {
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">@name</a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" asp-page="/Account/Logout/Index">Sign out</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            }
+        </div>
+    </nav>
+</div>

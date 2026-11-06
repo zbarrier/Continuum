@@ -1,7 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-	<PackageReference Include="Duende.IdentityServer" Version="8.0.10" />
+	<PackageReference Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="13.6.4" />
+	<PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="8.0.10" />
+	<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.14" />
+	<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.14" />
+	<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
+	  <PrivateAssets>all</PrivateAssets>
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	</PackageReference>
+	<!-- Patched version; Microsoft.Data.SqlClient otherwise brings in a vulnerable 10.0.12. -->
+	<PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>

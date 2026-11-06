@@ -1,0 +1,60 @@
+:root {
+  --bs-primary: #1565c0;
+  --bs-primary-rgb: 21, 101, 192;
+  --bs-link-color: #1565c0;
+  --bs-link-color-rgb: 21, 101, 192;
+  --bs-link-hover-color: #0d47a1;
+  --bs-link-hover-color-rgb: 13, 71, 161;
+}
+
+body {
+  background-color: #f5f7fa;
+}
+
+.btn-primary {
+  --bs-btn-bg: #1565c0;
+  --bs-btn-border-color: #1565c0;
+  --bs-btn-hover-bg: #0d47a1;
+  --bs-btn-hover-border-color: #0d47a1;
+  --bs-btn-active-bg: #0d47a1;
+  --bs-btn-active-border-color: #0d47a1;
+  --bs-btn-disabled-bg: #1565c0;
+  --bs-btn-disabled-border-color: #1565c0;
+}
+
+.body-container {
+  margin-top: 48px;
+  padding-bottom: 40px;
+}
+
+.auth-card {
+  max-width: 440px;
+  border: 0;
+}
+
+.welcome-page li {
+  list-style: none;
+  padding: 4px;
+}
+
+.logged-out-page iframe {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.grants-page .card {
+  margin-top: 20px;
+  border-bottom: 1px solid lightgray;
+}
+.grants-page .card .card-title {
+  font-size: 120%;
+  font-weight: bold;
+}
+.grants-page .card .card-title img {
+  width: 100px;
+  height: 100px;
+}
+.grants-page .card label {
+  font-weight: bold;
+}

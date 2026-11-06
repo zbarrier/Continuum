@@ -1,52 +1,57 @@
-using Duende.IdentityServer;
-using Duende.IdentityServer.Services;
-using Duende.IdentityServer.Test;
-
 using GetRDone.Identity;
+using GetRDone.Identity.Data;
+using GetRDone.Identity.Email;
 
-using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddSqlServerDbContext<ApplicationDbContext>("identitydb");
 
 var webBaseUrl = builder.Configuration["WEB_BASE_URL"]
     ?? throw new InvalidOperationException("WEB_BASE_URL was not provided.");
 
-builder.Services.AddIdentityServer()
+builder.Services.AddRazorPages();
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+    {
+        options.SignIn.RequireConfirmedEmail = true;
+        options.User.RequireUniqueEmail = true;
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddClaimsPrincipalFactory<GetRDoneUserClaimsPrincipalFactory>()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddTransient<IEmailSender<ApplicationUser>, SmtpEmailSender>();
+
+builder.Services.AddIdentityServer(options =>
+    {
+        options.Events.RaiseErrorEvents = true;
+        options.Events.RaiseInformationEvents = true;
+        options.Events.RaiseFailureEvents = true;
+        options.Events.RaiseSuccessEvents = true;
+    })
     .AddInMemoryIdentityResources(Config.IdentityResources)
     .AddInMemoryClients(Config.Clients(webBaseUrl))
-    .AddTestUsers(Config.Users);
+    .AddAspNetIdentity<ApplicationUser>();
 
 var app = builder.Build();
 
+await IdentitySeeder.MigrateAndSeedAsync(app.Services, seedDemoUsers: app.Environment.IsDevelopment());
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
 app.MapDefaultEndpoints();
+app.UseStaticFiles();
+app.UseRouting();
 app.UseIdentityServer();
+app.UseAuthorization();
 
-// Minimal demo login. Real applications should use a full login UI (e.g. the Duende UI templates).
-app.MapGet("/Account/Login", (string? returnUrl) => Results.Content(LoginPage.Render(returnUrl, error: null), "text/html"));
-app.MapPost("/Account/Login", async (HttpContext http, TestUserStore users, IIdentityServerInteractionService interaction) =>
-{
-    var form = await http.Request.ReadFormAsync();
-    var username = form["username"].ToString();
-    var returnUrl = form["returnUrl"].ToString();
-
-    if (!users.ValidateCredentials(username, form["password"].ToString()))
-    {
-        return Results.Content(LoginPage.Render(returnUrl, "Invalid username or password."), "text/html");
-    }
-
-    var user = users.FindByUsername(username);
-    await http.SignInAsync(new IdentityServerUser(user.SubjectId) { DisplayName = user.Username, AdditionalClaims = user.Claims });
-
-    return interaction.IsValidReturnUrl(returnUrl) ? Results.Redirect(returnUrl) : Results.Redirect("/");
-}).DisableAntiforgery();
-app.MapGet("/Account/Logout", async (HttpContext http, string? logoutId, IIdentityServerInteractionService interaction) =>
-{
-    await http.SignOutAsync(IdentityServerConstants.DefaultCookieAuthenticationScheme);
-    var context = await interaction.GetLogoutContextAsync(logoutId, http.RequestAborted);
-    return Results.Redirect(context?.PostLogoutRedirectUri ?? "/");
-});
-app.MapGet("/", () => "Get-R-Done Identity");
+app.MapRazorPages().RequireAuthorization();
 
 app.Run();

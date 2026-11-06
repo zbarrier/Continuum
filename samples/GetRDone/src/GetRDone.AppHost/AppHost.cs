@@ -8,13 +8,21 @@ var clustering = storage.AddTables("clustering");
 var kurrentdb = builder.AddKurrentDB("kurrentdb", port: 2113)
     .WithEndpoint("http", endpoint => endpoint.IsProxied = false);
 
-// Local SMTP capture for notification emails (wired up once notifications exist).
+// Local SMTP capture for notification and account emails.
 var mailpit = builder.AddMailPit("mailpit");
+
+// ASP.NET Core Identity users for GetRDone.Identity. The data volume keeps users across AppHost restarts.
+var identityDb = builder.AddSqlServer("sql")
+    .WithDataVolume()
+    .AddDatabase("identitydb");
 
 var orleans = builder.AddOrleans("getrdone")
     .WithClustering(clustering);
 
-var identity = builder.AddProject<Projects.GetRDone_Identity>("identity");
+var identity = builder.AddProject<Projects.GetRDone_Identity>("identity")
+    .WithReference(identityDb)
+    .WithReference(mailpit)
+    .WaitFor(identityDb);
 
 var silo = builder.AddProject<Projects.GetRDone_Silo>("silo")
     .WithReference(orleans)

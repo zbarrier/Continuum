@@ -14,7 +14,10 @@
             Signed in as <strong>@context.User.Identity?.Name</strong>
         </MudText>
         <MudStack Row="true" Spacing="1" Class="mt-2">
-            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Business">@context.User.FindFirst("tenant_id")?.Value</MudChip>
+            @if (context.User.FindFirst("tenant_id")?.Value is { } tenant)
+            {
+                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Business">@tenant</MudChip>
+            }
             @foreach (var role in context.User.FindAll("role").Select(c => c.Value))
             {
                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@role</MudChip>
