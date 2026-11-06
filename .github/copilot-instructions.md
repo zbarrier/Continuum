@@ -54,3 +54,6 @@
 
 ## GetRDone Project Structure
 - For GetRDone/Orleans apps: domains live under a Features folder, each with two projects GetRDone.[Domain].Abstractions (grain interfaces, commands, responses, events) and GetRDone.[Domain].Grains (grains and slice logic). Clients reference .Abstractions; the Silo references .Grains. Project names carry the GetRDone prefix; no Contracts project — shared domain concepts go in GetRDone.SharedKernel, added only when needed and limited (via its README) to domain concepts shared by two or more features. Display name is "Get-R-Done".
+
+## KurrentDB Subscriptions
+- Continuum KurrentDB subscriptions should fan out per connection: one subscription registered in startup code automatically runs once on each KurrentDB connection/instance (e.g., 1 shared + 2 dedicated = 3 connections), with each connection discovered at startup (likely via DI keyed KurrentDBClient registrations). This is not implemented yet in the self-hosted catch-up subscriptions or stream provider.

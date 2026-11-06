@@ -12,7 +12,10 @@ var kurrentdb = builder.AddKurrentDB("kurrentdb", port: 2113)
 var mailpit = builder.AddMailPit("mailpit");
 
 // ASP.NET Core Identity users for GetRDone.Identity. The data volume keeps users across AppHost restarts.
-var identityDb = builder.AddSqlServer("sql")
+// Not proxied, so Docker publishes host 14330 -> container 1433 and SSMS can always connect to
+// localhost,14330 (14330 avoids clashing with a locally installed SQL Server on 1433).
+var identityDb = builder.AddSqlServer("sql", port: 14330)
+    .WithEndpoint("tcp", endpoint => endpoint.IsProxied = false)
     .WithDataVolume()
     .AddDatabase("identitydb");
 
