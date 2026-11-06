@@ -3,7 +3,10 @@ var builder = DistributedApplication.CreateBuilder(args);
 var storage = builder.AddAzureStorage("storage").RunAsEmulator();
 var clustering = storage.AddTables("clustering");
 
-var kurrentdb = builder.AddKurrentDB("kurrentdb");
+// Not proxied, so Docker publishes the container directly as host 2113 -> container 2113 and the
+// KurrentDB desktop app can always connect to esdb://localhost:2113?tls=false.
+var kurrentdb = builder.AddKurrentDB("kurrentdb", port: 2113)
+    .WithEndpoint("http", endpoint => endpoint.IsProxied = false);
 
 // Local SMTP capture for notification emails (wired up once notifications exist).
 var mailpit = builder.AddMailPit("mailpit");

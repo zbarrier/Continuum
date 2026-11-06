@@ -10,7 +10,7 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 - Aspire orchestrates everything (`GetRDone.AppHost`): Azurite tables for Orleans clustering, KurrentDB for event storage, Mailpit for local email capture, plus the Identity, Silo, and Web projects.
 - `GetRDone.Identity`: Duende IdentityServer with seeded demo users (`client`, `coordinator`, `reviewer`, `vendor`; password `Pass123$`; tenant `demo`).
 - `GetRDone.Silo`: Orleans silo host. Orleans Identity **server** setup belongs here (`ManagedCode.Orleans.Identity.Server`, `silo.AddOrleansIdentity()`), which requires `builder.Services.AddAuthorization()`.
-- `GetRDone.Web`: Blazor Server with cookie + OIDC auth against Identity. Uses the Orleans Identity **client** package (`ManagedCode.Orleans.Identity.Client`, `builder.Services.AddOrleansIdentity()`) to forward user claims to grains. Do not write custom user-forwarding filters.
+- `GetRDone.Web`: Blazor Server (MudBlazor UI; `MainLayout` hosts the MudBlazor providers, app bar, and nav drawer) with cookie + OIDC auth
 - Feature-based projects under `src/Features/<Feature>/`: `GetRDone.<Feature>.Abstractions` (grain interfaces, commands, responses, events) and `GetRDone.<Feature>.Grains` (implementations). No generic shared Contracts project.
 - Planned: durable in-app notifications via Orleans streams + Blazor Server SignalR, with email through Mailpit.
 
@@ -36,8 +36,7 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 - Stop the AppHost before rebuilding; a running Silo locks its output files.
 
 ## Status
-- Done: scaffolding, OIDC sign-in, claim forwarding to grains, Hello event written to KurrentDB, type-map registration fix, Hello flow confirmed end to end after pinning Microsoft.Orleans.Streaming to $(OrleansVersion).
+Hello flow confirmed end to end after pinning Microsoft.Orleans.Streaming to $(OrleansVersion), Web UI moved to MudBlazor.
 - Next (infrastructure, independent of the event model):
-  - Switch the `GetRDone.Web` Blazor UI to MudBlazor.
-  - Replace the placeholder `GetRDone.Identity` UI (login, logout, consent, error pages) with a more standard, polished IdentityServer UI.
+  - Replace the placeholder `GetRDone.Identity` UI
 - Next (domain): the user will create the event model; notifications are designed as part of it. After that, implement the model slice by slice.

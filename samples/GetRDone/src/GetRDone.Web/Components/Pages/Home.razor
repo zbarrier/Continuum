@@ -4,30 +4,43 @@
 @using Orleans.Multitenant
 @inject IClusterClient ClusterClient
 
-<h1>Get-R-Done</h1>
+<PageTitle>Get-R-Done</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Get-R-Done</MudText>
 
 <AuthorizeView>
-    <p>
-        Signed in as <strong>@context.User.Identity?.Name</strong>
-        (tenant <code>@context.User.FindFirst("tenant_id")?.Value</code>,
-        roles <code>@string.Join(", ", context.User.FindAll("role").Select(c => c.Value))</code>)
-    </p>
-    <form method="post" action="logout">
-        <AntiforgeryToken />
-        <button type="submit">Sign out</button>
-    </form>
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudText Typo="Typo.body1">
+            Signed in as <strong>@context.User.Identity?.Name</strong>
+        </MudText>
+        <MudStack Row="true" Spacing="1" Class="mt-2">
+            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Business">@context.User.FindFirst("tenant_id")?.Value</MudChip>
+            @foreach (var role in context.User.FindAll("role").Select(c => c.Value))
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@role</MudChip>
+            }
+        </MudStack>
+    </MudPaper>
 </AuthorizeView>
 
-<h2>Hello round trip</h2>
-<p>Temporary check that Web → Silo → KurrentDB works with the signed-in user and tenant.</p>
-
-<input @bind="_message" placeholder="Message" />
-<button @onclick="SayHelloAsync">Say hello</button>
-
-@if (_result is not null)
-{
-    <p>@_result</p>
-}
+<MudCard Elevation="1">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Hello round trip</MudText>
+            <MudText Typo="Typo.body2">Temporary check that Web → Silo → KurrentDB works with the signed-in user and tenant.</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudTextField @bind-Value="_message" Label="Message" Variant="Variant.Outlined" />
+        @if (_result is not null)
+        {
+            <MudAlert Severity="@(_succeeded ? Severity.Success : Severity.Error)" Class="mt-4">@_result</MudAlert>
+        }
+    </MudCardContent>
+    <MudCardActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SayHelloAsync" Disabled="_busy">Say hello</MudButton>
+    </MudCardActions>
+</MudCard>
 
 @code {
     [CascadingParameter]
@@ -35,6 +48,8 @@
 
     private string _message = "world";
     private string? _result;
+    private bool _succeeded;
+    private bool _busy;
 
     private async Task SayHelloAsync()
     {
@@ -42,14 +57,24 @@
         var tenantId = user.FindFirst("tenant_id")?.Value;
         if (string.IsNullOrEmpty(tenantId))
         {
+            _succeeded = false;
             _result = "Your account has no tenant.";
             return;
         }
 
-        var grain = ClusterClient.ForTenant(tenantId).GetGrain<IHelloGrain>("greetings");
-        var result = await grain.SayHelloAsync(new SayHelloCommand(_message));
-        _result = result.IsSuccess
-            ? $"{result.Value.Greeting} (greeting #{result.Value.GreetingCount} for tenant '{tenantId}')"
-            : "The greeting could not be saved.";
+        _busy = true;
+        try
+        {
+            var grain = ClusterClient.ForTenant(tenantId).GetGrain<IHelloGrain>("greetings");
+            var result = await grain.SayHelloAsync(new SayHelloCommand(_message));
+            _succeeded = result.IsSuccess;
+            _result = result.IsSuccess
+                ? $"{result.Value.Greeting} (greeting #{result.Value.GreetingCount} for tenant '{tenantId}')"
+                : "The greeting could not be saved.";
+        }
+        finally
+        {
+            _busy = false;
+        }
     }
 }

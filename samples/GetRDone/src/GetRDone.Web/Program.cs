@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 using ManagedCode.Orleans.Identity.Client.Extensions;
 
+using MudBlazor.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -42,6 +44,7 @@ builder.UseOrleansClient();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddMudServices();
 
 var app = builder.Build();
 

@@ -1,8 +1,9 @@
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
             <NotAuthorized>
-                <p>You must <a href="login?returnUrl=@Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)" data-enhance-nav="false">sign in</a> to continue.</p>
+                <MudAlert Severity="Severity.Info" Class="mb-4">You must sign in to continue.</MudAlert>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}")" UserAttributes="@(new Dictionary<string, object> { ["data-enhance-nav"] = "false" })">Sign in</MudButton>
             </NotAuthorized>
         </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
