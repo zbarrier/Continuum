@@ -40,3 +40,8 @@ Hello flow confirmed end to end after pinning Microsoft.Orleans.Streaming to $(O
 - Next (infrastructure, independent of the event model):
   - Replace the placeholder `GetRDone.Identity` UI
 - Next (domain): the user will create the event model; notifications are designed as part of it. After that, implement the model slice by slice.
+- Optional (planned): per-tenant branding and tenant-specific URLs.
+  - Branding: a tenant grain returns plain branding data (colors, logo, display name; validated value objects, no MudBlazor types); Web maps it onto a copy of `GetRDoneTheme` (the default fallback), caches per tenant, and can refresh via an Orleans stream event. Could be an event-modeled slice.
+  - URLs: each tenant gets `{slug}.getrdone.com` (wildcard DNS + `*.getrdone.com` cert) and may add verified custom domains (TXT verification, per-domain managed certs). Resolve the tenant from the host via a domain registry (host -> tenant), with one canonical URL per tenant.
+  - Login stays central on Identity; Web passes `acr_values=tenant:{slug}` for tenant branding on the login page, and a custom redirect URI validator accepts only the tenant's verified hosts.
+  - The host is only a hint: the token's `tenant_id` must match the host's tenant; keep auth cookies host-only.
