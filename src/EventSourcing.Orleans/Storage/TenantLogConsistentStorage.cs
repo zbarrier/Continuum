@@ -60,10 +60,11 @@ public sealed class TenantLogConsistentStorage : IMultiStreamLogConsistentStorag
     }
 
     /// <inheritdoc />
-    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId)
+    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId,
+        IReadOnlyList<IReadOnlyList<string>?>? streamTargets = null)
     {
         var storage = await GetStorageAsync(grainId).ConfigureAwait(false);
-        return await storage.AppendAsync(grainTypeName, grainId, entries, expectedVersion, transactionId).ConfigureAwait(false);
+        return await storage.AppendAsync(grainTypeName, grainId, entries, expectedVersion, transactionId, streamTargets).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

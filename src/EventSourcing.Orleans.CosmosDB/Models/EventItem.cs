@@ -68,6 +68,14 @@ public sealed class EventItem
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Guid? TransactionId { get; set; }
 
+    /// <summary>
+    ///     Additional grain identifiers whose streams should receive the event's append (events only), or
+    ///     <see langword="null"/> for none.
+    /// </summary>
+    [JsonPropertyName("streamTargets")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? StreamTargets { get; set; }
+
     /// <summary>The Cosmos DB ETag; read only.</summary>
     [JsonPropertyName("_etag")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

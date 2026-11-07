@@ -71,6 +71,16 @@ public static class KurrentDBEventMetadataCodec
     /// </summary>
     public const string TransactionPartitionIndexName = "transactionPartitionIndex";
 
+    /// <summary>
+    ///     The metadata name the coordinating grain's identifier is written under. Informational only.
+    /// </summary>
+    public const string TransactionCoordinatorIdName = "transactionCoordinatorId";
+
+    /// <summary>
+    ///     The metadata name the additional stream targets are written under, as a JSON array of grain identifiers.
+    /// </summary>
+    public const string StreamTargetsName = "streamTargets";
+
     // Utf8JsonWriter writes straight into an IBufferWriter, avoiding the intermediate copy a MemoryStream needs.
     // A transaction-only document is about 141 bytes and one carrying tracing about 218, so 256 covers both with
     // room for a few extra entries before the buffer has to grow.
@@ -109,6 +119,8 @@ public static class KurrentDBEventMetadataCodec
             string? transactionSize = null;
             string? partitionSize = null;
             string? partitionIndex = null;
+            string? coordinatorId = null;
+            List<string?>? streamTargets = null;
             List<KeyValuePair<string, string?>>? values = null;
             foreach (var property in document.RootElement.EnumerateObject())
             {
@@ -144,11 +156,32 @@ public static class KurrentDBEventMetadataCodec
                     partitionIndex = ReadValue(property.Value);
                     continue;
                 }
+                if (property.NameEquals(TransactionCoordinatorIdName))
+                {
+                    coordinatorId = ReadValue(property.Value);
+                    continue;
+                }
+                if (property.NameEquals(StreamTargetsName))
+                {
+                    // Anything other than an array of strings is ignored; malformed targets are skipped on read.
+                    if (property.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        streamTargets = [];
+                        foreach (var target in property.Value.EnumerateArray())
+                        {
+                            if (target.ValueKind == JsonValueKind.String)
+                            {
+                                streamTargets.Add(target.GetString());
+                            }
+                        }
+                    }
+                    continue;
+                }
                 // Create drops the remaining reserved names, so any the client adds later cannot leak into the bag.
                 (values ??= []).Add(new KeyValuePair<string, string?>(property.Name, ReadValue(property.Value)));
             }
             var transaction = ReadTransaction(transactionId, transactionSize, partitionSize, partitionIndex);
-            return EventMetadata.Create(values, traceId, spanId, transaction);
+            return EventMetadata.Create(values, traceId, spanId, transaction, coordinatorId, streamTargets);
         }
         catch (JsonException)
         {
@@ -191,16 +224,22 @@ public static class KurrentDBEventMetadataCodec
     ///     The transaction the event is being appended in, or <see langword="null" /> to write none. Recorded here
     ///     because the event store cannot distinguish the events of one append from another once they are written.
     /// </param>
+    /// <param name="transactionCoordinatorId">
+    ///     The coordinating grain's identifier, written only alongside <paramref name="transaction"/>.
+    /// </param>
+    /// <param name="streamTargets">Additional grain identifiers whose streams should receive the whole transaction.</param>
     /// <remarks>
     ///     Tracing is deliberately not written here. The client injects it during the append, merging it into this
     ///     document, and it is the only component that knows the activity actually in effect at that moment.
     /// </remarks>
     /// <exception cref="ArgumentException"><paramref name="transaction"/> does not describe a consistent group.</exception>
-    public static byte[]? Write(IEventMetadata? metadata, TransactionInfo? transaction = null)
+    public static byte[]? Write(IEventMetadata? metadata, TransactionInfo? transaction = null, string? transactionCoordinatorId = null,
+        IReadOnlyList<string>? streamTargets = null)
     {
         transaction?.EnsureValid(nameof(transaction));
         var hasMetadata = metadata is not null && metadata.Count > 0;
-        if (!hasMetadata && transaction is null)
+        var hasTargets = streamTargets is { Count: > 0 };
+        if (!hasMetadata && transaction is null && !hasTargets)
         {
             return null;
         }
@@ -214,8 +253,9 @@ public static class KurrentDBEventMetadataCodec
             }
             if (transaction is { } info)
             {
-                WriteTransaction(writer, info);
+                WriteTransaction(writer, info, transactionCoordinatorId);
             }
+            WriteStreamTargets(writer, streamTargets);
             writer.WriteEndObject();
         }
         return buffer.WrittenSpan.ToArray();
@@ -229,7 +269,7 @@ public static class KurrentDBEventMetadataCodec
     /// <remarks>
     ///     This is for storing metadata that was already read back from the log, such as when caching an event, where
     ///     the tracing context belongs to the original append and must survive. It is the opposite of
-    ///     <see cref="Write(IEventMetadata?, TransactionInfo?)" />, which omits tracing because the client
+    ///     <see cref="Write(IEventMetadata?, TransactionInfo?, string?, IReadOnlyList{string}?)" />, which omits tracing because the client
     ///     injects the live activity's context during an append.
     /// </remarks>
     public static byte[]? WriteAll(IEventMetadata? metadata)
@@ -247,7 +287,7 @@ public static class KurrentDBEventMetadataCodec
                 ? new TransactionInfo(id, size, partitionSize, partitionIndex)
                 : null;
         transaction?.EnsureValid(nameof(metadata));
-        if (metadata.Count == 0 && transaction is null && metadata.TraceId is null && metadata.SpanId is null)
+        if (metadata.Count == 0 && transaction is null && metadata.TraceId is null && metadata.SpanId is null && metadata.StreamTargets.Count == 0)
         {
             return null;
         }
@@ -266,8 +306,9 @@ public static class KurrentDBEventMetadataCodec
             }
             if (transaction is { } info)
             {
-                WriteTransaction(writer, info);
+                WriteTransaction(writer, info, metadata.TransactionCoordinatorId);
             }
+            WriteStreamTargets(writer, metadata.StreamTargets);
             writer.WriteEndObject();
         }
         return buffer.WrittenSpan.ToArray();
@@ -285,7 +326,7 @@ public static class KurrentDBEventMetadataCodec
         }
     }
 
-    private static void WriteTransaction(Utf8JsonWriter writer, TransactionInfo info)
+    private static void WriteTransaction(Utf8JsonWriter writer, TransactionInfo info, string? coordinatorId)
     {
         // Written as strings so the sizes read back the same way every other metadata value does. Invariant culture
         // keeps the text identical on every silo regardless of its locale.
@@ -293,6 +334,24 @@ public static class KurrentDBEventMetadataCodec
         writer.WriteString(TransactionSizeName, info.TransactionSize.ToString(CultureInfo.InvariantCulture));
         writer.WriteString(TransactionPartitionSizeName, info.TransactionPartitionSize.ToString(CultureInfo.InvariantCulture));
         writer.WriteString(TransactionPartitionIndexName, info.TransactionPartitionIndex.ToString(CultureInfo.InvariantCulture));
+        if (!string.IsNullOrEmpty(coordinatorId))
+        {
+            writer.WriteString(TransactionCoordinatorIdName, coordinatorId);
+        }
+    }
+
+    private static void WriteStreamTargets(Utf8JsonWriter writer, IReadOnlyList<string>? streamTargets)
+    {
+        if (streamTargets is not { Count: > 0 })
+        {
+            return;
+        }
+        writer.WriteStartArray(StreamTargetsName);
+        foreach (var target in streamTargets)
+        {
+            writer.WriteStringValue(target);
+        }
+        writer.WriteEndArray();
     }
 
     /// <summary>

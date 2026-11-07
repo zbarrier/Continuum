@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 
+using Continuum.Orleans.Events;
 using Continuum.Orleans.Transactions;
 
 using Microsoft.Extensions.Logging;
@@ -200,9 +201,9 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
         try
         {
             var logEntries = updates.Select(x => x.Entry!).ToImmutableList();
-            _globalVersion = transaction is null
-                ? await _logStorage.AppendAsync(_grainTypeName, Services.GrainId, logEntries, expectedVersion, transactionId)
-                : await AppendTransactionAsync(transaction, logEntries, expectedVersion);
+            _globalVersion = transaction is not null
+                ? await AppendTransactionAsync(transaction, logEntries, expectedVersion)
+                : await _logStorage.AppendAsync(_grainTypeName, Services.GrainId, logEntries, expectedVersion, transactionId, GetStreamTargets(logEntries));
             // The log is the source of truth and the snapshot is only a cache, so the batch is written once the append
             // succeeds. Reporting a failed snapshot write as a failed batch would make Orleans retry and append the
             // same entries again.
@@ -326,8 +327,8 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
         foreach (var record in transaction.Records)
         {
             records.Add(record.Participant is { } participant
-                ? new(participant + 1, record.Event!)
-                : new(0, logEntries[nextEntry++]));
+                ? new(participant + 1, record.Event!, GetStreamTargets(record.Event!))
+                : new(0, logEntries[nextEntry], GetStreamTargets(logEntries[nextEntry++])));
         }
         if (nextEntry != logEntries.Count)
         {
@@ -336,6 +337,31 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
         var versions = await multiStreamStorage.AppendAsync(streams, records, transaction.TransactionId);
         return versions[0];
     }
+
+    /// <summary>
+    ///     Gets the validated stream targets of each entry, or <see langword="null"/> when no entry names any.
+    /// </summary>
+    private IReadOnlyList<string>?[]? GetStreamTargets(IList<TLogEntry> logEntries)
+    {
+        if (Host is not IStreamTargetSource)
+        {
+            return null;
+        }
+        var targets = new IReadOnlyList<string>?[logEntries.Count];
+        var any = false;
+        for (var index = 0; index < targets.Length; index++)
+        {
+            targets[index] = GetStreamTargets(logEntries[index]);
+            any |= targets[index] is not null;
+        }
+        return any ? targets : null;
+    }
+
+    /// <summary>
+    ///     Gets an event's validated stream targets from the host, or <see langword="null"/> for none.
+    /// </summary>
+    private string[]? GetStreamTargets(object @event)
+        => Host is IStreamTargetSource source ? StreamTargets.Format(Services.GrainId, source.GetStreamTargets(@event)) : null;
 
     /// <summary>
     ///     Whether a failed transaction append can never succeed by retrying: a participant's log moved (the grain's own

@@ -94,6 +94,24 @@ public interface IEventMetadata : IReadOnlyDictionary<string, string>
     int? TransactionPartitionIndex { get; }
 
     /// <summary>
+    ///     The identifier of the grain that coordinated the transaction the event was appended in.
+    /// <para>
+    ///     Informational only, for diagnostics: it does not affect routing. <see langword="null" /> when the event was
+    ///     not appended by a coordinated multi-stream transaction.
+    /// </para>
+    /// </summary>
+    string? TransactionCoordinatorId { get; }
+
+    /// <summary>
+    ///     The identifiers of additional grains whose streams should receive the event's whole transaction.
+    /// <para>
+    ///     Written by the producer at append time. Values are passed through as text; a consumer that routes on them
+    ///     parses and validates each one. Empty when the event names no additional targets.
+    /// </para>
+    /// </summary>
+    IReadOnlyList<string> StreamTargets { get; }
+
+    /// <summary>
     ///     Determines whether a name is reserved for use by a transport.
     /// </summary>
     public static bool IsReservedName(string name)

@@ -170,11 +170,16 @@ public class KurrentDBLogConsistentStorage : IMultiStreamLogConsistentStorage, I
     }
 
     /// <inheritdoc />
-    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId)
+    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId,
+        IReadOnlyList<IReadOnlyList<string>?>? streamTargets = null)
     {
         EnsureInitialized();
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentOutOfRangeException.ThrowIfNegative(expectedVersion);
+        if (streamTargets is not null && streamTargets.Count != entries.Count)
+        {
+            throw new ArgumentException("There must be one stream target list per entry.", nameof(streamTargets));
+        }
         var streamName = GetStreamName(grainId);
         if (entries.Count == 0)
         {
@@ -200,7 +205,8 @@ public class KurrentDBLogConsistentStorage : IMultiStreamLogConsistentStorage, I
             var serializedEntries = new EventData[entries.Count];
             for (var index = 0; index < serializedEntries.Length; index++)
             {
-                serializedEntries[index] = SerializeEvent(entries[index], new TransactionInfo(transactionId, entries.Count, entries.Count, index));
+                serializedEntries[index] = SerializeEvent(entries[index], new TransactionInfo(transactionId, entries.Count, entries.Count, index),
+                    streamTargets: streamTargets?[index]);
             }
             var writeResult = await _client.AppendToStreamAsync(streamName, streamState, serializedEntries, null, null, _userCredentials);
             operation.SetEventCount(serializedEntries.Length);
@@ -275,11 +281,13 @@ public class KurrentDBLogConsistentStorage : IMultiStreamLogConsistentStorage, I
             // single-stream subscriber can still regroup its own events.
             var appendRecords = new List<AppendRecord>(records.Count);
             var partitionIndexes = new int[streams.Count];
+            // The coordinator is recorded for diagnostics only; a single-stream append has no other grain to tell apart.
+            var coordinatorId = streams.Count > 1 ? streams[0].GrainId.ToString() : null;
             foreach (var record in records)
             {
                 var index = record.StreamIndex;
                 var transaction = new TransactionInfo(transactionId, records.Count, partitionCounts[index], partitionIndexes[index]++);
-                appendRecords.Add(new AppendRecord(streamNames[index], SerializeEvent(record.Entry, transaction)));
+                appendRecords.Add(new AppendRecord(streamNames[index], SerializeEvent(record.Entry, transaction, coordinatorId, record.StreamTargets)));
             }
             var checks = new List<ConsistencyCheck>();
             for (var index = 0; index < streams.Count; index++)
@@ -374,12 +382,15 @@ public class KurrentDBLogConsistentStorage : IMultiStreamLogConsistentStorage, I
     /// </summary>
     /// <param name="entry"></param>
     /// <param name="transaction">The append this entry belongs to, recorded so a subscriber can regroup the events.</param>
+    /// <param name="coordinatorId">The grain coordinating a multi-stream append, recorded for diagnostics only.</param>
+    /// <param name="streamTargets">Additional grains whose streams should receive the whole transaction.</param>
     /// <typeparam name="TLogEntry"></typeparam>
     /// <returns></returns>
-    private EventData SerializeEvent<TLogEntry>(TLogEntry entry, TransactionInfo transaction)
+    private EventData SerializeEvent<TLogEntry>(TLogEntry entry, TransactionInfo transaction, string? coordinatorId = null,
+        IReadOnlyList<string>? streamTargets = null)
     {
         var eventId = Uuid.FromGuid(_eventIdGenerator());
-        var metadata = KurrentDBEventMetadataCodec.Write(null, transaction);
+        var metadata = KurrentDBEventMetadataCodec.Write(null, transaction, coordinatorId, streamTargets);
         var readonlyMetadata = metadata is null ? null : (ReadOnlyMemory<byte>?)metadata;
         var entryTypeName = _typeMapper.GetTypeName(entry!.GetType());
         var entryData = _storageSerializer.Serialize(entry);

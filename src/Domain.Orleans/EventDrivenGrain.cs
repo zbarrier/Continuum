@@ -1,5 +1,6 @@
 using Continuum.CSharpFunctionalExtensions;
 using Continuum.Errors;
+using Continuum.Orleans.Events;
 using Continuum.Orleans.Transactions;
 using Continuum.TypeMapping;
 
@@ -51,7 +52,8 @@ public abstract class EventDrivenGrain<TState> : EventDrivenGrain<TState, object
 public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TState, TEventBase>,
     IEventDrivenGrain,
     ITransactionParticipant,
-    ITransactionSubmissionSource
+    ITransactionSubmissionSource,
+    IStreamTargetSource
     where TState : EventDrivenState<TState, TEventBase>, new()
     where TEventBase : class
 {
@@ -69,6 +71,17 @@ public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TSta
 
     /// <inheritdoc/>
     TransactionSubmission? ITransactionSubmissionSource.PendingTransaction => _coordination.PendingTransaction;
+
+    /// <inheritdoc/>
+    IReadOnlyList<GrainId> IStreamTargetSource.GetStreamTargets(object @event) => GetStreamTargets(@event);
+
+    /// <summary>
+    ///     Gets the additional grains whose streams should receive the transaction an event is appended in. The event
+    ///     always goes to its own grain's stream as well. Targets must belong to the same tenant as this grain.
+    /// </summary>
+    /// <param name="event">The event being appended, which may be a participant's event in a multi-stream transaction.</param>
+    /// <returns>The targets; none by default.</returns>
+    protected virtual IReadOnlyList<GrainId> GetStreamTargets(object @event) => [];
 
     /// <summary>Gets the grain's logger.</summary>
     public ILogger Logger { get; }

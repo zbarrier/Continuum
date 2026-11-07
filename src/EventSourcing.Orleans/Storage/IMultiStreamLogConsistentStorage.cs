@@ -14,6 +14,7 @@ public interface IMultiStreamLogConsistentStorage : ILogConsistentStorage
     /// </summary>
     /// <param name="streams">
     ///     The grains' logs. A grain may appear only once. A stream with no records only checks its expected version.
+    ///     The first stream is the grain coordinating the append, which is recorded on every entry for diagnostics.
     /// </param>
     /// <param name="records">
     ///     The entries to append, in the order they were generated across all streams. At least one is required.
@@ -44,5 +45,9 @@ public sealed record LogStream(string GrainTypeName, GrainId GrainId, int? Expec
 /// </summary>
 /// <param name="StreamIndex">The index of the entry's log in the append's streams.</param>
 /// <param name="Entry">The entry to append.</param>
+/// <param name="StreamTargets">
+///     Additional grain identifiers whose streams should receive the entry's whole transaction, or
+///     <see langword="null"/> for none. Already validated by the producer.
+/// </param>
 /// <typeparam name="TLogEntry">The log entry type.</typeparam>
-public sealed record LogRecord<TLogEntry>(int StreamIndex, TLogEntry Entry);
+public sealed record LogRecord<TLogEntry>(int StreamIndex, TLogEntry Entry, IReadOnlyList<string>? StreamTargets = null);

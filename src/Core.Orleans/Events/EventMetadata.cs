@@ -17,9 +17,10 @@ public sealed class EventMetadata : IEventMetadata
     [Id(0)]
     private readonly Dictionary<string, string> _values;
 
-    private EventMetadata(Dictionary<string, string> values)
+    private EventMetadata(Dictionary<string, string> values, string[]? streamTargets = null)
     {
         _values = values;
+        _streamTargets = streamTargets;
     }
 
     /// <inheritdoc />
@@ -45,6 +46,16 @@ public sealed class EventMetadata : IEventMetadata
     /// <inheritdoc />
     [Id(6)]
     public int? TransactionPartitionIndex { get; private init; }
+
+    /// <inheritdoc />
+    [Id(7)]
+    public string? TransactionCoordinatorId { get; private init; }
+
+    [Id(8)]
+    private readonly string[]? _streamTargets;
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> StreamTargets => _streamTargets ?? [];
 
     /// <summary>
     ///     Creates metadata from the supplied entries, ignoring any whose name is reserved by a transport.
@@ -78,7 +89,33 @@ public sealed class EventMetadata : IEventMetadata
     public static EventMetadata Create(IEnumerable<KeyValuePair<string, string?>>? values, string? traceId, string? spanId,
         TransactionInfo? transaction)
     {
+        return Create(values, traceId, spanId, transaction, null, null);
+    }
+
+    /// <summary>
+    ///     Creates metadata from the supplied entries together with the tracing, transaction and routing values a
+    ///     transport lifted out of the same document.
+    /// </summary>
+    /// <param name="values">The entries to copy. Entries with a null or empty name, or a null value, are skipped.</param>
+    /// <param name="traceId">The W3C trace id, or <see langword="null" /> when the event carried no tracing.</param>
+    /// <param name="spanId">The W3C span id, or <see langword="null" /> when the event carried no tracing.</param>
+    /// <param name="transaction">The producing transaction, or <see langword="null" /> when there was none.</param>
+    /// <param name="transactionCoordinatorId">
+    ///     The coordinating grain's identifier, or <see langword="null" />. Only kept when <paramref name="transaction"/>
+    ///     is present, since a coordinator without a transaction means nothing.
+    /// </param>
+    /// <param name="streamTargets">The additional target identifiers. Null or empty entries are skipped.</param>
+    /// <exception cref="ArgumentException"><paramref name="transaction"/> does not describe a consistent group.</exception>
+    public static EventMetadata Create(IEnumerable<KeyValuePair<string, string?>>? values, string? traceId, string? spanId,
+        TransactionInfo? transaction, string? transactionCoordinatorId, IEnumerable<string?>? streamTargets)
+    {
         transaction?.EnsureValid(nameof(transaction));
+        var coordinator = transaction is null || string.IsNullOrEmpty(transactionCoordinatorId) ? null : transactionCoordinatorId;
+        var targets = streamTargets?.Where(static target => !string.IsNullOrEmpty(target)).Select(static target => target!).ToArray();
+        if (targets is { Length: 0 })
+        {
+            targets = null;
+        }
         var copy = new Dictionary<string, string>(values?.TryGetNonEnumeratedCount(out var count) == true ? count : 0, StringComparer.Ordinal);
         if (values is not null)
         {
@@ -92,12 +129,13 @@ public sealed class EventMetadata : IEventMetadata
             }
         }
         var hasTracing = traceId is not null || spanId is not null;
-        if (copy.Count == 0 && !hasTracing && transaction is null)
+        if (copy.Count == 0 && !hasTracing && transaction is null && targets is null)
         {
             return Empty;
         }
-        return new EventMetadata(copy)
+        return new EventMetadata(copy, targets)
         {
+            TransactionCoordinatorId = coordinator,
             TraceId = traceId,
             SpanId = spanId,
             TransactionId = transaction?.TransactionId,

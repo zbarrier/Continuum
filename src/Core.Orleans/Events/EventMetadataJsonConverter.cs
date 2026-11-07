@@ -22,6 +22,8 @@ public sealed class EventMetadataJsonConverter : JsonConverter<EventMetadata>
     private const string TransactionSizeName = "transactionSize";
     private const string TransactionPartitionSizeName = "transactionPartitionSize";
     private const string TransactionPartitionIndexName = "transactionPartitionIndex";
+    private const string TransactionCoordinatorIdName = "transactionCoordinatorId";
+    private const string StreamTargetsName = "streamTargets";
 
     /// <inheritdoc />
     public override EventMetadata Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -55,6 +57,8 @@ public sealed class EventMetadataJsonConverter : JsonConverter<EventMetadata>
         int? transactionSize = null;
         int? transactionPartitionSize = null;
         int? transactionPartitionIndex = null;
+        string? transactionCoordinatorId = null;
+        List<string?>? streamTargets = null;
 
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
@@ -83,6 +87,12 @@ public sealed class EventMetadataJsonConverter : JsonConverter<EventMetadata>
                 case TransactionPartitionIndexName:
                     transactionPartitionIndex = ReadInt32(ref reader);
                     break;
+                case TransactionCoordinatorIdName:
+                    transactionCoordinatorId = reader.GetString();
+                    break;
+                case StreamTargetsName:
+                    streamTargets = ReadStreamTargets(ref reader);
+                    break;
                 default:
                     reader.Skip();
                     break;
@@ -108,7 +118,7 @@ public sealed class EventMetadataJsonConverter : JsonConverter<EventMetadata>
                 $"Event metadata has an incomplete transaction; {TransactionIdName}, {TransactionSizeName}, {TransactionPartitionSizeName} and {TransactionPartitionIndexName} must all be present or all be absent.");
         }
 
-        return EventMetadata.Create(values, traceId, spanId, transaction);
+        return EventMetadata.Create(values, traceId, spanId, transaction, transactionCoordinatorId, streamTargets);
     }
 
     /// <summary>
@@ -143,7 +153,38 @@ public sealed class EventMetadataJsonConverter : JsonConverter<EventMetadata>
         WriteIfNotNull(writer, TransactionSizeName, metadata.TransactionSize);
         WriteIfNotNull(writer, TransactionPartitionSizeName, metadata.TransactionPartitionSize);
         WriteIfNotNull(writer, TransactionPartitionIndexName, metadata.TransactionPartitionIndex);
+        if (metadata.TransactionCoordinatorId is { } coordinatorId)
+        {
+            writer.WriteString(TransactionCoordinatorIdName, coordinatorId);
+        }
+        if (metadata.StreamTargets.Count > 0)
+        {
+            writer.WriteStartArray(StreamTargetsName);
+            foreach (var target in metadata.StreamTargets)
+            {
+                writer.WriteStringValue(target);
+            }
+            writer.WriteEndArray();
+        }
         writer.WriteEndObject();
+    }
+
+    private static List<string?>? ReadStreamTargets(ref Utf8JsonReader reader)
+    {
+        if (reader.TokenType == JsonTokenType.Null)
+        {
+            return null;
+        }
+        if (reader.TokenType != JsonTokenType.StartArray)
+        {
+            throw new JsonException("Expected event metadata stream targets to be an array.");
+        }
+        var targets = new List<string?>();
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            targets.Add(reader.GetString());
+        }
+        return targets;
     }
 
     private static void ReadValues(ref Utf8JsonReader reader, List<KeyValuePair<string, string?>> values)

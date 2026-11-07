@@ -272,11 +272,16 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     }
 
     /// <inheritdoc />
-    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId)
+    public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId,
+        IReadOnlyList<IReadOnlyList<string>?>? streamTargets = null)
     {
         EnsureInitialized();
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentOutOfRangeException.ThrowIfNegative(expectedVersion);
+        if (streamTargets is not null && streamTargets.Count != entries.Count)
+        {
+            throw new ArgumentException("There must be one stream target list per entry.", nameof(streamTargets));
+        }
 
         var streamName = GetStreamName(grainId);
 
@@ -296,7 +301,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         using var operation = _instrumentation.Start(LogConsistentStorageInstrumentation.AppendOperation, grainTypeName, grainId, streamName);
         try
         {
-            return await AppendCoreAsync(grainTypeName, grainId, streamName, entries, expectedVersion, transactionId, operation).ConfigureAwait(false);
+            return await AppendCoreAsync(grainTypeName, grainId, streamName, entries, expectedVersion, transactionId, streamTargets, operation).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -306,7 +311,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     }
 
     private async Task<int> AppendCoreAsync<TLogEntry>(string grainTypeName, GrainId grainId, string streamName, IList<TLogEntry> entries, int expectedVersion,
-        Guid transactionId, LogConsistentStorageInstrumentation.Operation operation)
+        Guid transactionId, IReadOnlyList<IReadOnlyList<string>?>? streamTargets, LogConsistentStorageInstrumentation.Operation operation)
     {
         var transaction = _container.CreateTransactionalBatch(new PartitionKey(streamName));
         ulong currentVersion = (ulong)expectedVersion;
@@ -355,12 +360,14 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
         ulong subSequenceNumber = 0;
         List<EventItem> eventItemsToAppend = new(entries.Count);
 
-        foreach (var entry in entries)
+        for (var index = 0; index < entries.Count; index++)
         {
+            var entry = entries[index];
             if (entry is null)
             {
                 throw new CosmosDBLogConsistentStorageException(FormattableString.Invariant($"Failed to write log entries for {grainTypeName} with ID {grainId} and stream {streamName}. Cannot append null entries."));
             }
+            var targets = streamTargets?[index];
             var eventDataEntry = new EventItem
             {
                 Id = _eventIdGenerator().ToString(),
@@ -369,6 +376,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
                 Version = ++currentVersion,
                 SubSequenceNumber = subSequenceNumber++,
                 TransactionId = transactionId,
+                StreamTargets = targets is { Count: > 0 } ? [.. targets] : null,
                 DataType = _typeMapper.GetTypeName(entry.GetType()),
                 Data = SerializeEntry(entry),
             };

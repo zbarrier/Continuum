@@ -83,7 +83,8 @@ public class TenantLogConsistentStorageTests
             return Task.FromResult(0);
         }
 
-        public Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId)
+        public Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId,
+            IReadOnlyList<IReadOnlyList<string>?>? streamTargets = null)
         {
             Calls++;
             return Task.FromResult(expectedVersion + entries.Count);
