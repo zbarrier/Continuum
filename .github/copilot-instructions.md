@@ -7,6 +7,7 @@
 - All Continuum framework library projects must be Native AOT compatible (set IsAotCompatible=true and keep builds free of AOT/trim warnings). Orleans-dependent runtime features (e.g., Orleans DeepCopier/AddSerializer used by grains and sessions) are not required to run under Native AOT since Orleans does not support AOT yet; libraries must still be IsAotCompatible with no AOT/trim warnings from Continuum's own code.
 - Continuum projects reference each other with ProjectReference. Any Continuum project or test project that declares its own type-mapped types (e.g., [DomainEventType]) must reference Continuum.Core.SourceGenerators as an analyzer (OutputItemType="Analyzer" ReferenceOutputAssembly="false"); otherwise those types are never registered with the type mapper. Projects that do not declare type-mapped types do not need this analyzer reference.
 - Continuum has not shipped to production; no backward compatibility with previously stored data or prior behavior is needed — don't add legacy fallbacks.
+- Continuum is built primarily for the owner's own use (open source but not dumbed down): prefer powerful, flexible features that trust developers to use them wisely and document the costs/risks, rather than imposing restrictive caps or safeguards.
 
 ## Framework Usage
 - Continuum type map attributes are used almost only in application code that consumes the framework via NuGet, not in other Continuum projects.
@@ -57,3 +58,4 @@
 
 ## KurrentDB Subscriptions
 - Continuum KurrentDB subscriptions should fan out per connection: one subscription registered in startup code automatically runs once on each KurrentDB connection/instance (e.g., 1 shared + 2 dedicated = 3 connections), with each connection discovered at startup (likely via DI keyed KurrentDBClient registrations). This is not implemented yet in the self-hosted catch-up subscriptions or stream provider.
+- Planned (not implemented): proper OpenTelemetry tracing for the self-hosted catch-up subscriptions. A batch that holds a single transaction continues that transaction's trace; a batch spanning multiple transactions starts its own activity with span links to each transaction's trace context (traceId/spanId from event metadata).

@@ -54,3 +54,7 @@ Options are bound from `Continuum:KurrentDB:Subscriptions:{Name}`, where `{Name}
 Add a worker-wide health check with `builder.Services.AddHealthChecks().AddKurrentDBCatchupSubscriptions()`. It reports Unhealthy when any subscription has stopped on a batch it could not process (it stays stopped until the worker is fixed and restarted), Degraded while any subscription is reconnecting or retrying a batch, and Healthy otherwise.
 
 Metrics are recorded with `System.Diagnostics.Metrics` on the meter `KurrentDBCatchupSubscriptionMetrics.MeterName` (`Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions`), tagged with `continuum.subscription.name`: events and batches processed, batch retries, reconnects, failures, batch duration and a subscription state gauge. To export them with OpenTelemetry, add the meter: `.WithMetrics(m => m.AddMeter(KurrentDBCatchupSubscriptionMetrics.MeterName))`.
+
+## Planned
+
+- **OpenTelemetry tracing.** Batch processing will be traced from the trace context each event carries in its metadata. A batch holding a single transaction continues that transaction's trace; a batch spanning multiple transactions starts its own activity with span links to each transaction's trace context.
