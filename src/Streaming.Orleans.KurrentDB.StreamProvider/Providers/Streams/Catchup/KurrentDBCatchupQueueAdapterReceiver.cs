@@ -46,6 +46,9 @@ internal class KurrentDBCatchupQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     // Receiver life cycle
     private int _receiverState = ReceiverShutdown;
     private int _initializing;
+    // Set when a transaction cannot be cached. The subscription stays halted until the silo restarts, so nothing past
+    // the transaction is read, delivered or checkpointed.
+    private KurrentDBTransactionTooLargeForCacheException? _halted;
 
     private const int ReceiverShutdown = 0;
     private const int ReceiverRunning = 1;
@@ -233,6 +236,10 @@ internal class KurrentDBCatchupQueueAdapterReceiver : IKurrentDBQueueAdapterRece
                 return Array.Empty<IBatchContainer>();
             }
         }
+        if (_halted is { } halted)
+        {
+            throw new InvalidOperationException("The catch-up subscription is halted because a transaction did not fit in the cache. Raise the cache block size and restart the silo.", halted);
+        }
         // Read once: shutdown can clear the field on another thread after the checks above.
         var receiver = _receiver;
         if (receiver == null)
@@ -254,20 +261,42 @@ internal class KurrentDBCatchupQueueAdapterReceiver : IKurrentDBQueueAdapterRece
             _logger.ReceiverReadFailed(ex, _settings.QueueName);
             throw;
         }
+        var cache = _cache;
         if (messages == null || messages.Count == 0)
         {
             _receiverMonitor.TrackMessagesReceived(0, null, null);
-            return Array.Empty<IBatchContainer>();
+            // A read with nothing new is when a transaction whose remaining events were filtered out would otherwise
+            // wait for more events to be written.
+            return cache == null ? Array.Empty<IBatchContainer>() : ToNotifications(AddToCache(() => cache.ReleaseStalledTransaction(DateTime.UtcNow, ((KurrentDBCatchupSubscriptionReceiverOptions)_settings.ReceiverOptions).IncompleteTransactionTimeout)));
         }
         // receiverMonitor message age
         var dequeueTimeUtc = DateTime.UtcNow;
         TrackMessagesReceived(messages);
-        var cache = _cache;
         if (cache == null)
         {
             return Array.Empty<IBatchContainer>();
         }
-        var messageStreamPositions = cache.Add(messages, dequeueTimeUtc);
+        return ToNotifications(AddToCache(() => cache.Add(messages, dequeueTimeUtc)));
+    }
+
+    private List<StreamPosition> AddToCache(Func<List<StreamPosition>> add)
+    {
+        try
+        {
+            return add();
+        }
+        catch (KurrentDBTransactionTooLargeForCacheException ex)
+        {
+            // The cache has logged what block size is needed. The events have left the KurrentDB receiver, so carrying
+            // on would skip them; halting keeps the checkpoint behind the transaction until the silo is restarted.
+            _halted = ex;
+            _settings.Diagnostics?.Halted(ex);
+            throw;
+        }
+    }
+
+    private static IList<IBatchContainer> ToNotifications(List<StreamPosition> messageStreamPositions)
+    {
         var batches = new List<IBatchContainer>(messageStreamPositions.Count);
         foreach (var streamPosition in messageStreamPositions)
         {

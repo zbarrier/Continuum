@@ -14,8 +14,8 @@ using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests;
 
 /// <summary>
-///     Verifies that an event too large for a cache block is skipped on its own, and the rest of its batch is still
-///     cached and delivered.
+///     Verifies that a transaction too large for a cache block halts the subscription, reporting the block size it
+///     needs, and nothing past it is checkpointed.
 /// </summary>
 public class KurrentDBCatchupQueueCacheOversizedEventTests
 {
@@ -56,61 +56,31 @@ public class KurrentDBCatchupQueueCacheOversizedEventTests
             DateTime.UtcNow, new KurrentDBRawEvent(new byte[dataSize]));
 
     [Fact]
-    public void An_Oversized_Event_Is_Skipped_And_The_Rest_Of_The_Batch_Is_Cached()
+    public void An_Oversized_Event_Halts_With_The_Size_Needed()
     {
         var cache = CreateCache();
 
-        var positions = cache.Add(
+        var ex = Assert.Throws<KurrentDBTransactionTooLargeForCacheException>(() => cache.Add(
         [
             CreateEvent(0, 100, 10),
             CreateEvent(1, 200, BlockSize * 2),
             CreateEvent(2, 300, 10),
-        ], DateTime.UtcNow);
+        ], DateTime.UtcNow));
 
-        Assert.Equal([100L, 300L], positions.Select(position => position.SequenceToken.SequenceNumber));
-
-        var cursor = cache.GetCursorAtPosition(positions[0].StreamId, StreamSubscriptionStartPosition.EarliestAvailable);
-        Assert.True(cache.TryGetNextMessage(cursor, out var first));
-        Assert.True(cache.TryGetNextMessage(cursor, out var second));
-        Assert.False(cache.TryGetNextMessage(cursor, out _));
-        Assert.Equal(100, first.SequenceToken.SequenceNumber);
-        Assert.Equal(300, second.SequenceToken.SequenceNumber);
+        Assert.Equal(200UL, ex.CommitPosition);
+        Assert.Equal(BlockSize, ex.BlockSize);
+        Assert.True(ex.Size > BlockSize);
     }
 
     [Fact]
-    public void A_Batch_Of_Only_Oversized_Events_Caches_Nothing()
-    {
-        var cache = CreateCache();
-
-        var positions = cache.Add([CreateEvent(0, 100, BlockSize * 2)], DateTime.UtcNow);
-
-        Assert.Empty(positions);
-    }
-
-    [Fact]
-    public void A_Skipped_Batch_On_An_Empty_Cache_Is_Released_For_Checkpointing()
+    public void An_Oversized_Event_Is_Never_Released_For_Checkpointing()
     {
         var cache = CreateCache();
         var checkpoints = new List<ulong>();
         cache.OnCheckpointablePosition = checkpoints.Add;
 
-        cache.Add([CreateEvent(0, 100, BlockSize * 2), CreateEvent(1, 200, BlockSize * 2)], DateTime.UtcNow);
+        Assert.Throws<KurrentDBTransactionTooLargeForCacheException>(() => cache.Add([CreateEvent(0, 100, BlockSize * 2)], DateTime.UtcNow));
 
-        // Nothing is cached in front of the skipped events, so no purge would ever report them.
-        Assert.Equal([200UL], checkpoints);
-    }
-
-    [Fact]
-    public void A_Skipped_Batch_Behind_Cached_Events_Waits_For_Them_To_Be_Purged()
-    {
-        var cache = CreateCache();
-        var checkpoints = new List<ulong>();
-        cache.OnCheckpointablePosition = checkpoints.Add;
-        cache.Add([CreateEvent(0, 100, 10)], DateTime.UtcNow);
-
-        cache.Add([CreateEvent(1, 200, BlockSize * 2)], DateTime.UtcNow);
-
-        // The cached event is still in front of the skipped one, so releasing it now would checkpoint past an unread event.
-        Assert.Empty(checkpoints);
+        Assert.DoesNotContain(checkpoints, position => position >= 100);
     }
 }

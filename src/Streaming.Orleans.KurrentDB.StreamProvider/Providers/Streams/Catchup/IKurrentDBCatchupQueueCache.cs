@@ -1,3 +1,5 @@
+using StreamPosition = Orleans.Streams.StreamPosition;
+
 namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 
 /// <summary>
@@ -36,4 +38,13 @@ public interface IKurrentDBCatchupQueueCache : IKurrentDBQueueCache
     ///     behind every active cursor.
     /// </summary>
     Action<ulong>? OnCheckpointablePosition { get; set; }
+
+    /// <summary>
+    ///     Caches the transaction still being read when no event has arrived for it within <paramref name="timeout" />,
+    ///     so a transaction whose remaining events were filtered out is not held back on a quiet subscription.
+    /// </summary>
+    /// <param name="utcNow">The current time.</param>
+    /// <param name="timeout">How long to wait for the rest of a transaction after its last event arrived.</param>
+    /// <returns>The positions cached, or an empty list when no transaction was released.</returns>
+    List<StreamPosition> ReleaseStalledTransaction(DateTime utcNow, TimeSpan timeout);
 }

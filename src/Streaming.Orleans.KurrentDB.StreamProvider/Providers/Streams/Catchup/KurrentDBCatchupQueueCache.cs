@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 using KurrentDB.Client;
 
@@ -129,33 +130,59 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
             {
                 // Same as an oversized event: failing the batch would lose every other event in it.
                 _logger.InvalidStreamNamespace(queueMessage.EventId, queueMessage.EventType, queueMessage.StreamName.Value, queueMessage.Cursor.SequenceNumber, ex.StreamNamespace);
-                skippedTail = (ulong)queueMessage.Cursor.SequenceNumber;
+                skippedTail = TrySkip(queueMessage, skippedTail);
                 continue;
             }
             catch (InvalidOrleansStreamIdException ex)
             {
                 // Same as an invalid namespace: failing the batch would lose every other event in it.
                 _logger.InvalidOrleansStreamId(ex, queueMessage.EventId, queueMessage.EventType, queueMessage.StreamName.Value, queueMessage.Cursor.SequenceNumber, ex.OrleansStreamId);
-                skippedTail = (ulong)queueMessage.Cursor.SequenceNumber;
+                skippedTail = TrySkip(queueMessage, skippedTail);
                 continue;
             }
-            CachedMessage cachedMessage;
-            try
+            if (_pending.Count > 0 && string.Equals(queueMessage.StreamName.Value, KurrentDBStreamedEventConversions.CheckpointStreamName.Value, StringComparison.Ordinal))
             {
-                cachedMessage = _dataAdapter.FromQueueMessage(streamPosition, queueMessage, dequeueTimeUtc, GetSegment);
-            }
-            catch (EventTooLargeForCacheException ex)
-            {
-                // The event has already left the receiver, so failing the batch would lose every other event in it.
-                // Skipping only this event keeps the rest; the checkpoint moves past it with the next purge.
-                _logger.EventTooLargeForCache(queueMessage.EventId, queueMessage.EventType, queueMessage.StreamName.Value, queueMessage.Cursor.SequenceNumber, ex.Size, ex.BlockSize);
-                skippedTail = (ulong)queueMessage.Cursor.SequenceNumber;
+                // A checkpoint marker only advances the checkpoint, which must not pass a transaction still being read.
+                // The next marker after the transaction completes covers it.
                 continue;
             }
-            cachedMessages.Add(cachedMessage);
-            streamPositions.Add(streamPosition);
-            skippedTail = null;
+            if (_pending.Count > 0 && !BelongsToPending(queueMessage))
+            {
+                // Events of one append are contiguous in $all, so a different event means the pending transaction can
+                // never complete. Its events are cached as they are rather than lost.
+                _logger.IncompleteTransaction(_pending[0].Message.Metadata.TransactionId, _pending.Count, _pending[0].Message.Metadata.TransactionSize);
+                skippedTail = CacheTransaction(dequeueTimeUtc, cachedMessages, streamPositions, skippedTail);
+            }
+            _pending.Add((queueMessage, streamPosition));
+            _pendingLastReceivedUtc = dequeueTimeUtc;
+            if (IsTransactionComplete())
+            {
+                skippedTail = CacheTransaction(dequeueTimeUtc, cachedMessages, streamPositions, skippedTail);
+            }
         }
+        return Commit(cachedMessages, streamPositions, skippedTail, dequeueTimeUtc);
+    }
+
+    /// <inheritdoc />
+    public List<StreamPosition> ReleaseStalledTransaction(DateTime utcNow, TimeSpan timeout)
+    {
+        if (_pending.Count == 0 || utcNow - _pendingLastReceivedUtc < timeout)
+        {
+            return [];
+        }
+        // The rest of the transaction was filtered out of the subscription, or has not been written. Holding it longer
+        // would keep its events from consumers on a quiet subscription, so the events read are delivered as they are.
+        _logger.StalledTransaction(_pending[0].Message.Metadata.TransactionId, _pending.Count, _pending[0].Message.Metadata.TransactionSize, timeout);
+        var streamPositions = new List<StreamPosition>();
+        var cachedMessages = new List<CachedMessage>();
+        var skippedTail = CacheTransaction(utcNow, cachedMessages, streamPositions, null);
+        return Commit(cachedMessages, streamPositions, skippedTail, utcNow);
+    }
+
+    private DateTime _pendingLastReceivedUtc;
+
+    private List<StreamPosition> Commit(List<CachedMessage> cachedMessages, List<StreamPosition> streamPositions, ulong? skippedTail, DateTime dequeueTimeUtc)
+    {
         _cache.Add(cachedMessages, dequeueTimeUtc);
         if (cachedMessages.Count > 0)
         {
@@ -164,12 +191,131 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
             _newestCommitPosition = _dataAdapter.GetCommitPosition(cachedMessages[^1]);
             WakeCaughtUpCursors(cachedMessages, streamPositions, previousNewest);
         }
-        else if (skippedTail.HasValue && _cache.IsEmpty)
+        else if (skippedTail.HasValue && _cache.IsEmpty && _pending.Count == 0)
         {
             // Nothing cached is in front of the skipped events, so no purge will ever report them.
             OnCheckpointablePosition?.Invoke(skippedTail.Value);
         }
         return streamPositions;
+    }
+
+    // A transaction is only cached once every event of it has been read, so it is always delivered whole. Its events
+    // are held here between reads; they have not reached the cache, so neither purge nor checkpoint can pass them.
+    private readonly List<(StreamedEvent<KurrentDBRawEvent> Message, StreamPosition Position)> _pending = [];
+
+    private ulong? TrySkip(StreamedEvent<KurrentDBRawEvent> queueMessage, ulong? skippedTail)
+    {
+        // A skipped event still counts toward its transaction, so the rest of the transaction completes without it.
+        if (_pending.Count > 0 && BelongsToPending(queueMessage))
+        {
+            _pendingSkipped++;
+            return skippedTail;
+        }
+        return (ulong)queueMessage.Cursor.SequenceNumber;
+    }
+
+    private int _pendingSkipped;
+
+    private bool BelongsToPending(StreamedEvent<KurrentDBRawEvent> queueMessage) =>
+        _pending[0].Message.Metadata.TransactionId is { } transactionId && queueMessage.Metadata.TransactionId == transactionId;
+
+    private bool IsTransactionComplete()
+    {
+        var size = _pending[0].Message.Metadata.TransactionSize;
+        return _pending[0].Message.Metadata.TransactionId is null || size is null || _pending.Count + _pendingSkipped >= size.Value;
+    }
+
+    /// <summary>
+    ///     Caches the pending transaction once under each stream its events belong to, holding that stream's events, and
+    ///     once under each of its stream targets, holding every event. Every record is positioned at the last event, so
+    ///     each stream sees the same sequence token for the transaction.
+    /// </summary>
+    private ulong? CacheTransaction(DateTime dequeueTimeUtc, List<CachedMessage> cachedMessages, List<StreamPosition> streamPositions, ulong? skippedTail)
+    {
+        var events = new StreamedEvent<KurrentDBRawEvent>[_pending.Count];
+        for (var i = 0; i < _pending.Count; i++)
+        {
+            events[i] = _pending[i].Message;
+        }
+        var last = events[^1];
+        var streams = new List<StreamId>();
+        var eventsByStream = new Dictionary<StreamId, List<StreamedEvent<KurrentDBRawEvent>>>();
+        foreach (var (message, position) in _pending)
+        {
+            if (!eventsByStream.TryGetValue(position.StreamId, out var streamEvents))
+            {
+                streamEvents = [];
+                eventsByStream[position.StreamId] = streamEvents;
+                streams.Add(position.StreamId);
+            }
+            streamEvents.Add(message);
+        }
+        var targets = GetTargetStreams(events, eventsByStream);
+        _pending.Clear();
+        _pendingSkipped = 0;
+        var cachedAny = false;
+        foreach (var streamId in streams)
+        {
+            if (eventsByStream.TryGetValue(streamId, out var streamEvents))
+            {
+                cachedAny |= TryCacheRecord(streamId, streamEvents, last, dequeueTimeUtc, cachedMessages, streamPositions);
+            }
+        }
+        foreach (var streamId in targets)
+        {
+            cachedAny |= TryCacheRecord(streamId, events, last, dequeueTimeUtc, cachedMessages, streamPositions);
+        }
+        return cachedAny ? null : (ulong)last.Cursor.SequenceNumber;
+    }
+
+    private List<StreamId> GetTargetStreams(StreamedEvent<KurrentDBRawEvent>[] events, Dictionary<StreamId, List<StreamedEvent<KurrentDBRawEvent>>> eventsByStream)
+    {
+        var targets = new List<StreamId>();
+        foreach (var message in events)
+        {
+            foreach (var target in message.Metadata.StreamTargets)
+            {
+                StreamId streamId;
+                try
+                {
+                    streamId = _dataAdapter.GetTargetStreamId(target);
+                }
+                catch (Exception ex) when (ex is ArgumentException or InvalidStreamNamespaceException)
+                {
+                    // A bad target must not cost the transaction its other streams.
+                    _logger.InvalidStreamTarget(ex, message.EventId, message.StreamName.Value, message.Cursor.SequenceNumber, target);
+                    continue;
+                }
+                // A target that is already a participant stream receives the whole transaction instead of its own part.
+                eventsByStream.Remove(streamId);
+                if (!targets.Contains(streamId))
+                {
+                    targets.Add(streamId);
+                }
+            }
+        }
+        return targets;
+    }
+
+    private bool TryCacheRecord(StreamId streamId, IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> events, StreamedEvent<KurrentDBRawEvent> last, DateTime dequeueTimeUtc,
+        List<CachedMessage> cachedMessages, List<StreamPosition> streamPositions)
+    {
+        CachedMessage cachedMessage;
+        try
+        {
+            cachedMessage = _dataAdapter.FromQueueMessages(streamId, events, last, dequeueTimeUtc, GetSegment);
+        }
+        catch (EventTooLargeForCacheException ex)
+        {
+            // Skipping would silently lose the transaction for every stream it belongs to, so the subscription halts
+            // instead. Nothing of this batch has been cached, so no purge, and therefore no checkpoint, can pass it,
+            // and the transaction is read again once the block size is raised and the silo restarted.
+            _logger.TransactionTooLargeForCache(last.Metadata.TransactionId, events.Count, last.EventId, last.EventType, last.StreamName.Value, last.Cursor.SequenceNumber, streamId, ex.Size, ex.BlockSize);
+            throw new KurrentDBTransactionTooLargeForCacheException(last.Metadata.TransactionId, (ulong)last.Cursor.SequenceNumber, ex.Size, ex.BlockSize, ex);
+        }
+        cachedMessages.Add(cachedMessage);
+        streamPositions.Add(new StreamPosition(streamId, new EventSequenceToken(cachedMessage.SequenceNumber, 0)));
+        return true;
     }
 
     private void WakeCaughtUpCursors(List<CachedMessage> cachedMessages, List<StreamPosition> streamPositions, ulong previousNewest)
@@ -395,4 +541,12 @@ internal static partial class KurrentDBCatchupQueueCacheLog
     [LoggerMessage(Level = LogLevel.Error, Message = "Skipped event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition}: its metadata Orleans stream id '{OrleansStreamId}' is not a valid stream id.")] public static partial void InvalidOrleansStreamId(this ILogger logger, Exception exception, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, string orleansStreamId);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Could not reposition a caught-up cursor on stream {StreamId} at the event just added to the cache.")] public static partial void WakeCursorCacheMiss(this ILogger logger, Exception exception, StreamId streamId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Ignored stream target '{StreamTarget}' of event {EventId} in stream {StreamName} at commit position {CommitPosition}: it does not map to a valid stream.")] public static partial void InvalidStreamTarget(this ILogger logger, Exception exception, Guid eventId, string streamName, System.Numerics.BigInteger commitPosition, string streamTarget);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Transaction {TransactionId} ended after {Count} of {TransactionSize} events; the events read are cached as a partial transaction. This is expected when the subscription filter excludes part of the transaction.")] public static partial void IncompleteTransaction(this ILogger logger, Guid? transactionId, int count, int? transactionSize);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Transaction {TransactionId} received {Count} of {TransactionSize} events and no further event arrived within {Timeout}; the events read are cached as a partial transaction. This is expected when the subscription filter excludes part of the transaction.")] public static partial void StalledTransaction(this ILogger logger, Guid? transactionId, int count, int? transactionSize, TimeSpan timeout);
+
+    [LoggerMessage(Level = LogLevel.Critical, Message = "Halted: transaction {TransactionId} of {EventCount} events ending with event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition} needs {Size} bytes in the cache for stream {StreamId}, but the cache block size is {BlockSize} bytes. Raise the cache block size to at least {Size} bytes and restart; nothing past the transaction has been checkpointed.")] public static partial void TransactionTooLargeForCache(this ILogger logger, Guid? transactionId, int eventCount, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, StreamId streamId, int size, int blockSize);
 }

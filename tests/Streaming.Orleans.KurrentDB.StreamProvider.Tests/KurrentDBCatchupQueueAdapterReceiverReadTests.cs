@@ -86,7 +86,7 @@ public class KurrentDBCatchupQueueAdapterReceiverReadTests
         new(Guid.NewGuid(), "test-event", Stream, 0, new StreamedEventCursor("test", Stream.Category, Stream.Value, commitPosition, 0), DateTime.UtcNow, new KurrentDBRawEvent(new byte[16]));
 
     private static KurrentDBCatchupQueueAdapterReceiver CreateReceiver(IKurrentDBReceiver receiver, IQueueAdapterReceiverMonitor? monitor = null, LoadSheddingOptions? loadSheddingOptions = null, IEnvironmentStatisticsProvider? statistics = null) =>
-        new(new KurrentDBReceiverSettings { QueueName = "queue" }, CreateCache, NullLoggerFactory.Instance, monitor ?? new RecordingReceiverMonitor(),
+        new(new KurrentDBReceiverSettings { QueueName = "queue", ReceiverOptions = new KurrentDBStreamCatchupSubscriptionReceiverOptions() }, CreateCache, NullLoggerFactory.Instance, monitor ?? new RecordingReceiverMonitor(),
             loadSheddingOptions ?? new LoadSheddingOptions(), statistics, (_, _) => receiver);
 
     [Fact]

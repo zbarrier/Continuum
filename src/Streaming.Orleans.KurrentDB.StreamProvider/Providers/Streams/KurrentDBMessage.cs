@@ -55,17 +55,49 @@ public class KurrentDBMessage
     /// <param name="cachedMessage"></param>
     /// <param name="sourceConnectionName">The logical connection the cached event was read from.</param>
     public KurrentDBMessage(CachedMessage cachedMessage, string sourceConnectionName)
+        : this(cachedMessage, sourceConnectionName, HeaderSize)
+    {
+    }
+
+    private const int HeaderSize = sizeof(ulong) + sizeof(ulong);
+
+    private KurrentDBMessage(CachedMessage cachedMessage, string sourceConnectionName, int readOffset)
+        : this(cachedMessage, sourceConnectionName, ref readOffset)
+    {
+    }
+
+    /// <summary>
+    ///     Reads every event of the transaction a cached record holds, in log order.
+    /// </summary>
+    /// <param name="cachedMessage">The cached record.</param>
+    /// <param name="sourceConnectionName">The logical connection the cached events were read from.</param>
+    /// <returns>The events, each attributed to the stream the record is cached under.</returns>
+    public static KurrentDBMessage[] ReadAll(CachedMessage cachedMessage, string sourceConnectionName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
+        var count = checked((int)ReadUInt64(cachedMessage.Segment, sizeof(ulong)));
+        var messages = new KurrentDBMessage[count];
+        var readOffset = HeaderSize;
+        for (var i = 0; i < count; i++)
+        {
+            messages[i] = new KurrentDBMessage(cachedMessage, sourceConnectionName, ref readOffset);
+        }
+        return messages;
+    }
+
+    private KurrentDBMessage(CachedMessage cachedMessage, string sourceConnectionName, ref int readOffset)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceConnectionName);
         SourceConnectionName = sourceConnectionName;
-        // Reads must follow the write order in KurrentDBQueueDataAdapter.EncodeMessageIntoSegment.
-        var readOffset = 0;
+        // Reads must follow the write order in KurrentDBQueueDataAdapter.WriteEvent.
         CommitPosition = ReadUInt64(cachedMessage.Segment, ref readOffset);
         EventId = new Guid(SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset).AsSpan());
         StreamId = cachedMessage.StreamId;
         StreamName = ReadStreamName(cachedMessage.Segment, ref readOffset);
         StreamVersion = ReadUInt64(cachedMessage.Segment, ref readOffset);
-        SequenceNumber = cachedMessage.SequenceNumber;
+        // Each event keeps its own commit position as its sequence number; the record as a whole is positioned at its
+        // last event.
+        SequenceNumber = unchecked((long)CommitPosition);
         EventType = ReadRequiredString(cachedMessage.Segment, ref readOffset);
         Data = SegmentBuilder.ReadNextBytes(cachedMessage.Segment, ref readOffset);
         // Tracing and transaction values travel inside the metadata document rather than as their own fields.

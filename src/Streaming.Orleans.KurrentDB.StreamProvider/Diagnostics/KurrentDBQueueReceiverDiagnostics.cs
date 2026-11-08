@@ -47,6 +47,9 @@ public sealed class KurrentDBQueueReceiverDiagnostics
 
     internal void Stopped() => _statusRegistry.Remove(_providerName, _queueName);
 
+    internal void Halted(Exception exception) =>
+        Report(KurrentDBQueueReceiverState.Faulted, "Halted: a transaction did not fit in the cache. Raise the cache block size and restart the silo.", exception);
+
     private void Report(KurrentDBQueueReceiverState state, string? description = null, Exception? exception = null) =>
         _statusRegistry.Report(new KurrentDBQueueReceiverStatus(_providerName, _queueName, state, description, exception));
 }

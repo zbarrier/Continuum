@@ -85,6 +85,10 @@ public abstract class KurrentDBCatchupSubscriptionReceiverOptionsValidator : ICo
         {
             throw new OrleansConfigurationException($"{OptionsName} on stream provider {Name} is invalid. {nameof(KurrentDBCatchupSubscriptionReceiverOptions.BufferCapacityMultiplier)} must be between 1 and {KurrentDBCatchupSubscriptionReceiver.MaxBufferCapacityMultiplier}, but was {_options.BufferCapacityMultiplier}.");
         }
+        if (_options.IncompleteTransactionTimeout <= TimeSpan.Zero)
+        {
+            throw new OrleansConfigurationException($"{OptionsName} on stream provider {Name} is invalid. {nameof(KurrentDBCatchupSubscriptionReceiverOptions.IncompleteTransactionTimeout)} must be greater than zero, but was {_options.IncompleteTransactionTimeout}.");
+        }
     }
 
     /// <summary>

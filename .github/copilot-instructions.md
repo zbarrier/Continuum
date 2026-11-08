@@ -37,6 +37,9 @@
 - KurrentDB persistent subscriptions are intended only for consumers that can tolerate dropped and out-of-order events; ack-on-receive stays. Consumers that need ordering and no drops should use catch-up subscriptions. Do not propose ack-on-purge for persistent subscriptions.
 - In KurrentDB, every event has a unique $all commit position; events in the same append/transaction never share a commit position. Do not flag issues that assume shared commit positions.
 
+## KurrentDB Catch-Up Subscriptions
+- Continuum KurrentDB catch-up subscriptions (stream provider and self-hosted) handle partial transactions with a configurable PartialTransactionHandling option: Deliver (deliver events read, Debug log), DeliverAndWarn (deliver, Warning log), Halt (Critical log, halt receiver, no checkpoint movement); default is Halt. Partial transactions are never dropped. IncompleteTransactionTimeout is a nullable TimeSpan: unset defaults to 60s for Halt and 5s for Deliver/DeliverAndWarn; if set it must be > 0. Transactions too large for a cache block always halt with a log giving the payload size and block size.
+
 ## Testing Guidelines
 - Don't add production hooks or seams just to test narrow race windows or code that's likely to change soon. Prefer tests that need no production changes, and rely on code review for small, easy-to-read logic rather than testing every little thing.
 - When reviewing code, say plainly when code is fine as is; do not invent marginal suggestions just to have something to report. Only report findings with real value.

@@ -71,8 +71,17 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
     /// <returns></returns>
     public virtual IBatchContainer GetBatchContainer(ref CachedMessage cachedMessage)
     {
-        var kurrentDBMessage = new KurrentDBMessage(cachedMessage, _options.ConnectionName);
-        return GetBatchContainer(kurrentDBMessage);
+        var messages = KurrentDBMessage.ReadAll(cachedMessage, _options.ConnectionName);
+        if (messages.Length == 1)
+        {
+            return GetBatchContainer(messages[0]);
+        }
+        var materializations = new KurrentDBEventMaterialization[messages.Length];
+        for (var i = 0; i < messages.Length; i++)
+        {
+            materializations[i] = DeserializeEvent(messages[i]);
+        }
+        return new KurrentDBBatchContainer(messages, materializations);
     }
 
     /// <summary>
@@ -147,9 +156,14 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
     /// </summary>
     /// <param name="cachedMessage"></param>
     /// <returns></returns>
+    /// <remarks>
+    ///     A cached record holds a whole transaction and is positioned at the commit position of its last event. Commit
+    ///     positions are unique across the log, so no event index is needed, and every stream a transaction is fanned
+    ///     out to sees the same token.
+    /// </remarks>
     public virtual StreamSequenceToken GetSequenceToken(ref CachedMessage cachedMessage)
     {
-        return new EventSequenceToken(cachedMessage.SequenceNumber, cachedMessage.EventIndex);
+        return new EventSequenceToken(cachedMessage.SequenceNumber, 0);
     }
 
     /// <summary>
@@ -188,10 +202,32 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
             // Must agree with the token built in GetStreamPosition. The cache compares this against cursor tokens,
             // so a per-stream version here would collide across the many streams a $all receiver caches together.
             SequenceNumber = ToOrleansSequenceToken(queueMessage.Cursor.SequenceNumber, queueMessage.StreamName.Value),
-            EventIndex = position.SequenceToken.EventIndex,
+            EventIndex = 0,
             EnqueueTimeUtc = queueMessage.Timestamp,
             DequeueTimeUtc = dequeueTime,
             Segment = EncodeMessageIntoSegment(queueMessage, getSegment)
+        };
+    }
+
+    /// <summary>
+    ///     Creates one cached record holding every event of a transaction, positioned at its last event.
+    /// </summary>
+    /// <param name="streamId">The stream the record is cached under.</param>
+    /// <param name="queueMessages">The events of the transaction, in log order.</param>
+    /// <param name="dequeueTime">When the events were dequeued.</param>
+    /// <param name="getSegment">Allocates cache memory.</param>
+    public virtual CachedMessage FromQueueMessages(StreamId streamId, IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> queueMessages, StreamedEvent<KurrentDBRawEvent> positionedAt, DateTime dequeueTime, Func<int, ArraySegment<byte>> getSegment)
+    {
+        ArgumentNullException.ThrowIfNull(queueMessages, nameof(queueMessages));
+        ArgumentNullException.ThrowIfNull(positionedAt, nameof(positionedAt));
+        return new CachedMessage
+        {
+            StreamId = streamId,
+            SequenceNumber = ToOrleansSequenceToken(positionedAt.Cursor.SequenceNumber, positionedAt.StreamName.Value),
+            EventIndex = 0,
+            EnqueueTimeUtc = positionedAt.Timestamp,
+            DequeueTimeUtc = dequeueTime,
+            Segment = EncodeMessagesIntoSegment(queueMessages, (ulong)positionedAt.Cursor.SequenceNumber, getSegment)
         };
     }
 
@@ -236,6 +272,32 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
     public virtual StreamId GetStreamId(StreamedEvent<KurrentDBRawEvent> queueMessage)
     {
         var streamId = GetUnqualifiedStreamId(queueMessage);
+        var streamNamespace = streamId.GetNamespace() ?? string.Empty;
+        if (streamNamespace.Contains(KurrentDBStreamNamespace.Separator))
+        {
+            throw new InvalidStreamNamespaceException(streamNamespace);
+        }
+        return StreamId.Create(KurrentDBStreamNamespace.Qualify(_options.ProviderName, streamNamespace), streamId.GetKeyAsString());
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    ///     A target is the text form of a grain id, <c>{GrainType}/{Key}</c>. It is turned into the stream name the event
+    ///     sourcing storage would give that grain, <c>{GrainType}-{Key}</c>, and mapped with
+    ///     <see cref="KurrentDBDataAdapterOptions.StreamIdMapper" />, so a target reaches the same stream as the
+    ///     grain's own events.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The target is not a grain id.</exception>
+    /// <exception cref="InvalidStreamNamespaceException">The mapped namespace contains <see cref="KurrentDBStreamNamespace.Separator" />.</exception>
+    public virtual StreamId GetTargetStreamId(string streamTarget)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(streamTarget, nameof(streamTarget));
+        var separatorIndex = streamTarget.IndexOf('/', StringComparison.Ordinal);
+        if (separatorIndex <= 0 || separatorIndex == streamTarget.Length - 1)
+        {
+            throw new ArgumentException($"Stream target '{streamTarget}' is not a grain id.", nameof(streamTarget));
+        }
+        var streamId = _options.StreamIdMapper($"{streamTarget[..separatorIndex]}-{streamTarget[(separatorIndex + 1)..]}");
         var streamNamespace = streamId.GetNamespace() ?? string.Empty;
         if (streamNamespace.Contains(KurrentDBStreamNamespace.Separator))
         {
@@ -308,6 +370,55 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
     /// <returns></returns>
     protected virtual ArraySegment<byte> EncodeMessageIntoSegment(StreamedEvent<KurrentDBRawEvent> queueMessage, Func<int, ArraySegment<byte>> getSegment)
     {
+        return EncodeMessagesIntoSegment([queueMessage], (ulong)queueMessage.Cursor.SequenceNumber, getSegment);
+    }
+
+    /// <summary>
+    ///     Places the events of one transaction into a single segment.
+    /// </summary>
+    /// <remarks>
+    ///     The segment starts with the commit position the record is positioned at, the last event of the transaction,
+    ///     so eviction and checkpointing treat the whole transaction as one position. It is followed by the event count
+    ///     and then each event in log order.
+    /// </remarks>
+    public virtual ArraySegment<byte> EncodeMessagesIntoSegment(IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> queueMessages, ulong commitPosition, Func<int, ArraySegment<byte>> getSegment)
+    {
+        ArgumentNullException.ThrowIfNull(queueMessages, nameof(queueMessages));
+        ArgumentNullException.ThrowIfNull(getSegment, nameof(getSegment));
+        if (queueMessages.Count == 0)
+        {
+            throw new ArgumentException("A cached record must hold at least one event.", nameof(queueMessages));
+        }
+        var metadata = new byte[]?[queueMessages.Count];
+        var size = sizeof(ulong) + sizeof(ulong);
+        for (var i = 0; i < queueMessages.Count; i++)
+        {
+            metadata[i] = KurrentDBEventMetadataCodec.WriteAll(queueMessages[i].Metadata);
+            size += CalculateEventSize(queueMessages[i], metadata[i]);
+        }
+        var segment = getSegment(size);
+        var writeOffset = 0;
+        KurrentDBMessage.WriteUInt64(segment, ref writeOffset, commitPosition);
+        KurrentDBMessage.WriteUInt64(segment, ref writeOffset, (ulong)queueMessages.Count);
+        for (var i = 0; i < queueMessages.Count; i++)
+        {
+            WriteEvent(segment, ref writeOffset, queueMessages[i], metadata[i]);
+        }
+        return segment;
+    }
+
+    private static int CalculateEventSize(StreamedEvent<KurrentDBRawEvent> queueMessage, byte[]? metadata) =>
+        sizeof(ulong) +
+        SegmentBuilder.CalculateAppendSize(queueMessage.EventId.ToByteArray()) +
+        KurrentDBMessage.CalculateStreamNameSize(StreamName.From(queueMessage.StreamName)) +
+        sizeof(ulong) +
+        SegmentBuilder.CalculateAppendSize(queueMessage.EventType) +
+        SegmentBuilder.CalculateAppendSize((ReadOnlySpan<byte>)queueMessage.Event!.Data) +
+        SegmentBuilder.CalculateAppendSize((ReadOnlySpan<byte>)metadata) +
+        sizeof(long);
+
+    private static void WriteEvent(ArraySegment<byte> segment, ref int writeOffset, StreamedEvent<KurrentDBRawEvent> queueMessage, byte[]? metadataBytes)
+    {
         var eventId = queueMessage.EventId.ToByteArray();
         // The consumer is handed an IStreamedEvent rebuilt from the cache, so the fields it needs that are not
         // recoverable from CachedMessage travel with the event. The cursor's topic and partition are absent: they are
@@ -323,28 +434,13 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
         // type this silo does not know can still be cached and simply fails for its own stream on read.
         ReadOnlySpan<byte> data = queueMessage.Event!.Data;
         // The metadata bag round trips as the same JSON document shape the codec reads from KurrentDB, including the
-        // tracing and transaction values, so nothing the event carried is lost while it sits in the cache. The codec
-        // returns null when there is nothing worth writing, which the segment represents as no bytes.
-        ReadOnlySpan<byte> metadata = KurrentDBEventMetadataCodec.WriteAll(queueMessage.Metadata);
+        // tracing, transaction and target values, so nothing the event carried is lost while it sits in the cache. The
+        // codec returns null when there is nothing worth writing, which the segment represents as no bytes.
+        ReadOnlySpan<byte> metadata = metadataBytes;
         var timestamp = queueMessage.Timestamp.Ticks;
 
-        // get total size.
-        var size = sizeof(ulong) +
-                   SegmentBuilder.CalculateAppendSize(eventId) +
-                   KurrentDBMessage.CalculateStreamNameSize(streamName) +
-                   sizeof(ulong) +
-                   SegmentBuilder.CalculateAppendSize(eventType) +
-                   SegmentBuilder.CalculateAppendSize(data) +
-                   SegmentBuilder.CalculateAppendSize(metadata) +
-                   sizeof(long);
-
-        // get segment
-        var segment = getSegment(size);
-
-        // encode. The order must match the reads in the KurrentDBMessage cached message constructor. The commit
-        // position comes first, at a fixed width, so GetCommitPosition can read it without walking the segment.
-        // Numbers are written as fixed-width binary so reading them back does not parse text.
-        var writeOffset = 0;
+        // The order must match the reads in KurrentDBMessage.ReadAll. Numbers are written as fixed-width binary so
+        // reading them back does not parse text.
         KurrentDBMessage.WriteUInt64(segment, ref writeOffset, commitPosition);
         SegmentBuilder.Append(segment, ref writeOffset, eventId);
         KurrentDBMessage.WriteStreamName(segment, ref writeOffset, streamName);
@@ -353,8 +449,6 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
         SegmentBuilder.Append(segment, ref writeOffset, data);
         SegmentBuilder.Append(segment, ref writeOffset, metadata);
         KurrentDBMessage.WriteUInt64(segment, ref writeOffset, unchecked((ulong)timestamp));
-
-        return segment;
     }
 
     /// <summary>

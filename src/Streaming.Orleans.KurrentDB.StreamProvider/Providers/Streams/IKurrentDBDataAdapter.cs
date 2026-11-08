@@ -28,6 +28,24 @@ public interface IKurrentDBDataAdapter : IQueueDataAdapter<EventData[]>, ICacheD
     CachedMessage FromQueueMessage(StreamPosition position, StreamedEvent<KurrentDBRawEvent> queueMessage, DateTime dequeueTime, Func<int, ArraySegment<byte>> getSegment);
 
     /// <summary>
+    ///     Creates one cached record holding every event of a transaction, positioned at the commit position of its
+    ///     last event.
+    /// </summary>
+    /// <param name="streamId">The stream the record is cached under.</param>
+    /// <param name="queueMessages">The events of the transaction, in log order.</param>
+    /// <param name="positionedAt">The last event of the transaction, whose commit position the record is positioned at.</param>
+    /// <param name="dequeueTime">When the events were dequeued.</param>
+    /// <param name="getSegment">Allocates cache memory.</param>
+    CachedMessage FromQueueMessages(StreamId streamId, IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> queueMessages, StreamedEvent<KurrentDBRawEvent> positionedAt, DateTime dequeueTime, Func<int, ArraySegment<byte>> getSegment);
+
+    /// <summary>
+    ///     Gets the stream a transaction is fanned out to for a stream target recorded in event metadata.
+    /// </summary>
+    /// <param name="streamTarget">The target, the text form of a grain id.</param>
+    /// <returns>The stream identity, with its namespace qualified by the provider name.</returns>
+    StreamId GetTargetStreamId(string streamTarget);
+
+    /// <summary>
     ///     Get orleans stream position from the event message.
     /// </summary>
     /// <param name="queueMessage"></param>

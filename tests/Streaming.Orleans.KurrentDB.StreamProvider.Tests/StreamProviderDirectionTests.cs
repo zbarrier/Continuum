@@ -185,5 +185,10 @@ public class StreamProviderDirectionTests
         public ulong GetCommitPosition(CachedMessage cachedMessage) => throw new NotSupportedException();
 
         public StreamId GetStreamId(StreamedEvent<KurrentDBRawEvent> queueMessage) => throw new NotSupportedException();
+
+        public CachedMessage FromQueueMessages(StreamId streamId, IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> queueMessages, StreamedEvent<KurrentDBRawEvent> positionedAt, DateTime dequeueTime, Func<int, ArraySegment<byte>> getSegment) =>
+            throw new NotSupportedException();
+
+        public StreamId GetTargetStreamId(string streamTarget) => throw new NotSupportedException();
     }
 }

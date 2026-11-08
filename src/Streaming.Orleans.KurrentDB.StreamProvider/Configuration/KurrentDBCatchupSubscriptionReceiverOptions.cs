@@ -42,6 +42,17 @@ public abstract class KurrentDBCatchupSubscriptionReceiverOptions : KurrentDBRec
     public int BufferCapacityMultiplier { get; set; } = 10;
 
     /// <summary>
+    ///     How long to wait for the rest of a transaction after its last event arrived before delivering the events read
+    ///     as a partial transaction.
+    /// </summary>
+    /// <remarks>
+    ///     A subscription filter can exclude part of a transaction, and the remaining events never arrive. Their arrival
+    ///     is otherwise only ruled out by the next event, so on a quiet subscription the events read would wait until
+    ///     more are written. A partial transaction is logged as a warning in case the filter was not meant to exclude it.
+    /// </remarks>
+    public TimeSpan IncompleteTransactionTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
     ///     The name of the KurrentDB connection used to resolve the <see cref="CheckpointStore" />.
     ///     When not set, the unkeyed <see cref="ICheckpointStore{T}" /> registration is used.
     /// </summary>

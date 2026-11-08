@@ -47,6 +47,46 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
         Token = new EventSequenceToken(kurrentDBMessage.SequenceNumber, 0);
     }
 
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="KurrentDBBatchContainer" /> class holding every event of one
+    ///     transaction.
+    /// </summary>
+    /// <param name="kurrentDBMessages">The events of the transaction, in log order.</param>
+    /// <param name="materializations">The outcome of materializing each event.</param>
+    /// <remarks>
+    ///     The container is positioned at the last event, so a consumer's token, the cache cursor and the checkpoint all
+    ///     move past the transaction only once every event of it has been delivered.
+    /// </remarks>
+    public KurrentDBBatchContainer(IReadOnlyList<KurrentDBMessage> kurrentDBMessages, IReadOnlyList<KurrentDBEventMaterialization> materializations)
+    {
+        ArgumentNullException.ThrowIfNull(kurrentDBMessages, nameof(kurrentDBMessages));
+        ArgumentNullException.ThrowIfNull(materializations, nameof(materializations));
+        if (kurrentDBMessages.Count == 0 || kurrentDBMessages.Count != materializations.Count)
+        {
+            throw new ArgumentException("A batch must hold at least one event and one materialization per event.", nameof(materializations));
+        }
+        KurrentDBMessage = kurrentDBMessages[^1];
+        Payload = materializations[^1].Event;
+        Fault = materializations[^1].Fault;
+        IsSuppressed = materializations[^1].IsSuppressed;
+        Token = new EventSequenceToken(KurrentDBMessage.SequenceNumber, 0);
+        if (kurrentDBMessages.Count > 1)
+        {
+            Preceding = new KurrentDBBatchContainer[kurrentDBMessages.Count - 1];
+            for (var i = 0; i < Preceding.Length; i++)
+            {
+                Preceding[i] = new KurrentDBBatchContainer(kurrentDBMessages[i], materializations[i]);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     The earlier events of the transaction, each held as a single event record, or <see langword="null" /> when
+    ///     the transaction has one event.
+    /// </summary>
+    [Id(5)]
+    private KurrentDBBatchContainer[]? Preceding { get; }
+
     [Id(0)]
     private KurrentDBMessage KurrentDBMessage { get; } = null!;
 
@@ -109,10 +149,9 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     ///     either already in the cached message or constant for the provider, and reconstructing costs one allocation
     ///     per delivery instead of a larger footprint for the whole time the event sits in the cache.
     ///
-    ///     A record holds exactly one event, the same way the event sourcing storage writes a log entry, so a batch
-    ///     yields a single streamed event. Events appended together are told apart by their own position in the log
-    ///     rather than by an index within a record, and the append they belong to is recorded in the transaction
-    ///     values on <see cref="IStreamedEvent{TEvent}.Metadata" />.
+    ///     A record holds one transaction: the events appended together, in log order. A single-event append yields
+    ///     a single streamed event. Each event keeps its own commit position, and the transaction it belongs to is
+    ///     recorded in the transaction values on <see cref="IStreamedEvent{TEvent}.Metadata" />.
     /// </remarks>
     public IEnumerable<Tuple<T, StreamSequenceToken>> GetEvents<T>()
     {
@@ -120,18 +159,32 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
         {
             throw new InvalidOperationException($"This stream provider delivers events as {nameof(IStreamedEvent<object>)}, but a consumer subscribed as \"{typeof(T)}\". Subscribe as IStreamedEvent<object> and read the domain event from its Event property.");
         }
-        if (IsSuppressed)
+        // A transaction is delivered whole or not at all: every event is checked for a fault before any of it is handed
+        // out, so a consumer never receives part of a transaction. Suppressed events are left out on their own.
+        var records = Preceding is { Length: > 0 } preceding ? [.. preceding, this] : new[] { this };
+        foreach (var record in records)
         {
-            // Delivering nothing lets the agent record progress and move on, which is what the skip behavior asks for.
-            return [];
+            if (!record.IsSuppressed && record.Fault is { } fault)
+            {
+                // Raised here, on the delivery path, so the agent retries and faults the subscription rather than
+                // advancing the consumer past an event it never received.
+                throw new InvalidOperationException(fault);
+            }
         }
-        if (Fault is not null)
+        // Each event is tokened with its own commit position, which is unique, so tokens rise through the batch and no
+        // index is needed. A consumer only delivers an item newer than the last one it delivered, so a token shared by
+        // the whole batch would drop every event after the first. The batch itself is positioned at the last event.
+        var events = new List<Tuple<T, StreamSequenceToken>>(records.Length);
+        foreach (var record in records)
         {
-            // Raised here, on the delivery path, so the agent retries and faults the subscription rather than
-            // advancing the consumer past an event it never received.
-            throw new InvalidOperationException(Fault);
+            if (record.IsSuppressed)
+            {
+                continue;
+            }
+            var payload = record.Payload ?? throw new InvalidOperationException("A resolved KurrentDB record has no event.");
+            events.Add(Tuple.Create((T)(object)record.ToStreamedEvent(payload), (StreamSequenceToken)new EventSequenceToken(record.KurrentDBMessage.SequenceNumber, 0)));
         }
-        return [Tuple.Create((T)(object)ToStreamedEvent(Payload ?? throw new InvalidOperationException("A resolved KurrentDB record has no event.")), (StreamSequenceToken)new EventSequenceToken(Token.SequenceNumber, 0))];
+        return events;
     }
 
     /// <summary>
