@@ -62,3 +62,6 @@
 ## KurrentDB Subscriptions
 - Continuum KurrentDB subscriptions should fan out per connection: one subscription registered in startup code automatically runs once on each KurrentDB connection/instance (e.g., 1 shared + 2 dedicated = 3 connections), with each connection discovered at startup (likely via DI keyed KurrentDBClient registrations). This is not implemented yet in the self-hosted catch-up subscriptions or stream provider.
 - Planned (not implemented): proper OpenTelemetry tracing for the self-hosted catch-up subscriptions. A batch that holds a single transaction continues that transaction's trace; a batch spanning multiple transactions starts its own activity with span links to each transaction's trace context (traceId/spanId from event metadata).
+
+## File Editing
+- When the editor file tools fail to persist changes to disk (edits/creates report success but git status/Test-Path show no change), switch immediately to writing files via short single-line PowerShell terminal commands (e.g., Add-Content with a string array, or [IO.File] read/replace/write), verifying after each step. Never send multi-line scripts or here-strings through the terminal tool, since they run line-by-line, beep, and hang.

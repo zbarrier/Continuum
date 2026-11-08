@@ -210,4 +210,161 @@ public class KurrentDBCatchupQueueAdapterReceiverReadTests
 
         await receiver.Shutdown(TimeSpan.FromSeconds(5));
     }
+
+    private static readonly Guid PendingTransactionId = Guid.NewGuid();
+
+    private sealed class VerifyingReceiver(Func<bool> hasMore) : IKurrentDBCatchupReceiver
+    {
+        public List<(Guid TransactionId, ulong AfterPosition)> Verifications { get; } = [];
+
+        public Task InitAsync() => Task.CompletedTask;
+
+        public Task CloseAsync() => Task.CompletedTask;
+
+        public IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> Receive(int maxCount) => [];
+
+        public Task MessagesDeliveredAsync(ulong commitPosition) => Task.CompletedTask;
+
+        public Task<bool> HasMoreTransactionEventsAsync(Guid transactionId, ulong afterPosition, CancellationToken cancellationToken)
+        {
+            Verifications.Add((transactionId, afterPosition));
+            return Task.FromResult(hasMore());
+        }
+    }
+
+    private sealed class PendingTransactionCache : IKurrentDBCatchupQueueCache
+    {
+        public PendingTransaction? PendingTransaction { get; set; }
+
+        public Exception? ReleaseFailure { get; init; }
+
+        public int Releases { get; private set; }
+
+        public Action<ulong>? OnCheckpointablePosition { get; set; }
+
+        public List<global::Orleans.Streams.StreamPosition> ReleasePartialTransaction(DateTime utcNow)
+        {
+            Releases++;
+            if (ReleaseFailure is not null)
+            {
+                throw ReleaseFailure;
+            }
+
+            PendingTransaction = null;
+            return [];
+        }
+
+        public List<global::Orleans.Streams.StreamPosition> Add(IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> queueMessages, DateTime dequeueTimeUtc) => [];
+
+        public object GetCursor(StreamId streamId, global::Orleans.Streams.StreamSequenceToken? sequenceToken) => new();
+
+        public object GetCursorAtPosition(StreamId streamId, global::Orleans.Streams.StreamSubscriptionStartPosition startPosition) => new();
+
+        public bool TryGetNextMessage(object cursorObj, [System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out global::Orleans.Streams.IBatchContainer container)
+        {
+            container = null;
+            return false;
+        }
+
+        public void AddCachePressureMonitor(ICachePressureMonitor monitor) { }
+
+        public void SignalPurge() { }
+
+        public void ReleaseCursor(object cursorObj) { }
+
+        public void RecordDelivered(object cursorObj, ulong commitPosition) { }
+
+        public void RecordCaughtUp(object cursorObj) { }
+
+        public int GetMaxAddCount() => 100;
+
+        public void Dispose() { }
+    }
+
+    private static PendingTransaction Pending(TimeSpan age) => new(PendingTransactionId, 10, DateTime.UtcNow - age);
+
+    private static async Task<KurrentDBCatchupQueueAdapterReceiver> StartAsync(PendingTransactionCache cache, VerifyingReceiver receiver)
+    {
+        var adapterReceiver = new KurrentDBCatchupQueueAdapterReceiver(
+            new KurrentDBReceiverSettings { QueueName = "queue", ReceiverOptions = new KurrentDBStreamCatchupSubscriptionReceiverOptions() },
+            (_, _) => cache, NullLoggerFactory.Instance, new RecordingReceiverMonitor(), new LoadSheddingOptions(), null, (_, _) => receiver);
+        await adapterReceiver.Initialize(TimeSpan.FromSeconds(5));
+        return adapterReceiver;
+    }
+
+    [Fact]
+    public async Task Does_Not_Verify_A_Pending_Transaction_Before_It_Has_Been_Quiet_Long_Enough()
+    {
+        var cache = new PendingTransactionCache { PendingTransaction = Pending(TimeSpan.Zero) };
+        var receiver = new VerifyingReceiver(() => false);
+        var adapterReceiver = await StartAsync(cache, receiver);
+
+        await adapterReceiver.GetQueueMessagesAsync(10);
+
+        Assert.Empty(receiver.Verifications);
+        Assert.Equal(0, cache.Releases);
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Keeps_Waiting_When_Verification_Finds_More_Of_The_Pending_Transaction()
+    {
+        var cache = new PendingTransactionCache { PendingTransaction = Pending(TimeSpan.FromMinutes(1)) };
+        var receiver = new VerifyingReceiver(() => true);
+        var adapterReceiver = await StartAsync(cache, receiver);
+
+        await adapterReceiver.GetQueueMessagesAsync(10);
+
+        Assert.Equal([(PendingTransactionId, 10UL)], receiver.Verifications);
+        Assert.Equal(0, cache.Releases);
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Keeps_Waiting_And_Does_Not_Reverify_Immediately_When_Verification_Fails()
+    {
+        var cache = new PendingTransactionCache { PendingTransaction = Pending(TimeSpan.FromMinutes(1)) };
+        var receiver = new VerifyingReceiver(() => throw new TimeoutException());
+        var adapterReceiver = await StartAsync(cache, receiver);
+
+        await adapterReceiver.GetQueueMessagesAsync(10);
+        await adapterReceiver.GetQueueMessagesAsync(10);
+
+        Assert.Single(receiver.Verifications);
+        Assert.Equal(0, cache.Releases);
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Releases_The_Pending_Transaction_Once_Verification_Confirms_It_Is_Partial()
+    {
+        var cache = new PendingTransactionCache { PendingTransaction = Pending(TimeSpan.FromMinutes(1)) };
+        var receiver = new VerifyingReceiver(() => false);
+        var adapterReceiver = await StartAsync(cache, receiver);
+
+        await adapterReceiver.GetQueueMessagesAsync(10);
+
+        Assert.Single(receiver.Verifications);
+        Assert.Equal(1, cache.Releases);
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Stays_Halted_After_A_Confirmed_Partial_Transaction_Halts()
+    {
+        var cache = new PendingTransactionCache
+        {
+            PendingTransaction = Pending(TimeSpan.FromMinutes(1)),
+            ReleaseFailure = new KurrentDBPartialTransactionException(PendingTransactionId, 10, 1, 3),
+        };
+        var receiver = new VerifyingReceiver(() => false);
+        var adapterReceiver = await StartAsync(cache, receiver);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => adapterReceiver.GetQueueMessagesAsync(10));
+        await Assert.ThrowsAnyAsync<Exception>(() => adapterReceiver.GetQueueMessagesAsync(10));
+
+        Assert.Single(receiver.Verifications);
+        Assert.Equal(1, cache.Releases);
+        await adapterReceiver.Shutdown(TimeSpan.FromSeconds(5));
+    }
 }
