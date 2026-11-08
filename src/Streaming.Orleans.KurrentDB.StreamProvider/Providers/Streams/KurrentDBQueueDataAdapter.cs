@@ -214,6 +214,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
     /// </summary>
     /// <param name="streamId">The stream the record is cached under.</param>
     /// <param name="queueMessages">The events of the transaction, in log order.</param>
+    /// <param name="positionedAt">The event whose position the record takes, the last event of the transaction.</param>
     /// <param name="dequeueTime">When the events were dequeued.</param>
     /// <param name="getSegment">Allocates cache memory.</param>
     public virtual CachedMessage FromQueueMessages(StreamId streamId, IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> queueMessages, StreamedEvent<KurrentDBRawEvent> positionedAt, DateTime dequeueTime, Func<int, ArraySegment<byte>> getSegment)

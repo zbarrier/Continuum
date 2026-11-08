@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
 
+using Continuum.Orleans.KurrentDB;
 using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 using Continuum.Streaming.Orleans.KurrentDB.Monitors;
 using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Configuration;
@@ -268,8 +269,9 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
         {
             var receiver = new KurrentDBCatchupBatchReceiver(_channel.Reader, _checkpointMonitor, HandleBatchAsync,
                 _options.BufferOptions.MaxEventsPerProcessLoop, CreateBatchResiliencePipeline(), _logger,
-                                incompleteTransactionTimeout: _options.BufferOptions.IncompleteTransactionTimeout,
-                                groupTransactions: IsAllStream);
+                partialTransactionHandling: _options.BufferOptions.PartialTransactionHandling,
+                hasMoreTransactionEventsAsync: HasMoreTransactionEventsAsync,
+                groupTransactions: IsAllStream);
             await receiver.RunAsync(stopping.Token);
         }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested)
@@ -294,6 +296,23 @@ public abstract class KurrentDBCatchupSubscription<[DynamicallyAccessedMembers(D
             _metrics.Failed(SubscriptionName);
             await stopping.CancelAsync();
         }
+    }
+
+    private async Task<bool> HasMoreTransactionEventsAsync(Guid transactionId, ulong afterPosition, CancellationToken cancellationToken)
+    {
+        // Transactions are only grouped for $all. The read is inclusive of the last event seen, which is skipped.
+        var read = _client.ReadAllAsync(Direction.Forwards, new Position(afterPosition, afterPosition),
+            FilterOptions ?? global::KurrentDB.Client.EventTypeFilter.ExcludeSystemEvents(),
+            maxCount: 2, cancellationToken: cancellationToken);
+        await foreach (var resolvedEvent in read)
+        {
+            if (resolvedEvent.OriginalPosition?.CommitPosition is not { } position || position <= afterPosition)
+            {
+                continue;
+            }
+            return KurrentDBEventMetadataCodec.Read(resolvedEvent.Event.Metadata.Span).TransactionId == transactionId;
+        }
+        return false;
     }
 
     /// <summary>

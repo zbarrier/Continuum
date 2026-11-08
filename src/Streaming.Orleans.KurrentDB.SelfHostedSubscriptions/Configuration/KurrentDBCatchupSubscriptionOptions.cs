@@ -91,10 +91,12 @@ public class KurrentDBChannelBufferOptions
     public int MaxUnprocessedEventsBeforeStop { get; set; } = 1_000;
 
     /// <summary>
-    ///     How long to wait for the rest of an open transaction when no event arrives before handing it off incomplete.
-    ///     A transaction is committed in one go, so a gap this long means its remaining events were filtered out.
+    ///     What to do with a transaction the subscription has confirmed it only partially received, because the rest of
+    ///     it was filtered out. Partiality is confirmed when an event of another transaction arrives, or when a
+    ///     verification read after a quiet period finds no further event of it; a failed verification confirms nothing.
+    ///     Defaults to <see cref="PartialTransactionHandling.Halt" />.
     /// </summary>
-    public TimeSpan IncompleteTransactionTimeout { get; set; } = TimeSpan.FromSeconds(60);
+    public PartialTransactionHandling PartialTransactionHandling { get; set; } = PartialTransactionHandling.Halt;
 }
 
 /// <summary>

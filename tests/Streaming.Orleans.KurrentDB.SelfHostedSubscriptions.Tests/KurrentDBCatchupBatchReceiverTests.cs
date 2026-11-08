@@ -2,6 +2,7 @@ using System.Threading.Channels;
 
 using Continuum.Events;
 using Continuum.Orleans.Events;
+using Continuum.Streaming.Orleans.KurrentDB.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 using Continuum.Streaming.Orleans.KurrentDB.Monitors;
 
@@ -41,7 +42,9 @@ public class KurrentDBCatchupBatchReceiverTests
     private readonly List<List<IStreamedEvent<object>>> _batches = [];
 
     private KurrentDBCatchupBatchReceiver CreateReceiver(Func<List<IStreamedEvent<object>>, Task>? onNextBatchAsync = null, ulong maxEventsBeforeCommit = 1,
-        int maxBatchSize = 100, ResiliencePipeline? resiliencePipeline = null, TimeSpan? incompleteTransactionTimeout = null)
+        int maxBatchSize = 100, ResiliencePipeline? resiliencePipeline = null,
+        PartialTransactionHandling partialTransactionHandling = PartialTransactionHandling.Deliver,
+        Func<Guid, ulong, CancellationToken, Task<bool>>? hasMoreTransactionEventsAsync = null, TimeSpan? verificationDelay = null)
     {
         var monitor = new KurrentDBCheckpointMonitor(NullLogger.Instance,
             new KurrentDBCheckpointMonitorOptions { MaxEventsBeforeCommit = maxEventsBeforeCommit },
@@ -50,7 +53,8 @@ public class KurrentDBCatchupBatchReceiverTests
         {
             _batches.Add([.. batch]);
             return Task.CompletedTask;
-        }), maxBatchSize, resiliencePipeline, incompleteTransactionTimeout: incompleteTransactionTimeout);
+        }), maxBatchSize, resiliencePipeline, partialTransactionHandling: partialTransactionHandling,
+            hasMoreTransactionEventsAsync: hasMoreTransactionEventsAsync, verificationDelay: verificationDelay);
     }
 
     private static StreamedEvent<object> Event(string streamName, ulong position, int number, TransactionInfo? transaction = null)
@@ -261,9 +265,9 @@ public class KurrentDBCatchupBatchReceiverTests
     }
 
     [Fact]
-    public async Task Hands_off_an_incomplete_transaction_when_nothing_arrives_within_the_timeout()
+    public async Task Delivers_an_incomplete_transaction_once_verification_finds_no_more_of_it()
     {
-        var receiver = CreateReceiver(incompleteTransactionTimeout: TimeSpan.FromMilliseconds(200));
+        var receiver = CreateReceiver(verificationDelay: TimeSpan.FromMilliseconds(100), hasMoreTransactionEventsAsync: (_, _, _) => Task.FromResult(false));
         var run = receiver.RunAsync(TestContext.Current.CancellationToken);
 
         await _channel.Writer.WriteAsync(Event("order-1", 10, 1, new(Guid.NewGuid(), 2, 2, 0)), TestContext.Current.CancellationToken);
@@ -276,10 +280,46 @@ public class KurrentDBCatchupBatchReceiverTests
     }
 
     [Fact]
+    public async Task Halts_on_a_confirmed_partial_transaction_without_recording_the_position()
+    {
+        var id = Guid.NewGuid();
+        var receiver = CreateReceiver(maxBatchSize: 1, partialTransactionHandling: PartialTransactionHandling.Halt);
+
+        var ex = await Assert.ThrowsAsync<KurrentDBPartialTransactionException>(() => RunToCompletionAsync(receiver,
+            Event("order-1", 10, 1, new(id, 3, 3, 0)),
+            Event("order-2", 40, 2)));
+
+        Assert.Equal(id, ex.TransactionId);
+        Assert.Equal(10UL, ex.Position);
+        Assert.Empty(_batches);
+        Assert.Empty(_store.Stored);
+    }
+
+    [Fact]
+    public async Task Keeps_waiting_while_verification_finds_more_of_the_transaction_or_fails()
+    {
+        var id = Guid.NewGuid();
+        var attempts = 0;
+        var receiver = CreateReceiver(verificationDelay: TimeSpan.FromMilliseconds(50), hasMoreTransactionEventsAsync: (_, _, _) =>
+            Interlocked.Increment(ref attempts) % 2 == 0 ? Task.FromResult(true) : throw new TimeoutException());
+        var run = receiver.RunAsync(TestContext.Current.CancellationToken);
+
+        await _channel.Writer.WriteAsync(Event("order-1", 10, 1, new(id, 2, 2, 0)), TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => Volatile.Read(ref attempts) >= 4);
+        Assert.Empty(_batches);
+        await _channel.Writer.WriteAsync(Event("order-1", 20, 2, new(id, 2, 2, 1)), TestContext.Current.CancellationToken);
+        _channel.Writer.Complete();
+        await run;
+
+        Assert.Equal([[1, 2]], _batches.Select(b => b.Select(e => ((OrderPlaced)e.Event).Number).ToArray()));
+        Assert.Equal([20UL], _store.Stored);
+    }
+
+    [Fact]
     public async Task Cancellation_while_waiting_for_a_transaction_does_not_hand_it_off()
     {
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        var receiver = CreateReceiver(incompleteTransactionTimeout: TimeSpan.FromMinutes(5));
+        var receiver = CreateReceiver(verificationDelay: TimeSpan.FromMinutes(5), hasMoreTransactionEventsAsync: (_, _, _) => Task.FromResult(false));
         await _channel.Writer.WriteAsync(Event("order-1", 10, 1, new(Guid.NewGuid(), 2, 2, 0)), TestContext.Current.CancellationToken);
         var run = receiver.RunAsync(cancellation.Token);
 
