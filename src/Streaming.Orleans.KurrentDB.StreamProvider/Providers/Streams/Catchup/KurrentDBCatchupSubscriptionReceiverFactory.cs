@@ -55,7 +55,10 @@ public sealed class KurrentDBCatchupSubscriptionReceiverFactory : IKurrentDBRece
         // The client owns the checkpoint, so only events every cursor has finished with may be purged and checkpointed.
         var cursorTracker = new KurrentDBCursorTracker();
         var evictionStrategy = new KurrentDBCatchupEvictionStrategy(logger, context.TimePurge, context.CacheMonitor, context.StatisticMonitorWriteInterval, context.DataAdapter, cursorTracker);
-        return new KurrentDBCatchupQueueCache(context.Queue, KurrentDBCatchupQueueAdapterReceiver.MaxMessagesPerRead, context.BufferPool, context.DataAdapter, evictionStrategy, cursorTracker, logger, context.CacheMonitor, context.StatisticMonitorWriteInterval, context.MetadataMinTimeInCache);
+        return new KurrentDBCatchupQueueCache(context.Queue, KurrentDBCatchupQueueAdapterReceiver.MaxMessagesPerRead, context.BufferPool, context.DataAdapter, evictionStrategy, cursorTracker, logger, context.CacheMonitor, context.StatisticMonitorWriteInterval, context.MetadataMinTimeInCache)
+        {
+            PartialTransactionHandling = _receiverOptions.PartialTransactionHandling,
+        };
     }
 
     /// <inheritdoc />

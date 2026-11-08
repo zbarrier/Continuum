@@ -46,9 +46,15 @@ internal class KurrentDBCatchupQueueAdapterReceiver : IKurrentDBQueueAdapterRece
     // Receiver life cycle
     private int _receiverState = ReceiverShutdown;
     private int _initializing;
-    // Set when a transaction cannot be cached. The subscription stays halted until the silo restarts, so nothing past
-    // the transaction is read, delivered or checkpointed.
-    private KurrentDBTransactionTooLargeForCacheException? _halted;
+    // Set when a transaction cannot be cached, or is confirmed partial with Halt handling. The subscription stays
+    // halted until the silo restarts, so nothing past the transaction is read, delivered or checkpointed.
+    private Exception? _halted;
+    private DateTime _nextVerificationUtc;
+
+    // How long a pending transaction waits for its next event before KurrentDB is asked whether more of it exists, and
+    // how long that read may take. A failed read confirms nothing and is retried after the same delay.
+    internal static readonly TimeSpan PendingTransactionVerificationDelay = TimeSpan.FromSeconds(5);
+    internal static readonly TimeSpan PendingTransactionVerificationTimeout = TimeSpan.FromSeconds(5);
 
     private const int ReceiverShutdown = 0;
     private const int ReceiverRunning = 1;
@@ -238,7 +244,7 @@ internal class KurrentDBCatchupQueueAdapterReceiver : IKurrentDBQueueAdapterRece
         }
         if (_halted is { } halted)
         {
-            throw new InvalidOperationException("The catch-up subscription is halted because a transaction did not fit in the cache. Raise the cache block size and restart the silo.", halted);
+            throw new InvalidOperationException("The catch-up subscription is halted. See the inner exception, fix the cause and restart the silo.", halted);
         }
         // Read once: shutdown can clear the field on another thread after the checks above.
         var receiver = _receiver;
@@ -266,8 +272,9 @@ internal class KurrentDBCatchupQueueAdapterReceiver : IKurrentDBQueueAdapterRece
         {
             _receiverMonitor.TrackMessagesReceived(0, null, null);
             // A read with nothing new is when a transaction whose remaining events were filtered out would otherwise
-            // wait for more events to be written.
-            return cache == null ? Array.Empty<IBatchContainer>() : ToNotifications(AddToCache(() => cache.ReleaseStalledTransaction(DateTime.UtcNow, ((KurrentDBCatchupSubscriptionReceiverOptions)_settings.ReceiverOptions).IncompleteTransactionTimeout)));
+            // wait for more events to be written. Time alone proves nothing, since a dropped connection is also quiet,
+            // so KurrentDB is asked before the transaction is treated as partial.
+            return cache == null ? Array.Empty<IBatchContainer>() : ToNotifications(await VerifyPendingTransactionAsync(receiver, cache));
         }
         // receiverMonitor message age
         var dequeueTimeUtc = DateTime.UtcNow;
@@ -285,14 +292,47 @@ internal class KurrentDBCatchupQueueAdapterReceiver : IKurrentDBQueueAdapterRece
         {
             return add();
         }
-        catch (KurrentDBTransactionTooLargeForCacheException ex)
+        catch (Exception ex) when (ex is KurrentDBTransactionTooLargeForCacheException or KurrentDBPartialTransactionException)
         {
-            // The cache has logged what block size is needed. The events have left the KurrentDB receiver, so carrying
-            // on would skip them; halting keeps the checkpoint behind the transaction until the silo is restarted.
+            // The cache has logged the cause. The events have left the KurrentDB receiver, so carrying on would skip
+            // them; halting keeps the checkpoint behind the transaction until the silo is restarted.
             _halted = ex;
             _settings.Diagnostics?.Halted(ex);
             throw;
         }
+    }
+
+    private async Task<List<StreamPosition>> VerifyPendingTransactionAsync(IKurrentDBReceiver receiver, IKurrentDBCatchupQueueCache cache)
+    {
+        if (cache.PendingTransaction is not { } pending || receiver is not IKurrentDBCatchupReceiver catchupReceiver)
+        {
+            return [];
+        }
+        var utcNow = DateTime.UtcNow;
+        if (utcNow - pending.LastReceivedUtc < PendingTransactionVerificationDelay || utcNow < _nextVerificationUtc)
+        {
+            return [];
+        }
+        bool hasMore;
+        try
+        {
+            using var timeout = new CancellationTokenSource(PendingTransactionVerificationTimeout);
+            hasMore = await catchupReceiver.HasMoreTransactionEventsAsync(pending.TransactionId, pending.LastPosition, timeout.Token);
+        }
+        catch (Exception ex)
+        {
+            // A failed read confirms nothing, so the transaction keeps waiting and is verified again later.
+            _logger.PendingTransactionVerificationFailed(ex, _settings.QueueName, pending.TransactionId, pending.LastPosition);
+            _nextVerificationUtc = utcNow + PendingTransactionVerificationDelay;
+            return [];
+        }
+        if (hasMore)
+        {
+            // The rest of the transaction exists and is still on its way through the subscription.
+            _nextVerificationUtc = utcNow + PendingTransactionVerificationDelay;
+            return [];
+        }
+        return AddToCache(() => cache.ReleasePartialTransaction(DateTime.UtcNow));
     }
 
     private static IList<IBatchContainer> ToNotifications(List<StreamPosition> messageStreamPositions)
@@ -573,4 +613,6 @@ internal static partial class KurrentDBCatchupQueueAdapterReceiverLog
     [LoggerMessage(EventId = 100204, EventName = "CannotReadFromSubscription", Level = LogLevel.Warning, Message = "Failed to read from KurrentDB receiver for queue {QueueName}.")] public static partial void ReceiverReadFailed(this ILogger logger, Exception exception, string queueName);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to checkpoint delivered position {CommitPosition} for queue {QueueName}.")] public static partial void CheckpointDeliveredFailed(this ILogger logger, Exception exception, ulong commitPosition, string queueName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not verify whether transaction {TransactionId} after position {Position} on queue {QueueName} has more events; it keeps waiting and is verified again.")] public static partial void PendingTransactionVerificationFailed(this ILogger logger, Exception exception, string queueName, Guid transactionId, ulong position);
 }

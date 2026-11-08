@@ -40,11 +40,23 @@ public interface IKurrentDBCatchupQueueCache : IKurrentDBQueueCache
     Action<ulong>? OnCheckpointablePosition { get; set; }
 
     /// <summary>
-    ///     Caches the transaction still being read when no event has arrived for it within <paramref name="timeout" />,
-    ///     so a transaction whose remaining events were filtered out is not held back on a quiet subscription.
+    ///     The transaction still being read, or <see langword="null" /> when none is.
     /// </summary>
-    /// <param name="utcNow">The current time.</param>
-    /// <param name="timeout">How long to wait for the rest of a transaction after its last event arrived.</param>
-    /// <returns>The positions cached, or an empty list when no transaction was released.</returns>
-    List<StreamPosition> ReleaseStalledTransaction(DateTime utcNow, TimeSpan timeout);
+    PendingTransaction? PendingTransaction { get; }
+
+    /// <summary>
+    ///     Handles the transaction still being read as partial, once KurrentDB has confirmed no more of it will arrive,
+    ///     according to the configured <see cref="Continuum.Streaming.Orleans.KurrentDB.Configuration.PartialTransactionHandling" />.
+    /// </summary>
+    /// <returns>The positions cached, or an empty list when no transaction was pending.</returns>
+    /// <exception cref="KurrentDBPartialTransactionException">The handling is to halt.</exception>
+    List<StreamPosition> ReleasePartialTransaction(DateTime utcNow);
 }
+
+/// <summary>
+///     A transaction a catch-up cache is still reading.
+/// </summary>
+/// <param name="TransactionId">The transaction.</param>
+/// <param name="LastPosition">The position of the last event received of it.</param>
+/// <param name="LastReceivedUtc">When the last event of it was received.</param>
+public readonly record struct PendingTransaction(Guid TransactionId, ulong LastPosition, DateTime LastReceivedUtc);

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans.KurrentDB.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.Extensions;
 
 using KurrentDB.Client;
@@ -148,10 +149,9 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
             }
             if (_pending.Count > 0 && !BelongsToPending(queueMessage))
             {
-                // Events of one append are contiguous in $all, so a different event means the pending transaction can
-                // never complete. Its events are cached as they are rather than lost.
-                _logger.IncompleteTransaction(_pending[0].Message.Metadata.TransactionId, _pending.Count, _pending[0].Message.Metadata.TransactionSize);
-                skippedTail = CacheTransaction(dequeueTimeUtc, cachedMessages, streamPositions, skippedTail);
+                // Events of one append are contiguous in $all, so a different event confirms the pending transaction
+                // can never complete.
+                skippedTail = HandlePartialTransaction(dequeueTimeUtc, cachedMessages, streamPositions, skippedTail);
             }
             _pending.Add((queueMessage, streamPosition));
             _pendingLastReceivedUtc = dequeueTimeUtc;
@@ -163,20 +163,49 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
         return Commit(cachedMessages, streamPositions, skippedTail, dequeueTimeUtc);
     }
 
+    /// <summary>
+    ///     What to do with a transaction KurrentDB has confirmed was only partially received.
+    /// </summary>
+    public PartialTransactionHandling PartialTransactionHandling { get; set; } = PartialTransactionHandling.Halt;
+
     /// <inheritdoc />
-    public List<StreamPosition> ReleaseStalledTransaction(DateTime utcNow, TimeSpan timeout)
+    public PendingTransaction? PendingTransaction =>
+        _pending.Count > 0 && _pending[0].Message.Metadata.TransactionId is { } transactionId
+            ? new PendingTransaction(transactionId, (ulong)_pending[^1].Message.Cursor.SequenceNumber, _pendingLastReceivedUtc)
+            : null;
+
+    /// <inheritdoc />
+    public List<StreamPosition> ReleasePartialTransaction(DateTime utcNow)
     {
-        if (_pending.Count == 0 || utcNow - _pendingLastReceivedUtc < timeout)
+        if (_pending.Count == 0)
         {
             return [];
         }
-        // The rest of the transaction was filtered out of the subscription, or has not been written. Holding it longer
-        // would keep its events from consumers on a quiet subscription, so the events read are delivered as they are.
-        _logger.StalledTransaction(_pending[0].Message.Metadata.TransactionId, _pending.Count, _pending[0].Message.Metadata.TransactionSize, timeout);
         var streamPositions = new List<StreamPosition>();
         var cachedMessages = new List<CachedMessage>();
-        var skippedTail = CacheTransaction(utcNow, cachedMessages, streamPositions, null);
+        var skippedTail = HandlePartialTransaction(utcNow, cachedMessages, streamPositions, null);
         return Commit(cachedMessages, streamPositions, skippedTail, utcNow);
+    }
+
+    private ulong? HandlePartialTransaction(DateTime dequeueTimeUtc, List<CachedMessage> cachedMessages, List<StreamPosition> streamPositions, ulong? skippedTail)
+    {
+        var first = _pending[0].Message.Metadata;
+        var lastPosition = (ulong)_pending[^1].Message.Cursor.SequenceNumber;
+        switch (PartialTransactionHandling)
+        {
+            case PartialTransactionHandling.Deliver:
+                _logger.PartialTransactionDelivered(first.TransactionId, _pending.Count, first.TransactionSize, lastPosition);
+                break;
+            case PartialTransactionHandling.DeliverAndWarn:
+                _logger.PartialTransactionDeliveredWithWarning(first.TransactionId, _pending.Count, first.TransactionSize, lastPosition);
+                break;
+            default:
+                // Nothing of the transaction is cached, so no purge, and therefore no checkpoint, can pass it. The
+                // pending events are kept so the transaction stays visible while halted; they are read again on restart.
+                _logger.PartialTransactionHalted(first.TransactionId, _pending.Count, first.TransactionSize, lastPosition);
+                throw new KurrentDBPartialTransactionException(first.TransactionId, lastPosition, _pending.Count, first.TransactionSize);
+        }
+        return CacheTransaction(dequeueTimeUtc, cachedMessages, streamPositions, skippedTail);
     }
 
     private DateTime _pendingLastReceivedUtc;
@@ -544,9 +573,11 @@ internal static partial class KurrentDBCatchupQueueCacheLog
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Ignored stream target '{StreamTarget}' of event {EventId} in stream {StreamName} at commit position {CommitPosition}: it does not map to a valid stream.")] public static partial void InvalidStreamTarget(this ILogger logger, Exception exception, Guid eventId, string streamName, System.Numerics.BigInteger commitPosition, string streamTarget);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Transaction {TransactionId} ended after {Count} of {TransactionSize} events; the events read are cached as a partial transaction. This is expected when the subscription filter excludes part of the transaction.")] public static partial void IncompleteTransaction(this ILogger logger, Guid? transactionId, int count, int? transactionSize);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Transaction {TransactionId} ending at position {Position} was only partially received ({Count} of {TransactionSize} events); delivering the events received.")] public static partial void PartialTransactionDelivered(this ILogger logger, Guid? transactionId, int count, int? transactionSize, ulong position);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Transaction {TransactionId} received {Count} of {TransactionSize} events and no further event arrived within {Timeout}; the events read are cached as a partial transaction. This is expected when the subscription filter excludes part of the transaction.")] public static partial void StalledTransaction(this ILogger logger, Guid? transactionId, int count, int? transactionSize, TimeSpan timeout);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Transaction {TransactionId} ending at position {Position} was only partially received ({Count} of {TransactionSize} events); delivering the events received. This is expected when the subscription filter excludes part of the transaction.")] public static partial void PartialTransactionDeliveredWithWarning(this ILogger logger, Guid? transactionId, int count, int? transactionSize, ulong position);
+
+    [LoggerMessage(Level = LogLevel.Critical, Message = "Halted: transaction {TransactionId} ending at position {Position} was only partially received ({Count} of {TransactionSize} events). Nothing past it has been delivered or checkpointed. Change the subscription filter, or set PartialTransactionHandling to Deliver or DeliverAndWarn, and restart.")] public static partial void PartialTransactionHalted(this ILogger logger, Guid? transactionId, int count, int? transactionSize, ulong position);
 
     [LoggerMessage(Level = LogLevel.Critical, Message = "Halted: transaction {TransactionId} of {EventCount} events ending with event {EventId} of type {EventType} in stream {StreamName} at commit position {CommitPosition} needs {Size} bytes in the cache for stream {StreamId}, but the cache block size is {BlockSize} bytes. Raise the cache block size to at least {Size} bytes and restart; nothing past the transaction has been checkpointed.")] public static partial void TransactionTooLargeForCache(this ILogger logger, Guid? transactionId, int eventCount, Guid eventId, string eventType, string streamName, System.Numerics.BigInteger commitPosition, StreamId streamId, int size, int blockSize);
 }

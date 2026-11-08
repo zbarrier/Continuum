@@ -31,7 +31,7 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Catchup;
 ///         from the last delivered event rather than from the last event the server pushed.
 ///     </para>
 /// </remarks>
-public class KurrentDBCatchupSubscriptionReceiver : IKurrentDBReceiver
+public class KurrentDBCatchupSubscriptionReceiver : IKurrentDBCatchupReceiver
 {
 
     private readonly KurrentDBReceiverSettings _settings;
@@ -257,6 +257,41 @@ public class KurrentDBCatchupSubscriptionReceiver : IKurrentDBReceiver
     }
 
     #region Subscription
+
+    /// <inheritdoc />
+    public async Task<bool> HasMoreTransactionEventsAsync(Guid transactionId, ulong afterPosition, CancellationToken cancellationToken)
+    {
+        // Read with the subscription's own filter, so an event the filter excludes cannot be mistaken for the rest of the
+        // transaction. The read is bounded by the caller's token; failing it confirms nothing.
+        if (_allStreamOptions is not null)
+        {
+            var from = new Position(afterPosition, afterPosition);
+            var events = _allStreamOptions.Filter is { } filter
+                ? _client.ReadAllAsync(Direction.Forwards, from, filter, maxCount: 2, resolveLinkTos: _receiverOptions.ResolveLinkTos, userCredentials: _credentials, cancellationToken: cancellationToken)
+                : _client.ReadAllAsync(Direction.Forwards, from, maxCount: 2, resolveLinkTos: _receiverOptions.ResolveLinkTos, userCredentials: _credentials, cancellationToken: cancellationToken);
+            await foreach (var resolvedEvent in ((IAsyncEnumerable<ResolvedEvent>)events).WithCancellation(cancellationToken).ConfigureAwait(false))
+            {
+                // The read starts at the last event received, which is returned again.
+                if (resolvedEvent.OriginalPosition is not { } position || position.CommitPosition <= afterPosition || resolvedEvent.Event is null)
+                {
+                    continue;
+                }
+                return KurrentDBCatchupStreamedEventFactory.FromAllStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser).Metadata.TransactionId == transactionId;
+            }
+            return false;
+        }
+        var readResult = _client.ReadStreamAsync(Direction.Forwards, _streamName, new StreamPosition(afterPosition + 1), maxCount: 1, resolveLinkTos: _receiverOptions.ResolveLinkTos, userCredentials: _credentials, cancellationToken: cancellationToken);
+        if (await readResult.ReadState.ConfigureAwait(false) == ReadState.StreamNotFound)
+        {
+            return false;
+        }
+        await foreach (var resolvedEvent in ((IAsyncEnumerable<ResolvedEvent>)readResult).WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            return resolvedEvent.Event is not null
+                && KurrentDBCatchupStreamedEventFactory.FromStream(resolvedEvent, _settings.Options.ConnectionName, _settings.StreamNameParser).Metadata.TransactionId == transactionId;
+        }
+        return false;
+    }
 
     /// <summary>
     ///     Returns the position to subscribe after, or <see langword="null" /> to subscribe from the start. For

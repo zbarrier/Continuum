@@ -1,5 +1,6 @@
 using Continuum;
 using Continuum.Streaming;
+using Continuum.Streaming.Orleans.KurrentDB.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.Monitors;
 
 namespace Orleans.Configuration;
@@ -42,15 +43,15 @@ public abstract class KurrentDBCatchupSubscriptionReceiverOptions : KurrentDBRec
     public int BufferCapacityMultiplier { get; set; } = 10;
 
     /// <summary>
-    ///     How long to wait for the rest of a transaction after its last event arrived before delivering the events read
-    ///     as a partial transaction.
+    ///     What to do with a transaction the subscription only received part of, which happens when the subscription
+    ///     filter excludes some of its events.
     /// </summary>
     /// <remarks>
-    ///     A subscription filter can exclude part of a transaction, and the remaining events never arrive. Their arrival
-    ///     is otherwise only ruled out by the next event, so on a quiet subscription the events read would wait until
-    ///     more are written. A partial transaction is logged as a warning in case the filter was not meant to exclude it.
+    ///     A transaction is only treated as partial once KurrentDB confirms it. When no further event arrives, a short
+    ///     verification read is made after a few seconds; a failed read never confirms anything, so a dropped
+    ///     connection only delays the decision. See <see cref="PartialTransactionHandling" />.
     /// </remarks>
-    public TimeSpan IncompleteTransactionTimeout { get; set; } = TimeSpan.FromSeconds(60);
+    public PartialTransactionHandling PartialTransactionHandling { get; set; } = PartialTransactionHandling.Halt;
 
     /// <summary>
     ///     The name of the KurrentDB connection used to resolve the <see cref="CheckpointStore" />.
