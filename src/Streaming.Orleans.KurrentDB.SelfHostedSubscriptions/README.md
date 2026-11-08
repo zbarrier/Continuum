@@ -20,6 +20,7 @@ Each subscription reads exactly one source. Pick the base class and matching reg
 | One named stream, such as `$ce-{Category}` or a custom projection stream, by overriding `StreamName` | `KurrentDBStreamCatchupSubscription<TSubscription, TOptions>` | `AddKurrentDBStreamCatchupSubscription(MySubscription.Info)` |
 
 - `$all` subscriptions checkpoint the `$all` commit position and deliver events appended in one transaction in the same batch.
+- A `Filter` can let through only part of a transaction. `BufferOptions.PartialTransactionHandling` decides what happens: `Halt` (default) logs a critical error and stops without checkpointing past it; `DeliverAndWarn` delivers what was received with a warning; `Deliver` delivers it with a debug log. A transaction is only treated as partial once confirmed: an event from another transaction arrives, or, after about 5 seconds of quiet, a short read of `$all` with the same filter finds no more of it. A failed or timed-out read confirms nothing, so the subscription keeps waiting and checks again.
 - `$all` subscriptions exclude `$`-prefixed system events (links, metadata, checkpoints) by default with `EventTypeFilter.ExcludeSystemEvents()`. Overriding `Filter` replaces that default; prefer prefix filters over regular expressions, and return `null` only to read every event.
 - Stream subscriptions checkpoint the stream revision and must not name `$all`.
 - Link events are resolved to the events they point at (`ResolveLinkTos`, on by default), which `$ce-` and other projected link streams need.

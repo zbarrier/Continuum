@@ -96,6 +96,20 @@ Writes to the checkpoint store are batched by `CheckpointMonitorOptions`. By def
 
 A catch-up subscription is read only. Events are written by event sourcing, so writing to the provider throws.
 
+### Transactions
+
+Events appended in one transaction are delivered together, in one batch, to each Orleans stream the transaction wrote to. The checkpoint never moves into the middle of a transaction.
+
+A filter can let through only part of a transaction. This is allowed, because some filters are meant to do it, but it is never silent. `PartialTransactionHandling` on the catch-up subscription options decides what happens:
+
+- `Halt` (default): logs a critical error and stops the receiver without moving the checkpoint past the transaction. Change the filter or the handling and restart.
+- `DeliverAndWarn`: delivers the events received and logs a warning.
+- `Deliver`: delivers the events received and logs at debug level.
+
+A transaction is only treated as partial once that is confirmed: an event from another transaction arrives, or, after about 5 seconds with nothing arriving, a short read of `$all` with the same filter finds no further event of it. A read that fails or times out confirms nothing, so the subscription keeps waiting and checks again. A dropped connection can take a while to detect, so silence alone never ends a transaction.
+
+A transaction must fit in one cache block. One that does not halts the receiver with a critical log giving the size it needs and the block size; raise the block size and restart.
+
 ### Multiple `$all` subscriptions
 
 You can run as many `$all` subscriptions against the same database as you need. Add one stream provider per subscription, each with a distinct name and the default filter, the same filter, or a different filter. Providers that use the same `ConnectionName` share one `KurrentDBClient`, and each subscription runs as a separate call on that client's connection.
@@ -219,7 +233,7 @@ An existing persistent subscription is not changed on startup. Setting `UpdateEx
 - **Events must not exceed 1 MB**, data and metadata combined. This is KurrentDB's default maximum append size.
 - **Keep metadata under 16 KB.** Metadata is carried with every event and copied on every delivery, so use it for small values such as correlation and causation ids, tenant and user details and tracing headers, and keep the payload in the event data.
 
-Events are cached in 2 MB blocks, which leaves room for a 1 MB event and the extra space the cache needs to store it. An event that does not fit in a block is logged as an error and skipped. It is not delivered or retried. A catch-up subscription's checkpoint moves past it, and a persistent subscription has already acknowledged it.
+Events are cached in 2 MB blocks, which leaves room for a 1 MB event and the extra space the cache needs to store it. A catch-up subscription halts on an event or transaction that does not fit in a block, without moving the checkpoint past it (see [Transactions](#transactions)). A persistent subscription logs an event that does not fit as an error and skips it, since it has already acknowledged it.
 
 ## Cache memory after a catch-up
 
