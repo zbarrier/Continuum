@@ -126,6 +126,65 @@ public class ParseValidatorTests
         Assert.Same(OtherError, Result.Failure<string>(OtherError).IsInt32(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo).Error);
     }
 
+    // IsInt64
+
+    [Theory]
+    [InlineData("0", 0L)]
+    [InlineData("-42", -42L)]
+    [InlineData("2147483648", 2147483648L)]
+    [InlineData("9223372036854775807", long.MaxValue)]
+    [InlineData("-9223372036854775808", long.MinValue)]
+    public void IsInt64_ValidValue_Success(string value, long expected)
+    {
+        var result = Result.IsInt64(value, MyPropertyName);
+
+        Assert.Equal(expected, result.Value);
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("1.5")]
+    [InlineData("9223372036854775808")]
+    public void IsInt64_InvalidValue_InvalidFormatError(string value)
+    {
+        var result = Result.IsInt64(value, MyPropertyName);
+
+        Assert.Equal(InvalidFormat(MyPropertyName), result.Error);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void IsInt64_NullOrEmpty_NotEmptyError(string? value)
+    {
+        var result = Result.IsInt64(value, MyPropertyName);
+
+        Assert.Equal(NotEmpty(MyPropertyName), result.Error);
+    }
+
+    [Fact]
+    public void IsInt64MultiPart_InvalidValue_UsesFormattedPropertyName()
+    {
+        var result = Result.IsInt64("abc", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        Assert.Equal(InvalidFormat(MultiPartPropertyName), result.Error);
+    }
+
+    [Fact]
+    public void IsInt64MultiPart_ValidValue_Success()
+    {
+        var result = Result.IsInt64("7", PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo);
+
+        Assert.Equal(7L, result.Value);
+    }
+
+    [Fact]
+    public void IsInt64Chained_FailedResult_ReturnsOriginalError()
+    {
+        Assert.Same(OtherError, Result.Failure<string>(OtherError).IsInt64(MyPropertyName).Error);
+        Assert.Same(OtherError, Result.Failure<string>(OtherError).IsInt64(PropertyPath.Root.Append(MyPropertyName), MyPropertyNameTwo).Error);
+    }
+
     // IsDateOnly (chained)
 
     [Fact]
