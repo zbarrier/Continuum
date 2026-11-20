@@ -3,7 +3,7 @@ using Continuum.Domain.Orleans;
 
 namespace GetRDone.Orders.Abstractions.OrderAggregate;
 
-public partial interface IOrderGrain : IEventDrivenGrain
+public partial interface IOrderGrain : IEventDrivenStateMachineGrain
 {
 }
 

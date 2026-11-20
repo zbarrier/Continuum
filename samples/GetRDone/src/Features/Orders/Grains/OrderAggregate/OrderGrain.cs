@@ -1,10 +1,16 @@
+using System.Security.Claims;
+
 using Continuum.CSharpFunctionalExtensions;
+using Continuum.CSharpFunctionalExtensions.Orleans;
 using Continuum.Domain.Orleans;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
 using GetRDone.Orders.Abstractions.ReadModels;
 
+using ManagedCode.Orleans.Identity.Core.Extensions;
+
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 
 using Orleans.Providers;
 
@@ -13,66 +19,55 @@ namespace GetRDone.Orders.Grains.OrderAggregate;
 [Authorize]
 [GrainType("order")]
 [LogConsistencyProvider(ProviderName = "EventLog")]
-public sealed partial class OrderGrain(IServiceProvider serviceProvider)
-    : EventDrivenGrain<OrderState, OrderEvent>(serviceProvider, "kurrentdb"), IOrderGrain
-{ }
+public sealed partial class OrderGrain
+    : EventDrivenStateMachineGrain<OrderState, OrderEvent, OrderStatus, OrderCommand>, IOrderGrain
+{
+    private readonly ILogger<OrderGrain> _logger;
+    private readonly Func<Exception, Error> _grainCallErrorHandler;
+
+    public OrderGrain(IServiceProvider serviceProvider, ILogger<OrderGrain> logger)
+        : base(serviceProvider, "kurrentdb")
+    {
+        _logger = logger;
+        _grainCallErrorHandler = ex => GlobalGrainErrorHandler.Default(ex, _logger);
+    }
+
+    private string? GetCurrentUserId()
+    {
+        return this.GetCurrentUser().FindFirstValue(ClaimTypes.NameIdentifier) ?? this.GetCurrentUser().FindFirstValue("sub") ?? null;
+    }
+}
+
+public enum OrderStatus
+{
+    None,
+    Draft
+}
+
+public enum OrderCommand
+{
+    StartDraft
+}
 
 [GenerateSerializer]
-public sealed class OrderState : EventDrivenState<OrderState, OrderEvent>
+public sealed partial class OrderState : EventDrivenStateMachineState<OrderState, OrderEvent, OrderStatus, OrderCommand>
 {
-    public OrderState() => On<OrderDraftStarted>(Apply);
+    public OrderState() : base(OrderStatus.None) { }
 
     [Id(0)]
     public OrderDraftStarted? Draft { get; set; }
 
-    private void Apply(OrderDraftStarted @event) => Draft = @event;
-}
-
-public static class StartOrderDraft
-{
-    public static Result<OrderDraftStarted> Decide(
-        OrderState state, StartOrderDraftCommand command, IReadOnlyList<OrderableService> offerings,
-        Guid orderId, Guid initiatedBy, DateTimeOffset occurredAt)
+    protected override void ConfigureEventHandlers()
     {
-        if (state.Draft is not null)
-            return Result.Failure<OrderDraftStarted>(RequestErrors.NewAlreadyExists("The order already exists."));
-
-        if (string.IsNullOrWhiteSpace(command.PropertyStreet) || string.IsNullOrWhiteSpace(command.PropertyCity)
-            || string.IsNullOrWhiteSpace(command.PropertyState) || string.IsNullOrWhiteSpace(command.PropertyZip))
-            return Result.Failure<OrderDraftStarted>(RequestErrors.NewInvalidArg("A complete property address is required."));
-
-        if (string.IsNullOrWhiteSpace(command.PropertyType) || string.IsNullOrWhiteSpace(command.IntendedUseId)
-            || string.IsNullOrWhiteSpace(command.IntendedUseVersion) || string.IsNullOrWhiteSpace(command.IntendedUseName)
-            || string.IsNullOrWhiteSpace(command.LoanNumber) || command.DueDate == default)
-            return Result.Failure<OrderDraftStarted>(RequestErrors.NewInvalidArg("The request and property details are required."));
-
-        var offering = offerings.FirstOrDefault(item => item.ServiceRequestTypeId == command.ServiceRequestTypeId
-            && item.ServiceRequestTypeVersion == command.ServiceRequestTypeVersion
-            && item.FormTypeId == command.FormTypeId && item.FormTypeVersion == command.FormTypeVersion);
-        if (offering is null)
-            return Result.Failure<OrderDraftStarted>(RequestErrors.NewInvalidArg("The selected service and form are not offered."));
-
-        return Result.Success(new OrderDraftStarted
+        On<OrderDraftStarted>(@event =>
         {
-            OrderId = orderId,
-            ServiceRequestTypeId = offering.ServiceRequestTypeId,
-            ServiceRequestTypeVersion = offering.ServiceRequestTypeVersion,
-            ServiceRequestTypeName = offering.ServiceRequestTypeName,
-            FormTypeId = offering.FormTypeId,
-            FormTypeVersion = offering.FormTypeVersion,
-            FormTypeName = offering.FormTypeName,
-            PropertyStreet = command.PropertyStreet,
-            PropertyCity = command.PropertyCity,
-            PropertyState = command.PropertyState,
-            PropertyZip = command.PropertyZip,
-            PropertyType = command.PropertyType,
-            IntendedUseId = command.IntendedUseId,
-            IntendedUseVersion = command.IntendedUseVersion,
-            IntendedUseName = command.IntendedUseName,
-            LoanNumber = command.LoanNumber,
-            DueDate = command.DueDate,
-            InitiatedBy = initiatedBy,
-            OccurredAt = occurredAt
+            Status = OrderStatus.Draft;
+            Draft = @event;
         });
+    }
+
+    protected override void ConfigureStateMachine()
+    {
+        StateMachine.Configure(OrderStatus.None).Permit(OrderCommand.StartDraft, OrderStatus.Draft);
     }
 }

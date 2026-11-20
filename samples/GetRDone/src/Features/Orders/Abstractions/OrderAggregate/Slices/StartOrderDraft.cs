@@ -5,12 +5,12 @@ using Continuum.TypeMapping;
 
 namespace GetRDone.Orders.Abstractions.OrderAggregate;
 
-public partial interface IOrderGrain : IEventDrivenGrain
+public partial interface IOrderGrain : IEventDrivenStateMachineGrain
 {
     Task<Result<StartOrderDraftResponse>> StartOrderDraftAsync(StartOrderDraftCommand command);
 }
 
-[GenerateSerializer, Immutable]
+[Alias("Orders.StartOrderDraftCommand.V1"), GenerateSerializer, Immutable]
 public sealed record StartOrderDraftCommand(
     Guid ServiceRequestTypeId,
     int ServiceRequestTypeVersion,
@@ -21,16 +21,16 @@ public sealed record StartOrderDraftCommand(
     string PropertyState,
     string PropertyZip,
     string PropertyType,
-    string IntendedUseId,
-    string IntendedUseVersion,
+    Guid IntendedUseId,
+    int IntendedUseVersion,
     string IntendedUseName,
     string LoanNumber,
     DateOnly DueDate);
 
-[GenerateSerializer, Immutable]
+[Alias("Orders.StartOrderDraftResponse.V1"), GenerateSerializer, Immutable]
 public sealed class StartOrderDraftResponse(IReadOnlyList<IChange> changes, int version) : CommandResponseWithChangesBase(changes, version);
 
-[DomainEventType("GetRDone.Orders.OrderDraftStarted"), GenerateSerializer, Immutable]
+[Alias("Orders.OrderDraftStarted.V1"), DomainEventType("Orders.OrderDraftStarted.V1"), GenerateSerializer, Immutable]
 public sealed class OrderDraftStarted : OrderEvent
 {
     [Id(0)] public required Guid OrderId { get; init; }
@@ -45,8 +45,8 @@ public sealed class OrderDraftStarted : OrderEvent
     [Id(9)] public required string PropertyState { get; init; }
     [Id(10)] public required string PropertyZip { get; init; }
     [Id(11)] public required string PropertyType { get; init; }
-    [Id(12)] public required string IntendedUseId { get; init; }
-    [Id(13)] public required string IntendedUseVersion { get; init; }
+    [Id(12)] public required Guid IntendedUseId { get; init; }
+    [Id(13)] public required int IntendedUseVersion { get; init; }
     [Id(14)] public required string IntendedUseName { get; init; }
     [Id(15)] public required string LoanNumber { get; init; }
     [Id(16)] public required DateOnly DueDate { get; init; }

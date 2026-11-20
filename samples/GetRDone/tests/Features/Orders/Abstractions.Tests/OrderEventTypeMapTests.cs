@@ -17,6 +17,6 @@ public sealed class OrderEventTypeMapTests
             TypeMapRegistry.GetRegistrations(TypeMapKinds.DomainEvent),
             item => item.Type == typeof(OrderDraftStarted));
 
-        Assert.Equal("GetRDone.Orders.OrderDraftStarted", registration.TypeIdentifier);
+        Assert.Equal("Orders.OrderDraftStarted.V1", registration.TypeIdentifier);
     }
 }

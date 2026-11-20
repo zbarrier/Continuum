@@ -521,3 +521,42 @@ public sealed record DueDate : DateOnlyValueObject<DueDate>
 
     private DueDate(DateOnly value) : base(value) { }
 }
+
+[Alias("Orders.UserId.V1"), GenerateSerializer, Immutable]
+public sealed record UserId : GuidValueObject<UserId>
+{
+    public static Result<UserId> Create(string? value, string propertyName = nameof(UserId))
+    {
+        return Result.IsGuidAndNotEmpty(value, propertyName)
+            .Map(validatedValue => new UserId(validatedValue));
+    }
+    public static Result<UserId> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.IsGuidAndNotEmpty(value, propertyPath, member)
+            .Map(validatedValue => new UserId(validatedValue));
+    }
+    public static Result<UserId> Create(Guid? value, string propertyName = nameof(UserId))
+    {
+        return Result.NotNull(value, propertyName)
+            .NotEmpty(propertyName)
+            .Map(validatedValue => new UserId(validatedValue));
+    }
+    public static Result<UserId> Create(Guid? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNull(value, propertyPath, member)
+            .NotEmpty(propertyPath, member)
+            .Map(validatedValue => new UserId(validatedValue));
+    }
+    public static Result<UserId> Create(Guid value, string propertyName = nameof(UserId))
+    {
+        return Result.NotEmpty(value, propertyName)
+            .Map(validatedValue => new UserId(validatedValue));
+    }
+    public static Result<UserId> Create(Guid value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotEmpty(value, propertyPath, member)
+            .Map(validatedValue => new UserId(validatedValue));
+    }
+
+    private UserId(Guid value) : base(value) { }
+}

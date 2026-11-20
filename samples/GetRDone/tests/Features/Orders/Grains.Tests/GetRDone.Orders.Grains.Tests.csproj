@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Features\Orders\Grains\GetRDone.Orders.Grains.csproj" />
+    <!-- Hosts a test silo, so like GetRDone.Silo it registers the referenced type-mapped types before the mappers are built. -->
+    <ProjectReference Include="$(ContinuumSrc)Core.SourceGenerators\Continuum.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
