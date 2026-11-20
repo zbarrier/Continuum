@@ -2,7 +2,16 @@ using Stateless;
 
 namespace Continuum.Domain.Orleans;
 
-/// <summary>Base class for an event-driven state backed by a <see cref="StateMachine{TState, TTrigger}"/>; each applied event fires its command on the state machine.</summary>
+/// <summary>
+///     Base class for an event-driven state whose status is guarded by a <see cref="StateMachine{TState, TTrigger}"/>.
+///     Grains check a command against <see cref="StateMachine"/> (for example with <c>CanFire</c>) before applying its
+///     event; applying an event only runs its handler, which sets <see cref="Status"/>.
+/// </summary>
+/// <remarks>
+///     Events are facts, so replaying them never fires the state machine: changing transitions or guards cannot break
+///     existing streams, and entry/exit actions never run during replay. Do not call <c>Fire</c> on
+///     <see cref="StateMachine"/>; the status must change only through event handlers.
+/// </remarks>
 /// <typeparam name="TState">The concrete state type.</typeparam>
 /// <typeparam name="TEventBase">The base type of events applied to the state.</typeparam>
 /// <typeparam name="TStatus">The state machine status type.</typeparam>
@@ -11,7 +20,7 @@ namespace Continuum.Domain.Orleans;
 public abstract class EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand> : 
     IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand> 
     where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
-    where TEventBase : StateMachineEvent<TCommand>
+    where TEventBase : class
     where TStatus : notnull
     where TCommand : notnull
 {
@@ -35,8 +44,15 @@ public abstract class EventDrivenStateMachineState<TState, TEventBase, TStatus, 
         ConfigureStateMachine();
     }
 
-    /// <summary>Gets the state machine that tracks the status of the state.</summary>
+    /// <summary>Gets the state machine that guards which commands are permitted in the current <see cref="Status"/>.</summary>
     public StateMachine<TStatus, TCommand> StateMachine => _stateMachine;
+
+    /// <summary>Gets the current status. Event handlers set it.</summary>
+    public TStatus Status
+    {
+        get => _status;
+        protected set => _status = value;
+    }
 
     /// <summary>Registers the handler invoked when an event of type <typeparamref name="TEvent"/> is applied.</summary>
     /// <typeparam name="TEvent">The event type to handle.</typeparam>
@@ -64,14 +80,13 @@ public abstract class EventDrivenStateMachineState<TState, TEventBase, TStatus, 
         {
             handler(evt);
         }
-        _stateMachine.Fire(evt.Command);
     }
 
     /// <summary>Registers event handlers by calling <see cref="On{TEvent}(Action{TEvent})"/>.</summary>
     /// <remarks>Called from the base constructor before derived constructors run; handlers must not depend on fields set in a derived constructor.</remarks>
     protected abstract void ConfigureEventHandlers();
 
-    /// <summary>Configures the permitted transitions of <see cref="StateMachine"/>.</summary>
+    /// <summary>Configures the permitted transitions of <see cref="StateMachine"/>, used to check commands before their events are applied.</summary>
     /// <remarks>Called from the base constructor before derived constructors run; configuration must not depend on fields set in a derived constructor.</remarks>
     protected abstract void ConfigureStateMachine();
 }

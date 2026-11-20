@@ -12,17 +12,23 @@ public interface IEventDrivenState<TState, TEventBase>
     void When(TEventBase @event);
 }
 
-/// <summary>An event-driven state backed by a state machine.</summary>
+/// <summary>
+///     An event-driven state with a status guarded by a state machine. Commands are checked against the state machine
+///     before events are applied; applying an event never fires the state machine, its handler sets the status.
+/// </summary>
 /// <typeparam name="TState">The concrete state type.</typeparam>
 /// <typeparam name="TEventBase">The base type of events applied to the state.</typeparam>
 /// <typeparam name="TStatus">The state machine status type.</typeparam>
 /// <typeparam name="TCommand">The state machine trigger type.</typeparam>
 public interface IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>
     where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
-    where TEventBase : IStateMachineEvent<TCommand>
+    where TEventBase : class
     where TStatus : notnull
     where TCommand : notnull
 {
+    /// <summary>Gets the current status.</summary>
+    TStatus Status { get; }
+
     /// <summary>Applies an event to the state.</summary>
     /// <param name="event">The event to apply.</param>
     void When(TEventBase @event);

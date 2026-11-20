@@ -46,7 +46,7 @@ internal sealed class CoordinatingStreamTransaction<TState, TEventBase> : ICoord
 internal sealed class CoordinatingStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>
     : ICoordinatingStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>
     where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
-    where TEventBase : StateMachineEvent<TCommand>
+    where TEventBase : class
     where TStatus : notnull
     where TCommand : notnull
 {

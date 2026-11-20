@@ -15,7 +15,7 @@ dotnet add package Continuum.Domain
 | Type | Purpose |
 |---|---|
 | `IEventDrivenState<TState, TEventBase>` | State rebuilt by applying events. |
-| `IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>` | Event-driven state whose events fire state machine commands. |
+| `IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>` | Event-driven state whose status is set by event handlers and guarded by a state machine that checks commands before their events are applied. |
 | `IStreamTransaction<TState, TEventBase>` | Works on an isolated copy of the state and tracks uncommitted events. |
 | `IStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>` | The state machine equivalent of `IStreamTransaction`. |
 | `IStreamTransactionResponse` | The saved changes (event type name and event) and the new version. |

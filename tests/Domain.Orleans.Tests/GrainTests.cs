@@ -59,7 +59,7 @@ public sealed class DoorGrain(IServiceProvider serviceProvider)
         return await SaveChanges(transaction);
     }
 
-    public Task<DoorStatus> GetStatus() => Task.FromResult(State.StateMachine.State);
+    public Task<DoorStatus> GetStatus() => Task.FromResult(State.Status);
     public Task<int> GetOpenCount() => Task.FromResult(State.OpenCount);
 }
 

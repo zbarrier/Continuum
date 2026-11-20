@@ -26,7 +26,7 @@ public abstract class EventDrivenStateMachineGrain<TState, TEventBase, TStatus, 
     ITransactionSubmissionSource,
     IStreamTargetSource
     where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
-    where TEventBase : StateMachineEvent<TCommand>
+    where TEventBase : class
     where TStatus : notnull
     where TCommand : notnull
 {

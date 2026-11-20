@@ -9,18 +9,3 @@ public interface IDomainEvent
     /// <summary>Gets the time at which the event occurred.</summary>
     DateTimeOffset OccurredAt { get; }
 }
-
-/// <summary>An event that carries the state machine command (trigger) that produced it.</summary>
-/// <typeparam name="TCommand">The state machine trigger type.</typeparam>
-public interface IStateMachineEvent<TCommand>
-    where TCommand : notnull
-{
-    /// <summary>Gets the state machine command (trigger) that produced the event.</summary>
-    TCommand Command { get; }
-}
-
-/// <summary>A domain event that is also a state machine event.</summary>
-/// <typeparam name="TCommand">The state machine trigger type.</typeparam>
-public interface IStateMachineDomainEvent<TCommand> : IDomainEvent, IStateMachineEvent<TCommand>
-    where TCommand : notnull
-{ }

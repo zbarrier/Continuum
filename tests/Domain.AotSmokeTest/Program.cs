@@ -29,8 +29,9 @@ Check("State dispatches events", counter.Count == 5);
 
 var door = new DoorState();
 door.When(new DoorOpened());
+var closePermitted = door.StateMachine.CanFire(DoorCommand.Close);
 door.When(new DoorClosed());
-Check("State machine transitions", door.StateMachine.State == DoorStatus.Closed && door.OpenCount == 1);
+Check("State machine status", closePermitted && door.Status == DoorStatus.Closed && door.StateMachine.CanFire(DoorCommand.Open) && door.OpenCount == 1);
 
 // StreamTransactionResponseConverter with source-generated JSON metadata
 var mapper = new SmokeTypeMapper();
@@ -65,11 +66,11 @@ internal enum DoorStatus { Closed, Open }
 internal enum DoorCommand { Open, Close }
 
 [GenerateSerializer]
-internal abstract class DoorEvent(DoorCommand command) : StateMachineEvent<DoorCommand>(command);
+internal abstract class DoorEvent;
 [GenerateSerializer]
-internal sealed class DoorOpened() : DoorEvent(DoorCommand.Open);
+internal sealed class DoorOpened : DoorEvent;
 [GenerateSerializer]
-internal sealed class DoorClosed() : DoorEvent(DoorCommand.Close);
+internal sealed class DoorClosed : DoorEvent;
 
 [GenerateSerializer]
 internal sealed class DoorState : EventDrivenStateMachineState<DoorState, DoorEvent, DoorStatus, DoorCommand>
@@ -78,7 +79,15 @@ internal sealed class DoorState : EventDrivenStateMachineState<DoorState, DoorEv
 
     [Id(0)] public int OpenCount { get; set; }
 
-    protected override void ConfigureEventHandlers() => On<DoorOpened>(_ => OpenCount++);
+    protected override void ConfigureEventHandlers()
+    {
+        On<DoorOpened>(_ =>
+        {
+            Status = DoorStatus.Open;
+            OpenCount++;
+        });
+        On<DoorClosed>(_ => Status = DoorStatus.Closed);
+    }
 
     protected override void ConfigureStateMachine()
     {

@@ -14,7 +14,7 @@ public abstract class EventDrivenStateMachineGrainTestHarness<TGrainInterface, T
 	where TGrainInterface : IEventDrivenStateMachineGrain
 	where TGrain : EventDrivenStateMachineGrain<TGrainState, TEventBase, TStatus, TCommand>, TGrainInterface
 	where TGrainState : EventDrivenStateMachineState<TGrainState, TEventBase, TStatus, TCommand>, new()
-	where TEventBase : StateMachineEvent<TCommand>
+	where TEventBase : class
 	where TStatus : notnull
 	where TCommand : notnull
 {

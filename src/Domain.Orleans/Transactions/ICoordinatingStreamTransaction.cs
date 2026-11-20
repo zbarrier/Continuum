@@ -46,7 +46,7 @@ public interface ICoordinatingStreamTransaction<TState, TEventBase> : IStreamTra
 public interface ICoordinatingStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>
     : IStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>, IAsyncDisposable
     where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
-    where TEventBase : IStateMachineEvent<TCommand>
+    where TEventBase : class
     where TStatus : notnull
     where TCommand : notnull
 {

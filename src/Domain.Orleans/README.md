@@ -46,7 +46,15 @@ public sealed class DoorState : EventDrivenStateMachineState<DoorState, DoorEven
 
     [Id(0)] public int OpenCount { get; set; }
 
-    protected override void ConfigureEventHandlers() => On<DoorOpened>(_ => OpenCount++);
+    protected override void ConfigureEventHandlers()
+    {
+        On<DoorOpened>(_ =>
+        {
+            Status = DoorStatus.Open;
+            OpenCount++;
+        });
+        On<DoorClosed>(_ => Status = DoorStatus.Closed);
+    }
 
     protected override void ConfigureStateMachine()
     {
@@ -54,9 +62,17 @@ public sealed class DoorState : EventDrivenStateMachineState<DoorState, DoorEven
         StateMachine.Configure(DoorStatus.Open).Permit(DoorCommand.Close, DoorStatus.Closed);
     }
 }
+
+public sealed class DoorGrain(IServiceProvider services)
+    : EventDrivenStateMachineGrain<DoorState, DoorEvent, DoorStatus, DoorCommand>(services, "doors"), IDoorGrain
+{
+    public Task<Result<IStreamTransactionResponse>> Open()
+        => Result.SuccessIf(State.StateMachine.CanFire(DoorCommand.Open), RequestErrors.NewFailedPrecondition("The door is already open."))
+            .BindWithStreamTransaction(this, transaction => transaction.Apply(new DoorOpened()));
+}
 ```
 
-Each event carries the command it fires. The current status is stored on the state, and the constructor builds the state machine over it and calls `ConfigureStateMachine`, so copies and deserialized states (including snapshots) always have their transitions.
+The state machine guards commands: the grain checks it (for example with `CanFire`) before applying an event. Applying an event never fires the state machine; its handler sets `Status`. Events are facts and do not carry a trigger, so replaying a stream cannot fail when transitions or guards change later, and entry/exit actions never run during replay. Do not call `Fire` on `StateMachine`; the status changes only through event handlers. The status is stored on the state, and the constructor builds the state machine over it and calls `ConfigureStateMachine`, so copies and deserialized states (including snapshots) always have their transitions.
 
 ## Transactions
 

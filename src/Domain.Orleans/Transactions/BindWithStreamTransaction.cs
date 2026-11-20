@@ -112,7 +112,7 @@ public static class ResultStreamTransactionExtensions
             Action<ICoordinatingStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>> f,
             TimeSpan? timeout = null)
         where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
-        where TEventBase : StateMachineEvent<TCommand>
+        where TEventBase : class
         where TStatus : notnull
         where TCommand : notnull
         => self.BindWithStreamTransaction(grain, t => { f(t); return Task.FromResult(Result.Success()); }, timeout);
@@ -123,7 +123,7 @@ public static class ResultStreamTransactionExtensions
             Func<ICoordinatingStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>, Result> f,
             TimeSpan? timeout = null)
         where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
-        where TEventBase : StateMachineEvent<TCommand>
+        where TEventBase : class
         where TStatus : notnull
         where TCommand : notnull
         => self.BindWithStreamTransaction(grain, t => Task.FromResult(f(t)), timeout);
@@ -134,7 +134,7 @@ public static class ResultStreamTransactionExtensions
             Func<ICoordinatingStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>, Task<Result>> f,
             TimeSpan? timeout = null)
         where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
-        where TEventBase : StateMachineEvent<TCommand>
+        where TEventBase : class
         where TStatus : notnull
         where TCommand : notnull
     {

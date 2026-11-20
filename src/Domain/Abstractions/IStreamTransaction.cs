@@ -32,7 +32,7 @@ public interface IStreamTransaction<TState, TEventBase> : IDisposable
 /// <typeparam name="TCommand">The state machine trigger type.</typeparam>
 public interface IStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand> : IDisposable
     where TState : IEventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
-    where TEventBase : IStateMachineEvent<TCommand>
+    where TEventBase : class
     where TStatus : notnull
     where TCommand : notnull
 {
