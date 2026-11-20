@@ -122,6 +122,34 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is not empty or default.
     /// </summary>
+    public static Result<sbyte> NotEmpty(this Result<sbyte> result, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value == default
+            ? Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName))
+            : result;
+    }
+
+    /// <summary>
+    ///     Ensure value is not empty or default.
+    /// </summary>
+    public static Result<sbyte> NotEmpty(this Result<sbyte> result, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value == default)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is not empty or default.
+    /// </summary>
     public static Result<short> NotEmpty(this Result<short> result, string propertyName)
     {
         if (result.IsFailure) return result;

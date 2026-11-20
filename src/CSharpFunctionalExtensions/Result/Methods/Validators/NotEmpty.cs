@@ -98,6 +98,28 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is not empty or default.
     /// </summary>
+    public static Result<sbyte> NotEmpty(sbyte value, string propertyName) 
+        => value == default
+            ? Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName))
+            : Result.Success(value);
+
+    /// <summary>
+    ///     Ensure value is not empty or default.
+    /// </summary>
+    public static Result<sbyte> NotEmpty(sbyte value, PropertyPath path, string member)
+    {
+        if (value == default)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
+        }
+
+        return Result.Success(value);
+    }
+
+    /// <summary>
+    ///     Ensure value is not empty or default.
+    /// </summary>
     public static Result<short> NotEmpty(short value, string propertyName) 
         => value == default
             ? Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName))

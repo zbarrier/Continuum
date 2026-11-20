@@ -94,6 +94,34 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is less than or equal to given value.
     /// </summary>
+    public static Result<sbyte> LessThanOrEqual(this Result<sbyte> result, sbyte comparisonValue, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value <= comparisonValue
+            ? result
+            : Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.LessThanOrEqual, ValidatorErrorStrings.LessThanOrEqual, propertyName, comparisonValue));
+    }
+
+    /// <summary>
+    ///     Ensure value is less than or equal to given value.
+    /// </summary>
+    public static Result<sbyte> LessThanOrEqual(this Result<sbyte> result, sbyte comparisonValue, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value > comparisonValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.LessThanOrEqual, ValidatorErrorStrings.LessThanOrEqual, propertyName, comparisonValue));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is less than or equal to given value.
+    /// </summary>
     public static Result<short> LessThanOrEqual(this Result<short> result, short comparisonValue, string propertyName)
     {
         if (result.IsFailure) return result;

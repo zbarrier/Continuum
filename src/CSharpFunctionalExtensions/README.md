@@ -117,6 +117,22 @@ if (combined.Error is ValidationError validation)
 }
 ```
 
+### Parsing culture
+
+The string parsers (`IsInt32`, `IsDecimal`, `IsDouble`, `IsDateOnly`, `IsDateTime`, `IsTimeSpan`, ...) use the
+invariant culture by default, never the current culture. The current culture isn't reliable on a server: it doesn't
+flow from the request into Orleans grains, so it is whatever the silo happens to use.
+
+Browser `number` and `date` inputs, and Blazor's `InputNumber`/`InputDate`, already submit invariant values. For
+free-text fields that accept localized input, pass the user's culture explicitly:
+
+```csharp
+Result<decimal> price = Result.IsDecimal(form.Price, "Price", userCulture);   // "1.234,5" with de-DE => 1234.5
+```
+
+Choose the culture deliberately: text such as `"1,234"` is valid in both en-US and de-DE but means 1234 in one and
+1.234 in the other. A `null` provider uses the invariant culture.
+
 ### Typed error arguments
 
 Message arguments are `ErrorArgument` values rather than `object`. Common types (strings, numbers, dates, `Guid`,

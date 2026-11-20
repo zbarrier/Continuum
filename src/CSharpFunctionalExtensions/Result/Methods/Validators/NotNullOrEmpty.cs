@@ -130,6 +130,38 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is not null, empty or default.
     /// </summary>
+    public static Result<sbyte> NotNullOrEmpty(sbyte? value, string propertyName)
+    {
+        if (!value.HasValue)
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
+        if (value.Value == default)
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
+
+        return Result.Success(value.Value);
+    }
+
+    /// <summary>
+    ///     Ensure value is not null, empty or default.
+    /// </summary>
+    public static Result<sbyte> NotNullOrEmpty(sbyte? value, PropertyPath path, string member)
+    {
+        if (!value.HasValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
+        }
+        if (value.Value == default)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
+        }
+
+        return Result.Success(value.Value);
+    }
+
+    /// <summary>
+    ///     Ensure value is not null, empty or default.
+    /// </summary>
     public static Result<short> NotNullOrEmpty(short? value, string propertyName)
     {
         if (!value.HasValue)

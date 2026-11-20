@@ -142,6 +142,7 @@ public readonly struct ErrorArgument : IEquatable<ErrorArgument>, IFormattable
     public static implicit operator ErrorArgument(int value) => From(value);
     public static implicit operator ErrorArgument(long value) => From(value);
     public static implicit operator ErrorArgument(short value) => From(value);
+    public static implicit operator ErrorArgument(sbyte value) => From(value);
     public static implicit operator ErrorArgument(byte value) => From(value);
     public static implicit operator ErrorArgument(ushort value) => From(value);
     public static implicit operator ErrorArgument(uint value) => From(value);

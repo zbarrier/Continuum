@@ -146,6 +146,42 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is not null, empty or default.
     /// </summary>
+    public static Result<sbyte> NotNullOrEmpty(this Result<sbyte?> result, string propertyName)
+    {
+        if (result.IsFailure) return Result.Failure<sbyte>(result.Error);
+
+        if (!result.Value.HasValue)
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
+        if (result.Value.Value == default)
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
+
+        return Result.Success(result.Value.Value);
+    }
+
+    /// <summary>
+    ///     Ensure value is not null, empty or default.
+    /// </summary>
+    public static Result<sbyte> NotNullOrEmpty(this Result<sbyte?> result, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return Result.Failure<sbyte>(result.Error);
+
+        if (!result.Value.HasValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
+        }
+        if (result.Value.Value == default)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEmpty, ValidatorErrorStrings.NotEmpty, propertyName));
+        }
+
+        return Result.Success(result.Value.Value);
+    }
+
+    /// <summary>
+    ///     Ensure value is not null, empty or default.
+    /// </summary>
     public static Result<short> NotNullOrEmpty(this Result<short?> result, string propertyName)
     {
         if (result.IsFailure) return Result.Failure<short>(result.Error);

@@ -94,6 +94,34 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is greater than given value.
     /// </summary>
+    public static Result<sbyte> GreaterThan(this Result<sbyte> result, sbyte comparisonValue, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value > comparisonValue
+            ? result
+            : Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.GreaterThan, ValidatorErrorStrings.GreaterThan, propertyName, comparisonValue));
+    }
+
+    /// <summary>
+    ///     Ensure value is greater than given value.
+    /// </summary>
+    public static Result<sbyte> GreaterThan(this Result<sbyte> result, sbyte comparisonValue, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value <= comparisonValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.GreaterThan, ValidatorErrorStrings.GreaterThan, propertyName, comparisonValue));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is greater than given value.
+    /// </summary>
     public static Result<short> GreaterThan(this Result<short> result, short comparisonValue, string propertyName)
     {
         if (result.IsFailure) return result;

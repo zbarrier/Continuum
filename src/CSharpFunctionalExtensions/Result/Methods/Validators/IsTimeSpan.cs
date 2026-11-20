@@ -7,6 +7,7 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid TimeSpan.
     /// </summary>
+    /// <remarks>Parses with the invariant culture.</remarks>
     public static Result<TimeSpan> IsTimeSpan(string? value, string propertyName)
     => Result.NotNullOrEmpty(value, propertyName)
         .IsTimeSpan(propertyName);
@@ -14,7 +15,24 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid TimeSpan.
     /// </summary>
+    /// <remarks>Parses with <paramref name="provider"/>, such as the user's culture for localized form input. Null uses the invariant culture.</remarks>
+    public static Result<TimeSpan> IsTimeSpan(string? value, string propertyName, IFormatProvider? provider)
+    => Result.NotNullOrEmpty(value, propertyName)
+        .IsTimeSpan(propertyName, provider);
+
+    /// <summary>
+    ///     Ensure value is valid TimeSpan.
+    /// </summary>
+    /// <remarks>Parses with the invariant culture.</remarks>
     public static Result<TimeSpan> IsTimeSpan(string? value, PropertyPath path, string member)
     => Result.NotNullOrEmpty(value, path, member)
         .IsTimeSpan(path, member);
+
+    /// <summary>
+    ///     Ensure value is valid TimeSpan.
+    /// </summary>
+    /// <remarks>Parses with <paramref name="provider"/>, such as the user's culture for localized form input. Null uses the invariant culture.</remarks>
+    public static Result<TimeSpan> IsTimeSpan(string? value, PropertyPath path, string member, IFormatProvider? provider)
+    => Result.NotNullOrEmpty(value, path, member)
+        .IsTimeSpan(path, member, provider);
 }

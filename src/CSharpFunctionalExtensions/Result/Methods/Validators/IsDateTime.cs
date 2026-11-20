@@ -7,6 +7,7 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid DateTime.
     /// </summary>
+    /// <remarks>Parses with the invariant culture.</remarks>
     public static Result<DateTime> IsDateTime(string? value, string propertyName)
     => Result.NotNullOrEmpty(value, propertyName)
         .IsDateTime(propertyName);
@@ -14,7 +15,24 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is valid DateTime.
     /// </summary>
+    /// <remarks>Parses with <paramref name="provider"/>, such as the user's culture for localized form input. Null uses the invariant culture.</remarks>
+    public static Result<DateTime> IsDateTime(string? value, string propertyName, IFormatProvider? provider)
+    => Result.NotNullOrEmpty(value, propertyName)
+        .IsDateTime(propertyName, provider);
+
+    /// <summary>
+    ///     Ensure value is valid DateTime.
+    /// </summary>
+    /// <remarks>Parses with the invariant culture.</remarks>
     public static Result<DateTime> IsDateTime(string? value, PropertyPath path, string member)
     => Result.NotNullOrEmpty(value, path, member)
         .IsDateTime(path, member);
+
+    /// <summary>
+    ///     Ensure value is valid DateTime.
+    /// </summary>
+    /// <remarks>Parses with <paramref name="provider"/>, such as the user's culture for localized form input. Null uses the invariant culture.</remarks>
+    public static Result<DateTime> IsDateTime(string? value, PropertyPath path, string member, IFormatProvider? provider)
+    => Result.NotNullOrEmpty(value, path, member)
+        .IsDateTime(path, member, provider);
 }

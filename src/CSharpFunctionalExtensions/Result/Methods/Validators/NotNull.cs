@@ -120,6 +120,28 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is not null.
     /// </summary>
+    public static Result<sbyte> NotNull(sbyte? value, string propertyName) 
+        => !value.HasValue
+            ? Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName))
+            : Result.Success(value.Value);
+
+    /// <summary>
+    ///     Ensure value is not null.
+    /// </summary>
+    public static Result<sbyte> NotNull(sbyte? value, PropertyPath path, string member)
+    {
+        if (!value.HasValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
+        }
+
+        return Result.Success(value.Value);
+    }
+
+    /// <summary>
+    ///     Ensure value is not null.
+    /// </summary>
     public static Result<short> NotNull(short? value, string propertyName) 
         => !value.HasValue
             ? Result.Failure<short>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName))

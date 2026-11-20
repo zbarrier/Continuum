@@ -9,14 +9,32 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is a valid BigInteger and not equal to BigInteger.Zero.
     /// </summary>
+    /// <remarks>Parses with the invariant culture.</remarks>
     public static Result<BigInteger> IsBigIntegerAndNotEmpty(string? value, string propertyName)
     => Result.NotNullOrEmpty(value, propertyName)
         .IsBigIntegerAndNotEmpty(propertyName);
 
     /// <summary>
+    ///     Ensure value is a valid BigInteger and not equal to BigInteger.Zero.
+    /// </summary>
+    /// <remarks>Parses with <paramref name="provider"/>, such as the user's culture for localized form input. Null uses the invariant culture.</remarks>
+    public static Result<BigInteger> IsBigIntegerAndNotEmpty(string? value, string propertyName, IFormatProvider? provider)
+    => Result.NotNullOrEmpty(value, propertyName)
+        .IsBigIntegerAndNotEmpty(propertyName, provider);
+
+    /// <summary>
     ///     Ensure value is valid BigInteger and not equal to BigInteger.Zero.
     /// </summary>
+    /// <remarks>Parses with the invariant culture.</remarks>
     public static Result<BigInteger> IsBigIntegerAndNotEmpty(string? value, PropertyPath path, string member)
     => Result.NotNullOrEmpty(value, path, member)
         .IsBigIntegerAndNotEmpty(path, member);
+
+    /// <summary>
+    ///     Ensure value is valid BigInteger and not equal to BigInteger.Zero.
+    /// </summary>
+    /// <remarks>Parses with <paramref name="provider"/>, such as the user's culture for localized form input. Null uses the invariant culture.</remarks>
+    public static Result<BigInteger> IsBigIntegerAndNotEmpty(string? value, PropertyPath path, string member, IFormatProvider? provider)
+    => Result.NotNullOrEmpty(value, path, member)
+        .IsBigIntegerAndNotEmpty(path, member, provider);
 }

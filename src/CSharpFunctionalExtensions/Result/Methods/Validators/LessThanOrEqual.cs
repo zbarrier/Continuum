@@ -76,6 +76,28 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is less than or equal to given value.
     /// </summary>
+    public static Result<sbyte> LessThanOrEqual(sbyte value, sbyte comparisonValue, string propertyName) 
+        => value <= comparisonValue
+            ? Result.Success(value)
+            : Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.LessThanOrEqual, ValidatorErrorStrings.LessThanOrEqual, propertyName, comparisonValue));
+
+    /// <summary>
+    ///     Ensure value is less than or equal to given value.
+    /// </summary>
+    public static Result<sbyte> LessThanOrEqual(sbyte value, sbyte comparisonValue, PropertyPath path, string member)
+    {
+        if (value > comparisonValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.LessThanOrEqual, ValidatorErrorStrings.LessThanOrEqual, propertyName, comparisonValue));
+        }
+
+        return Result.Success(value);
+    }
+
+    /// <summary>
+    ///     Ensure value is less than or equal to given value.
+    /// </summary>
     public static Result<short> LessThanOrEqual(short value, short comparisonValue, string propertyName)
         => value <= comparisonValue
             ? Result.Success(value)

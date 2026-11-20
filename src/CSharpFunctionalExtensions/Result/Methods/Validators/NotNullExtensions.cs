@@ -150,6 +150,34 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is not null.
     /// </summary>
+    public static Result<sbyte> NotNull(this Result<sbyte?> result, string propertyName)
+    {
+        if (result.IsFailure) return Result.Failure<sbyte>(result.Error);
+
+        return !result.Value.HasValue
+            ? Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName))
+            : Result.Success(result.Value.Value);
+    }
+
+    /// <summary>
+    ///     Ensure value is not null.
+    /// </summary>
+    public static Result<sbyte> NotNull(this Result<sbyte?> result, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return Result.Failure<sbyte>(result.Error);
+
+        if (!result.Value.HasValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotNull, ValidatorErrorStrings.NotNull, propertyName));
+        }
+
+        return Result.Success(result.Value.Value);
+    }
+
+    /// <summary>
+    ///     Ensure value is not null.
+    /// </summary>
     public static Result<short> NotNull(this Result<short?> result, string propertyName)
     {
         if (result.IsFailure) return Result.Failure<short>(result.Error);

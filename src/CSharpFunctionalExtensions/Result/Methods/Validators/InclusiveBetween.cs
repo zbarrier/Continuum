@@ -101,6 +101,36 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is between given range.
     /// </summary>
+    public static Result<sbyte> InclusiveBetween(sbyte value, sbyte from, sbyte to, string propertyName)
+    {
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
+
+        return value < from || value > to
+            ? Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value))
+            : Result.Success(value);
+    }
+
+    /// <summary>
+    ///     Ensure value is between given range.
+    /// </summary>
+    public static Result<sbyte> InclusiveBetween(sbyte value, sbyte from, sbyte to, PropertyPath path, string member)
+    {
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
+
+        if (value < from || value > to)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, value));
+        }
+
+        return Result.Success(value);
+    }
+
+    /// <summary>
+    ///     Ensure value is between given range.
+    /// </summary>
     public static Result<short> InclusiveBetween(short value, short from, short to, string propertyName)
     {
         if (from > to)

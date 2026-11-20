@@ -103,6 +103,34 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is not equal to given value.
     /// </summary>
+    public static Result<sbyte> NotEqual(this Result<sbyte> result, sbyte expectedValue, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        return result.Value != expectedValue
+            ? result
+            : Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEqual, ValidatorErrorStrings.NotEqual, propertyName, expectedValue));
+    }
+
+    /// <summary>
+    ///     Ensure value is not equal to given value.
+    /// </summary>
+    public static Result<sbyte> NotEqual(this Result<sbyte> result, sbyte expectedValue, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (result.Value == expectedValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEqual, ValidatorErrorStrings.NotEqual, propertyName, expectedValue));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is not equal to given value.
+    /// </summary>
     public static Result<short> NotEqual(this Result<short> result, short expectedValue, string propertyName)
     {
         if (result.IsFailure) return result;

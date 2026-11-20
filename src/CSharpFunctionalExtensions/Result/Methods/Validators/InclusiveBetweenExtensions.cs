@@ -115,6 +115,40 @@ public static partial class ResultExtensions
     /// <summary>
     ///     Ensure value is between given range.
     /// </summary>
+    public static Result<sbyte> InclusiveBetween(this Result<sbyte> result, sbyte from, sbyte to, string propertyName)
+    {
+        if (result.IsFailure) return result;
+
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
+
+        return result.Value < from || result.Value > to
+            ? Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value))
+            : result;
+    }
+
+    /// <summary>
+    ///     Ensure value is between given range.
+    /// </summary>
+    public static Result<sbyte> InclusiveBetween(this Result<sbyte> result, sbyte from, sbyte to, PropertyPath path, string member)
+    {
+        if (result.IsFailure) return result;
+
+        if (from > to)
+            throw new ArgumentOutOfRangeException(nameof(to), ToShouldBeLargerThanFrom);
+
+        if (result.Value < from || result.Value > to)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.InclusiveBetween, ValidatorErrorStrings.InclusiveBetween, propertyName, from, to, result.Value));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Ensure value is between given range.
+    /// </summary>
     public static Result<short> InclusiveBetween(this Result<short> result, short from, short to, string propertyName)
     {
         if (result.IsFailure) return result;

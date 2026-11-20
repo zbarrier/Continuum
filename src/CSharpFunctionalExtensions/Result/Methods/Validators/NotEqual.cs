@@ -87,6 +87,28 @@ public partial struct Result
     /// <summary>
     ///     Ensure value is not equal to given value.
     /// </summary>
+    public static Result<sbyte> NotEqual(sbyte value, sbyte expectedValue, string propertyName) 
+        => value != expectedValue
+            ? Result.Success(value)
+            : Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEqual, ValidatorErrorStrings.NotEqual, propertyName, expectedValue));
+
+    /// <summary>
+    ///     Ensure value is not equal to given value.
+    /// </summary>
+    public static Result<sbyte> NotEqual(sbyte value, sbyte expectedValue, PropertyPath path, string member)
+    {
+        if (value == expectedValue)
+        {
+            var propertyName = path.Format(member);
+            return Result.Failure<sbyte>(new ValidationError(propertyName, ValidationErrorCodes.NotEqual, ValidatorErrorStrings.NotEqual, propertyName, expectedValue));
+        }
+
+        return Result.Success(value);
+    }
+
+    /// <summary>
+    ///     Ensure value is not equal to given value.
+    /// </summary>
     public static Result<short> NotEqual(short value, short expectedValue, string propertyName)
         => value != expectedValue
             ? Result.Success(value)
