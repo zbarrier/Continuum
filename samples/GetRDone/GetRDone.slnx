@@ -1,13 +1,27 @@
 <Solution>
-  <Folder Name="/src/">
-	<Project Path="src/GetRDone.AppHost/GetRDone.AppHost.csproj" />
-	<Project Path="src/GetRDone.ServiceDefaults/GetRDone.ServiceDefaults.csproj" />
-	<Project Path="src/GetRDone.Identity/GetRDone.Identity.csproj" />
-	<Project Path="src/GetRDone.Silo/GetRDone.Silo.csproj" />
-	<Project Path="src/GetRDone.Web/GetRDone.Web.csproj" />
+  <Folder Name="/Solution Items/">
+    <File Path="GetRDone_Sample-2026-11-19-v1.json" />
   </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/GetRDone.AppHost/GetRDone.AppHost.csproj" />
+    <Project Path="src/GetRDone.Identity/GetRDone.Identity.csproj" />
+    <Project Path="src/GetRDone.ServiceDefaults/GetRDone.ServiceDefaults.csproj" />
+    <Project Path="src/GetRDone.Silo/GetRDone.Silo.csproj" />
+    <Project Path="src/GetRDone.Web/GetRDone.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/Features/" />
   <Folder Name="/src/Features/Hello/">
-	<Project Path="src/Features/Hello/GetRDone.Hello.Abstractions/GetRDone.Hello.Abstractions.csproj" />
-	<Project Path="src/Features/Hello/GetRDone.Hello.Grains/GetRDone.Hello.Grains.csproj" />
+    <Project Path="src/Features/Hello/GetRDone.Hello.Abstractions/GetRDone.Hello.Abstractions.csproj" />
+    <Project Path="src/Features/Hello/GetRDone.Hello.Grains/GetRDone.Hello.Grains.csproj" />
+  </Folder>
+  <Folder Name="/src/Features/Orders/">
+    <Project Path="src/Features/Orders/Abstractions/GetRDone.Orders.Abstractions.csproj" Id="c8c1fdda-90a4-4e4f-bb14-7a6f1bee7cb5" />
+    <Project Path="src/Features/Orders/Grains/GetRDone.Orders.Grains.csproj" Id="83739dd6-41bf-4701-9f48-ad5c06317021" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Features/" />
+  <Folder Name="/tests/Features/Orders/">
+    <Project Path="tests/Features/Orders/Abstractions.Tests/GetRDone.Orders.Abstractions.Tests.csproj" Id="bb35aea5-d6fe-4877-b927-f396cd1717ac" />
+    <Project Path="tests/Features/Orders/Grains.Tests/GetRDone.Orders.Grains.Tests.csproj" Id="9f046018-e292-4b5a-b377-17924c726fec" />
   </Folder>
 </Solution>

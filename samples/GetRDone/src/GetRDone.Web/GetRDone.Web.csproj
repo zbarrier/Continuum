@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+	<ProjectReference Include="..\Features\Orders\Abstractions\GetRDone.Orders.Abstractions.csproj" />
 	<ProjectReference Include="..\GetRDone.ServiceDefaults\GetRDone.ServiceDefaults.csproj" />
 	<ProjectReference Include="..\Features\Hello\GetRDone.Hello.Abstractions\GetRDone.Hello.Abstractions.csproj" />
   </ItemGroup>
