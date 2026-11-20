@@ -20,7 +20,7 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 - Event storage uses `AddMultitenantKurrentDBBasedLogConsistencyProvider` with provider name `EventLog` and connection name `kurrentdb` (see `GetRDoneStorage`). All tenants currently share the default connection.
 
 ## Conventions
-- Domain events are **classes, not records**. Orleans compares raised events to remove pending ones, and record value equality can match the wrong event. Events have `InitiatedBy` (Guid) and `OccurredAt` (DateTimeOffset), plus `[DomainEventType("GetRDone.<Feature>.<Name>")]`, `[GenerateSerializer]`, and `[Immutable]`.
+- Domain events are **classes, not records**. Orleans compares raised events to remove pending ones, and record value equality can match the wrong event. Events have `InitiatedBy` (Guid) and `OccurredAt` (DateTimeOffset), plus `[DomainEventType("GetRDone.<Feature>.<Name>")]`, `[GenerateSerializer]`, and `[Immutable]`. Events have no constructor: declare `[Id(n)] public required T Name { get; init; }` properties (IDs start at 0 per class) and create them with an object initializer.
 - Commands and responses may be records.
 - `InitiatedBy` comes from the authenticated identity (`OrleansIdentityContext.RequireAuthenticatedUserId()`), never from command input.
 - Grains return `Result`/`Result<T>`, catch and log exceptions, and never leak exception details to the UI.

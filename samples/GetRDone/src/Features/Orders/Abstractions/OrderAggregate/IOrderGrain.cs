@@ -9,4 +9,4 @@ public partial interface IOrderGrain : IEventDrivenGrain
 
 
 [GenerateSerializer, Immutable]
-public abstract class OrderEvent(Guid initiatedBy, DateTimeOffset occurredAt) : DomainEvent(initiatedBy, occurredAt);
+public abstract class OrderEvent : DomainEvent;

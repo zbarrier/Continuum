@@ -11,38 +11,21 @@ public partial interface IOrderGrain : IEventDrivenGrain
 }
 
 [GenerateSerializer, Immutable]
-public sealed class StartOrderDraftCommand(
-    Guid serviceRequestTypeId,
-    int serviceRequestTypeVersion,
-    Guid formTypeId,
-    int formTypeVersion,
-    string propertyStreet,
-    string propertyCity,
-    string propertyState,
-    string propertyZip,
-    string propertyType,
-    string intendedUseId,
-    string intendedUseVersion,
-    string intendedUseName,
-    string loanNumber,
-    DateOnly dueDate)
-{
-    
-    [Id(0)] public Guid ServiceRequestTypeId { get; init; } = serviceRequestTypeId;
-    [Id(1)] public int ServiceRequestTypeVersion { get; init; } = serviceRequestTypeVersion;
-    [Id(2)] public Guid FormTypeId { get; init; } = formTypeId;
-    [Id(3)] public int FormTypeVersion { get; init; } = formTypeVersion;
-    [Id(4)] public string PropertyStreet { get; init; } = propertyStreet;
-    [Id(5)] public string PropertyCity { get; init; } = propertyCity;
-    [Id(6)] public string PropertyState { get; init; } = propertyState;
-    [Id(7)] public string PropertyZip { get; init; } = propertyZip;
-    [Id(8)] public string PropertyType { get; init; } = propertyType;
-    [Id(9)] public string IntendedUseId { get; init; } = intendedUseId;
-    [Id(10)] public string IntendedUseVersion { get; init; } = intendedUseVersion;
-    [Id(11)] public string IntendedUseName { get; init; } = intendedUseName;
-    [Id(12)] public string LoanNumber { get; init; } = loanNumber;
-    [Id(13)] public DateOnly DueDate { get; init; } = dueDate;
-}
+public sealed record StartOrderDraftCommand(
+    Guid ServiceRequestTypeId,
+    int ServiceRequestTypeVersion,
+    Guid FormTypeId,
+    int FormTypeVersion,
+    string PropertyStreet,
+    string PropertyCity,
+    string PropertyState,
+    string PropertyZip,
+    string PropertyType,
+    string IntendedUseId,
+    string IntendedUseVersion,
+    string IntendedUseName,
+    string LoanNumber,
+    DateOnly DueDate);
 
 [GenerateSerializer, Immutable]
 public sealed class StartOrderDraftResponse(IReadOnlyList<IChange> changes, int version) : CommandResponseWithChangesBase(changes, version);
@@ -50,45 +33,21 @@ public sealed class StartOrderDraftResponse(IReadOnlyList<IChange> changes, int 
 [DomainEventType("GetRDone.Orders.OrderDraftStarted"), GenerateSerializer, Immutable]
 public sealed class OrderDraftStarted : OrderEvent
 {
-    public OrderDraftStarted(Guid orderId, Guid serviceRequestTypeId, int serviceRequestTypeVersion, string serviceRequestTypeName, Guid formTypeId, int formTypeVersion, string formTypeName, 
-        string propertyStreet, string propertyCity, string propertyState, string propertyZip, string propertyType, string intendedUseId, string intendedUseVersion, string intendedUseName, 
-        string loanNumber, DateOnly dueDate, Guid initiatedBy, DateTimeOffset occurredAt)
-        : base(initiatedBy, occurredAt)
-    {
-        OrderId = orderId;
-        ServiceRequestTypeId = serviceRequestTypeId;
-        ServiceRequestTypeVersion = serviceRequestTypeVersion;
-        ServiceRequestTypeName = serviceRequestTypeName;
-        FormTypeId = formTypeId;
-        FormTypeVersion = formTypeVersion;
-        FormTypeName = formTypeName;
-        PropertyStreet = propertyStreet;
-        PropertyCity = propertyCity;
-        PropertyState = propertyState;
-        PropertyZip = propertyZip;
-        PropertyType = propertyType;
-        IntendedUseId = intendedUseId;
-        IntendedUseVersion = intendedUseVersion;
-        IntendedUseName = intendedUseName;
-        LoanNumber = loanNumber;
-        DueDate = dueDate;
-    }
-
-    [Id(0)] public Guid OrderId { get; init; }
-    [Id(1)] public Guid ServiceRequestTypeId { get; init; }
-    [Id(2)] public int ServiceRequestTypeVersion { get; init; }
-    [Id(3)] public string ServiceRequestTypeName { get; init; }
-    [Id(4)] public Guid FormTypeId { get; init; }
-    [Id(5)] public int FormTypeVersion { get; init; }
-    [Id(6)] public string FormTypeName { get; init; }
-    [Id(7)] public string PropertyStreet { get; init; }
-    [Id(8)] public string PropertyCity { get; init; }
-    [Id(9)] public string PropertyState { get; init; }
-    [Id(10)] public string PropertyZip { get; init; }
-    [Id(11)] public string PropertyType { get; init; }
-    [Id(12)] public string IntendedUseId { get; init; }
-    [Id(13)] public string IntendedUseVersion { get; init; }
-    [Id(14)] public string IntendedUseName { get; init; }
-    [Id(15)] public string LoanNumber { get; init; }
-    [Id(16)] public DateOnly DueDate { get; init; }
+    [Id(0)] public required Guid OrderId { get; init; }
+    [Id(1)] public required Guid ServiceRequestTypeId { get; init; }
+    [Id(2)] public required int ServiceRequestTypeVersion { get; init; }
+    [Id(3)] public required string ServiceRequestTypeName { get; init; }
+    [Id(4)] public required Guid FormTypeId { get; init; }
+    [Id(5)] public required int FormTypeVersion { get; init; }
+    [Id(6)] public required string FormTypeName { get; init; }
+    [Id(7)] public required string PropertyStreet { get; init; }
+    [Id(8)] public required string PropertyCity { get; init; }
+    [Id(9)] public required string PropertyState { get; init; }
+    [Id(10)] public required string PropertyZip { get; init; }
+    [Id(11)] public required string PropertyType { get; init; }
+    [Id(12)] public required string IntendedUseId { get; init; }
+    [Id(13)] public required string IntendedUseVersion { get; init; }
+    [Id(14)] public required string IntendedUseName { get; init; }
+    [Id(15)] public required string LoanNumber { get; init; }
+    [Id(16)] public required DateOnly DueDate { get; init; }
 }

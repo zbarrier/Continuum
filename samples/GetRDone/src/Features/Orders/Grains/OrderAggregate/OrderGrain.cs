@@ -52,11 +52,27 @@ public static class StartOrderDraft
         if (offering is null)
             return Result.Failure<OrderDraftStarted>(RequestErrors.NewInvalidArg("The selected service and form are not offered."));
 
-        return Result.Success(new OrderDraftStarted(orderId,
-            offering.ServiceRequestTypeId, offering.ServiceRequestTypeVersion, offering.ServiceRequestTypeName,
-            offering.FormTypeId, offering.FormTypeVersion, offering.FormTypeName,
-            command.PropertyStreet, command.PropertyCity, command.PropertyState, command.PropertyZip, command.PropertyType,
-            command.IntendedUseId, command.IntendedUseVersion, command.IntendedUseName, 
-            command.LoanNumber, command.DueDate, initiatedBy, occurredAt));
+        return Result.Success(new OrderDraftStarted
+        {
+            OrderId = orderId,
+            ServiceRequestTypeId = offering.ServiceRequestTypeId,
+            ServiceRequestTypeVersion = offering.ServiceRequestTypeVersion,
+            ServiceRequestTypeName = offering.ServiceRequestTypeName,
+            FormTypeId = offering.FormTypeId,
+            FormTypeVersion = offering.FormTypeVersion,
+            FormTypeName = offering.FormTypeName,
+            PropertyStreet = command.PropertyStreet,
+            PropertyCity = command.PropertyCity,
+            PropertyState = command.PropertyState,
+            PropertyZip = command.PropertyZip,
+            PropertyType = command.PropertyType,
+            IntendedUseId = command.IntendedUseId,
+            IntendedUseVersion = command.IntendedUseVersion,
+            IntendedUseName = command.IntendedUseName,
+            LoanNumber = command.LoanNumber,
+            DueDate = command.DueDate,
+            InitiatedBy = initiatedBy,
+            OccurredAt = occurredAt
+        });
     }
 }

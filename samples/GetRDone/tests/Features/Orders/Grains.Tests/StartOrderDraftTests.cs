@@ -26,14 +26,32 @@ public sealed class StartOrderDraftTests
         var result = StartOrderDraft.Decide(state, ValidCommand(), [Offering], OrderId, UserId, OccurredAt);
 
         Assert.True(result.IsSuccess);
-        var expected = new OrderDraftStarted(OrderId, ServiceId, 1, "Appraisal Commercial",
-            FormId, 1, "Market Value Interior Inspection", "1200 Main St", "Roanoke", "VA", "24011",
-            "Commercial - Office", "refinance", "1", "Refinance", "CB-2026-0412", new DateOnly(2026, 12, 4), 
-            UserId, OccurredAt);
-        Assert.Equal(expected, result.Value);
+        var expected = new OrderDraftStarted
+        {
+            OrderId = OrderId,
+            ServiceRequestTypeId = ServiceId,
+            ServiceRequestTypeVersion = 1,
+            ServiceRequestTypeName = "Appraisal Commercial",
+            FormTypeId = FormId,
+            FormTypeVersion = 1,
+            FormTypeName = "Market Value Interior Inspection",
+            PropertyStreet = "1200 Main St",
+            PropertyCity = "Roanoke",
+            PropertyState = "VA",
+            PropertyZip = "24011",
+            PropertyType = "Commercial - Office",
+            IntendedUseId = "refinance",
+            IntendedUseVersion = "1",
+            IntendedUseName = "Refinance",
+            LoanNumber = "CB-2026-0412",
+            DueDate = new DateOnly(2026, 12, 4),
+            InitiatedBy = UserId,
+            OccurredAt = OccurredAt
+        };
+        Assert.Equivalent(expected, result.Value, strict: true);
         Assert.Null(state.Draft);
         state.When(result.Value);
-        Assert.Equal(expected, state.Draft);
+        Assert.Same(result.Value, state.Draft);
     }
 
     [Theory]
