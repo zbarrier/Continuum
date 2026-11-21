@@ -11,15 +11,16 @@ namespace GetRDone.Orders.Grains.ReadModels;
 [Authorize]
 [GrainType("userDirectory")]
 public sealed class UserDirectoryGrain(
-    [PersistentState("userDirectory")] IPersistentState<UserDirectoryState> state)
+    [PersistentState("userDirectory")] IPersistentState<UserDirectoryState> state,
+    IReadModelSeedData seedData)
     : Grain, IUserDirectoryGrain
 {
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         TenantKey.Split(this.GetPrimaryKeyString(), out var tenantId, out _);
-        if (!state.RecordExists && tenantId == SeedData.TenantId)
+        if (!state.RecordExists && seedData.GetSeed(tenantId) is { } seed)
         {
-            state.State.Users = SeedData.Users;
+            state.State.Users = seed.Users;
             await state.WriteStateAsync(cancellationToken);
         }
         await base.OnActivateAsync(cancellationToken);

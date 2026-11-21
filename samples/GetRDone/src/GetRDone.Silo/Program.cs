@@ -4,6 +4,7 @@ using Continuum.TypeMapping;
 
 using GetRDone;
 using GetRDone.Orders.Grains.OrderAggregate;
+using GetRDone.Orders.Grains.ReadModels;
 
 using ManagedCode.Orleans.Identity.Server.Extensions;
 
@@ -27,6 +28,7 @@ builder.Services.AddMultitenantKurrentDBBasedLogConsistencyProvider(GetRDoneStor
 builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<IOrderPermissions, OrderPermissions>();
+builder.Services.AddSingleton<IReadModelSeedData, SampleSeedData>();
 
 builder.UseOrleans(silo =>
 {

@@ -1,39 +1,50 @@
+using System.Security.Claims;
+
 using Continuum.CSharpFunctionalExtensions;
+using Continuum.Orleans.Tenancy;
 
 using GetRDone.Orders.Abstractions;
 using GetRDone.Orders.Abstractions.ReadModels;
-using GetRDone.Orders.Grains.ReadModels;
+using GetRDone.Orders.Grains.Tests.Data;
 
-namespace GetRDone.Orders.Tests;
+using ManagedCode.Orleans.Identity.Core.Constants;
 
+using Orleans.Runtime;
+
+namespace GetRDone.Orders.Grains.Tests;
+
+/// <summary>Tests for the pre-populated read models, seeded with <see cref="TestData"/> for the test tenant.</summary>
 public sealed class ReadModelGrainTests(OrdersCluster fixture) : IClassFixture<OrdersCluster>
 {
-    private const string TenantId = SeedData.TenantId;
+    private const string TenantId = TestData.TenantId;
 
     [Fact]
-    public async Task ReadModels_AreSeededForTheSampleTenantOnly()
+    public async Task ReadModels_AreSeededForTheTestTenantOnly()
     {
         var grainFactory = fixture.Cluster.GrainFactory;
+        GivenSignedIn(RequestedByUsers.ClientUser1);
 
-        Assert.Equal(SeedData.IntendedUses, await grainFactory.GetIntendedUsesGrain(TenantId).GetIntendedUsesAsync());
-        Assert.Equal(SeedData.OrderableServices, await grainFactory.GetOrderableServicesGrain(TenantId).GetOrderableServicesAsync());
-        Assert.Equal(SeedData.Users, await grainFactory.GetUserDirectoryGrain(TenantId).GetUsersAsync());
+        Assert.Equal(TestData.IntendedUses, await grainFactory.GetIntendedUsesGrain(TenantId).GetIntendedUsesAsync());
+        Assert.Equivalent(TestData.OrderableServices, await grainFactory.GetOrderableServicesGrain(TenantId).GetOrderableServicesAsync(), strict: true);
+        Assert.Equal(TestData.Users, await grainFactory.GetUserDirectoryGrain(TenantId).GetUsersAsync());
 
-        Assert.Empty(await grainFactory.GetIntendedUsesGrain("other").GetIntendedUsesAsync());
-        Assert.Empty(await grainFactory.GetOrderableServicesGrain("other").GetOrderableServicesAsync());
-        Assert.Empty(await grainFactory.GetUserDirectoryGrain("other").GetUsersAsync());
+        Assert.Empty(await grainFactory.GetIntendedUsesGrain(TestData.OtherTenantId).GetIntendedUsesAsync());
+        Assert.Empty(await grainFactory.GetOrderableServicesGrain(TestData.OtherTenantId).GetOrderableServicesAsync());
+        Assert.Empty(await grainFactory.GetUserDirectoryGrain(TestData.OtherTenantId).GetUsersAsync());
     }
 
     [Theory]
-    [InlineData("elliott|ad86c5b7", 1, "Refinance", true)]
-    [InlineData("elliott|e81d3f06", 1, "Other", true)]
-    [InlineData("elliott|ad86c5b7", 2, "Refinance", false)]
-    [InlineData("elliott|ad86c5b7", 1, "Purchase", false)]
-    [InlineData("elliott|0d9c1b2a", 1, "Refinance", false)]
+    [InlineData("summit|7a1d0c42", 2, "Refinance", true)]
+    [InlineData("summit|3e8b5f19", 1, "Purchase", true)]
+    [InlineData("summit|7a1d0c42", 1, "Refinance", false)]
+    [InlineData("summit|7a1d0c42", 2, "Purchase", false)]
+    [InlineData("summit|0d9c1b2a", 2, "Refinance", false)]
     public async Task IsCurrentIntendedUse_MatchesIdVersionAndName(string id, int version, string name, bool expected)
     {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+
         var result = await fixture.Cluster.GrainFactory.GetIntendedUsesGrain(TenantId).IsCurrentIntendedUseAsync(
-            IntendedUseId.Create(id, TenantId).Value, IntendedUseVersion.Create(version).Value, IntendedUseName.Create(name).Value);
+            IntendedUseRef.Create(id, version, name, TenantId).Value);
 
         Assert.Equal(expected, result.IsSuccess);
         if (!expected)
@@ -43,20 +54,23 @@ public sealed class ReadModelGrainTests(OrdersCluster fixture) : IClassFixture<O
     }
 
     [Theory]
-    [InlineData("elliott|5a1f0c3e", 1, "Appraisal Commercial", "elliott|e5a1c9d3", 1, "Market Value Interior Inspection", true)]
-    [InlineData("elliott|5a1f0c3e", 2, "Appraisal Commercial", "elliott|e5a1c9d3", 1, "Market Value Interior Inspection", false)]
-    [InlineData("elliott|5a1f0c3e", 1, "Appraisal Commercial", "elliott|e5a1c9d3", 1, "Desktop Appraisal", false)]
-    [InlineData("elliott|5a1f0c3e", 1, "Appraisal Commercial", "elliott|0d9c1b2a", 1, "Market Value Interior Inspection", false)]
+    [InlineData("summit|6c4f2a90", 3, "Residential Appraisal", "summit|d05e9b37", 1, "Uniform Residential Appraisal Report", true)]
+    [InlineData("summit|6c4f2a90", 3, "Residential Appraisal", "summit|8e2b6f41", 2, "Desktop Appraisal", true)]
+    [InlineData("summit|4b7e1d03", 1, "Commercial Appraisal", "summit|a2c6f8e0", 1, "Narrative Appraisal Report", true)]
+    [InlineData("summit|6c4f2a90", 2, "Residential Appraisal", "summit|d05e9b37", 1, "Uniform Residential Appraisal Report", false)]
+    [InlineData("summit|6c4f2a90", 3, "Residential Appraisal", "summit|8e2b6f41", 1, "Desktop Appraisal", false)]
+    [InlineData("summit|6c4f2a90", 3, "Residential Appraisal", "summit|d05e9b37", 1, "Desktop Appraisal", false)]
+    [InlineData("summit|6c4f2a90", 3, "Residential Appraisal", "summit|0d9c1b2a", 1, "Uniform Residential Appraisal Report", false)]
+    [InlineData("summit|6c4f2a90", 3, "Residential Appraisal", "summit|a2c6f8e0", 1, "Narrative Appraisal Report", false)]
+    [InlineData("summit|4b7e1d03", 1, "Commercial Appraisal", "summit|8e2b6f41", 2, "Desktop Appraisal", false)]
     public async Task IsCurrentOrderableService_MatchesServiceAndForm(
         string serviceId, int serviceVersion, string serviceName, string formId, int formVersion, string formName, bool expected)
     {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+
         var result = await fixture.Cluster.GrainFactory.GetOrderableServicesGrain(TenantId).IsCurrentOrderableServiceAsync(
-            ServiceRequestTypeId.Create(serviceId, TenantId).Value,
-            ServiceRequestTypeVersion.Create(serviceVersion).Value,
-            ServiceRequestTypeName.Create(serviceName).Value,
-            FormTypeId.Create(formId, TenantId).Value,
-            FormTypeVersion.Create(formVersion).Value,
-            FormTypeName.Create(formName).Value);
+            ServiceRequestTypeRef.Create(serviceId, serviceVersion, serviceName, TenantId).Value,
+            FormTypeRef.Create(formId, formVersion, formName, TenantId).Value);
 
         Assert.Equal(expected, result.IsSuccess);
         if (!expected)
@@ -66,14 +80,39 @@ public sealed class ReadModelGrainTests(OrdersCluster fixture) : IClassFixture<O
     }
 
     [Theory]
-    [InlineData(SeedData.AnaRuizUserId, SeedData.CarterBankAndTrustClientId, true)]
-    [InlineData(SeedData.AnaRuizUserId, "elliott|0b2e4f61", false)]
-    [InlineData("elliott|3f2a9c1e-0b1d-4c8e-9a51-6d2e7f0a1b2c", SeedData.CarterBankAndTrustClientId, false)]
-    public async Task IsClientUser_MatchesUserAndClient(string userId, string clientId, bool expected)
+    [InlineData(nameof(RequestedByUsers.ClientUser1), TestData.LakeviewCreditUnionClientId, true)]
+    [InlineData(nameof(RequestedByUsers.ClientUser2), TestData.HarborNationalBankClientId, true)]
+    [InlineData(nameof(RequestedByUsers.ClientUser1), TestData.HarborNationalBankClientId, false)]
+    [InlineData(nameof(RequestedByUsers.Coordinator1), TestData.LakeviewCreditUnionClientId, false)]
+    public async Task IsClientUser_MatchesUserAndClient(string user, string clientId, bool expected)
     {
+        var principal = user switch
+        {
+            nameof(RequestedByUsers.ClientUser1) => RequestedByUsers.ClientUser1,
+            nameof(RequestedByUsers.ClientUser2) => RequestedByUsers.ClientUser2,
+            nameof(RequestedByUsers.Coordinator1) => RequestedByUsers.Coordinator1,
+            _ => throw new ArgumentOutOfRangeException(nameof(user))
+        };
+        GivenSignedIn(principal);
+
         var result = await fixture.Cluster.GrainFactory.GetUserDirectoryGrain(TenantId).IsClientUserAsync(
-            UserId.Create(userId, TenantId).Value, ClientId.Create(clientId, TenantId).Value);
+            UserId.Create(principal.GetTenantUserId(), TenantId).Value, ClientId.Create(clientId, TenantId).Value);
 
         Assert.Equal(expected, result.IsSuccess);
     }
+
+    [Fact]
+    public async Task IsClientUser_RejectsAnUnknownUser()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+
+        var result = await fixture.Cluster.GrainFactory.GetUserDirectoryGrain(TenantId).IsClientUserAsync(
+            UserId.Create(TenantKey.Create(TenantId, Guid.NewGuid().ToString()), TenantId).Value,
+            ClientId.Create(TestData.LakeviewCreditUnionClientId, TenantId).Value);
+
+        Assert.True(result.IsFailure);
+    }
+
+    /// <summary>Signs in <paramref name="user"/> for the rest of the test; Orleans Identity reads the user from the request context.</summary>
+    private static void GivenSignedIn(ClaimsPrincipal user) => RequestContext.Set(OrleansIdentityConstants.USER_CLAIMS, user);
 }

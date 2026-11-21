@@ -2,12 +2,16 @@ using Continuum.Hosting;
 using Continuum.TypeMapping;
 
 using GetRDone.Orders.Grains.OrderAggregate;
+using GetRDone.Orders.Grains.ReadModels;
+using GetRDone.Orders.Grains.Tests.Data;
+
+using ManagedCode.Orleans.Identity.Server.Extensions;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using Orleans.TestingHost;
 
-namespace GetRDone.Orders.Tests;
+namespace GetRDone.Orders.Grains.Tests;
 
 public sealed class OrdersSiloConfigurator : ISiloConfigurator
 {
@@ -15,8 +19,12 @@ public sealed class OrdersSiloConfigurator : ISiloConfigurator
     {
         siloBuilder.AddMemoryGrainStorageAsDefault();
         siloBuilder.AddLogStorageBasedLogConsistencyProvider("EventLog");
+
+        siloBuilder.AddOrleansIdentity();
+
         siloBuilder.Services.AddDefaultTypeMapAttributeMappers("kurrentdb", TypeMapKinds.DomainEvent);
         siloBuilder.Services.AddSingleton<IOrderPermissions, OrderPermissions>();
+        siloBuilder.Services.AddSingleton<IReadModelSeedData, TestReadModelSeedData>();
     }
 }
 

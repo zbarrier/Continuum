@@ -137,7 +137,8 @@ public abstract class GrainTestHarness<TEventBase>
 
     /// <summary>
     ///     Asserts that nothing was saved to the grain under test or to any grain set up with <c>GivenParticipant</c>,
-    ///     such as after a multi-stream transaction was rolled back.
+    ///     such as when a command succeeds without changing anything (the value was already set). A failed command
+    ///     never saves, so tests of errors don't need this.
     /// </summary>
     /// <returns>A task that completes when every grain has been checked.</returns>
     protected async Task ThenNoChanges()

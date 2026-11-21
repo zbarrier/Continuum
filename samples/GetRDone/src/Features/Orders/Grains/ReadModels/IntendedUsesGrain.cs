@@ -11,15 +11,16 @@ namespace GetRDone.Orders.Grains.ReadModels;
 [Authorize]
 [GrainType("intendedUses")]
 public sealed class IntendedUsesGrain(
-    [PersistentState("intendedUses")] IPersistentState<IntendedUsesState> state)
+    [PersistentState("intendedUses")] IPersistentState<IntendedUsesState> state,
+    IReadModelSeedData seedData)
     : Grain, IIntendedUsesGrain
 {
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         TenantKey.Split(this.GetPrimaryKeyString(), out var tenantId, out _);
-        if (!state.RecordExists && tenantId == SeedData.TenantId)
+        if (!state.RecordExists && seedData.GetSeed(tenantId) is { } seed)
         {
-            state.State.IntendedUses = SeedData.IntendedUses;
+            state.State.IntendedUses = seed.IntendedUses;
             await state.WriteStateAsync(cancellationToken);
         }
         await base.OnActivateAsync(cancellationToken);
@@ -27,12 +28,12 @@ public sealed class IntendedUsesGrain(
 
     public Task<IntendedUse[]> GetIntendedUsesAsync() => Task.FromResult(state.State.IntendedUses.ToArray());
 
-    public Task<Result> IsCurrentIntendedUseAsync(IntendedUseId intendedUseId, IntendedUseVersion intendedUseVersion, IntendedUseName intendedUseName)
+    public Task<Result> IsCurrentIntendedUseAsync(IntendedUseRef intendedUse)
     {
         var isCurrent = state.State.IntendedUses.Any(item =>
-            item.IntendedUseId == (string)intendedUseId
-            && item.IntendedUseVersion == (int)intendedUseVersion
-            && item.Name == (string)intendedUseName);
+            item.IntendedUseId == (string)intendedUse.Id
+            && item.IntendedUseVersion == (int)intendedUse.Version
+            && item.Name == (string)intendedUse.Name);
 
         return Task.FromResult(isCurrent
             ? Result.Success()

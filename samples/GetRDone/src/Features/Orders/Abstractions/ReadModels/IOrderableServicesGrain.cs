@@ -14,23 +14,20 @@ public interface IOrderableServicesGrain : IGrainWithStringKey
     Task<OrderableService[]> GetOrderableServicesAsync();
 
     /// <summary>
-    ///     Succeeds when the service request type and form type pair exists, both versions are current, and both names match.
+    ///     Succeeds when the service request type exists and the form type is one of its form types, with both versions
+    ///     current and both names matching.
     /// </summary>
     [ReadOnly]
-    Task<Result> IsCurrentOrderableServiceAsync(
-        ServiceRequestTypeId serviceRequestTypeId,
-        ServiceRequestTypeVersion serviceRequestTypeVersion,
-        ServiceRequestTypeName serviceRequestTypeName,
-        FormTypeId formTypeId,
-        FormTypeVersion formTypeVersion,
-        FormTypeName formTypeName);
+    Task<Result> IsCurrentOrderableServiceAsync(ServiceRequestTypeRef serviceRequestType, FormTypeRef formType);
 }
 
+/// <summary>A service request type and the form types that can be ordered with it.</summary>
 [GenerateSerializer, Immutable]
 public sealed record OrderableService(
     string ServiceRequestTypeId,
     int ServiceRequestTypeVersion,
     string ServiceRequestTypeName,
-    string FormTypeId,
-    int FormTypeVersion,
-    string FormTypeName);
+    OrderableFormType[] FormTypes);
+
+[GenerateSerializer, Immutable]
+public sealed record OrderableFormType(string FormTypeId, int FormTypeVersion, string FormTypeName);

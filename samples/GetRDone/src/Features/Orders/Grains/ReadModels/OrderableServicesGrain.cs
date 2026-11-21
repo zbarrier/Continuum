@@ -11,15 +11,16 @@ namespace GetRDone.Orders.Grains.ReadModels;
 [Authorize]
 [GrainType("orderableServices")]
 public sealed class OrderableServicesGrain(
-    [PersistentState("orderableServices")] IPersistentState<OrderableServicesState> state)
+    [PersistentState("orderableServices")] IPersistentState<OrderableServicesState> state,
+    IReadModelSeedData seedData)
     : Grain, IOrderableServicesGrain
 {
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         TenantKey.Split(this.GetPrimaryKeyString(), out var tenantId, out _);
-        if (!state.RecordExists && tenantId == SeedData.TenantId)
+        if (!state.RecordExists && seedData.GetSeed(tenantId) is { } seed)
         {
-            state.State.OrderableServices = SeedData.OrderableServices;
+            state.State.OrderableServices = seed.OrderableServices;
             await state.WriteStateAsync(cancellationToken);
         }
         await base.OnActivateAsync(cancellationToken);
@@ -27,21 +28,16 @@ public sealed class OrderableServicesGrain(
 
     public Task<OrderableService[]> GetOrderableServicesAsync() => Task.FromResult(state.State.OrderableServices.ToArray());
 
-    public Task<Result> IsCurrentOrderableServiceAsync(
-        ServiceRequestTypeId serviceRequestTypeId,
-        ServiceRequestTypeVersion serviceRequestTypeVersion,
-        ServiceRequestTypeName serviceRequestTypeName,
-        FormTypeId formTypeId,
-        FormTypeVersion formTypeVersion,
-        FormTypeName formTypeName)
+    public Task<Result> IsCurrentOrderableServiceAsync(ServiceRequestTypeRef serviceRequestType, FormTypeRef formType)
     {
-        var isCurrent = state.State.OrderableServices.Any(item =>
-            item.ServiceRequestTypeId == (string)serviceRequestTypeId
-            && item.ServiceRequestTypeVersion == (int)serviceRequestTypeVersion
-            && item.ServiceRequestTypeName == (string)serviceRequestTypeName
-            && item.FormTypeId == (string)formTypeId
-            && item.FormTypeVersion == (int)formTypeVersion
-            && item.FormTypeName == (string)formTypeName);
+        var isCurrent = state.State.OrderableServices.Any(service =>
+            service.ServiceRequestTypeId == (string)serviceRequestType.Id
+            && service.ServiceRequestTypeVersion == (int)serviceRequestType.Version
+            && service.ServiceRequestTypeName == (string)serviceRequestType.Name
+            && service.FormTypes.Any(form =>
+                form.FormTypeId == (string)formType.Id
+                && form.FormTypeVersion == (int)formType.Version
+                && form.FormTypeName == (string)formType.Name));
 
         return Task.FromResult(isCurrent
             ? Result.Success()

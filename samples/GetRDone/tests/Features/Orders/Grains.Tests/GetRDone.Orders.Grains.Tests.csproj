@@ -8,15 +8,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="10.1.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
-    <PackageReference Include="Microsoft.Orleans.TestingHost" Version="$(OrleansVersion)" />
+    <PackageReference Include="coverlet.collector" Version="10.1.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Duende.IdentityModel" Version="8.1.0" />
+    <PackageReference Include="ManagedCode.Orleans.Identity.Server" Version="10.4.6" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageReference Include="Xunit.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="Xunit.DependencyInjection.Logging" Version="12.0.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
-    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Features\Orders\Grains\GetRDone.Orders.Grains.csproj" />
+    <ProjectReference Include="$(ContinuumSrc)Domain.Orleans.TestHarness\Continuum.Domain.Orleans.TestHarness.csproj" />
     <!-- Hosts a test silo, so like GetRDone.Silo it registers the referenced type-mapped types before the mappers are built. -->
     <ProjectReference Include="$(ContinuumSrc)Core.SourceGenerators\Continuum.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>

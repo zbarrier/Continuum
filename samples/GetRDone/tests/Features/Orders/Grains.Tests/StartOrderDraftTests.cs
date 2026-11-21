@@ -1,73 +1,66 @@
 using System.Security.Claims;
 
 using Continuum.CSharpFunctionalExtensions;
+using Continuum.Domain;
+using Continuum.Domain.Orleans;
+using Continuum.Domain.Orleans.TestHarness;
 using Continuum.Orleans.Tenancy;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
 using GetRDone.Orders.Grains.OrderAggregate;
-using GetRDone.Orders.Grains.ReadModels;
+using GetRDone.Orders.Grains.Tests.Data;
 
 using ManagedCode.Orleans.Identity.Core.Constants;
 
-using Orleans.Runtime;
+using static GetRDone.Orders.Grains.Tests.Data.StartOrderDraftTestData;
 
-namespace GetRDone.Orders.Tests;
+namespace GetRDone.Orders.Grains.Tests;
 
-public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<OrdersCluster>
+/// <summary>
+///     Given/When/Then tests for starting an order draft. Each test uses a new order in the test tenant, whose read
+///     models are seeded with <see cref="TestData"/>; the drafts come from <see cref="StartOrderDraftTestData"/>.
+/// </summary>
+public sealed class StartOrderDraftTests
+    : EventDrivenStateMachineGrainTestHarness<IOrderGrain, OrderGrain, OrderState, OrderEvent, OrderStatus, OrderCommand>,
+      IClassFixture<OrdersCluster>
 {
-    private const string TenantId = SeedData.TenantId;
-    private const string AnaRuizUserGuid = "7304a1f2-3c5d-4e6f-8a9b-0c1d2e3f4a5b";
+    public StartOrderDraftTests(OrdersCluster fixture)
+        : base(fixture.Cluster, TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString())) { }
 
-    [Fact]
-    public async Task StartDraft_RecordsAllDetails()
+    private IOrderGrain Order => Cluster.GrainFactory.GetGrain<IOrderGrain>(GrainId);
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task StartDraft_RecordsTheDraft(int variation)
     {
-        var orderId = NewOrderId();
-        var order = GetOrder(orderId);
+        var (user, command, draftStarted) = Variation(variation);
         var before = DateTimeOffset.UtcNow;
 
-        var result = await StartAsync(order, ValidCommand());
+        GivenSignedIn(user);
+        await Given();
 
-        Assert.True(result.IsSuccess, result.IsFailure ? result.Error.ToString() : null);
-        Assert.Equal(1, result.Value.Version);
-        var saved = Assert.IsType<OrderDraftStarted>(Assert.Single(await order.GetSavedEventsSince(0)));
-        Assert.InRange(saved.OccurredAt, before, DateTimeOffset.UtcNow);
-        var expected = new OrderDraftStarted
+        await When(() => Order.StartOrderDraftAsync(command));
+
+        Then<StartOrderDraftResponse>(response =>
         {
-            OrderId = orderId,
-            ClientId = "elliott|c8e41a7d",
-            ServiceRequestTypeId = "elliott|5a1f0c3e",
-            ServiceRequestTypeVersion = 1,
-            ServiceRequestTypeName = "Appraisal Commercial",
-            FormTypeId = "elliott|e5a1c9d3",
-            FormTypeVersion = 1,
-            FormTypeName = "Market Value Interior Inspection",
-            PropertyStreet = "1200 Main St",
-            PropertyCity = "Roanoke",
-            PropertyState = "VA",
-            PropertyZip = "24011",
-            PropertyType = "Commercial - Office",
-            IntendedUseId = "elliott|ad86c5b7",
-            IntendedUseVersion = 1,
-            IntendedUseName = "Refinance",
-            LoanNumber = "CB-2026-0412",
-            DueDate = new DateOnly(2026, 12, 4),
-            InitiatedBy = SeedData.AnaRuizUserId,
-            OccurredAt = saved.OccurredAt
-        };
-        Assert.Equivalent(expected, saved, strict: true);
+            Assert.Equal(1, response.Version);
+            var started = Assert.IsType<OrderDraftStarted>(SingleEvent(response.Changes));
+            Assert.InRange(started.OccurredAt, before, DateTimeOffset.UtcNow);
+            Assert.Equivalent(draftStarted(GrainId, started.OccurredAt), started, strict: true);
+        });
     }
 
     [Fact]
-    public async Task StartDraft_RejectsAnExistingOrder()
+    public async Task StartDraft_RejectsAnOrderThatWasAlreadyStarted()
     {
-        var order = GetOrder(NewOrderId());
-        Assert.True((await StartAsync(order, ValidCommand())).IsSuccess);
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given(DraftStarted1(GrainId));
 
-        var result = await StartAsync(order, ValidCommand());
+        await When(() => Order.StartOrderDraftAsync(Command1));
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(ErrorCodes.AlreadyExists, result.Error.Code);
-        Assert.Single(await order.GetSavedEventsSince(0));
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.AlreadyExists, error.Code));
     }
 
     [Theory]
@@ -90,11 +83,11 @@ public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<
     [InlineData(nameof(StartOrderDraftCommand.DueDate))]
     public async Task StartDraft_RejectsAnInvalidDetail(string property)
     {
-        var command = ValidCommand();
+        var command = Command1;
         command = property switch
         {
             nameof(StartOrderDraftCommand.ClientId) => command with { ClientId = " " },
-            nameof(StartOrderDraftCommand.ServiceRequestTypeId) => command with { ServiceRequestTypeId = "elliott|" },
+            nameof(StartOrderDraftCommand.ServiceRequestTypeId) => command with { ServiceRequestTypeId = "summit|" },
             nameof(StartOrderDraftCommand.ServiceRequestTypeVersion) => command with { ServiceRequestTypeVersion = 0 },
             nameof(StartOrderDraftCommand.ServiceRequestTypeName) => command with { ServiceRequestTypeName = "" },
             nameof(StartOrderDraftCommand.FormTypeId) => command with { FormTypeId = "" },
@@ -103,23 +96,21 @@ public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<
             nameof(StartOrderDraftCommand.PropertyStreet) => command with { PropertyStreet = " " },
             nameof(StartOrderDraftCommand.PropertyCity) => command with { PropertyCity = "" },
             nameof(StartOrderDraftCommand.PropertyState) => command with { PropertyState = "ZZ" },
-            nameof(StartOrderDraftCommand.PropertyZip) => command with { PropertyZip = "2401" },
+            nameof(StartOrderDraftCommand.PropertyZip) => command with { PropertyZip = "2880" },
             nameof(StartOrderDraftCommand.PropertyType) => command with { PropertyType = "" },
-            nameof(StartOrderDraftCommand.IntendedUseId) => command with { IntendedUseId = "elliott|a|b" },
+            nameof(StartOrderDraftCommand.IntendedUseId) => command with { IntendedUseId = "summit|a|b" },
             nameof(StartOrderDraftCommand.IntendedUseVersion) => command with { IntendedUseVersion = 0 },
             nameof(StartOrderDraftCommand.IntendedUseName) => command with { IntendedUseName = "" },
             nameof(StartOrderDraftCommand.LoanNumber) => command with { LoanNumber = "" },
             nameof(StartOrderDraftCommand.DueDate) => command with { DueDate = default },
             _ => throw new ArgumentOutOfRangeException(nameof(property))
         };
-        var order = GetOrder(NewOrderId());
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given();
 
-        var result = await StartAsync(order, command);
+        await When(() => Order.StartOrderDraftAsync(command));
 
-        Assert.True(result.IsFailure);
-        var error = Assert.IsType<ValidationError>(result.Error);
-        Assert.Equal(property, Assert.Single(error.Entries).Target);
-        Assert.Empty(await order.GetSavedEventsSince(0));
+        ThenError<ValidationError>(error => Assert.Equal(property, Assert.Single(error.Entries).Target));
     }
 
     [Theory]
@@ -129,66 +120,81 @@ public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<
     [InlineData(nameof(StartOrderDraftCommand.IntendedUseId))]
     public async Task StartDraft_RejectsAnIdOfAnotherTenant(string property)
     {
-        var command = ValidCommand();
+        var command = Command1;
         command = property switch
         {
-            nameof(StartOrderDraftCommand.ClientId) => command with { ClientId = "other|c8e41a7d" },
-            nameof(StartOrderDraftCommand.ServiceRequestTypeId) => command with { ServiceRequestTypeId = "other|5a1f0c3e" },
-            nameof(StartOrderDraftCommand.FormTypeId) => command with { FormTypeId = "e5a1c9d3" },
-            nameof(StartOrderDraftCommand.IntendedUseId) => command with { IntendedUseId = "other|ad86c5b7" },
+            nameof(StartOrderDraftCommand.ClientId) => command with { ClientId = "other|9b3e7d21" },
+            nameof(StartOrderDraftCommand.ServiceRequestTypeId) => command with { ServiceRequestTypeId = "other|6c4f2a90" },
+            nameof(StartOrderDraftCommand.FormTypeId) => command with { FormTypeId = "d05e9b37" },
+            nameof(StartOrderDraftCommand.IntendedUseId) => command with { IntendedUseId = "other|7a1d0c42" },
             _ => throw new ArgumentOutOfRangeException(nameof(property))
         };
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given();
 
-        var result = await StartAsync(GetOrder(NewOrderId()), command);
+        await When(() => Order.StartOrderDraftAsync(command));
 
-        var entry = Assert.Single(Assert.IsType<ValidationError>(result.Error).Entries);
-        Assert.Equal(property, entry.Target);
-        Assert.Equal(ValidationErrorCodes.InvalidFormat, entry.Code);
+        ThenError<ValidationError>(error =>
+        {
+            var entry = Assert.Single(error.Entries);
+            Assert.Equal(property, entry.Target);
+            Assert.Equal(ValidationErrorCodes.InvalidFormat, entry.Code);
+        });
     }
 
     [Fact]
     public async Task StartDraft_ReportsEveryInvalidDetail()
     {
-        var command = ValidCommand() with { PropertyStreet = "", LoanNumber = "" };
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given();
 
-        var result = await StartAsync(GetOrder(NewOrderId()), command);
+        await When(() => Order.StartOrderDraftAsync(Command1 with { PropertyStreet = "", LoanNumber = "" }));
 
-        Assert.True(result.IsFailure);
-        var error = Assert.IsType<ValidationError>(result.Error);
-        Assert.Equal(
+        ThenError<ValidationError>(error => Assert.Equal(
             [nameof(StartOrderDraftCommand.PropertyStreet), nameof(StartOrderDraftCommand.LoanNumber)],
-            error.Entries.Select(entry => entry.Target));
+            error.Entries.Select(entry => entry.Target)));
     }
 
     [Fact]
     public async Task StartDraft_RejectsAnOrderIdThatIsNotAGuid()
     {
-        var order = fixture.Cluster.GrainFactory.GetGrain<IOrderGrain>(TenantKey.Create(TenantId, "not-a-guid"));
+        var order = Cluster.GrainFactory.GetGrain<IOrderGrain>(TenantKey.Create(TestData.TenantId, "not-a-guid"));
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given();
 
-        var result = await StartAsync(order, ValidCommand());
+        await When(() => order.StartOrderDraftAsync(Command1));
 
-        Assert.Equal("OrderId", Assert.Single(Assert.IsType<ValidationError>(result.Error).Entries).Target);
+        ThenError<ValidationError>(error => Assert.Equal("OrderId", Assert.Single(error.Entries).Target));
     }
 
     [Fact]
     public async Task StartDraft_RejectsAnUnauthenticatedCaller()
     {
-        var result = await GetOrder(NewOrderId()).StartOrderDraftAsync(ValidCommand());
-
-        Assert.Equal(nameof(OrderDraftStarted.InitiatedBy), Assert.Single(Assert.IsType<ValidationError>(result.Error).Entries).Target);
+        // Orleans Identity rejects the call before it reaches the grain (and before the harness could read the
+        // order's version), so this calls the grain directly instead of using When.
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Order.StartOrderDraftAsync(Command1));
     }
 
     [Fact]
-    public async Task StartDraft_RejectsAUserWhoIsNotAUserOfTheClient()
+    public async Task StartDraft_RejectsAUserWhoIsNotAClientUser()
     {
-        var order = GetOrder(NewOrderId());
+        GivenSignedIn(RequestedByUsers.Coordinator1);
+        await Given();
 
-        var otherUser = await StartAsync(order, ValidCommand(), userGuid: Guid.NewGuid().ToString());
-        var otherClient = await StartAsync(order, ValidCommand() with { ClientId = "elliott|0b2e4f61" });
+        await When(() => Order.StartOrderDraftAsync(Command1));
 
-        Assert.Equal(ErrorCodes.PermissionDenied, otherUser.Error.Code);
-        Assert.Equal(ErrorCodes.PermissionDenied, otherClient.Error.Code);
-        Assert.Empty(await order.GetSavedEventsSince(0));
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.PermissionDenied, error.Code));
+    }
+
+    [Fact]
+    public async Task StartDraft_RejectsAClientUserOfAnotherClient()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser2);
+        await Given();
+
+        await When(() => Order.StartOrderDraftAsync(Command1));
+
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.PermissionDenied, error.Code));
     }
 
     [Theory]
@@ -200,24 +206,46 @@ public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<
     [InlineData("formName")]
     public async Task StartDraft_RejectsAServiceAndFormThatAreNotCurrent(string part)
     {
-        var command = ValidCommand();
+        var desktop = TestData.DesktopAppraisal;
+        var command = Command1;
         command = part switch
         {
-            "service" => command with { ServiceRequestTypeId = "elliott|0d9c1b2a" },
-            "serviceVersion" => command with { ServiceRequestTypeVersion = 2 },
-            "serviceName" => command with { ServiceRequestTypeName = "Appraisal Residential" },
-            "form" => command with { FormTypeId = "elliott|0d9c1b2a" },
-            "formVersion" => command with { FormTypeVersion = 2 },
-            "formName" => command with { FormTypeName = "Desktop Appraisal" },
+            "service" => command with { ServiceRequestTypeId = "summit|0d9c1b2a" },
+            "serviceVersion" => command with { ServiceRequestTypeVersion = command.ServiceRequestTypeVersion - 1 },
+            "serviceName" => command with { ServiceRequestTypeName = TestData.CommercialAppraisal.ServiceRequestTypeName },
+            "form" => command with { FormTypeId = "summit|0d9c1b2a" },
+            "formVersion" => command with
+            {
+                FormTypeId = desktop.FormTypeId,
+                FormTypeVersion = desktop.FormTypeVersion - 1,
+                FormTypeName = desktop.FormTypeName
+            },
+            "formName" => command with { FormTypeName = desktop.FormTypeName },
             _ => throw new ArgumentOutOfRangeException(nameof(part))
         };
-        var order = GetOrder(NewOrderId());
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given();
 
-        var result = await StartAsync(order, command);
+        await When(() => Order.StartOrderDraftAsync(command));
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(ErrorCodes.InvalidArgument, result.Error.Code);
-        Assert.Empty(await order.GetSavedEventsSince(0));
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.InvalidArgument, error.Code));
+    }
+
+    [Fact]
+    public async Task StartDraft_RejectsAFormOfAnotherService()
+    {
+        var commercialForm = TestData.NarrativeAppraisal;
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given();
+
+        await When(() => Order.StartOrderDraftAsync(Command1 with
+        {
+            FormTypeId = commercialForm.FormTypeId,
+            FormTypeVersion = commercialForm.FormTypeVersion,
+            FormTypeName = commercialForm.FormTypeName
+        }));
+
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.InvalidArgument, error.Code));
     }
 
     [Theory]
@@ -226,83 +254,46 @@ public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<
     [InlineData("intendedUseName")]
     public async Task StartDraft_RejectsAnIntendedUseThatIsNotCurrent(string part)
     {
-        var command = ValidCommand();
+        var command = Command1;
         command = part switch
         {
-            "intendedUse" => command with { IntendedUseId = "elliott|0d9c1b2a" },
-            "intendedUseVersion" => command with { IntendedUseVersion = 2 },
-            "intendedUseName" => command with { IntendedUseName = "Purchase" },
+            "intendedUse" => command with { IntendedUseId = "summit|0d9c1b2a" },
+            "intendedUseVersion" => command with { IntendedUseVersion = command.IntendedUseVersion - 1 },
+            "intendedUseName" => command with { IntendedUseName = TestData.Purchase.Name },
             _ => throw new ArgumentOutOfRangeException(nameof(part))
         };
-        var order = GetOrder(NewOrderId());
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given();
 
-        var result = await StartAsync(order, command);
+        await When(() => Order.StartOrderDraftAsync(command));
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(ErrorCodes.InvalidArgument, result.Error.Code);
-        Assert.Empty(await order.GetSavedEventsSince(0));
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.InvalidArgument, error.Code));
     }
 
     [Fact]
     public void ReplayingOrderDraftStarted_MovesTheOrderToDraft()
     {
         var state = new OrderState();
-        var started = new OrderDraftStarted
-        {
-            OrderId = NewOrderId(),
-            ClientId = "elliott|c8e41a7d",
-            ServiceRequestTypeId = "elliott|5a1f0c3e",
-            ServiceRequestTypeVersion = 1,
-            ServiceRequestTypeName = "Appraisal Commercial",
-            FormTypeId = "elliott|e5a1c9d3",
-            FormTypeVersion = 1,
-            FormTypeName = "Market Value Interior Inspection",
-            PropertyStreet = "1200 Main St",
-            PropertyCity = "Roanoke",
-            PropertyState = "VA",
-            PropertyZip = "24011",
-            PropertyType = "Commercial - Office",
-            IntendedUseId = "elliott|ad86c5b7",
-            IntendedUseVersion = 1,
-            IntendedUseName = "Refinance",
-            LoanNumber = "CB-2026-0412",
-            DueDate = new DateOnly(2026, 12, 4),
-            InitiatedBy = SeedData.AnaRuizUserId,
-            OccurredAt = DateTimeOffset.Parse("2026-11-17T09:05:00Z")
-        };
         Assert.Equal(OrderStatus.None, state.Status);
 
-        state.When(started);
+        state.When(DraftStarted1(GrainId));
 
         Assert.Equal(OrderStatus.Draft, state.Status);
-        Assert.Equal(SeedData.AnaRuizUserId, state.StartedBy);
+        Assert.Equal(RequestedByUsers.ClientUser1.GetTenantUserId(), state.StartedBy);
         Assert.False(state.StateMachine.CanFire(OrderCommand.StartDraft));
     }
 
-    private static StartOrderDraftCommand ValidCommand() => new(
-        "elliott|c8e41a7d",
-        "elliott|5a1f0c3e", 1, "Appraisal Commercial",
-        "elliott|e5a1c9d3", 1, "Market Value Interior Inspection",
-        "1200 Main St", "Roanoke", "VA", "24011", "Commercial - Office",
-        "elliott|ad86c5b7", 1, "Refinance",
-        "CB-2026-0412", new DateOnly(2026, 12, 4));
+    /// <summary>Signs in <paramref name="user"/> for the rest of the test; Orleans Identity reads the user from the request context.</summary>
+    private static void GivenSignedIn(ClaimsPrincipal user) => RequestContext.Set(OrleansIdentityConstants.USER_CLAIMS, user);
 
-    private static string NewOrderId() => TenantKey.Create(TenantId, Guid.NewGuid().ToString());
-
-    private IOrderGrain GetOrder(string orderId) => fixture.Cluster.GrainFactory.GetGrain<IOrderGrain>(orderId);
-
-    private static async Task<Result<StartOrderDraftResponse>> StartAsync(
-        IOrderGrain order, StartOrderDraftCommand command, string userGuid = AnaRuizUserGuid)
-    {
-        RequestContext.Set(OrleansIdentityConstants.USER_CLAIMS, new ClaimsPrincipal(new ClaimsIdentity(
-            [new Claim(ClaimTypes.NameIdentifier, userGuid)], "test")));
-        try
+    private static (ClaimsPrincipal User, StartOrderDraftCommand Command, Func<string, DateTimeOffset?, OrderDraftStarted> DraftStarted)
+        Variation(int variation) => variation switch
         {
-            return await order.StartOrderDraftAsync(command);
-        }
-        finally
-        {
-            RequestContext.Remove(OrleansIdentityConstants.USER_CLAIMS);
-        }
-    }
+            1 => (RequestedByUsers.ClientUser1, Command1, DraftStarted1),
+            2 => (RequestedByUsers.ClientUser2, Command2, DraftStarted2),
+            3 => (RequestedByUsers.ClientUser1, Command3, DraftStarted3),
+            _ => throw new ArgumentOutOfRangeException(nameof(variation))
+        };
+
+    private static object SingleEvent(IReadOnlyList<IChange> changes) => Assert.IsType<Change>(Assert.Single(changes)).Event;
 }

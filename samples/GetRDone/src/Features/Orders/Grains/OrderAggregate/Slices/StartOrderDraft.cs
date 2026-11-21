@@ -20,48 +20,40 @@ public sealed partial class OrderGrain
                     OrderId.Create(this.GetPrimaryKeyString(), tenantId).Deconstruct(out var orderId),
                     UserId.Create(GetCurrentUserId(tenantId), tenantId, nameof(OrderDraftStarted.InitiatedBy)).Deconstruct(out var initiatedBy),
                     ClientId.Create(command.ClientId, tenantId).Deconstruct(out var clientId),
-                    ServiceRequestTypeId.Create(command.ServiceRequestTypeId, tenantId).Deconstruct(out var serviceRequestTypeId),
-                    ServiceRequestTypeVersion.Create(command.ServiceRequestTypeVersion).Deconstruct(out var serviceRequestTypeVersion),
-                    ServiceRequestTypeName.Create(command.ServiceRequestTypeName).Deconstruct(out var serviceRequestTypeName),
-                    FormTypeId.Create(command.FormTypeId, tenantId).Deconstruct(out var formTypeId),
-                    FormTypeVersion.Create(command.FormTypeVersion).Deconstruct(out var formTypeVersion),
-                    FormTypeName.Create(command.FormTypeName).Deconstruct(out var formTypeName),
-                    PropertyStreet.Create(command.PropertyStreet).Deconstruct(out var propertyStreet),
-                    PropertyCity.Create(command.PropertyCity).Deconstruct(out var propertyCity),
-                    PropertyState.Create(command.PropertyState).Deconstruct(out var propertyState),
-                    PropertyZip.Create(command.PropertyZip).Deconstruct(out var propertyZip),
+                    ServiceRequestTypeRef.Create(command.ServiceRequestTypeId, command.ServiceRequestTypeVersion, command.ServiceRequestTypeName, tenantId)
+                        .Deconstruct(out var serviceRequestType),
+                    FormTypeRef.Create(command.FormTypeId, command.FormTypeVersion, command.FormTypeName, tenantId)
+                        .Deconstruct(out var formType),
+                    PropertyAddress.Create(command.PropertyStreet, command.PropertyCity, command.PropertyState, command.PropertyZip)
+                        .Deconstruct(out var propertyAddress),
                     PropertyType.Create(command.PropertyType).Deconstruct(out var propertyType),
-                    IntendedUseId.Create(command.IntendedUseId, tenantId).Deconstruct(out var intendedUseId),
-                    IntendedUseVersion.Create(command.IntendedUseVersion).Deconstruct(out var intendedUseVersion),
-                    IntendedUseName.Create(command.IntendedUseName).Deconstruct(out var intendedUseName),
+                    IntendedUseRef.Create(command.IntendedUseId, command.IntendedUseVersion, command.IntendedUseName, tenantId)
+                        .Deconstruct(out var intendedUse),
                     LoanNumber.Create(command.LoanNumber).Deconstruct(out var loanNumber),
                     DueDate.Create(command.DueDate).Deconstruct(out var dueDate))
                 .Ensure(() => State.StateMachine.CanFire(OrderCommand.StartDraft), 
                     () => RequestErrors.NewAlreadyExists("The order draft has already been started."))
                 .Bind(() => _permissions.CanStartOrderAsync(initiatedBy!, clientId!))
-                .Bind(() => GrainFactory.GetOrderableServicesGrain(tenantId).IsCurrentOrderableServiceAsync(
-                    serviceRequestTypeId!, serviceRequestTypeVersion!, serviceRequestTypeName!,
-                    formTypeId!, formTypeVersion!, formTypeName!))
-                .Bind(() => GrainFactory.GetIntendedUsesGrain(tenantId).IsCurrentIntendedUseAsync(
-                    intendedUseId!, intendedUseVersion!, intendedUseName!))
+                .Bind(() => GrainFactory.GetOrderableServicesGrain(tenantId).IsCurrentOrderableServiceAsync(serviceRequestType!, formType!))
+                .Bind(() => GrainFactory.GetIntendedUsesGrain(tenantId).IsCurrentIntendedUseAsync(intendedUse!))
                 .BindWithStreamTransaction(this, transaction => transaction.Apply(new OrderDraftStarted
                 {
                     OrderId = orderId!,
                     ClientId = clientId!,
-                    ServiceRequestTypeId = serviceRequestTypeId!,
-                    ServiceRequestTypeVersion = serviceRequestTypeVersion!,
-                    ServiceRequestTypeName = serviceRequestTypeName!,
-                    FormTypeId = formTypeId!,
-                    FormTypeVersion = formTypeVersion!,
-                    FormTypeName = formTypeName!,
-                    PropertyStreet = propertyStreet!,
-                    PropertyCity = propertyCity!,
-                    PropertyState = propertyState!,
-                    PropertyZip = propertyZip!,
+                    ServiceRequestTypeId = serviceRequestType!.Id,
+                    ServiceRequestTypeVersion = serviceRequestType.Version,
+                    ServiceRequestTypeName = serviceRequestType.Name,
+                    FormTypeId = formType!.Id,
+                    FormTypeVersion = formType.Version,
+                    FormTypeName = formType.Name,
+                    PropertyStreet = propertyAddress!.Street,
+                    PropertyCity = propertyAddress.City,
+                    PropertyState = propertyAddress.State,
+                    PropertyZip = propertyAddress.Zip,
                     PropertyType = propertyType!,
-                    IntendedUseId = intendedUseId!,
-                    IntendedUseVersion = intendedUseVersion!,
-                    IntendedUseName = intendedUseName!,
+                    IntendedUseId = intendedUse!.Id,
+                    IntendedUseVersion = intendedUse.Version,
+                    IntendedUseName = intendedUse.Name,
                     LoanNumber = loanNumber!,
                     DueDate = dueDate!,
                     InitiatedBy = initiatedBy!,

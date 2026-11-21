@@ -15,7 +15,7 @@ public interface IIntendedUsesGrain : IGrainWithStringKey
 
     /// <summary>Succeeds when the intended use exists, the version is its current version, and the name matches.</summary>
     [ReadOnly]
-    Task<Result> IsCurrentIntendedUseAsync(IntendedUseId intendedUseId, IntendedUseVersion intendedUseVersion, IntendedUseName intendedUseName);
+    Task<Result> IsCurrentIntendedUseAsync(IntendedUseRef intendedUse);
 }
 
 [GenerateSerializer, Immutable]

@@ -10,7 +10,7 @@ public static class IdentitySeeder
     public const string DemoPassword = "Pass123$";
 
     /// <summary>Ana Ruiz, the Carter Bank &amp; Trust client user from the event model.</summary>
-    /// <remarks>The Orders read models seed the same user (GetRDone.Orders.Grains.ReadModels.SeedData); keep them in sync.</remarks>
+    /// <remarks>The Orders read models seed the same user (GetRDone.Orders.Grains.ReadModels.SampleSeedData); keep them in sync.</remarks>
     public const string AnaRuizUserId = "7304a1f2-3c5d-4e6f-8a9b-0c1d2e3f4a5b";
 
     public static async Task MigrateAndSeedAsync(IServiceProvider services, bool seedDemoUsers)

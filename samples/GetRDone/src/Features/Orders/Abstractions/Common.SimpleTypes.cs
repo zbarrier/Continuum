@@ -151,7 +151,7 @@ public sealed record ServiceRequestTypeVersion : Int32ValueObject<ServiceRequest
 [Alias("Orders.ServiceRequestTypeName.V1"), GenerateSerializer, Immutable]
 public sealed record ServiceRequestTypeName : StringValueObject<ServiceRequestTypeName>
 {
-    public const int MaxLength = 100;
+    public const int MaxLength = 30;
 
     public static Result<ServiceRequestTypeName> Create(string? value, string propertyName = nameof(ServiceRequestTypeName))
     {
@@ -235,7 +235,7 @@ public sealed record FormTypeVersion : Int32ValueObject<FormTypeVersion>
 [Alias("Orders.FormTypeName.V1"), GenerateSerializer, Immutable]
 public sealed record FormTypeName : StringValueObject<FormTypeName>
 {
-    public const int MaxLength = 100;
+    public const int MaxLength = 50;
 
     public static Result<FormTypeName> Create(string? value, string propertyName = nameof(FormTypeName))
     {
