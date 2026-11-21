@@ -10,7 +10,7 @@ Requires Docker. From this folder:
 dotnet run --project src/GetRDone.AppHost
 ```
 
-Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only, password `Pass123$`): `client@getrdone.local`, `coordinator@getrdone.local`, `reviewer@getrdone.local` (tenant `demo`), and `vendor@getrdone.local` (no tenant). Vendors can also self-register from the sign-in page; confirmation and password-reset emails appear in Mailpit.
+Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only, password `Pass123$`): `ana.ruiz@carterbank.example` (client user of Carter Bank & Trust), `coordinator@getrdone.local`, `reviewer@getrdone.local` (tenant `elliott`), and `vendor@getrdone.local` (no tenant). If your local Identity database was seeded before the tenant became `elliott`, delete the SQL Server data volume so the users are re-seeded. Vendors can also self-register from the sign-in page; confirmation and password-reset emails appear in Mailpit.
 
 ## Projects
 
@@ -23,11 +23,17 @@ Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only
 
 ## Starting an order draft
 
-The caller generates a new non-empty order GUID and calls `IOrderGrain` using that GUID as the tenant-qualified grain key (for example, `client.ForTenant(tenantId).GetGrain<IOrderGrain>(orderId.ToString())`). `StartOrderDraftAsync` returns the saved changes and stream version after persisting `OrderDraftStarted`. The authenticated user's ID and event time are supplied by the backend.
+The caller generates a new non-empty order GUID and calls `IOrderGrain` using that GUID as the tenant-qualified grain key (for example, `client.ForTenant(tenantId).GetGrain<IOrderGrain>(orderId.ToString())`). `StartOrderDraftAsync` returns the saved changes and stream version after persisting `OrderDraftStarted`. The event time is supplied by the backend, and `InitiatedBy` is the tenant-qualified user ID (`{tenantId}|{userGuid}`) built from the authenticated identity's GUID.
 
-`IOrderableServicesGrain` uses the tenant-qualified key `offerings`. It exposes a hard-coded sample service/form pair, stored in memory per tenant and recreated after a silo restart. The command checks the selected IDs and versions against that list; client accounts and divisions from the original model are not part of this sample. There is no order-entry UI yet.
+IDs (order, user, client, service request type, form type, intended use) are tenant-qualified strings validated by `TenantKeyValueObject` types; an ID from another tenant is rejected. The command carries the selected IDs, versions, and names, and only current versions are accepted.
 
-`IIntendedUsesGrain` uses the tenant-qualified key `intendedUses` and works the same way, with hard-coded Refinance and Purchase intended uses. The command sends only the intended use ID and version; the name recorded on `OrderDraftStarted` comes from this list.
+The lookups come from pre-populated read models, seeded on activation when their state is empty (the event model's seed data chapter shows them being seeded by events this model does not produce). They are stored in memory per tenant, only the `elliott` tenant is seeded, and they are recreated after a silo restart. Use the `GetIntendedUsesGrain`, `GetOrderableServicesGrain`, and `GetUserDirectoryGrain` grain factory extensions to reach them:
+
+- `IIntendedUsesGrain` (key `intendedUses`): Refinance, Purchase, Construction, Other. `IsCurrentIntendedUseAsync` checks the selected ID, version, and name.
+- `IOrderableServicesGrain` (key `orderableServices`): one Appraisal Commercial service with its Market Value Interior Inspection form. `IsCurrentOrderableServiceAsync` checks the selected service and form IDs, versions, and names.
+- `IUserDirectoryGrain` (key `userDirectory`): Ana Ruiz of Carter Bank & Trust. `IsClientUserAsync` checks that a user belongs to a client.
+
+`IOrderPermissions` decides who may act on an order. Starting a draft requires the current user to be a user of the selected client; later commands will allow the user who started the order. Real tenant and permission checks belong to a full application. There is no order-entry UI yet.
 
 Tenant-qualified keys partition the sample's data, but the current silo does not enforce that a caller's `tenant_id` claim matches the requested grain key. Authentication alone is not tenant authorization; do not rely on this sample for tenant isolation until that enforcement is added.
 

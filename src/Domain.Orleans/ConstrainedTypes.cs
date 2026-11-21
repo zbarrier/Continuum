@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 
+using Continuum.Orleans.Tenancy;
+
 namespace Continuum.Domain.Orleans;
 
 /// <summary>Base record for a strongly typed value object that wraps a <see cref="byte"/> value.</summary>
@@ -313,6 +315,60 @@ public abstract record StringValueObject<T> where T : StringValueObject<T>
 
     /// <summary>Deconstructs the value object into a <see cref="string"/>.</summary>
     /// <param name="value">The <see cref="string"/> representation of the value.</param>
+    public void Deconstruct(out string value) => value = Value;
+}
+
+/// <summary>
+///     Base record for a strongly typed identifier that wraps a tenant-qualified Orleans key in the
+///     <c>{TenantId}|{Key}</c> format of <see cref="TenantKey"/>, or a plain key when there is no tenant.
+/// </summary>
+/// <remarks>
+///     Validate the value with <see cref="TenantKeyResultExtensions"/> before calling the constructor, so the identifier
+///     always belongs to the expected tenant.
+/// </remarks>
+/// <typeparam name="T">The concrete value object type.</typeparam>
+[GenerateSerializer, Immutable]
+public abstract record TenantKeyValueObject<T> where T : TenantKeyValueObject<T>
+{
+    /// <summary>Initializes a new instance with the specified, already validated, key.</summary>
+    /// <param name="value">The tenant-qualified key to wrap.</param>
+    protected TenantKeyValueObject(string value) => Value = value;
+
+    /// <summary>Gets the wrapped tenant-qualified key.</summary>
+    [Id(0), JsonInclude] protected string Value { get; init; }
+
+    /// <summary>Gets the tenant id, or <see langword="null"/> when the key is not tenant qualified.</summary>
+    [JsonIgnore]
+    public string? TenantId
+    {
+        get
+        {
+            TenantKey.Split(Value, out var tenantId, out _);
+            return tenantId;
+        }
+    }
+
+    /// <summary>Gets the key within the tenant.</summary>
+    [JsonIgnore]
+    public string Key
+    {
+        get
+        {
+            TenantKey.Split(Value, out _, out var key);
+            return key;
+        }
+    }
+
+    /// <inheritdoc/>
+    public sealed override string ToString() => Value;
+
+    /// <summary>Converts the value object to a <see cref="string"/>.</summary>
+    /// <param name="self">The value object to convert.</param>
+    /// <returns>The tenant-qualified key.</returns>
+    public static implicit operator string(TenantKeyValueObject<T> self) => self.Value;
+
+    /// <summary>Deconstructs the value object into a <see cref="string"/>.</summary>
+    /// <param name="value">The tenant-qualified key.</param>
     public void Deconstruct(out string value) => value = Value;
 }
 

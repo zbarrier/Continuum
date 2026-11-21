@@ -1,3 +1,7 @@
+using Continuum.CSharpFunctionalExtensions;
+using Continuum.Orleans.Tenancy;
+
+using GetRDone.Orders.Abstractions;
 using GetRDone.Orders.Abstractions.ReadModels;
 
 using Microsoft.AspNetCore.Authorization;
@@ -12,19 +16,28 @@ public sealed class IntendedUsesGrain(
 {
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        if (!state.RecordExists)
+        TenantKey.Split(this.GetPrimaryKeyString(), out var tenantId, out _);
+        if (!state.RecordExists && tenantId == SeedData.TenantId)
         {
-            state.State.IntendedUses =
-            [
-                new IntendedUse(Guid.Parse("5c0f5b7e-6a1d-4f3e-9b2a-8d4c7e1f2a60"), 1, "Refinance"),
-                new IntendedUse(Guid.Parse("a3e8d2c4-7b19-4f6a-8e05-1d9c3b7f4e28"), 1, "Purchase")
-            ];
-            await state.WriteStateAsync();
+            state.State.IntendedUses = SeedData.IntendedUses;
+            await state.WriteStateAsync(cancellationToken);
         }
         await base.OnActivateAsync(cancellationToken);
     }
 
     public Task<IntendedUse[]> GetIntendedUsesAsync() => Task.FromResult(state.State.IntendedUses.ToArray());
+
+    public Task<Result> IsCurrentIntendedUseAsync(IntendedUseId intendedUseId, IntendedUseVersion intendedUseVersion, IntendedUseName intendedUseName)
+    {
+        var isCurrent = state.State.IntendedUses.Any(item =>
+            item.IntendedUseId == (string)intendedUseId
+            && item.IntendedUseVersion == (int)intendedUseVersion
+            && item.Name == (string)intendedUseName);
+
+        return Task.FromResult(isCurrent
+            ? Result.Success()
+            : Result.Failure(RequestErrors.NewInvalidArg("The selected intended use is not available.")));
+    }
 }
 
 [GenerateSerializer]

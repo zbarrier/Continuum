@@ -10,7 +10,7 @@ public abstract class DomainEvent : IDomainEvent
 {
     /// <inheritdoc/>
     [Id(0)]
-    public required Guid InitiatedBy { get; init; }
+    public required string InitiatedBy { get; init; }
 
     /// <inheritdoc/>
     [Id(1)]

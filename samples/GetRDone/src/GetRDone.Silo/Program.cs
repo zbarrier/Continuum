@@ -3,6 +3,7 @@ using Continuum.Hosting.Orleans;
 using Continuum.TypeMapping;
 
 using GetRDone;
+using GetRDone.Orders.Grains.OrderAggregate;
 
 using ManagedCode.Orleans.Identity.Server.Extensions;
 
@@ -24,6 +25,8 @@ builder.Services.AddMultitenantKurrentDBBasedLogConsistencyProvider(GetRDoneStor
 
 // The Orleans Identity grain filter evaluates [Authorize] attributes using ASP.NET Core authorization services.
 builder.Services.AddAuthorization();
+
+builder.Services.AddSingleton<IOrderPermissions, OrderPermissions>();
 
 builder.UseOrleans(silo =>
 {

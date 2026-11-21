@@ -4,40 +4,22 @@ using Continuum.Domain.Orleans;
 namespace GetRDone.Orders.Abstractions;
 
 [Alias("Orders.OrderId.V1"), GenerateSerializer, Immutable]
-public sealed record OrderId : GuidValueObject<OrderId>
+public sealed record OrderId : TenantKeyValueObject<OrderId>
 {
-    public static Result<OrderId> Create(string? value, string propertyName = nameof(OrderId))
+    public static Result<OrderId> Create(string? value, string? tenantId, string propertyName = nameof(OrderId))
     {
-        return Result.IsGuidAndNotEmpty(value, propertyName)
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantGuidKey(tenantId, propertyName)
             .Map(validatedValue => new OrderId(validatedValue));
     }
-    public static Result<OrderId> Create(string? value, PropertyPath propertyPath, string member)
+    public static Result<OrderId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
     {
-        return Result.IsGuidAndNotEmpty(value, propertyPath, member)
-            .Map(validatedValue => new OrderId(validatedValue));
-    }
-    public static Result<OrderId> Create(Guid? value, string propertyName = nameof(OrderId))
-    {
-        return Result.NotNull(value, propertyName)
-            .Map(validatedValue => new OrderId(validatedValue));
-    }
-    public static Result<OrderId> Create(Guid? value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotNull(value, propertyPath, member)
-            .Map(validatedValue => new OrderId(validatedValue));
-    }
-    public static Result<OrderId> Create(Guid value, string propertyName = nameof(OrderId))
-    {
-        return Result.NotEmpty(value, propertyName)
-            .Map(validatedValue => new OrderId(validatedValue));
-    }
-    public static Result<OrderId> Create(Guid value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotEmpty(value, propertyPath, member)
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantGuidKey(tenantId, propertyPath, member)
             .Map(validatedValue => new OrderId(validatedValue));
     }
 
-    private OrderId(Guid value) : base(value) { }
+    private OrderId(string value) : base(value) { }
 }
 
 [Alias("Orders.OrderNumber.V1"), GenerateSerializer, Immutable]
@@ -84,43 +66,42 @@ public sealed record OrderNumber : Int64ValueObject<OrderNumber>
     private OrderNumber(long value) : base(value) { }
 }
 
-[Alias("Orders.ServiceRequestTypeId.V1"), GenerateSerializer, Immutable]
-public sealed record ServiceRequestTypeId : GuidValueObject<ServiceRequestTypeId>
+[Alias("Orders.ClientId.V1"), GenerateSerializer, Immutable]
+public sealed record ClientId : TenantKeyValueObject<ClientId>
 {
-    public static Result<ServiceRequestTypeId> Create(string? value, string propertyName = nameof(ServiceRequestTypeId))
+    public static Result<ClientId> Create(string? value, string? tenantId, string propertyName = nameof(ClientId))
     {
-        return Result.IsGuidAndNotEmpty(value, propertyName)
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantKey(tenantId, propertyName)
+            .Map(validatedValue => new ClientId(validatedValue));
+    }
+    public static Result<ClientId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantKey(tenantId, propertyPath, member)
+            .Map(validatedValue => new ClientId(validatedValue));
+    }
+
+    private ClientId(string value) : base(value) { }
+}
+
+[Alias("Orders.ServiceRequestTypeId.V1"), GenerateSerializer, Immutable]
+public sealed record ServiceRequestTypeId : TenantKeyValueObject<ServiceRequestTypeId>
+{
+    public static Result<ServiceRequestTypeId> Create(string? value, string? tenantId, string propertyName = nameof(ServiceRequestTypeId))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantKey(tenantId, propertyName)
             .Map(validatedValue => new ServiceRequestTypeId(validatedValue));
     }
-    public static Result<ServiceRequestTypeId> Create(string? value, PropertyPath propertyPath, string member)
+    public static Result<ServiceRequestTypeId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
     {
-        return Result.IsGuidAndNotEmpty(value, propertyPath, member)
-            .Map(validatedValue => new ServiceRequestTypeId(validatedValue));
-    }
-    public static Result<ServiceRequestTypeId> Create(Guid? value, string propertyName = nameof(ServiceRequestTypeId))
-    {
-        return Result.NotNull(value, propertyName)
-            .NotEmpty(propertyName)
-            .Map(validatedValue => new ServiceRequestTypeId(validatedValue));
-    }
-    public static Result<ServiceRequestTypeId> Create(Guid? value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotNull(value, propertyPath, member)
-            .NotEmpty(propertyPath, member)
-            .Map(validatedValue => new ServiceRequestTypeId(validatedValue));
-    }
-    public static Result<ServiceRequestTypeId> Create(Guid value, string propertyName = nameof(ServiceRequestTypeId))
-    {
-        return Result.NotEmpty(value, propertyName)
-            .Map(validatedValue => new ServiceRequestTypeId(validatedValue));
-    }
-    public static Result<ServiceRequestTypeId> Create(Guid value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotEmpty(value, propertyPath, member)
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantKey(tenantId, propertyPath, member)
             .Map(validatedValue => new ServiceRequestTypeId(validatedValue));
     }
 
-    private ServiceRequestTypeId(Guid value) : base(value) { }
+    private ServiceRequestTypeId(string value) : base(value) { }
 }
 
 [Alias("Orders.ServiceRequestTypeVersion.V1"), GenerateSerializer, Immutable]
@@ -167,43 +148,44 @@ public sealed record ServiceRequestTypeVersion : Int32ValueObject<ServiceRequest
     private ServiceRequestTypeVersion(int value) : base(value) { }
 }
 
-[Alias("Orders.FormTypeId.V1"), GenerateSerializer, Immutable]
-public sealed record FormTypeId : GuidValueObject<FormTypeId>
+[Alias("Orders.ServiceRequestTypeName.V1"), GenerateSerializer, Immutable]
+public sealed record ServiceRequestTypeName : StringValueObject<ServiceRequestTypeName>
 {
-    public static Result<FormTypeId> Create(string? value, string propertyName = nameof(FormTypeId))
+    public const int MaxLength = 100;
+
+    public static Result<ServiceRequestTypeName> Create(string? value, string propertyName = nameof(ServiceRequestTypeName))
     {
-        return Result.IsGuidAndNotEmpty(value, propertyName)
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new ServiceRequestTypeName(validatedValue));
+    }
+    public static Result<ServiceRequestTypeName> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new ServiceRequestTypeName(validatedValue));
+    }
+
+    private ServiceRequestTypeName(string value) : base(value) { }
+}
+
+[Alias("Orders.FormTypeId.V1"), GenerateSerializer, Immutable]
+public sealed record FormTypeId : TenantKeyValueObject<FormTypeId>
+{
+    public static Result<FormTypeId> Create(string? value, string? tenantId, string propertyName = nameof(FormTypeId))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantKey(tenantId, propertyName)
             .Map(validatedValue => new FormTypeId(validatedValue));
     }
-    public static Result<FormTypeId> Create(string? value, PropertyPath propertyPath, string member)
+    public static Result<FormTypeId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
     {
-        return Result.IsGuidAndNotEmpty(value, propertyPath, member)
-            .Map(validatedValue => new FormTypeId(validatedValue));
-    }
-    public static Result<FormTypeId> Create(Guid? value, string propertyName = nameof(FormTypeId))
-    {
-        return Result.NotNull(value, propertyName)
-            .NotEmpty(propertyName)
-            .Map(validatedValue => new FormTypeId(validatedValue));
-    }
-    public static Result<FormTypeId> Create(Guid? value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotNull(value, propertyPath, member)
-            .NotEmpty(propertyPath, member)
-            .Map(validatedValue => new FormTypeId(validatedValue));
-    }
-    public static Result<FormTypeId> Create(Guid value, string propertyName = nameof(FormTypeId))
-    {
-        return Result.NotEmpty(value, propertyName)
-            .Map(validatedValue => new FormTypeId(validatedValue));
-    }
-    public static Result<FormTypeId> Create(Guid value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotEmpty(value, propertyPath, member)
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantKey(tenantId, propertyPath, member)
             .Map(validatedValue => new FormTypeId(validatedValue));
     }
 
-    private FormTypeId(Guid value) : base(value) { }
+    private FormTypeId(string value) : base(value) { }
 }
 
 [Alias("Orders.FormTypeVersion.V1"), GenerateSerializer, Immutable]
@@ -248,6 +230,27 @@ public sealed record FormTypeVersion : Int32ValueObject<FormTypeVersion>
     }
 
     private FormTypeVersion(int value) : base(value) { }
+}
+
+[Alias("Orders.FormTypeName.V1"), GenerateSerializer, Immutable]
+public sealed record FormTypeName : StringValueObject<FormTypeName>
+{
+    public const int MaxLength = 100;
+
+    public static Result<FormTypeName> Create(string? value, string propertyName = nameof(FormTypeName))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new FormTypeName(validatedValue));
+    }
+    public static Result<FormTypeName> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new FormTypeName(validatedValue));
+    }
+
+    private FormTypeName(string value) : base(value) { }
 }
 
 [Alias("Orders.PropertyStreet.V1"), GenerateSerializer, Immutable]
@@ -357,42 +360,22 @@ public sealed record PropertyType : StringValueObject<PropertyType>
 }
 
 [Alias("Orders.IntendedUseId.V1"), GenerateSerializer, Immutable]
-public sealed record IntendedUseId : GuidValueObject<IntendedUseId>
+public sealed record IntendedUseId : TenantKeyValueObject<IntendedUseId>
 {
-    public static Result<IntendedUseId> Create(string? value, string propertyName = nameof(IntendedUseId))
+    public static Result<IntendedUseId> Create(string? value, string? tenantId, string propertyName = nameof(IntendedUseId))
     {
-        return Result.IsGuidAndNotEmpty(value, propertyName)
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantKey(tenantId, propertyName)
             .Map(validatedValue => new IntendedUseId(validatedValue));
     }
-    public static Result<IntendedUseId> Create(string? value, PropertyPath propertyPath, string member)
+    public static Result<IntendedUseId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
     {
-        return Result.IsGuidAndNotEmpty(value, propertyPath, member)
-            .Map(validatedValue => new IntendedUseId(validatedValue));
-    }
-    public static Result<IntendedUseId> Create(Guid? value, string propertyName = nameof(IntendedUseId))
-    {
-        return Result.NotNull(value, propertyName)
-            .NotEmpty(propertyName)
-            .Map(validatedValue => new IntendedUseId(validatedValue));
-    }
-    public static Result<IntendedUseId> Create(Guid? value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotNull(value, propertyPath, member)
-            .NotEmpty(propertyPath, member)
-            .Map(validatedValue => new IntendedUseId(validatedValue));
-    }
-    public static Result<IntendedUseId> Create(Guid value, string propertyName = nameof(IntendedUseId))
-    {
-        return Result.NotEmpty(value, propertyName)
-            .Map(validatedValue => new IntendedUseId(validatedValue));
-    }
-    public static Result<IntendedUseId> Create(Guid value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotEmpty(value, propertyPath, member)
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantKey(tenantId, propertyPath, member)
             .Map(validatedValue => new IntendedUseId(validatedValue));
     }
 
-    private IntendedUseId(Guid value) : base(value) { }
+    private IntendedUseId(string value) : base(value) { }
 }
 
 [Alias("Orders.IntendedUseVersion.V1"), GenerateSerializer, Immutable]
@@ -523,40 +506,20 @@ public sealed record DueDate : DateOnlyValueObject<DueDate>
 }
 
 [Alias("Orders.UserId.V1"), GenerateSerializer, Immutable]
-public sealed record UserId : GuidValueObject<UserId>
+public sealed record UserId : TenantKeyValueObject<UserId>
 {
-    public static Result<UserId> Create(string? value, string propertyName = nameof(UserId))
+    public static Result<UserId> Create(string? value, string? tenantId, string propertyName = nameof(UserId))
     {
-        return Result.IsGuidAndNotEmpty(value, propertyName)
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantGuidKey(tenantId, propertyName)
             .Map(validatedValue => new UserId(validatedValue));
     }
-    public static Result<UserId> Create(string? value, PropertyPath propertyPath, string member)
+    public static Result<UserId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
     {
-        return Result.IsGuidAndNotEmpty(value, propertyPath, member)
-            .Map(validatedValue => new UserId(validatedValue));
-    }
-    public static Result<UserId> Create(Guid? value, string propertyName = nameof(UserId))
-    {
-        return Result.NotNull(value, propertyName)
-            .NotEmpty(propertyName)
-            .Map(validatedValue => new UserId(validatedValue));
-    }
-    public static Result<UserId> Create(Guid? value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotNull(value, propertyPath, member)
-            .NotEmpty(propertyPath, member)
-            .Map(validatedValue => new UserId(validatedValue));
-    }
-    public static Result<UserId> Create(Guid value, string propertyName = nameof(UserId))
-    {
-        return Result.NotEmpty(value, propertyName)
-            .Map(validatedValue => new UserId(validatedValue));
-    }
-    public static Result<UserId> Create(Guid value, PropertyPath propertyPath, string member)
-    {
-        return Result.NotEmpty(value, propertyPath, member)
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantGuidKey(tenantId, propertyPath, member)
             .Map(validatedValue => new UserId(validatedValue));
     }
 
-    private UserId(Guid value) : base(value) { }
+    private UserId(string value) : base(value) { }
 }

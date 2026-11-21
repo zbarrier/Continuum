@@ -70,6 +70,29 @@ public static class TenantKey
         }
     }
 
+    /// <summary>
+    /// Tries to split an Orleans key into its tenant id and the key within the tenant.
+    /// </summary>
+    /// <param name="key">The Orleans key, either <c>{TenantId}|{Key}</c> or a plain key.</param>
+    /// <param name="tenantId">The tenant id, or <see langword="null"/> when <paramref name="key"/> is not tenant qualified or is malformed.</param>
+    /// <param name="keyWithinTenant">The key within the tenant.</param>
+    /// <returns>
+    /// <see langword="false"/> when the tenant id or the key within the tenant is empty, or the key within the tenant
+    /// contains <see cref="Separator"/>; otherwise, <see langword="true"/>.
+    /// </returns>
+    public static bool TrySplit(string key, out string? tenantId, out string keyWithinTenant)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+
+        if (TrySplitCore(key, out tenantId, out keyWithinTenant) is null)
+        {
+            return true;
+        }
+
+        tenantId = null;
+        return false;
+    }
+
     internal static string? TrySplitCore(string key, out string? tenantId, out string keyWithinTenant)
     {
         tenantId = null;

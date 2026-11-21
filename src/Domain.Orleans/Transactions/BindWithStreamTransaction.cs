@@ -157,4 +157,37 @@ public static class ResultStreamTransactionExtensions
             return Result.Failure<IStreamTransactionResponse>(Result.Configuration.DefaultTryErrorHandlerWithLogging(grain.Logger, ex));
         }
     }
+
+    /// <inheritdoc cref="BindWithStreamTransaction{TState, TEventBase, TStatus, TCommand}(Result, EventDrivenStateMachineGrain{TState, TEventBase, TStatus, TCommand}, Action{ICoordinatingStateMachineStreamTransaction{TState, TEventBase, TStatus, TCommand}}, TimeSpan?)"/>
+    public static async Task<Result<IStreamTransactionResponse>> BindWithStreamTransaction<TState, TEventBase, TStatus, TCommand>(this Task<Result> self,
+            EventDrivenStateMachineGrain<TState, TEventBase, TStatus, TCommand> grain,
+            Action<ICoordinatingStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>> f,
+            TimeSpan? timeout = null)
+        where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
+        where TEventBase : class
+        where TStatus : notnull
+        where TCommand : notnull
+        => await (await self).BindWithStreamTransaction(grain, f, timeout);
+
+    /// <inheritdoc cref="BindWithStreamTransaction{TState, TEventBase, TStatus, TCommand}(Result, EventDrivenStateMachineGrain{TState, TEventBase, TStatus, TCommand}, Action{ICoordinatingStateMachineStreamTransaction{TState, TEventBase, TStatus, TCommand}}, TimeSpan?)"/>
+    public static async Task<Result<IStreamTransactionResponse>> BindWithStreamTransaction<TState, TEventBase, TStatus, TCommand>(this Task<Result> self,
+            EventDrivenStateMachineGrain<TState, TEventBase, TStatus, TCommand> grain,
+            Func<ICoordinatingStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>, Result> f,
+            TimeSpan? timeout = null)
+        where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
+        where TEventBase : class
+        where TStatus : notnull
+        where TCommand : notnull
+        => await (await self).BindWithStreamTransaction(grain, f, timeout);
+
+    /// <inheritdoc cref="BindWithStreamTransaction{TState, TEventBase, TStatus, TCommand}(Result, EventDrivenStateMachineGrain{TState, TEventBase, TStatus, TCommand}, Action{ICoordinatingStateMachineStreamTransaction{TState, TEventBase, TStatus, TCommand}}, TimeSpan?)"/>
+    public static async Task<Result<IStreamTransactionResponse>> BindWithStreamTransaction<TState, TEventBase, TStatus, TCommand>(this Task<Result> self,
+            EventDrivenStateMachineGrain<TState, TEventBase, TStatus, TCommand> grain,
+            Func<ICoordinatingStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>, Task<Result>> f,
+            TimeSpan? timeout = null)
+        where TState : EventDrivenStateMachineState<TState, TEventBase, TStatus, TCommand>, new()
+        where TEventBase : class
+        where TStatus : notnull
+        where TCommand : notnull
+        => await (await self).BindWithStreamTransaction(grain, f, timeout);
 }

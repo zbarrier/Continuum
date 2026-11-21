@@ -12,17 +12,21 @@ public partial interface IOrderGrain : IEventDrivenStateMachineGrain
 
 [Alias("Orders.StartOrderDraftCommand.V1"), GenerateSerializer, Immutable]
 public sealed record StartOrderDraftCommand(
-    Guid ServiceRequestTypeId,
+    string ClientId,
+    string ServiceRequestTypeId,
     int ServiceRequestTypeVersion,
-    Guid FormTypeId,
+    string ServiceRequestTypeName,
+    string FormTypeId,
     int FormTypeVersion,
+    string FormTypeName,
     string PropertyStreet,
     string PropertyCity,
     string PropertyState,
     string PropertyZip,
     string PropertyType,
-    Guid IntendedUseId,
+    string IntendedUseId,
     int IntendedUseVersion,
+    string IntendedUseName,
     string LoanNumber,
     DateOnly DueDate);
 
@@ -32,21 +36,22 @@ public sealed class StartOrderDraftResponse(IReadOnlyList<IChange> changes, int 
 [Alias("Orders.OrderDraftStarted.V1"), DomainEventType("Orders.OrderDraftStarted.V1"), GenerateSerializer, Immutable]
 public sealed class OrderDraftStarted : OrderEvent
 {
-    [Id(0)] public required Guid OrderId { get; init; }
-    [Id(1)] public required Guid ServiceRequestTypeId { get; init; }
-    [Id(2)] public required int ServiceRequestTypeVersion { get; init; }
-    [Id(3)] public required string ServiceRequestTypeName { get; init; }
-    [Id(4)] public required Guid FormTypeId { get; init; }
-    [Id(5)] public required int FormTypeVersion { get; init; }
-    [Id(6)] public required string FormTypeName { get; init; }
-    [Id(7)] public required string PropertyStreet { get; init; }
-    [Id(8)] public required string PropertyCity { get; init; }
-    [Id(9)] public required string PropertyState { get; init; }
-    [Id(10)] public required string PropertyZip { get; init; }
-    [Id(11)] public required string PropertyType { get; init; }
-    [Id(12)] public required Guid IntendedUseId { get; init; }
-    [Id(13)] public required int IntendedUseVersion { get; init; }
-    [Id(14)] public required string IntendedUseName { get; init; }
-    [Id(15)] public required string LoanNumber { get; init; }
-    [Id(16)] public required DateOnly DueDate { get; init; }
+    [Id(0)] public required string OrderId { get; init; }
+    [Id(1)] public required string ClientId { get; init; }
+    [Id(2)] public required string ServiceRequestTypeId { get; init; }
+    [Id(3)] public required int ServiceRequestTypeVersion { get; init; }
+    [Id(4)] public required string ServiceRequestTypeName { get; init; }
+    [Id(5)] public required string FormTypeId { get; init; }
+    [Id(6)] public required int FormTypeVersion { get; init; }
+    [Id(7)] public required string FormTypeName { get; init; }
+    [Id(8)] public required string PropertyStreet { get; init; }
+    [Id(9)] public required string PropertyCity { get; init; }
+    [Id(10)] public required string PropertyState { get; init; }
+    [Id(11)] public required string PropertyZip { get; init; }
+    [Id(12)] public required string PropertyType { get; init; }
+    [Id(13)] public required string IntendedUseId { get; init; }
+    [Id(14)] public required int IntendedUseVersion { get; init; }
+    [Id(15)] public required string IntendedUseName { get; init; }
+    [Id(16)] public required string LoanNumber { get; init; }
+    [Id(17)] public required DateOnly DueDate { get; init; }
 }
