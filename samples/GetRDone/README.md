@@ -17,9 +17,9 @@ Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only
 - `GetRDone.AppHost` - Aspire: Azurite (Orleans clustering), KurrentDB, SQL Server (Identity, persistent volume), Mailpit, Identity, Silo, Web.
 - `GetRDone.ServiceDefaults` - OpenTelemetry, health checks, service discovery.
 - `GetRDone.Identity` - Duende IdentityServer with ASP.NET Core Identity on SQL Server and the Duende Razor Pages UI (`role`, `tenant_id` claims).
-- `GetRDone.Silo` - Orleans silo; multi-tenant KurrentDB event log; ManagedCode.Orleans.Identity authorization.
-- `GetRDone.Web` - Blazor Server; OIDC sign-in; forwards the circuit user to grains via an outgoing grain-call filter.
-- `Features/<Domain>/GetRDone.<Domain>.Abstractions` / `.Grains` - feature slices. `Hello` is temporary and proves the round trip.
+- `GetRDone.Silo` - Orleans silo; multi-tenant KurrentDB event log; KurrentDB stream provider for projections; ManagedCode.Orleans.Identity authorization.
+- `GetRDone.Web` - Blazor Server; OIDC sign-in; forwards the circuit user to grains via an outgoing grain-call filter. A client user's Home has My drafts and My orders sections (paged lists). My drafts loads from the ClientOrderDrafts projection; My orders stays empty until the ClientOrders read model is built. Other roles' home pages are not built yet.
+- `Features/<Domain>/GetRDone.<Domain>.Abstractions` / `.Grains` - feature slices. `Hello` is temporary and proves the round trip (the Hello page, `/hello`).
 
 ## Starting an order draft
 
@@ -34,6 +34,14 @@ The lookups come from pre-populated read models, seeded on activation when their
 - `IUserDirectoryGrain` (grain type `userDirectory`): Ana Ruiz of Carter Bank & Trust. `IsClientUserAsync` checks that a user belongs to a client.
 
 `IOrderPermissions` decides who may act on an order. Starting a draft requires the current user to be a user of the selected client; later commands will allow the user who started the order. Real tenant and permission checks belong to a full application. There is no order-entry UI yet.
+
+## Client order projections
+
+Every order event also targets the per-user stream `clientUserOrders-{tenantId}|{userGuid}` of the user who started the order (`OrderGrain.GetStreamTargets`), so one projection can group all of a user's orders. The Silo's `OrderProjections` KurrentDB stream provider runs a catch-up subscription on `$all` filtered to the `order-` stream prefix and delivers each event to its order stream and its target streams. Projection grains implicitly subscribe to the `OrderProjections:clientUserOrders` namespace, so Orleans activates one grain per user, keyed by the user's tenant user ID.
+
+- `IClientOrderDraftsGrain` (grain type `clientOrderDrafts`; `GetClientOrderDraftsGrain(tenantUserId)`): the user's drafts, most recently saved first. `GetDraftsAsync(skip, take)` returns one page and the total count. Only the user can read their own drafts.
+
+The checkpoint and the projections are stored in memory, so after a silo restart the subscription replays from the start and rebuilds them.
 
 Tenant-qualified keys partition the sample's data, but the current silo does not enforce that a caller's `tenant_id` claim matches the requested grain key. Authentication alone is not tenant authorization; do not rely on this sample for tenant isolation until that enforcement is added.
 

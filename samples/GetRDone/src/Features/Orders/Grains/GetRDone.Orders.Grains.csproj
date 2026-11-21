@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Abstractions\GetRDone.Orders.Abstractions.csproj" />
+    <ProjectReference Include="$(ContinuumSrc)Streaming.Orleans\Continuum.Streaming.Orleans.csproj" />
   </ItemGroup>
 
 </Project>

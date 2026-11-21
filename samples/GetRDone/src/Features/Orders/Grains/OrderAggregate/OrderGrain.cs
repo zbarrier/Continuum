@@ -1,14 +1,10 @@
-using System.Security.Claims;
-
 using Continuum.CSharpFunctionalExtensions;
 using Continuum.CSharpFunctionalExtensions.Orleans;
 using Continuum.Domain.Orleans;
-using Continuum.Orleans.Tenancy;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
 using GetRDone.Orders.Abstractions.ReadModels;
-
-using ManagedCode.Orleans.Identity.Core.Extensions;
+using GetRDone.Orders.Grains.ReadModels;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
@@ -36,18 +32,14 @@ public sealed partial class OrderGrain
     }
 
     /// <summary>
-    ///     Gets the current user's ID qualified by <paramref name="tenantId"/>, as <c>{TenantId}|{UserGuid}</c>. The identity
-    ///     provider only knows the user GUID; a full application would also check the user's access to the tenant.
+    ///     Sends every order event to the stream of the user who started the order as well, so the client user's read
+    ///     models (such as <see cref="ClientOrderDraftsGrain"/>) see all of that user's orders on one stream.
     /// </summary>
-    private string? GetCurrentUserId(string? tenantId)
+    protected override IReadOnlyList<GrainId> GetStreamTargets(object @event)
     {
-        var user = this.GetCurrentUser();
-        var userGuid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
-        if (string.IsNullOrEmpty(userGuid))
-        {
-            return null;
-        }
-        return tenantId is null ? userGuid : $"{tenantId}{TenantKey.Separator}{userGuid}";
+        // The draft started event is what records the starter, so it is not in the state yet while it is appended.
+        var startedBy = @event is OrderDraftStarted started ? started.InitiatedBy : State.StartedBy;
+        return startedBy is null ? [] : [OrderProjections.ClientUserOrdersStreamTarget(startedBy)];
     }
 }
 

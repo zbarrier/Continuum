@@ -18,7 +18,7 @@ public sealed partial class OrderGrain
 
             return await Result.CombineForValidation(
                     OrderId.Create(this.GetPrimaryKeyString(), tenantId).Deconstruct(out var orderId),
-                    UserId.Create(GetCurrentUserId(tenantId), tenantId, nameof(OrderDraftStarted.InitiatedBy)).Deconstruct(out var initiatedBy),
+                    UserId.Create(this.GetCurrentTenantUserId(tenantId), tenantId, nameof(OrderDraftStarted.InitiatedBy)).Deconstruct(out var initiatedBy),
                     ClientId.Create(command.ClientId, tenantId).Deconstruct(out var clientId),
                     ServiceRequestTypeRef.Create(command.ServiceRequestTypeId, command.ServiceRequestTypeVersion, command.ServiceRequestTypeName, tenantId)
                         .Deconstruct(out var serviceRequestType),

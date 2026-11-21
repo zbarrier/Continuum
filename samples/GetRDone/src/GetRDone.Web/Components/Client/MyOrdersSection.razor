@@ -1,0 +1,67 @@
+@* The client's submitted orders (ClientOrders) with their number and current status, with View. *@
+
+<MudTable T="ClientOrderRow" ServerData="LoadAsync" RowsPerPage="5" Hover="true" Elevation="1" Class="@Class">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">My orders (@_total)</MudText>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Order #</MudTh>
+        <MudTh>Property</MudTh>
+        <MudTh>Form type</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Submitted</MudTh>
+        <MudTh />
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Order #">@context.OrderNumber</MudTd>
+        <MudTd DataLabel="Property">@context.PropertyAddress</MudTd>
+        <MudTd DataLabel="Form type">@context.FormTypeName</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Color="StatusColor(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Submitted">@context.SubmittedAt.ToString("MMM d, h:mm tt")</MudTd>
+        <MudTd Style="text-align:right">
+            @* The client's order page is not built yet. *@
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="true">View</MudButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2">No orders</MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="PageSizes" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private static readonly int[] PageSizes = [5, 10, 25];
+
+    private int _total;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private Task<TableData<ClientOrderRow>> LoadAsync(TableState state, CancellationToken cancellationToken)
+    {
+        // The ClientOrders read model is not built yet (it starts with OrderSubmitted), so there are no orders to show.
+        var page = new TableData<ClientOrderRow> { Items = [], TotalItems = 0 };
+        UpdateTotal(page.TotalItems);
+        return Task.FromResult(page);
+    }
+
+    private void UpdateTotal(int total)
+    {
+        if (_total != total)
+        {
+            _total = total;
+            StateHasChanged();
+        }
+    }
+
+    private static Color StatusColor(string status) => status switch
+    {
+        "Shipped" => Color.Success,
+        "DoW awaiting approval" => Color.Warning,
+        _ => Color.Info
+    };
+}

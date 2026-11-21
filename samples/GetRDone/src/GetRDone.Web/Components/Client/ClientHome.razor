@@ -1,0 +1,9 @@
+@* The client user's home: their drafts and their submitted orders (event model chapter 1, Home screens). *@
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">Home</MudText>
+    @* The order entry page is not built yet. *@
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Disabled="true">New order</MudButton>
+</MudStack>
+<MyDraftsSection Class="mb-6" />
+<MyOrdersSection />

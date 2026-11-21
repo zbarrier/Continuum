@@ -26,6 +26,13 @@ public static class RequestedByUsers
     public static ClaimsPrincipal Coordinator1 { get; } = CreateUser(
         "49a9d592-00b0-43a9-acb2-5da7f8fcee2e", "tommyJones", "Tommy", "Jones", "tommy.jones@summitvaluation.example", CoordinatorRole);
 
+    /// <summary>
+    ///     A client user with a new ID, for tests of per-user read models that must start empty even though the test cluster
+    ///     is shared.
+    /// </summary>
+    public static ClaimsPrincipal NewClientUser() => CreateUser(
+        Guid.NewGuid().ToString(), "newClient", "New", "Client", "new.client@lakeviewcu.example", ClientRole);
+
     private static ClaimsPrincipal CreateUser(
         string subject, string userName, string givenName, string familyName, string email, string role)
     {

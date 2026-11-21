@@ -29,6 +29,9 @@ builder.Services.AddAuthentication(options =>
         options.Scope.Add("profile");
         options.Scope.Add("email");
         options.Scope.Add("getrdone");
+        // Keep the JWT claim names (name, role, sub) instead of mapping them to the long ClaimTypes URIs, so they
+        // match NameClaimType and RoleClaimType below.
+        options.MapInboundClaims = false;
         options.TokenValidationParameters.NameClaimType = "name";
         options.TokenValidationParameters.RoleClaimType = "role";
     });

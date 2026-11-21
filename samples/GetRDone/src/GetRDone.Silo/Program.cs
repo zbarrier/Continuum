@@ -1,12 +1,22 @@
 using Continuum.Hosting;
 using Continuum.Hosting.Orleans;
+using Continuum.Streaming.Orleans;
 using Continuum.TypeMapping;
 
 using GetRDone;
 using GetRDone.Orders.Grains.OrderAggregate;
 using GetRDone.Orders.Grains.ReadModels;
 
+using KurrentDB.Client;
+
 using ManagedCode.Orleans.Identity.Server.Extensions;
+
+using Orleans.Configuration;
+using Orleans.Serialization;
+using Orleans.Storage;
+using Orleans.Streams;
+
+const string CheckpointConnectionName = "checkpoints";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +40,11 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IOrderPermissions, OrderPermissions>();
 builder.Services.AddSingleton<IReadModelSeedData, SampleSeedData>();
 
+// Where the order projections' stream provider keeps its $all position. It is grain-backed and held in memory, like
+// the projections themselves, so a silo restart loses both and the projections are rebuilt from the start of $all.
+// A durable checkpoint with in-memory projections would skip every event before the restart.
+builder.AddSubscriptionCheckpointStore<ulong>(CheckpointConnectionName);
+
 builder.UseOrleans(silo =>
 {
     // Default grain storage for read-model grains. Orleans also resolves a grain storage provider when activating
@@ -38,6 +53,31 @@ builder.UseOrleans(silo =>
     //silo.AddKurrentDBBasedLogConsistencyProviderAsDefault();
     silo.AddOrleansIdentity();
     silo.AddActivityPropagation();
+
+    silo.AddMemoryGrainStorage(SubscriptionCheckpointGrain.StorageName);
+    // Projection state is written with the Orleans serializer, which round-trips the [GenerateSerializer] state exactly.
+    silo.AddMemoryGrainStorage(OrderProjections.StorageName);
+    silo.Services.AddOptions<MemoryGrainStorageOptions>(OrderProjections.StorageName)
+        .PostConfigure<Serializer>((options, serializer) => options.GrainStorageSerializer = new OrleansGrainStorageSerializer(serializer));
+
+    // Reads the order streams from $all and delivers them, and the per-user client orders streams their events name as
+    // stream targets, to the order projections' implicit subscriptions. See OrderProjections.
+    silo.AddKurrentDBStreams(OrderProjections.ProviderName, configurator =>
+    {
+        configurator.ConfigureKurrentDB(ob => ob.Configure(options =>
+        {
+            options.ConnectionName = GetRDoneStorage.DefaultConnectionName;
+            options.Name = OrderProjections.ProviderName;
+        }));
+        configurator.UseAllStreamCatchupSubscription(ob => ob.Configure(options =>
+        {
+            options.Filter = StreamFilter.Prefix("order-");
+            options.StartFromNow = false;
+            options.CheckpointConnectionName = CheckpointConnectionName;
+        }));
+        // The projections only subscribe implicitly, so no pub/sub store is needed.
+        configurator.ConfigureStreamPubSub(StreamPubSubType.ImplicitOnly);
+    });
 });
 
 var app = builder.Build();

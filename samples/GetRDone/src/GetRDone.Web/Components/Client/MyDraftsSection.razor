@@ -1,0 +1,72 @@
+@* The client's drafts that are not submitted yet (ClientOrderDrafts), with Resume. *@
+@using Continuum.Orleans.Tenancy
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
+
+<MudTable T="ClientOrderDraft" ServerData="LoadAsync" RowsPerPage="5" Hover="true" Elevation="1" Class="@Class">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">My drafts (@_total)</MudText>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Property</MudTh>
+        <MudTh>Form type</MudTh>
+        <MudTh>Last saved</MudTh>
+        <MudTh />
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Property">@context.PropertyAddress</MudTd>
+        <MudTd DataLabel="Form type">@context.FormTypeName</MudTd>
+        <MudTd DataLabel="Last saved">@context.LastSavedAt.ToString("MMM d, h:mm tt")</MudTd>
+        <MudTd Style="text-align:right">
+            @* The order entry page that resumes a draft is not built yet. *@
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="true">Resume</MudButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2">@(_error ?? "No drafts")</MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="PageSizes" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private static readonly int[] PageSizes = [5, 10, 25];
+
+    private int _total;
+    private string? _error;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private async Task<TableData<ClientOrderDraft>> LoadAsync(TableState state, CancellationToken cancellationToken)
+    {
+        var user = (await AuthenticationState).User;
+        var tenantId = user.FindFirst("tenant_id")?.Value;
+        var userId = user.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(userId))
+        {
+            return Show([], 0, "Your account has no tenant.");
+        }
+
+        var result = await ClusterClient.GetClientOrderDraftsGrain(TenantKey.Create(tenantId, userId))
+            .GetDraftsAsync(state.Page * state.PageSize, state.PageSize);
+        return result.IsSuccess
+            ? Show(result.Value.Drafts, result.Value.TotalCount, null)
+            : Show([], 0, "Your drafts could not be loaded.");
+    }
+
+    private TableData<ClientOrderDraft> Show(ClientOrderDraft[] drafts, int total, string? error)
+    {
+        _error = error;
+        if (_total != total)
+        {
+            _total = total;
+            StateHasChanged();
+        }
+        return new TableData<ClientOrderDraft> { Items = drafts, TotalItems = total };
+    }
+}
