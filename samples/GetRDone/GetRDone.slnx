@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="GetRDone_Sample-2026-11-19-v1.json" />
+    <File Path="GetRDone_Sample-2026-11-21-v2.json" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/GetRDone.AppHost/GetRDone.AppHost.csproj" />
