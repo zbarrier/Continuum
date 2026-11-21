@@ -7,7 +7,7 @@ namespace GetRDone.Orders.Grains.ReadModels;
 [Authorize]
 [GrainType("orderableServices")]
 public sealed class OrderableServicesGrain(
-    [PersistentState("offerings", "OrderableServices")] IPersistentState<OrderableServicesState> state)
+    [PersistentState("offerings")] IPersistentState<OrderableServicesState> state)
     : Grain, IOrderableServicesGrain
 {
     public override async Task OnActivateAsync(CancellationToken cancellationToken)

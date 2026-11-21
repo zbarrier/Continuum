@@ -84,7 +84,6 @@ public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<
     [InlineData(nameof(StartOrderDraftCommand.PropertyType))]
     [InlineData(nameof(StartOrderDraftCommand.IntendedUseId))]
     [InlineData(nameof(StartOrderDraftCommand.IntendedUseVersion))]
-    [InlineData(nameof(StartOrderDraftCommand.IntendedUseName))]
     [InlineData(nameof(StartOrderDraftCommand.LoanNumber))]
     [InlineData(nameof(StartOrderDraftCommand.DueDate))]
     public async Task StartDraft_RejectsAnInvalidDetail(string property)
@@ -103,7 +102,6 @@ public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<
             nameof(StartOrderDraftCommand.PropertyType) => command with { PropertyType = "" },
             nameof(StartOrderDraftCommand.IntendedUseId) => command with { IntendedUseId = Guid.Empty },
             nameof(StartOrderDraftCommand.IntendedUseVersion) => command with { IntendedUseVersion = 0 },
-            nameof(StartOrderDraftCommand.IntendedUseName) => command with { IntendedUseName = "" },
             nameof(StartOrderDraftCommand.LoanNumber) => command with { LoanNumber = "" },
             nameof(StartOrderDraftCommand.DueDate) => command with { DueDate = default },
             _ => throw new ArgumentOutOfRangeException(nameof(property))
@@ -157,6 +155,27 @@ public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<
         Assert.Empty(await order.GetSavedEventsSince(0));
     }
 
+    [Theory]
+    [InlineData("intendedUse")]
+    [InlineData("intendedUseVersion")]
+    public async Task StartDraft_RejectsUnknownIntendedUseOrVersion(string part)
+    {
+        var command = ValidCommand(await GetOfferingAsync());
+        command = part switch
+        {
+            "intendedUse" => command with { IntendedUseId = Guid.NewGuid() },
+            "intendedUseVersion" => command with { IntendedUseVersion = command.IntendedUseVersion + 1 },
+            _ => throw new ArgumentOutOfRangeException(nameof(part))
+        };
+        var order = GetOrder(Guid.NewGuid());
+
+        var result = await StartAsync(order, command);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorCodes.InvalidArgument, result.Error.Code);
+        Assert.Empty(await order.GetSavedEventsSince(0));
+    }
+
     [Fact]
     public void ReplayingOrderDraftStarted_MovesTheOrderToDraft()
     {
@@ -195,7 +214,7 @@ public sealed class StartOrderDraftTests(OrdersCluster fixture) : IClassFixture<
     private static StartOrderDraftCommand ValidCommand(OrderableService offering) => new(
         offering.ServiceRequestTypeId, offering.ServiceRequestTypeVersion, offering.FormTypeId, offering.FormTypeVersion,
         "1200 Main St", "Roanoke", "VA", "24011", "Commercial - Office",
-        IntendedUseId, 1, "Refinance", "CB-2026-0412", new DateOnly(2026, 12, 4));
+        IntendedUseId, 1, "CB-2026-0412", new DateOnly(2026, 12, 4));
 
     private async Task<OrderableService> GetOfferingAsync() => Assert.Single(await fixture.Cluster.GrainFactory
         .GetGrain<IOrderableServicesGrain>(TenantKey.Create(TenantId, "offerings")).GetOfferingsAsync());

@@ -23,9 +23,11 @@ Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only
 
 ## Starting an order draft
 
-The caller generates a new non-empty order GUID and calls `IOrderGrain` using that GUID as the tenant-qualified grain key (for example, `client.ForTenant(tenantId).GetGrain<IOrderGrain>(orderId.ToString())`). `StartOrderDraftAsync` returns the order ID after persisting `OrderDraftStarted`. The authenticated user's ID and event time are supplied by the backend.
+The caller generates a new non-empty order GUID and calls `IOrderGrain` using that GUID as the tenant-qualified grain key (for example, `client.ForTenant(tenantId).GetGrain<IOrderGrain>(orderId.ToString())`). `StartOrderDraftAsync` returns the saved changes and stream version after persisting `OrderDraftStarted`. The authenticated user's ID and event time are supplied by the backend.
 
 `IOrderableServicesGrain` uses the tenant-qualified key `offerings`. It exposes a hard-coded sample service/form pair, stored in memory per tenant and recreated after a silo restart. The command checks the selected IDs and versions against that list; client accounts and divisions from the original model are not part of this sample. There is no order-entry UI yet.
+
+`IIntendedUsesGrain` uses the tenant-qualified key `intendedUses` and works the same way, with hard-coded Refinance and Purchase intended uses. The command sends only the intended use ID and version; the name recorded on `OrderDraftStarted` comes from this list.
 
 Tenant-qualified keys partition the sample's data, but the current silo does not enforce that a caller's `tenant_id` claim matches the requested grain key. Authentication alone is not tenant authorization; do not rely on this sample for tenant isolation until that enforcement is added.
 

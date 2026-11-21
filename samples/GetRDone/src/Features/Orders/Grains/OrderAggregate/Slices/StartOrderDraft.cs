@@ -30,7 +30,6 @@ public sealed partial class OrderGrain
                     PropertyType.Create(command.PropertyType).Deconstruct(out var propertyType),
                     IntendedUseId.Create(command.IntendedUseId).Deconstruct(out var intendedUseId),
                     IntendedUseVersion.Create(command.IntendedUseVersion).Deconstruct(out var intendedUseVersion),
-                    IntendedUseName.Create(command.IntendedUseName).Deconstruct(out var intendedUseName),
                     LoanNumber.Create(command.LoanNumber).Deconstruct(out var loanNumber),
                     DueDate.Create(command.DueDate).Deconstruct(out var dueDate))
                 .Ensure(() => State.StateMachine.CanFire(OrderCommand.StartDraft),
@@ -49,6 +48,16 @@ public sealed partial class OrderGrain
                         return Result.Failure(RequestErrors.NewInvalidArg("The selected service and form are not offered."));
                     }
 
+                    var intendedUses = await GrainFactory.GetGrain<IIntendedUsesGrain>(TenantKey.Create(tenantId, "intendedUses"))
+                        .GetIntendedUsesAsync();
+                    var intendedUse = intendedUses.FirstOrDefault(item =>
+                        item.IntendedUseId == (Guid)intendedUseId!
+                        && item.IntendedUseVersion == (int)intendedUseVersion!);
+                    if (intendedUse is null)
+                    {
+                        return Result.Failure(RequestErrors.NewInvalidArg("The selected intended use is not available."));
+                    }
+
                     transaction.Apply(new OrderDraftStarted
                     {
                         OrderId = orderId!,
@@ -63,9 +72,9 @@ public sealed partial class OrderGrain
                         PropertyState = propertyState!,
                         PropertyZip = propertyZip!,
                         PropertyType = propertyType!,
-                        IntendedUseId = intendedUseId!,
-                        IntendedUseVersion = intendedUseVersion!,
-                        IntendedUseName = intendedUseName!,
+                        IntendedUseId = intendedUse.IntendedUseId,
+                        IntendedUseVersion = intendedUse.IntendedUseVersion,
+                        IntendedUseName = intendedUse.Name,
                         LoanNumber = loanNumber!,
                         DueDate = dueDate!,
                         InitiatedBy = requestedBy!,

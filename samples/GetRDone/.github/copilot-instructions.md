@@ -27,7 +27,7 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 
 ## Required Setup (Known Pitfalls)
 - Any project declaring `[DomainEventType]` types **and** the Silo project must reference `Continuum.Core.SourceGenerators` as an analyzer (`OutputItemType="Analyzer" ReferenceOutputAssembly="false"`). Without it in the Silo, events fail at runtime with "A type mapping for the type ... was not found."
-- The Silo needs `silo.AddMemoryGrainStorageAsDefault()` so Orleans can activate event-driven grains; event state itself is stored in KurrentDB.
+- The Silo needs `silo.AddMemoryGrainStorageAsDefault()` so Orleans can activate event-driven grains (event state itself is stored in KurrentDB). Read-model grains use this default storage too: declare `[PersistentState("name")]` without a storage name rather than registering a named provider per grain.
 - Orleans version is 10.4.2 (`OrleansVersion`), required by ManagedCode.Orleans.Identity 10.4.6.
 - The sample-local `Directory.Build.props` intentionally does not import the repository root packaging rules.
 

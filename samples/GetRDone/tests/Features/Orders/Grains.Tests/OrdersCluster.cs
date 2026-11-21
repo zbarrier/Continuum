@@ -9,7 +9,6 @@ public sealed class OrdersSiloConfigurator : ISiloConfigurator
 {
     public void Configure(ISiloBuilder siloBuilder)
     {
-        siloBuilder.AddMemoryGrainStorage("OrderableServices");
         siloBuilder.AddMemoryGrainStorageAsDefault();
         siloBuilder.AddLogStorageBasedLogConsistencyProvider("EventLog");
         siloBuilder.Services.AddDefaultTypeMapAttributeMappers("kurrentdb", TypeMapKinds.DomainEvent);

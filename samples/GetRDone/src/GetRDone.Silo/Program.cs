@@ -27,10 +27,10 @@ builder.Services.AddAuthorization();
 
 builder.UseOrleans(silo =>
 {
-    // Orleans resolves a grain storage provider when activating journaled grains even though events are
-    // stored by the KurrentDB log-consistency provider, so a default (unused) provider is required.
+    // Default grain storage for read-model grains. Orleans also resolves a grain storage provider when activating
+    // journaled grains, even though their events are stored by the KurrentDB log-consistency provider.
     silo.AddMemoryGrainStorageAsDefault();
-    silo.AddMemoryGrainStorage("OrderableServices");
+    //silo.AddKurrentDBBasedLogConsistencyProviderAsDefault();
     silo.AddOrleansIdentity();
     silo.AddActivityPropagation();
 });

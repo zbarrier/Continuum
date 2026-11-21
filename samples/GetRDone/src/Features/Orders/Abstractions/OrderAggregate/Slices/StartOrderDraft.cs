@@ -23,7 +23,6 @@ public sealed record StartOrderDraftCommand(
     string PropertyType,
     Guid IntendedUseId,
     int IntendedUseVersion,
-    string IntendedUseName,
     string LoanNumber,
     DateOnly DueDate);
 
