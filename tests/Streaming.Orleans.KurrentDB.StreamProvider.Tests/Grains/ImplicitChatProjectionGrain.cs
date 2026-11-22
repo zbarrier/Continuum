@@ -19,6 +19,8 @@ namespace Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests.Grains;
 public class ImplicitChatProjectionGrain
     : ProjectionGrain<ImplicitChatProjectionGrain, ImplicitChatProjectionState>, IImplicitChatProjectionGrain
 {
+    private readonly List<int> _batchSizes = [];
+
     public ImplicitChatProjectionGrain(
         [PersistentState("ImplicitChatProjection", "MemoryStorageProvider")] IPersistentState<ImplicitChatProjectionState> storage,
         ILogger<ImplicitChatProjectionGrain> logger)
@@ -27,6 +29,14 @@ public class ImplicitChatProjectionGrain
     }
 
     public Task<string[]> GetAuthors() => Task.FromResult(State.Authors.ToArray());
+
+    public Task<int[]> GetBatchSizes() => Task.FromResult(_batchSizes.ToArray());
+
+    protected override Task ApplyAsync(IReadOnlyList<IStreamedEvent<object>> streamedEvents)
+    {
+        _batchSizes.Add(streamedEvents.Count);
+        return base.ApplyAsync(streamedEvents);
+    }
 }
 
 /// <summary>

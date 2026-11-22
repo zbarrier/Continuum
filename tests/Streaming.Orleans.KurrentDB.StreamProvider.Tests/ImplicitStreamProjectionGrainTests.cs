@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using Continuum.Events;
+using Continuum.Orleans.KurrentDB;
 using Continuum.Streaming.Orleans.KurrentDB.StreamProvider.Tests.Grains;
 
 using KurrentDB.Client;
@@ -74,11 +76,37 @@ public class ImplicitStreamProjectionGrainTests
         Assert.Equal(new[] { "Grace" }, secondAuthors);
     }
 
+    [Fact]
+    public async Task Delivers_A_Transaction_To_The_Projection_In_One_Batch()
+    {
+        var key = Guid.NewGuid().ToString("N");
+        var streamName = $"{Constants.ImplicitStreamPrefix}-{key}";
+        var transactionId = Guid.NewGuid();
+        string[] authors = ["Ada", "Grace", "Linus"];
+
+        var events = authors
+            .Select((author, index) => CreateEventData(
+                new ChatMessage(author, "in one transaction", DateTimeOffset.UtcNow),
+                KurrentDBEventMetadataCodec.Write(null, new TransactionInfo(transactionId, authors.Length, authors.Length, index))))
+            .ToArray();
+
+        await using var client = new KurrentDBClient(KurrentDBClientSettings.Create(_connectionString));
+        await client.AppendToStreamAsync(streamName, StreamState.Any, events, cancellationToken: TestContext.Current.CancellationToken);
+
+        var projection = _fixture.Cluster.Client.GetGrain<IImplicitChatProjectionGrain>(key);
+        var projected = await WaitForAsync(projection, expectedCount: authors.Length);
+
+        Assert.Equal(authors, projected);
+        Assert.Equal(new[] { authors.Length }, await projection.GetBatchSizes());
+    }
+
     private static Task AppendAsync(KurrentDBClient client, string streamName, ChatMessage message)
+        => client.AppendToStreamAsync(streamName, StreamState.Any, new[] { CreateEventData(message, metadata: null) });
+
+    private static EventData CreateEventData(ChatMessage message, byte[]? metadata)
     {
         var data = JsonSerializer.SerializeToUtf8Bytes(message, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        var eventData = new EventData(Uuid.NewUuid(), EventTypeName, data);
-        return client.AppendToStreamAsync(streamName, StreamState.Any, new[] { eventData });
+        return new EventData(Uuid.NewUuid(), EventTypeName, data, metadata);
     }
 
     private async Task<string[]> WaitForAsync(IImplicitChatProjectionGrain projection, int expectedCount)

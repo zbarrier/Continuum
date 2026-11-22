@@ -6,13 +6,17 @@ using Orleans.Streams.Core;
 namespace Continuum.Streaming.Orleans;
 
 /// <summary>
-/// Owns the Orleans stream subscriptions held by a grain that consumes events one at a time.
+/// Owns the Orleans stream subscriptions held by a grain that consumes events in batches.
 /// </summary>
 /// <remarks>
 /// <para>
 ///     Kept separate from any public grain base so that the subscription rules, which are subtle, live in one place
 ///     and can be shared by every kind of stream consumer, such as projections and process managers, without each
 ///     inheriting from a common subscriber base.
+/// </para>
+/// <para>
+///     Every subscription, implicit or explicit, is attached as a batch observer, so Orleans delivers all the events
+///     of one batch container in a single call rather than one call per event.
 /// </para>
 /// <para>
 ///     This type is intentionally provider agnostic: it depends only on the Orleans streaming abstractions and never
@@ -22,7 +26,7 @@ namespace Continuum.Streaming.Orleans;
 /// </para>
 /// </remarks>
 /// <typeparam name="TGrain">The grain type, whose <c>[ImplicitStreamSubscription]</c> attributes are honoured.</typeparam>
-internal sealed class StreamSubscriptionManager<TGrain>
+internal sealed class StreamSubscriptionManager<TGrain> : IAsyncBatchObserver<IStreamedEvent<object>>
     where TGrain : Grain
 {
     /// <summary>
@@ -43,7 +47,7 @@ internal sealed class StreamSubscriptionManager<TGrain>
     private readonly Dictionary<Guid, Subscription> _subscriptions = [];
     private readonly Grain _grain;
     private readonly ILogger _logger;
-    private readonly Func<IStreamedEvent<object>, StreamSequenceToken?, Task> _onNextAsync;
+    private readonly Func<IReadOnlyList<IStreamedEvent<object>>, Task> _onNextBatchAsync;
     private readonly Func<Exception, Task> _onErrorAsync;
     private readonly Func<Task> _onCompletedAsync;
 
@@ -62,13 +66,13 @@ internal sealed class StreamSubscriptionManager<TGrain>
     public StreamSubscriptionManager(
         Grain grain,
         ILogger logger,
-        Func<IStreamedEvent<object>, StreamSequenceToken?, Task> onNextAsync,
+        Func<IReadOnlyList<IStreamedEvent<object>>, Task> onNextBatchAsync,
         Func<Exception, Task> onErrorAsync,
         Func<Task> onCompletedAsync)
     {
         _grain = grain;
         _logger = logger;
-        _onNextAsync = onNextAsync;
+        _onNextBatchAsync = onNextBatchAsync;
         _onErrorAsync = onErrorAsync;
         _onCompletedAsync = onCompletedAsync;
     }
@@ -111,7 +115,7 @@ internal sealed class StreamSubscriptionManager<TGrain>
     public async Task AttachImplicitAsync(IStreamSubscriptionHandleFactory handleFactory)
     {
         var handle = handleFactory.Create<IStreamedEvent<object>>();
-        var resumed = await handle.ResumeAsync(_onNextAsync, _onErrorAsync, _onCompletedAsync);
+        var resumed = await handle.ResumeAsync(this);
 
         // Keyed by handle id because the runtime calls this once per implicit subscription, and two handles may
         // refer to the same stream. Keying by stream would let the second call discard the first handle, which
@@ -192,6 +196,28 @@ internal sealed class StreamSubscriptionManager<TGrain>
         return SubscribeCoreAsync(source, getResumeTokenAsync);
     }
 
+    /// <summary>
+    /// Forwards one delivered batch container to the grain as a list of events.
+    /// </summary>
+    /// <remarks>
+    /// The Orleans sequence tokens are dropped: each event carries its own cursor, which is what consumers use to
+    /// detect redelivery.
+    /// </remarks>
+    Task IAsyncBatchObserver<IStreamedEvent<object>>.OnNextAsync(IList<SequentialItem<IStreamedEvent<object>>> items)
+    {
+        var streamedEvents = new IStreamedEvent<object>[items.Count];
+        for (var i = 0; i < streamedEvents.Length; i++)
+        {
+            streamedEvents[i] = items[i].Item;
+        }
+
+        return _onNextBatchAsync(streamedEvents);
+    }
+
+    Task IAsyncBatchObserver<IStreamedEvent<object>>.OnErrorAsync(Exception ex) => _onErrorAsync(ex);
+
+    Task IAsyncBatchObserver<IStreamedEvent<object>>.OnCompletedAsync() => _onCompletedAsync();
+
     private async Task UnsubscribeWhereAsync(Func<Subscription, bool> predicate)
     {
         foreach (var (handleId, subscription) in _subscriptions.ToArray())
@@ -256,10 +282,10 @@ internal sealed class StreamSubscriptionManager<TGrain>
         var resumeToken = await resumeTokenTask;
 
         var handle = handles.Count > 0
-            ? await handles[0].ResumeAsync(_onNextAsync, _onErrorAsync, _onCompletedAsync, resumeToken)
+            ? await handles[0].ResumeAsync(this, resumeToken)
             : resumeToken is null
-                ? await stream.SubscribeAsync(_onNextAsync, _onErrorAsync, _onCompletedAsync)
-                : await stream.SubscribeAsync(_onNextAsync, _onErrorAsync, _onCompletedAsync, resumeToken);
+                ? await stream.SubscribeAsync(this)
+                : await stream.SubscribeAsync(this, resumeToken);
 
         _subscriptions[handle.HandleId] = new Subscription(handle, IsImplicit: false);
 

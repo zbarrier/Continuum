@@ -23,10 +23,11 @@ public interface IProjectionGrain : IGrainWithStringKey
 /// </summary>
 /// <remarks>
 /// <para>
-///     Events reach the projection either through an Orleans stream provider, one at a time, or through
+///     Events reach the projection in batches, either through an Orleans stream provider or through
 ///     <see cref="IProjectionGrain.OnNextBatchAsync"/> from a catch-up subscription that runs outside the stream
-///     runtime. Both paths apply events through the same <see cref="ProjectionState{TState}"/>, so they share one
-///     de-duplication watermark and one write per delivery.
+///     runtime. The stream provider delivers one batch container per call, which for the KurrentDB provider is one
+///     whole transaction. Both paths go through <see cref="ApplyAsync"/>, so they share one de-duplication watermark
+///     and one write per delivery.
 /// </para>
 /// <para>
 ///     The grain holds exactly one persistent state. Prefer a separate grain per read model over fanning a delivery
@@ -84,7 +85,7 @@ public abstract class ProjectionGrain<TGrain, TState> : Grain, IProjectionGrain,
         => _subscriptionManager ??= new StreamSubscriptionManager<TGrain>(
             this,
             Logger,
-            OnNextAsync,
+            ApplyAsync,
             OnErrorAsync,
             OnCompletedAsync);
 
@@ -112,7 +113,7 @@ public abstract class ProjectionGrain<TGrain, TState> : Grain, IProjectionGrain,
         => SubscriptionManager.AttachImplicitAsync(handleFactory);
 
     /// <summary>
-    /// Applies a batch delivered by a catch-up subscription and writes the state once if it changed.
+    /// Applies a batch delivered by a catch-up subscription that runs outside the stream runtime.
     /// </summary>
     public Task OnNextBatchAsync([Immutable] List<IStreamedEvent<object>> streamedEvents)
     {
@@ -123,16 +124,6 @@ public abstract class ProjectionGrain<TGrain, TState> : Grain, IProjectionGrain,
 
         return ApplyAsync(streamedEvents);
     }
-
-    /// <summary>
-    /// Applies a single event delivered by the stream provider.
-    /// </summary>
-    /// <remarks>
-    /// Throwing from this method is meaningful: it prevents the delivered event from being treated as
-    /// successfully consumed, which is what allows a provider to avoid checkpointing past it.
-    /// </remarks>
-    protected virtual Task OnNextAsync(IStreamedEvent<object> streamedEvent, StreamSequenceToken? token)
-        => ApplyAsync([streamedEvent]);
 
     /// <summary>
     /// Invoked when the stream reports an error.
@@ -214,14 +205,20 @@ public abstract class ProjectionGrain<TGrain, TState> : Grain, IProjectionGrain,
     protected static bool IsImplicit(StreamId streamId) => StreamSubscriptionManager<TGrain>.IsImplicit(streamId);
 
     /// <summary>
-    /// The single apply path shared by stream and batch delivery.
+    /// Applies one delivered batch in order and writes the state once if it changed.
     /// </summary>
     /// <remarks>
-    /// The state is written before delivery is acknowledged, so a failure here propagates and the events are not
-    /// treated as consumed. The sequence watermark is only durable once the write succeeds, which is what makes
-    /// redelivery safe.
+    /// <para>
+    ///     The single apply path shared by stream provider and catch-up subscription deliveries. Override to observe
+    ///     or wrap every delivery, and call the base implementation to apply and write.
+    /// </para>
+    /// <para>
+    ///     The state is written before delivery is acknowledged, so a failure here propagates and the events are not
+    ///     treated as consumed, which is what keeps a provider from checkpointing past them. The sequence watermark is
+    ///     only durable once the write succeeds, which is what makes redelivery safe.
+    /// </para>
     /// </remarks>
-    private async Task ApplyAsync(IReadOnlyList<IStreamedEvent<object>> streamedEvents)
+    protected virtual async Task ApplyAsync(IReadOnlyList<IStreamedEvent<object>> streamedEvents)
     {
         var hasChanges = await State.WhenAsync(streamedEvents);
         if (hasChanges)

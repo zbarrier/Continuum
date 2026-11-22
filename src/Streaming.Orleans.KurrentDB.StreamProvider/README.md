@@ -98,7 +98,7 @@ A catch-up subscription is read only. Events are written by event sourcing, so w
 
 ### Transactions
 
-Events appended in one transaction are delivered together, in one batch, to each Orleans stream the transaction wrote to. The checkpoint never moves into the middle of a transaction.
+Events appended in one transaction are delivered together, in one batch, to each Orleans stream the transaction wrote to. The checkpoint never moves into the middle of a transaction. A subscriber attached as an `IAsyncBatchObserver<T>`, such as a `ProjectionGrain`, receives the batch in one call; one attached as an `IAsyncObserver<T>` receives its events one call at a time.
 
 A filter can let through only part of a transaction. This is allowed, because some filters are meant to do it, but it is never silent. `PartialTransactionHandling` on the catch-up subscription options decides what happens:
 

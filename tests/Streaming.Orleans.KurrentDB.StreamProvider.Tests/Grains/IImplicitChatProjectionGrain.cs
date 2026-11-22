@@ -6,4 +6,9 @@ public interface IImplicitChatProjectionGrain : IGrainWithStringKey
     ///     The authors seen so far, in the order they were first applied.
     /// </summary>
     Task<string[]> GetAuthors();
+
+    /// <summary>
+    ///     The number of events in each delivery this activation applied, in order.
+    /// </summary>
+    Task<int[]> GetBatchSizes();
 }
