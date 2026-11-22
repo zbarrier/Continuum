@@ -37,10 +37,19 @@ internal static class OrderDraftReadModel
             {
                 OrderDraftStarted started => new OrderDraft(
                     started.OrderId,
+                    started.ServiceRequestTypeId,
+                    started.ServiceRequestTypeVersion,
                     started.ServiceRequestTypeName,
+                    started.FormTypeId,
+                    started.FormTypeVersion,
                     started.FormTypeName,
-                    $"{started.PropertyStreet}, {started.PropertyCity}, {started.PropertyState} {started.PropertyZip}",
+                    started.PropertyStreet,
+                    started.PropertyCity,
+                    started.PropertyState,
+                    started.PropertyZip,
                     started.PropertyType,
+                    started.IntendedUseId,
+                    started.IntendedUseVersion,
                     started.IntendedUseName,
                     started.LoanNumber,
                     started.DueDate,
@@ -48,6 +57,26 @@ internal static class OrderDraftReadModel
                     AccessContactName: null,
                     AccessContactPhone: null,
                     started.OccurredAt),
+                RequestAndPropertySaved saved => Started(draft) with
+                {
+                    ServiceRequestTypeId = saved.ServiceRequestTypeId,
+                    ServiceRequestTypeVersion = saved.ServiceRequestTypeVersion,
+                    ServiceRequestTypeName = saved.ServiceRequestTypeName,
+                    FormTypeId = saved.FormTypeId,
+                    FormTypeVersion = saved.FormTypeVersion,
+                    FormTypeName = saved.FormTypeName,
+                    PropertyStreet = saved.PropertyStreet,
+                    PropertyCity = saved.PropertyCity,
+                    PropertyState = saved.PropertyState,
+                    PropertyZip = saved.PropertyZip,
+                    PropertyType = saved.PropertyType,
+                    IntendedUseId = saved.IntendedUseId,
+                    IntendedUseVersion = saved.IntendedUseVersion,
+                    IntendedUseName = saved.IntendedUseName,
+                    LoanNumber = saved.LoanNumber,
+                    DueDate = saved.DueDate,
+                    LastSavedAt = saved.OccurredAt
+                },
                 BorrowerAndAccessContactSaved saved => Started(draft) with
                 {
                     BorrowerName = saved.BorrowerName,

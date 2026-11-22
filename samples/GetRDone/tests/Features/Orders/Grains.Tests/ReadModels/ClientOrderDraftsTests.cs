@@ -67,6 +67,24 @@ public sealed class ClientOrderDraftsTests
     }
 
     [Fact]
+    public async Task RequestAndPropertySaved_UpdatesTheDraftsAddressFormTypeAndLastSavedTime()
+    {
+        var orderId = NewOrderId();
+
+        await Given(
+            DraftStarted(Command3, orderId, _user, TestData.At),
+            SaveRequestAndPropertyTestData.Saved(
+                SaveRequestAndPropertyTestData.Command3 with { PropertyStreet = "11 Laurel Ridge Ct" },
+                orderId, _user, TestData.At.AddMinutes(5)));
+
+        Then(state => Assert.Equal(
+            new ClientOrderDraft(
+                orderId, "11 Laurel Ridge Ct, Black Mountain, NC 28711", TestData.UniformResidentialAppraisal.FormTypeName,
+                TestData.At.AddMinutes(5)),
+            state.Drafts[orderId]));
+    }
+
+    [Fact]
     public async Task Drafts_ListTheUsersDraftsMostRecentlySavedFirst()
     {
         var (order1, order2, order3) = (NewOrderId(), NewOrderId(), NewOrderId());

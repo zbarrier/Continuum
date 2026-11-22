@@ -1,0 +1,255 @@
+@* Tab 1 of order entry: starts the draft, or saves the request and property of a draft that was already started. *@
+@using Continuum.CSharpFunctionalExtensions
+@using Continuum.Orleans.Tenancy
+@using GetRDone.Orders.Abstractions
+@using GetRDone.Orders.Abstractions.OrderAggregate
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
+@inject ISnackbar Snackbar
+@inject ILogger<RequestAndPropertyTab> Logger
+
+@if (_form.Error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_form.Error</MudAlert>
+}
+<MudGrid Spacing="3">
+    <MudItem xs="12" sm="6">
+        <MudSelect T="ServiceFormOption" Label="@FieldLabels[ServiceFormField]" @bind-Value="_serviceForm" ToStringFunc="@(option => option?.Display)"
+                   Error="@_form.HasError(ServiceFormField)" ErrorText="@_form.ErrorText(ServiceFormField)">
+            @foreach (var option in _serviceForms)
+            {
+                <MudSelectItem Value="option">@option.Display</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_street" Label="@FieldLabels[nameof(SaveRequestAndPropertyCommand.PropertyStreet)]" MaxLength="PropertyStreet.MaxLength"
+                      Error="@_form.HasError(nameof(SaveRequestAndPropertyCommand.PropertyStreet))" ErrorText="@_form.ErrorText(nameof(SaveRequestAndPropertyCommand.PropertyStreet))" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_city" Label="@FieldLabels[nameof(SaveRequestAndPropertyCommand.PropertyCity)]" MaxLength="PropertyCity.MaxLength"
+                      Error="@_form.HasError(nameof(SaveRequestAndPropertyCommand.PropertyCity))" ErrorText="@_form.ErrorText(nameof(SaveRequestAndPropertyCommand.PropertyCity))" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_state" Label="@FieldLabels[nameof(SaveRequestAndPropertyCommand.PropertyState)]" MaxLength="2" Placeholder="VA"
+                      Error="@_form.HasError(nameof(SaveRequestAndPropertyCommand.PropertyState))" ErrorText="@_form.ErrorText(nameof(SaveRequestAndPropertyCommand.PropertyState))" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_zip" Label="@FieldLabels[nameof(SaveRequestAndPropertyCommand.PropertyZip)]" MaxLength="10"
+                      Error="@_form.HasError(nameof(SaveRequestAndPropertyCommand.PropertyZip))" ErrorText="@_form.ErrorText(nameof(SaveRequestAndPropertyCommand.PropertyZip))" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudSelect T="string" Label="@FieldLabels[nameof(SaveRequestAndPropertyCommand.PropertyType)]" @bind-Value="_propertyType"
+                   Error="@_form.HasError(nameof(SaveRequestAndPropertyCommand.PropertyType))" ErrorText="@_form.ErrorText(nameof(SaveRequestAndPropertyCommand.PropertyType))">
+            @foreach (var propertyType in PropertyTypes)
+            {
+                <MudSelectItem Value="propertyType">@propertyType</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudSelect T="IntendedUse" Label="@FieldLabels[IntendedUseField]" @bind-Value="_intendedUse" ToStringFunc="@(use => use?.Name)"
+                   Error="@_form.HasError(IntendedUseField)" ErrorText="@_form.ErrorText(IntendedUseField)">
+            @foreach (var use in IntendedUses)
+            {
+                <MudSelectItem Value="use">@use.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_loanNumber" Label="@FieldLabels[nameof(SaveRequestAndPropertyCommand.LoanNumber)]" MaxLength="LoanNumber.MaxLength"
+                      Error="@_form.HasError(nameof(SaveRequestAndPropertyCommand.LoanNumber))" ErrorText="@_form.ErrorText(nameof(SaveRequestAndPropertyCommand.LoanNumber))" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudDatePicker @bind-Date="_dueDate" Label="@FieldLabels[nameof(SaveRequestAndPropertyCommand.DueDate)]" DateFormat="MMM d, yyyy" MinDate="DateTime.Today"
+                       Error="@_form.HasError(nameof(SaveRequestAndPropertyCommand.DueDate))" ErrorText="@_form.ErrorText(nameof(SaveRequestAndPropertyCommand.DueDate))" />
+    </MudItem>
+</MudGrid>
+<MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+    <MudButton Variant="Variant.Text" Href="/">@(Draft is null ? "Cancel" : "Home")</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_form.Saving || (Draft is null && ClientId is null))" OnClick="SaveAsync">Save &amp; continue</MudButton>
+</MudStack>
+
+@code {
+    private const string ServiceFormField = "ServiceForm";
+    private const string IntendedUseField = "IntendedUse";
+
+    /// <summary>Property type is free text on the order; the tab offers the common ones.</summary>
+    private static readonly string[] PropertyTypes =
+    [
+        "Single Family", "Condominium", "Townhouse", "2-4 Unit", "Manufactured Home", "Multifamily (5+)",
+        "Commercial – Office", "Commercial – Retail", "Commercial – Industrial", "Land"
+    ];
+
+    /// <summary>The field that shows a validation error, for the targets that are not a field of their own.</summary>
+    private static readonly Dictionary<string, string> FieldByTarget = new()
+    {
+        [nameof(SaveRequestAndPropertyCommand.ServiceRequestTypeId)] = ServiceFormField,
+        [nameof(SaveRequestAndPropertyCommand.ServiceRequestTypeVersion)] = ServiceFormField,
+        [nameof(SaveRequestAndPropertyCommand.ServiceRequestTypeName)] = ServiceFormField,
+        [nameof(SaveRequestAndPropertyCommand.FormTypeId)] = ServiceFormField,
+        [nameof(SaveRequestAndPropertyCommand.FormTypeVersion)] = ServiceFormField,
+        [nameof(SaveRequestAndPropertyCommand.FormTypeName)] = ServiceFormField,
+        [nameof(SaveRequestAndPropertyCommand.IntendedUseId)] = IntendedUseField,
+        [nameof(SaveRequestAndPropertyCommand.IntendedUseVersion)] = IntendedUseField,
+        [nameof(SaveRequestAndPropertyCommand.IntendedUseName)] = IntendedUseField
+    };
+
+    private static readonly Dictionary<string, string> FieldLabels = new()
+    {
+        [ServiceFormField] = "Service · form type",
+        [nameof(SaveRequestAndPropertyCommand.PropertyStreet)] = "Street",
+        [nameof(SaveRequestAndPropertyCommand.PropertyCity)] = "City",
+        [nameof(SaveRequestAndPropertyCommand.PropertyState)] = "State",
+        [nameof(SaveRequestAndPropertyCommand.PropertyZip)] = "ZIP",
+        [nameof(SaveRequestAndPropertyCommand.PropertyType)] = "Property type",
+        [IntendedUseField] = "Intended use",
+        [nameof(SaveRequestAndPropertyCommand.LoanNumber)] = "Loan number",
+        [nameof(SaveRequestAndPropertyCommand.DueDate)] = "Due date"
+    };
+
+    private OrderEntryForm _form = default!;
+    private OrderDraft? _shownDraft;
+    private ServiceFormOption[] _serviceForms = [];
+
+    private ServiceFormOption? _serviceForm;
+    private string _street = "";
+    private string _city = "";
+    private string _state = "";
+    private string _zip = "";
+    private string? _propertyType;
+    private IntendedUse? _intendedUse;
+    private string _loanNumber = "";
+    private DateTime? _dueDate;
+
+    /// <summary>The tenant the order belongs to.</summary>
+    [Parameter, EditorRequired]
+    public string TenantId { get; set; } = "";
+
+    /// <summary>The ID, within the tenant, of the order the tab starts when there is no draft yet.</summary>
+    [Parameter]
+    public Guid NewOrderGuid { get; set; }
+
+    /// <summary>The client the user orders for, which starts the draft; <see langword="null"/> when the user can't order.</summary>
+    [Parameter]
+    public string? ClientId { get; set; }
+
+    /// <summary>The draft to change, or <see langword="null"/> when the tab starts it.</summary>
+    [Parameter]
+    public OrderDraft? Draft { get; set; }
+
+    /// <summary>The services and form types the user can order.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<OrderableService> OrderableServices { get; set; } = [];
+
+    /// <summary>The intended uses the user can choose.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<IntendedUse> IntendedUses { get; set; } = [];
+
+    /// <summary>Called with the draft as it is after a save.</summary>
+    [Parameter]
+    public EventCallback<OrderDraft> OnSaved { get; set; }
+
+    protected override void OnInitialized() => _form = new OrderEntryForm(Logger, FieldLabels, FieldByTarget);
+
+    protected override void OnParametersSet()
+    {
+        _serviceForms = [.. OrderableServices.SelectMany(service => service.FormTypes.Select(formType => new ServiceFormOption(
+            service.ServiceRequestTypeId, service.ServiceRequestTypeVersion, service.ServiceRequestTypeName,
+            formType.FormTypeId, formType.FormTypeVersion, formType.FormTypeName)))];
+
+        // Shows the draft when it changes, without overwriting what the user is typing each time the page renders.
+        if (Draft is null || ReferenceEquals(Draft, _shownDraft))
+        {
+            return;
+        }
+
+        _shownDraft = Draft;
+        _serviceForm = new ServiceFormOption(
+            Draft.ServiceRequestTypeId, Draft.ServiceRequestTypeVersion, Draft.ServiceRequestTypeName,
+            Draft.FormTypeId, Draft.FormTypeVersion, Draft.FormTypeName);
+        _street = Draft.PropertyStreet;
+        _city = Draft.PropertyCity;
+        _state = Draft.PropertyState;
+        _zip = Draft.PropertyZip;
+        _propertyType = Draft.PropertyType;
+        _intendedUse = new IntendedUse(Draft.IntendedUseId, Draft.IntendedUseVersion, Draft.IntendedUseName);
+        _loanNumber = Draft.LoanNumber;
+        _dueDate = Draft.DueDate.ToDateTime(TimeOnly.MinValue);
+    }
+
+    private async Task SaveAsync()
+    {
+        var command = new SaveRequestAndPropertyCommand(
+            _serviceForm?.ServiceRequestTypeId ?? "", _serviceForm?.ServiceRequestTypeVersion ?? 0, _serviceForm?.ServiceRequestTypeName ?? "",
+            _serviceForm?.FormTypeId ?? "", _serviceForm?.FormTypeVersion ?? 0, _serviceForm?.FormTypeName ?? "",
+            _street, _city, _state, _zip, _propertyType ?? "",
+            _intendedUse?.IntendedUseId ?? "", _intendedUse?.IntendedUseVersion ?? 0, _intendedUse?.Name ?? "",
+            _loanNumber, _dueDate is { } dueDate ? DateOnly.FromDateTime(dueDate) : default);
+
+        if (Draft is null)
+        {
+            await StartAsync(command);
+        }
+        else if (command == Saved(Draft))
+        {
+            // Nothing changed, so there is nothing to save.
+            await OnSaved.InvokeAsync(Draft);
+        }
+        else
+        {
+            await SaveChangesAsync(Draft, command);
+        }
+    }
+
+    private async Task StartAsync(SaveRequestAndPropertyCommand tab)
+    {
+        var command = new StartOrderDraftCommand(
+            ClientId!,
+            tab.ServiceRequestTypeId, tab.ServiceRequestTypeVersion, tab.ServiceRequestTypeName,
+            tab.FormTypeId, tab.FormTypeVersion, tab.FormTypeName,
+            tab.PropertyStreet, tab.PropertyCity, tab.PropertyState, tab.PropertyZip, tab.PropertyType,
+            tab.IntendedUseId, tab.IntendedUseVersion, tab.IntendedUseName,
+            tab.LoanNumber, tab.DueDate);
+
+        var order = ClusterClient.GetGrain<IOrderGrain>(TenantKey.Create(TenantId, NewOrderGuid.ToString()));
+        var draft = await _form.SaveAsync(() => order.StartOrderDraftAsync(command).Bind(_ => order.GetOrderDraftAsync()));
+        if (draft is not null)
+        {
+            await OnSaved.InvokeAsync(draft);
+        }
+    }
+
+    private async Task SaveChangesAsync(OrderDraft current, SaveRequestAndPropertyCommand command)
+    {
+        var order = ClusterClient.GetGrain<IOrderGrain>(current.OrderId);
+        var draft = await _form.SaveAsync(() => order.SaveRequestAndPropertyAsync(command).Bind(_ => order.GetOrderDraftAsync()));
+        if (draft is null)
+        {
+            return;
+        }
+
+        Snackbar.Add("Request & Property saved.", Severity.Success);
+        await OnSaved.InvokeAsync(draft);
+    }
+
+    /// <summary>The tab as the draft saved it.</summary>
+    private static SaveRequestAndPropertyCommand Saved(OrderDraft draft) => new(
+        draft.ServiceRequestTypeId, draft.ServiceRequestTypeVersion, draft.ServiceRequestTypeName,
+        draft.FormTypeId, draft.FormTypeVersion, draft.FormTypeName,
+        draft.PropertyStreet, draft.PropertyCity, draft.PropertyState, draft.PropertyZip, draft.PropertyType,
+        draft.IntendedUseId, draft.IntendedUseVersion, draft.IntendedUseName,
+        draft.LoanNumber, draft.DueDate);
+
+    /// <summary>One choice of the combined Service · form type select.</summary>
+    private sealed record ServiceFormOption(
+        string ServiceRequestTypeId,
+        int ServiceRequestTypeVersion,
+        string ServiceRequestTypeName,
+        string FormTypeId,
+        int FormTypeVersion,
+        string FormTypeName)
+    {
+        public string Display => $"{ServiceRequestTypeName} · {FormTypeName}";
+    }
+}

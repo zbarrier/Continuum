@@ -10,6 +10,7 @@ public sealed class OrderEventTypeMapTests
 {
     [Theory]
     [InlineData(typeof(OrderDraftStarted), "Orders.OrderDraftStarted.V1")]
+    [InlineData(typeof(RequestAndPropertySaved), "Orders.RequestAndPropertySaved.V1")]
     [InlineData(typeof(BorrowerAndAccessContactSaved), "Orders.BorrowerAndAccessContactSaved.V1")]
     public void OrderEvent_IsRegisteredAsADomainEvent(Type eventType, string typeIdentifier)
     {

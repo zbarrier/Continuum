@@ -1,0 +1,98 @@
+@* Tab 2 of order entry: saves the borrower and the access contact of the draft. *@
+@using Continuum.CSharpFunctionalExtensions
+@using GetRDone.Orders.Abstractions
+@using GetRDone.Orders.Abstractions.OrderAggregate
+@inject IClusterClient ClusterClient
+@inject ISnackbar Snackbar
+@inject ILogger<BorrowerAndAccessContactTab> Logger
+
+@if (_form.Error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_form.Error</MudAlert>
+}
+<MudGrid Spacing="3">
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_borrowerName" Label="@FieldLabels[nameof(SaveBorrowerAndAccessContactCommand.BorrowerName)]" MaxLength="BorrowerName.MaxLength"
+                      Error="@_form.HasError(nameof(SaveBorrowerAndAccessContactCommand.BorrowerName))" ErrorText="@_form.ErrorText(nameof(SaveBorrowerAndAccessContactCommand.BorrowerName))" />
+    </MudItem>
+    <MudItem sm="6" Class="d-none d-sm-flex" />
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_accessContactName" Label="@FieldLabels[nameof(SaveBorrowerAndAccessContactCommand.AccessContactName)]" MaxLength="AccessContactName.MaxLength"
+                      HelperText="Optional; the person who gives the appraiser access"
+                      Error="@_form.HasError(nameof(SaveBorrowerAndAccessContactCommand.AccessContactName))" ErrorText="@_form.ErrorText(nameof(SaveBorrowerAndAccessContactCommand.AccessContactName))" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_accessContactPhone" Label="@FieldLabels[nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone)]" InputType="InputType.Telephone" Placeholder="540-555-0142"
+                      Error="@_form.HasError(nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone))" ErrorText="@_form.ErrorText(nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone))" />
+    </MudItem>
+</MudGrid>
+<MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+    <MudButton Variant="Variant.Text" OnClick="OnBack">Back</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_form.Saving" OnClick="SaveAsync">Save &amp; continue</MudButton>
+</MudStack>
+
+@code {
+    private static readonly Dictionary<string, string> FieldLabels = new()
+    {
+        [nameof(SaveBorrowerAndAccessContactCommand.BorrowerName)] = "Borrower name",
+        [nameof(SaveBorrowerAndAccessContactCommand.AccessContactName)] = "Access contact",
+        [nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone)] = "Access contact phone"
+    };
+
+    private OrderEntryForm _form = default!;
+    private OrderDraft? _shownDraft;
+
+    private string _borrowerName = "";
+    private string _accessContactName = "";
+    private string _accessContactPhone = "";
+
+    /// <summary>The draft whose tab this is.</summary>
+    [Parameter, EditorRequired]
+    public OrderDraft Draft { get; set; } = default!;
+
+    /// <summary>Called with the draft as it is after a save.</summary>
+    [Parameter]
+    public EventCallback<OrderDraft> OnSaved { get; set; }
+
+    /// <summary>Called when the user goes back to the previous tab.</summary>
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    protected override void OnInitialized() => _form = new OrderEntryForm(Logger, FieldLabels);
+
+    protected override void OnParametersSet()
+    {
+        // Shows the draft when it changes, without overwriting what the user is typing each time the page renders.
+        if (ReferenceEquals(Draft, _shownDraft))
+        {
+            return;
+        }
+
+        _shownDraft = Draft;
+        _borrowerName = Draft.BorrowerName ?? "";
+        _accessContactName = Draft.AccessContactName ?? "";
+        _accessContactPhone = FormatPhone(Draft.AccessContactPhone);
+    }
+
+    private async Task SaveAsync()
+    {
+        var order = ClusterClient.GetGrain<IOrderGrain>(Draft.OrderId);
+        var command = new SaveBorrowerAndAccessContactCommand(
+            _borrowerName,
+            string.IsNullOrWhiteSpace(_accessContactName) ? null : _accessContactName,
+            string.IsNullOrWhiteSpace(_accessContactPhone) ? null : _accessContactPhone);
+
+        var draft = await _form.SaveAsync(() => order.SaveBorrowerAndAccessContactAsync(command).Bind(_ => order.GetOrderDraftAsync()));
+        if (draft is null)
+        {
+            return;
+        }
+
+        Snackbar.Add("Borrower & Access contact saved.", Severity.Success);
+        await OnSaved.InvokeAsync(draft);
+    }
+
+    /// <summary>Formats the 10 digits the order records as 540-555-0142.</summary>
+    private static string FormatPhone(string? digits) =>
+        digits is { Length: 10 } ? $"{digits[..3]}-{digits[3..6]}-{digits[6..]}" : digits ?? "";
+}

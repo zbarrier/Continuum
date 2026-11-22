@@ -43,10 +43,19 @@ public sealed class OrderDraftTests
 
         ThenQuery<OrderDraft>(draft => Assert.Equal(new OrderDraft(
             GrainId,
+            command.ServiceRequestTypeId,
+            command.ServiceRequestTypeVersion,
             command.ServiceRequestTypeName,
+            command.FormTypeId,
+            command.FormTypeVersion,
             command.FormTypeName,
-            $"{command.PropertyStreet}, {command.PropertyCity}, {command.PropertyState} {command.PropertyZip}",
+            command.PropertyStreet,
+            command.PropertyCity,
+            command.PropertyState,
+            command.PropertyZip,
             command.PropertyType,
+            command.IntendedUseId,
+            command.IntendedUseVersion,
             command.IntendedUseName,
             command.LoanNumber,
             command.DueDate,
@@ -90,6 +99,42 @@ public sealed class OrderDraftTests
             Assert.Null(draft.AccessContactPhone);
             Assert.Equal(SavedAt, draft.LastSavedAt);
         });
+    }
+
+    [Fact]
+    public async Task GetOrderDraft_ShowsTheLatestRequestAndProperty()
+    {
+        var latest = SaveRequestAndPropertyTestData.Command1;
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given(
+            StartOrderDraftTestData.DraftStarted1(GrainId),
+            Saved1(GrainId),
+            SaveRequestAndPropertyTestData.Saved1(GrainId, SavedAt));
+
+        await WhenQuery(() => Order.GetOrderDraftAsync());
+
+        ThenQuery<OrderDraft>(draft => Assert.Equal(new OrderDraft(
+            GrainId,
+            latest.ServiceRequestTypeId,
+            latest.ServiceRequestTypeVersion,
+            latest.ServiceRequestTypeName,
+            latest.FormTypeId,
+            latest.FormTypeVersion,
+            latest.FormTypeName,
+            latest.PropertyStreet,
+            latest.PropertyCity,
+            latest.PropertyState,
+            latest.PropertyZip,
+            latest.PropertyType,
+            latest.IntendedUseId,
+            latest.IntendedUseVersion,
+            latest.IntendedUseName,
+            latest.LoanNumber,
+            latest.DueDate,
+            Command1.BorrowerName,
+            Command1.AccessContactName,
+            Command1.AccessContactPhone,
+            SavedAt), draft));
     }
 
     [Fact]

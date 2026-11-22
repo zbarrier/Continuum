@@ -15,13 +15,26 @@ public partial interface IOrderGrain : IEventDrivenStateMachineGrain
     Task<Result<OrderDraft>> GetOrderDraftAsync();
 }
 
-/// <summary>The saved tabs of a draft. The Borrower &amp; Access contact values are <see langword="null"/> until that tab is saved.</summary>
+/// <summary>
+///     The saved tabs of a draft, with the IDs and versions of the service, form type and intended use, so the Request
+///     &amp; Property tab can show them for editing. The Borrower &amp; Access contact values are <see langword="null"/>
+///     until that tab is saved.
+/// </summary>
 /// <param name="OrderId">The order the draft belongs to.</param>
-/// <param name="ServiceRequestTypeName">The service ordered.</param>
-/// <param name="FormTypeName">The form type ordered.</param>
-/// <param name="PropertyAddress">The property address on one line.</param>
+/// <param name="ServiceRequestTypeId">The service ordered.</param>
+/// <param name="ServiceRequestTypeVersion">The version of the service ordered.</param>
+/// <param name="ServiceRequestTypeName">The name of the service ordered.</param>
+/// <param name="FormTypeId">The form type ordered.</param>
+/// <param name="FormTypeVersion">The version of the form type ordered.</param>
+/// <param name="FormTypeName">The name of the form type ordered.</param>
+/// <param name="PropertyStreet">The street of the property.</param>
+/// <param name="PropertyCity">The city of the property.</param>
+/// <param name="PropertyState">The two-letter state of the property.</param>
+/// <param name="PropertyZip">The ZIP code of the property.</param>
 /// <param name="PropertyType">The type of the property.</param>
-/// <param name="IntendedUseName">The intended use of the appraisal.</param>
+/// <param name="IntendedUseId">The intended use of the appraisal.</param>
+/// <param name="IntendedUseVersion">The version of the intended use.</param>
+/// <param name="IntendedUseName">The name of the intended use.</param>
 /// <param name="LoanNumber">The client's loan number.</param>
 /// <param name="DueDate">When the appraisal is due.</param>
 /// <param name="BorrowerName">The borrower.</param>
@@ -31,14 +44,27 @@ public partial interface IOrderGrain : IEventDrivenStateMachineGrain
 [GenerateSerializer, Immutable]
 public sealed record OrderDraft(
     string OrderId,
+    string ServiceRequestTypeId,
+    int ServiceRequestTypeVersion,
     string ServiceRequestTypeName,
+    string FormTypeId,
+    int FormTypeVersion,
     string FormTypeName,
-    string PropertyAddress,
+    string PropertyStreet,
+    string PropertyCity,
+    string PropertyState,
+    string PropertyZip,
     string PropertyType,
+    string IntendedUseId,
+    int IntendedUseVersion,
     string IntendedUseName,
     string LoanNumber,
     DateOnly DueDate,
     string? BorrowerName,
     string? AccessContactName,
     string? AccessContactPhone,
-    DateTimeOffset LastSavedAt);
+    DateTimeOffset LastSavedAt)
+{
+    /// <summary>The property address on one line.</summary>
+    public string PropertyAddress => $"{PropertyStreet}, {PropertyCity}, {PropertyState} {PropertyZip}";
+}
