@@ -67,6 +67,19 @@ public sealed class ClientOrderDraftsTests
     }
 
     [Fact]
+    public async Task SupportingDocumentAttached_UpdatesTheDraftsLastSavedTime()
+    {
+        var orderId = NewOrderId();
+
+        await Given(
+            DraftStarted(Command1, orderId, _user, TestData.At),
+            AttachSupportingDocumentTestData.Attached(
+                AttachSupportingDocumentTestData.Command1, orderId, _user, TestData.At.AddMinutes(7)));
+
+        Then(state => Assert.Equal(TestData.At.AddMinutes(7), state.Drafts[orderId].LastSavedAt));
+    }
+
+    [Fact]
     public async Task RequestAndPropertySaved_UpdatesTheDraftsAddressFormTypeAndLastSavedTime()
     {
         var orderId = NewOrderId();

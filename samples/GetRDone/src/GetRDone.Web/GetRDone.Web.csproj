@@ -2,6 +2,7 @@
 
   <ItemGroup>
 	<PackageReference Include="Aspire.Azure.Data.Tables" Version="13.6.4" />
+	<PackageReference Include="Aspire.Azure.Storage.Blobs" Version="13.6.4" />
 	<PackageReference Include="ManagedCode.Orleans.Identity.Client" Version="10.4.6" />
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" />
 	<PackageReference Include="Microsoft.Orleans.Client" Version="$(OrleansVersion)" />

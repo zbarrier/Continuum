@@ -182,3 +182,36 @@ public sealed record IntendedUseRef
         Name = name;
     }
 }
+
+/// <summary>A selected version of a document type, identified by its ID, version, and name.</summary>
+[Alias("Orders.DocumentTypeRef.V1"), GenerateSerializer, Immutable]
+public sealed record DocumentTypeRef
+{
+    [Id(0)] public DocumentTypeId Id { get; }
+    [Id(1)] public DocumentTypeVersion Version { get; }
+    [Id(2)] public DocumentTypeName Name { get; }
+
+    public static Result<DocumentTypeRef> Create(string? id, int version, string? name, string? tenantId)
+    {
+        return Result.CombineForValidation(
+                DocumentTypeId.Create(id, tenantId).Deconstruct(out var validId),
+                DocumentTypeVersion.Create(version).Deconstruct(out var validVersion),
+                DocumentTypeName.Create(name).Deconstruct(out var validName))
+            .Map(() => new DocumentTypeRef(validId!, validVersion!, validName!));
+    }
+    public static Result<DocumentTypeRef> Create(string? id, int version, string? name, string? tenantId, PropertyPath propertyPath)
+    {
+        return Result.CombineForValidation(
+                DocumentTypeId.Create(id, tenantId, propertyPath, nameof(DocumentTypeId)).Deconstruct(out var validId),
+                DocumentTypeVersion.Create(version, propertyPath, nameof(DocumentTypeVersion)).Deconstruct(out var validVersion),
+                DocumentTypeName.Create(name, propertyPath, nameof(DocumentTypeName)).Deconstruct(out var validName))
+            .Map(() => new DocumentTypeRef(validId!, validVersion!, validName!));
+    }
+
+    private DocumentTypeRef(DocumentTypeId id, DocumentTypeVersion version, DocumentTypeName name)
+    {
+        Id = id;
+        Version = version;
+        Name = name;
+    }
+}

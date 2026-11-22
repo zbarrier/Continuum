@@ -41,6 +41,7 @@ public partial interface IOrderGrain : IEventDrivenStateMachineGrain
 /// <param name="BorrowerName">The borrower.</param>
 /// <param name="AccessContactName">The person who gives access to the property, if any.</param>
 /// <param name="AccessContactPhone">The access contact's 10-digit phone number, digits only.</param>
+/// <param name="SupportingDocuments">The documents attached to the draft, in the order they were attached.</param>
 /// <param name="LastSavedAt">When the draft was last saved.</param>
 /// <param name="Version">The version of the order the draft shows: the number of the order's events it has applied.</param>
 [GenerateSerializer, Immutable]
@@ -65,6 +66,7 @@ public sealed record OrderDraft(
     string? BorrowerName,
     string? AccessContactName,
     string? AccessContactPhone,
+    IReadOnlyList<SupportingDocument> SupportingDocuments,
     DateTimeOffset LastSavedAt,
     int Version)
 {
@@ -93,6 +95,7 @@ public sealed record OrderDraft(
         BorrowerName: null,
         AccessContactName: null,
         AccessContactPhone: null,
+        SupportingDocuments: [],
         started.OccurredAt,
         Version: 1);
 
@@ -154,6 +157,40 @@ public sealed record OrderDraft(
             LastSavedAt = saved.OccurredAt,
             Version = Version + 1
         },
+        SupportingDocumentAttached attached => this with
+        {
+            SupportingDocuments =
+            [
+                .. SupportingDocuments,
+                new SupportingDocument(
+                    attached.DocumentId, attached.DocumentTypeId, attached.DocumentTypeVersion, attached.DocumentTypeName,
+                    attached.FileName, attached.ContentType, attached.FileSize, attached.Description, attached.OccurredAt)
+            ],
+            LastSavedAt = attached.OccurredAt,
+            Version = Version + 1
+        },
         _ => this with { Version = Version + 1 }
     };
 }
+
+/// <summary>A document attached to a draft, as the Supporting documents tab lists it.</summary>
+/// <param name="DocumentId">The document.</param>
+/// <param name="DocumentTypeId">The type of the document.</param>
+/// <param name="DocumentTypeVersion">The version of the document type.</param>
+/// <param name="DocumentTypeName">The name of the document type.</param>
+/// <param name="FileName">The name of the uploaded file.</param>
+/// <param name="ContentType">The media type of the file.</param>
+/// <param name="FileSize">The size of the file in bytes.</param>
+/// <param name="Description">What the document holds, if the user described it.</param>
+/// <param name="AttachedAt">When the document was attached.</param>
+[GenerateSerializer, Immutable]
+public sealed record SupportingDocument(
+    string DocumentId,
+    string DocumentTypeId,
+    int DocumentTypeVersion,
+    string DocumentTypeName,
+    string FileName,
+    string ContentType,
+    long FileSize,
+    string? Description,
+    DateTimeOffset AttachedAt);

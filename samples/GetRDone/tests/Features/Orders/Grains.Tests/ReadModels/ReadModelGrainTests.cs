@@ -56,6 +56,26 @@ public sealed class ReadModelGrainTests(OrdersCluster fixture) : IClassFixture<O
     }
 
     [Theory]
+    [InlineData("summit|4a8e2c61", 2, "Purchase contract", true)]
+    [InlineData("summit|c3f7b905", 1, "Survey", true)]
+    [InlineData("summit|4a8e2c61", 1, "Purchase contract", false)]
+    [InlineData("summit|4a8e2c61", 2, "Survey", false)]
+    [InlineData("summit|0d9c1b2a", 1, "Survey", false)]
+    public async Task IsCurrentDocumentType_MatchesIdVersionAndName(string id, int version, string name, bool expected)
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+
+        var result = await fixture.Cluster.GrainFactory.GetDocumentTypesGrain(TenantId).IsCurrentDocumentTypeAsync(
+            DocumentTypeRef.Create(id, version, name, TenantId).Value);
+
+        Assert.Equal(expected, result.IsSuccess);
+        if (!expected)
+        {
+            Assert.Equal(ErrorCodes.InvalidArgument, result.Error.Code);
+        }
+    }
+
+    [Theory]
     [InlineData("summit|6c4f2a90", 3, "Residential Appraisal", "summit|d05e9b37", 1, "Uniform Residential Appraisal Report", true)]
     [InlineData("summit|6c4f2a90", 3, "Residential Appraisal", "summit|8e2b6f41", 2, "Desktop Appraisal", true)]
     [InlineData("summit|4b7e1d03", 1, "Commercial Appraisal", "summit|a2c6f8e0", 1, "Narrative Appraisal Report", true)]

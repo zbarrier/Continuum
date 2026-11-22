@@ -1,5 +1,7 @@
+using Continuum.CSharpFunctionalExtensions;
 using Continuum.Orleans.Tenancy;
 
+using GetRDone.Orders.Abstractions;
 using GetRDone.Orders.Abstractions.ReadModels;
 
 using Microsoft.AspNetCore.Authorization;
@@ -25,6 +27,18 @@ public sealed class DocumentTypesGrain(
     }
 
     public Task<DocumentType[]> GetDocumentTypesAsync() => Task.FromResult(state.State.DocumentTypes.ToArray());
+
+    public Task<Result> IsCurrentDocumentTypeAsync(DocumentTypeRef documentType)
+    {
+        var isCurrent = state.State.DocumentTypes.Any(item =>
+            item.DocumentTypeId == (string)documentType.Id
+            && item.DocumentTypeVersion == (int)documentType.Version
+            && item.Name == (string)documentType.Name);
+
+        return Task.FromResult(isCurrent
+            ? Result.Success()
+            : Result.Failure(RequestErrors.NewInvalidArg("The selected document type is not available.")));
+    }
 }
 
 [GenerateSerializer]

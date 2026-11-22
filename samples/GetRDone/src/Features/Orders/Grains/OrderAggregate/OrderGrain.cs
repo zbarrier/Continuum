@@ -53,7 +53,8 @@ public enum OrderCommand
 {
     StartDraft,
     SaveRequestAndProperty,
-    SaveBorrowerAndAccessContact
+    SaveBorrowerAndAccessContact,
+    AttachSupportingDocument
 }
 
 [GenerateSerializer]
@@ -64,9 +65,13 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>The user who started the order, as a tenant-qualified user ID.</summary>
     [Id(0)] public string? StartedBy { get; private set; }
 
+    /// <summary>The documents attached to the order, so a document can't be attached twice.</summary>
+    [Id(1)] public HashSet<string> SupportingDocumentIds { get; private set; } = [];
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
+        On<SupportingDocumentAttached>(Handle);
     }
 
     protected override void ConfigureStateMachine()
@@ -74,6 +79,7 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         StateMachine.Configure(OrderStatus.None).Permit(OrderCommand.StartDraft, OrderStatus.Draft);
         StateMachine.Configure(OrderStatus.Draft)
             .PermitReentry(OrderCommand.SaveRequestAndProperty)
-            .PermitReentry(OrderCommand.SaveBorrowerAndAccessContact);
+            .PermitReentry(OrderCommand.SaveBorrowerAndAccessContact)
+            .PermitReentry(OrderCommand.AttachSupportingDocument);
     }
 }

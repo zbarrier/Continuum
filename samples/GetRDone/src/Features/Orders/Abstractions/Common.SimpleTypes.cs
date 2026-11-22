@@ -589,3 +589,235 @@ public sealed record UserId : TenantKeyValueObject<UserId>
 
     private UserId(string value) : base(value) { }
 }
+
+/// <summary>A supporting document attached to an order; the client generates it before uploading the file.</summary>
+[Alias("Orders.DocumentId.V1"), GenerateSerializer, Immutable]
+public sealed record DocumentId : TenantKeyValueObject<DocumentId>
+{
+    public static Result<DocumentId> Create(string? value, string? tenantId, string propertyName = nameof(DocumentId))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantGuidKey(tenantId, propertyName)
+            .Map(validatedValue => new DocumentId(validatedValue));
+    }
+    public static Result<DocumentId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantGuidKey(tenantId, propertyPath, member)
+            .Map(validatedValue => new DocumentId(validatedValue));
+    }
+
+    private DocumentId(string value) : base(value) { }
+}
+
+[Alias("Orders.DocumentTypeId.V1"), GenerateSerializer, Immutable]
+public sealed record DocumentTypeId : TenantKeyValueObject<DocumentTypeId>
+{
+    public static Result<DocumentTypeId> Create(string? value, string? tenantId, string propertyName = nameof(DocumentTypeId))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantKey(tenantId, propertyName)
+            .Map(validatedValue => new DocumentTypeId(validatedValue));
+    }
+    public static Result<DocumentTypeId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantKey(tenantId, propertyPath, member)
+            .Map(validatedValue => new DocumentTypeId(validatedValue));
+    }
+
+    private DocumentTypeId(string value) : base(value) { }
+}
+
+[Alias("Orders.DocumentTypeVersion.V1"), GenerateSerializer, Immutable]
+public sealed record DocumentTypeVersion : Int32ValueObject<DocumentTypeVersion>
+{
+    public const int MinValue = 1;
+    public const int MaxValue = int.MaxValue;
+
+    public static Result<DocumentTypeVersion> Create(string? value, string propertyName = nameof(DocumentTypeVersion))
+    {
+        return Result.IsInt32(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .Map(validatedValue => new DocumentTypeVersion(validatedValue));
+    }
+    public static Result<DocumentTypeVersion> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.IsInt32(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .Map(validatedValue => new DocumentTypeVersion(validatedValue));
+    }
+    public static Result<DocumentTypeVersion> Create(int? value, string propertyName = nameof(DocumentTypeVersion))
+    {
+        return Result.NotNull(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .Map(validatedValue => new DocumentTypeVersion(validatedValue));
+    }
+    public static Result<DocumentTypeVersion> Create(int? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNull(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .Map(validatedValue => new DocumentTypeVersion(validatedValue));
+    }
+    public static Result<DocumentTypeVersion> Create(int value, string propertyName = nameof(DocumentTypeVersion))
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyName)
+            .Map(validatedValue => new DocumentTypeVersion(validatedValue));
+    }
+    public static Result<DocumentTypeVersion> Create(int value, PropertyPath propertyPath, string member)
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyPath, member)
+            .Map(validatedValue => new DocumentTypeVersion(validatedValue));
+    }
+
+    private DocumentTypeVersion(int value) : base(value) { }
+}
+
+[Alias("Orders.DocumentTypeName.V1"), GenerateSerializer, Immutable]
+public sealed record DocumentTypeName : StringValueObject<DocumentTypeName>
+{
+    public const int MaxLength = 50;
+
+    public static Result<DocumentTypeName> Create(string? value, string propertyName = nameof(DocumentTypeName))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new DocumentTypeName(validatedValue));
+    }
+    public static Result<DocumentTypeName> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new DocumentTypeName(validatedValue));
+    }
+
+    private DocumentTypeName(string value) : base(value) { }
+}
+
+/// <summary>The name of an uploaded file, as it was on the user's computer.</summary>
+[Alias("Orders.FileName.V1"), GenerateSerializer, Immutable]
+public sealed record FileName : StringValueObject<FileName>
+{
+    // Windows, macOS and Linux file systems allow up to 255 characters for a file name.
+    public const int MaxLength = 255;
+
+    public static Result<FileName> Create(string? value, string propertyName = nameof(FileName))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new FileName(validatedValue));
+    }
+    public static Result<FileName> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new FileName(validatedValue));
+    }
+
+    private FileName(string value) : base(value) { }
+}
+
+/// <summary>The media type of an uploaded file, such as <c>application/pdf</c>.</summary>
+[Alias("Orders.ContentType.V1"), GenerateSerializer, Immutable]
+public sealed record ContentType : StringValueObject<ContentType>
+{
+    // RFC 6838 allows up to 127 characters for each of the type and subtype.
+    public const int MaxLength = 255;
+
+    public static Result<ContentType> Create(string? value, string propertyName = nameof(ContentType))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new ContentType(validatedValue));
+    }
+    public static Result<ContentType> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new ContentType(validatedValue));
+    }
+
+    private ContentType(string value) : base(value) { }
+}
+
+/// <summary>The size of an uploaded file in bytes; completed appraisals with their photos can be large, so up to 100 MB.</summary>
+[Alias("Orders.FileSize.V1"), GenerateSerializer, Immutable]
+public sealed record FileSize : Int64ValueObject<FileSize>
+{
+    public const long MinValue = 1;
+    public const long MaxValue = 100L * 1024 * 1024;
+
+    public static Result<FileSize> Create(string? value, string propertyName = nameof(FileSize))
+    {
+        return Result.IsInt64(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .Map(validatedValue => new FileSize(validatedValue));
+    }
+    public static Result<FileSize> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.IsInt64(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .Map(validatedValue => new FileSize(validatedValue));
+    }
+    public static Result<FileSize> Create(long? value, string propertyName = nameof(FileSize))
+    {
+        return Result.NotNull(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .Map(validatedValue => new FileSize(validatedValue));
+    }
+    public static Result<FileSize> Create(long? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNull(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .Map(validatedValue => new FileSize(validatedValue));
+    }
+    public static Result<FileSize> Create(long value, string propertyName = nameof(FileSize))
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyName)
+            .Map(validatedValue => new FileSize(validatedValue));
+    }
+    public static Result<FileSize> Create(long value, PropertyPath propertyPath, string member)
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyPath, member)
+            .Map(validatedValue => new FileSize(validatedValue));
+    }
+
+    private FileSize(long value) : base(value) { }
+}
+
+/// <summary>What a supporting document holds, in the user's words. The description is optional.</summary>
+[Alias("Orders.DocumentDescription.V1"), GenerateSerializer, Immutable]
+public sealed record DocumentDescription : StringValueObject<DocumentDescription>
+{
+    public const int MaxLength = 500;
+
+    public static Result<DocumentDescription> Create(string? value, string propertyName = nameof(DocumentDescription))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new DocumentDescription(validatedValue));
+    }
+    public static Result<DocumentDescription> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new DocumentDescription(validatedValue));
+    }
+
+    /// <summary>Creates the description, or returns <see langword="null"/> when it is empty.</summary>
+    public static Result<DocumentDescription?> CreateOptional(string? value, string propertyName = nameof(DocumentDescription))
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? Result.Success<DocumentDescription?>(null)
+            : Create(value, propertyName).Map(description => (DocumentDescription?)description);
+    }
+    /// <summary>Creates the description, or returns <see langword="null"/> when it is empty.</summary>
+    public static Result<DocumentDescription?> CreateOptional(string? value, PropertyPath propertyPath, string member)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? Result.Success<DocumentDescription?>(null)
+            : Create(value, propertyPath, member).Map(description => (DocumentDescription?)description);
+    }
+
+    private DocumentDescription(string value) : base(value) { }
+}

@@ -1,4 +1,6 @@
+using GetRDone.Orders.Abstractions.OrderAggregate;
 using GetRDone.Web.Components;
+using GetRDone.Web.Components.Client.OrderEntryTabs;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -44,6 +46,9 @@ builder.Services.AddOrleansIdentity();
 
 builder.AddKeyedAzureTableServiceClient("clustering");
 builder.UseOrleansClient(client => client.AddActivityPropagation());
+
+builder.AddAzureBlobContainerClient(SupportingDocumentStorage.ContainerName);
+builder.Services.AddSingleton<SupportingDocumentStore>();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

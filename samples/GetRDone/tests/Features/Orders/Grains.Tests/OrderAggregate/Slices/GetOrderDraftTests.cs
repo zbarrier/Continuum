@@ -41,7 +41,7 @@ public sealed class GetOrderDraftTests
 
         await WhenQuery(() => Order.GetOrderDraftAsync());
 
-        ThenQuery<OrderDraft>(draft => Assert.Equal(new OrderDraft(
+        ThenQuery<OrderDraft>(draft => Assert.Equivalent(new OrderDraft(
             GrainId,
             command.ServiceRequestTypeId,
             command.ServiceRequestTypeVersion,
@@ -62,8 +62,9 @@ public sealed class GetOrderDraftTests
             BorrowerName: null,
             AccessContactName: null,
             AccessContactPhone: null,
+            SupportingDocuments: [],
             TestData.At,
-            Version: 1), draft));
+            Version: 1), draft, strict: true));
     }
 
     [Fact]
@@ -116,7 +117,7 @@ public sealed class GetOrderDraftTests
 
         await WhenQuery(() => Order.GetOrderDraftAsync());
 
-        ThenQuery<OrderDraft>(draft => Assert.Equal(new OrderDraft(
+        ThenQuery<OrderDraft>(draft => Assert.Equivalent(new OrderDraft(
             GrainId,
             latest.ServiceRequestTypeId,
             latest.ServiceRequestTypeVersion,
@@ -137,8 +138,39 @@ public sealed class GetOrderDraftTests
             Command1.BorrowerName,
             Command1.AccessContactName,
             Command1.AccessContactPhone,
+            SupportingDocuments: [],
             SavedAt,
-            Version: 3), draft));
+            Version: 3), draft, strict: true));
+    }
+
+    [Fact]
+    public async Task GetOrderDraft_ListsTheAttachedDocumentsInTheOrderTheyWereAttached()
+    {
+        var first = AttachSupportingDocumentTestData.Command1;
+        var second = AttachSupportingDocumentTestData.Command3;
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given(
+            StartOrderDraftTestData.DraftStarted1(GrainId),
+            AttachSupportingDocumentTestData.Attached1(GrainId, TestData.At.AddMinutes(2)),
+            AttachSupportingDocumentTestData.Attached(second, GrainId, RequestedByUsers.ClientUser1, SavedAt));
+
+        await WhenQuery(() => Order.GetOrderDraftAsync());
+
+        ThenQuery<OrderDraft>(draft =>
+        {
+            Assert.Equal(
+                [
+                    new SupportingDocument(
+                        first.DocumentId, first.DocumentTypeId, first.DocumentTypeVersion, first.DocumentTypeName,
+                        first.FileName, first.ContentType, first.FileSize, first.Description, TestData.At.AddMinutes(2)),
+                    new SupportingDocument(
+                        second.DocumentId, second.DocumentTypeId, second.DocumentTypeVersion, second.DocumentTypeName,
+                        second.FileName, second.ContentType, second.FileSize, second.Description, SavedAt)
+                ],
+                draft.SupportingDocuments);
+            Assert.Equal(SavedAt, draft.LastSavedAt);
+            Assert.Equal(3, draft.Version);
+        });
     }
 
     [Fact]

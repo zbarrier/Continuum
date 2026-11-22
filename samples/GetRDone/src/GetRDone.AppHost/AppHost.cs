@@ -3,6 +3,9 @@ var builder = DistributedApplication.CreateBuilder(args);
 var storage = builder.AddAzureStorage("storage").RunAsEmulator();
 var clustering = storage.AddTables("clustering");
 
+// The files of supporting documents. The web app uploads them; orders record only their path.
+var orderDocuments = storage.AddBlobContainer("order-documents");
+
 // Not proxied, so Docker publishes the container directly as host 2113 -> container 2113 and the
 // KurrentDB desktop app can always connect to esdb://localhost:2113?tls=false.
 var kurrentdb = builder.AddKurrentDB("kurrentdb", port: 2113)
@@ -37,9 +40,11 @@ var silo = builder.AddProject<Projects.GetRDone_Silo>("silo")
 var web = builder.AddProject<Projects.GetRDone_Web>("web")
     .WithExternalHttpEndpoints()
     .WithReference(orleans.AsClient())
+    .WithReference(orderDocuments)
     .WithEnvironment("IDENTITY_URL", identity.GetEndpoint("https"))
     .WaitFor(silo)
-    .WaitFor(identity);
+    .WaitFor(identity)
+    .WaitFor(orderDocuments);
 
 identity.WithEnvironment("WEB_BASE_URL", web.GetEndpoint("https"));
 

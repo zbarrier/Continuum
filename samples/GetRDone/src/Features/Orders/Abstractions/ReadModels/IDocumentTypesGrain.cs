@@ -1,3 +1,5 @@
+using Continuum.CSharpFunctionalExtensions;
+
 using Orleans.Concurrency;
 
 namespace GetRDone.Orders.Abstractions.ReadModels;
@@ -10,6 +12,10 @@ public interface IDocumentTypesGrain : IGrainWithStringKey
 {
     [ReadOnly]
     Task<DocumentType[]> GetDocumentTypesAsync();
+
+    /// <summary>Succeeds when the document type exists, the version is its current version, and the name matches.</summary>
+    [ReadOnly]
+    Task<Result> IsCurrentDocumentTypeAsync(DocumentTypeRef documentType);
 }
 
 [GenerateSerializer, Immutable]

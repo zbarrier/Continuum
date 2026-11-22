@@ -12,6 +12,7 @@ public sealed class OrderEventTypeMapTests
     [InlineData(typeof(OrderDraftStarted), "Orders.OrderDraftStarted.V1")]
     [InlineData(typeof(RequestAndPropertySaved), "Orders.RequestAndPropertySaved.V1")]
     [InlineData(typeof(BorrowerAndAccessContactSaved), "Orders.BorrowerAndAccessContactSaved.V1")]
+    [InlineData(typeof(SupportingDocumentAttached), "Orders.SupportingDocumentAttached.V1")]
     public void OrderEvent_IsRegisteredAsADomainEvent(Type eventType, string typeIdentifier)
     {
         RuntimeHelpers.RunModuleConstructor(eventType.Module.ModuleHandle);

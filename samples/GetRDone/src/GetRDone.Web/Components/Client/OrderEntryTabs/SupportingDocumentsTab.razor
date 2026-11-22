@@ -1,0 +1,198 @@
+@* Tab 3 of order entry: lists the draft's supporting documents and attaches more. The file is uploaded to blob storage first
+   and then attached; when the order rejects the document, the upload is deleted again (as a best effort). *@
+@using Continuum.CSharpFunctionalExtensions
+@using Continuum.Orleans.Tenancy
+@using GetRDone.Orders.Abstractions
+@using GetRDone.Orders.Abstractions.OrderAggregate
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
+@inject SupportingDocumentStore DocumentStore
+@inject ISnackbar Snackbar
+@inject ILogger<SupportingDocumentsTab> Logger
+
+<MudSimpleTable Dense="true" Elevation="0" Outlined="true" Class="mb-6">
+    <thead>
+        <tr>
+            <th>File</th>
+            <th>Type</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Draft.SupportingDocuments.Count == 0)
+        {
+            <tr>
+                <td colspan="3"><MudText Typo="Typo.body2" Color="Color.Secondary">No documents yet.</MudText></td>
+            </tr>
+        }
+        @foreach (var document in Draft.SupportingDocuments)
+        {
+            <tr>
+                <td>@document.FileName <MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true">(@FormatSize(document.FileSize))</MudText></td>
+                <td>@document.DocumentTypeName</td>
+                <td>@document.Description</td>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+@if (_form.Error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_form.Error</MudAlert>
+}
+<MudGrid Spacing="3">
+    <MudItem xs="12" sm="6">
+        <MudSelect T="DocumentType" Label="@FieldLabels[DocumentTypeField]" @bind-Value="_documentType" ToStringFunc="@(type => type?.Name)"
+                   Error="@_form.HasError(DocumentTypeField)" ErrorText="@_form.ErrorText(DocumentTypeField)">
+            @foreach (var type in DocumentTypes)
+            {
+                <MudSelectItem Value="type">@type.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudFileUpload T="IBrowserFile" @ref="_fileUpload" @bind-Files="_file">
+            <CustomContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-3">
+                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.AttachFile" OnClick="@context.OpenFilePickerAsync">Choose file</MudButton>
+                    <MudText Typo="Typo.body2" Color="@(_file is null ? Color.Secondary : Color.Default)">
+                        @(_file is null ? "No file chosen" : $"{_file.Name} ({FormatSize(_file.Size)})")
+                    </MudText>
+                </MudStack>
+            </CustomContent>
+            <SelectedTemplate />
+        </MudFileUpload>
+        @if (_form.HasError(FileField))
+        {
+            <MudText Typo="Typo.caption" Color="Color.Error">@_form.ErrorText(FileField)</MudText>
+        }
+    </MudItem>
+    <MudItem xs="12">
+        <MudTextField @bind-Value="_description" Label="@FieldLabels[nameof(AttachSupportingDocumentCommand.Description)]" MaxLength="DocumentDescription.MaxLength"
+                      HelperText="Optional"
+                      Error="@_form.HasError(nameof(AttachSupportingDocumentCommand.Description))" ErrorText="@_form.ErrorText(nameof(AttachSupportingDocumentCommand.Description))" />
+    </MudItem>
+</MudGrid>
+@if (_form.Saving)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+}
+<MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+    <MudButton Variant="Variant.Text" OnClick="OnBack">Back</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_form.Saving" OnClick="AttachAsync">Attach</MudButton>
+</MudStack>
+
+@code {
+    private const string DocumentTypeField = "DocumentType";
+    private const string FileField = "File";
+
+    /// <summary>The field that shows a validation error, for the targets that are not a field of their own.</summary>
+    private static readonly Dictionary<string, string> FieldByTarget = new()
+    {
+        [nameof(AttachSupportingDocumentCommand.DocumentTypeId)] = DocumentTypeField,
+        [nameof(AttachSupportingDocumentCommand.DocumentTypeVersion)] = DocumentTypeField,
+        [nameof(AttachSupportingDocumentCommand.DocumentTypeName)] = DocumentTypeField,
+        [nameof(AttachSupportingDocumentCommand.FileName)] = FileField,
+        [nameof(AttachSupportingDocumentCommand.ContentType)] = FileField,
+        [nameof(AttachSupportingDocumentCommand.FileSize)] = FileField
+    };
+
+    private static readonly Dictionary<string, string> FieldLabels = new()
+    {
+        [DocumentTypeField] = "Document type",
+        [FileField] = "File",
+        [nameof(AttachSupportingDocumentCommand.Description)] = "Description"
+    };
+
+    private OrderEntryForm _form = default!;
+    private MudFileUpload<IBrowserFile>? _fileUpload;
+
+    private DocumentType? _documentType;
+    private IBrowserFile? _file;
+    private string _description = "";
+
+    /// <summary>The draft whose tab this is.</summary>
+    [Parameter, EditorRequired]
+    public OrderDraft Draft { get; set; } = default!;
+
+    /// <summary>The document types a document can be attached as.</summary>
+    [Parameter, EditorRequired]
+    public DocumentType[] DocumentTypes { get; set; } = [];
+
+    /// <summary>Called with the draft as it is after a document is attached.</summary>
+    [Parameter]
+    public EventCallback<OrderDraft> OnSaved { get; set; }
+
+    /// <summary>Called when the user goes back to the previous tab.</summary>
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    protected override void OnInitialized() => _form = new OrderEntryForm(Logger, FieldLabels, FieldByTarget);
+
+    private async Task AttachAsync()
+    {
+        var file = _file;
+        var order = ClusterClient.GetGrain<IOrderGrain>(Draft.OrderId);
+        TenantKey.Split(Draft.OrderId, out var tenantId, out _);
+        var documentId = TenantKey.Create(tenantId, Guid.NewGuid().ToString());
+        var command = new AttachSupportingDocumentCommand(
+            documentId,
+            _documentType?.DocumentTypeId ?? "", _documentType?.DocumentTypeVersion ?? 0, _documentType?.Name ?? "",
+            file?.Name ?? "",
+            string.IsNullOrEmpty(file?.ContentType) ? "application/octet-stream" : file.ContentType,
+            file?.Size ?? 0,
+            string.IsNullOrWhiteSpace(_description) ? null : _description);
+
+        var draft = await _form.SaveDraftAsync(order, Draft, async () =>
+        {
+            // Checks what the order checks before uploading, so an invalid document never uploads its file.
+            var valid = Validate(command, tenantId);
+            if (valid.IsFailure)
+            {
+                return Result.Failure<AttachSupportingDocumentResponse>(valid.Error);
+            }
+
+            var blobPath = SupportingDocumentStorage.BlobPath(Draft.OrderId, documentId);
+            await using (var content = file!.OpenReadStream(FileSize.MaxValue))
+            {
+                await DocumentStore.UploadAsync(blobPath, content, command.ContentType);
+            }
+
+            // Only a rejected document deletes its file. When the call throws, the order may still have attached it.
+            var result = await order.AttachSupportingDocumentAsync(command);
+            if (result.IsFailure)
+            {
+                await DocumentStore.TryDeleteAsync(blobPath);
+            }
+            return result;
+        });
+        if (draft is null)
+        {
+            return;
+        }
+
+        Snackbar.Add("Document attached.", Severity.Success);
+        _description = "";
+        _file = null;
+        if (_fileUpload is not null)
+        {
+            await _fileUpload.ClearAsync();
+        }
+        await OnSaved.InvokeAsync(draft);
+    }
+
+    private static Result Validate(AttachSupportingDocumentCommand command, string? tenantId) => Result.CombineForValidation(
+        DocumentTypeRef.Create(command.DocumentTypeId, command.DocumentTypeVersion, command.DocumentTypeName, tenantId),
+        FileName.Create(command.FileName),
+        ContentType.Create(command.ContentType),
+        FileSize.Create(command.FileSize),
+        DocumentDescription.CreateOptional(command.Description, nameof(AttachSupportingDocumentCommand.Description)));
+
+    /// <summary>Formats a file size as 512 B, 34 KB or 2.5 MB.</summary>
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:0} KB",
+        _ => $"{bytes / (1024.0 * 1024):0.#} MB"
+    };
+}
