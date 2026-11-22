@@ -14,7 +14,7 @@ using ManagedCode.Orleans.Identity.Core.Constants;
 
 using static GetRDone.Orders.Grains.Tests.Data.StartOrderDraftTestData;
 
-namespace GetRDone.Orders.Grains.Tests;
+namespace GetRDone.Orders.Grains.Tests.OrderAggregate.Slices;
 
 /// <summary>
 ///     Given/When/Then tests for starting an order draft. Each test uses a new order in the test tenant, whose read

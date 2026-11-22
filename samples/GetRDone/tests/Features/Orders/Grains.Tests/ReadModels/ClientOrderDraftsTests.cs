@@ -18,7 +18,7 @@ using Orleans.Runtime;
 
 using static GetRDone.Orders.Grains.Tests.Data.StartOrderDraftTestData;
 
-namespace GetRDone.Orders.Grains.Tests;
+namespace GetRDone.Orders.Grains.Tests.ReadModels;
 
 /// <summary>
 ///     Tests for the ClientOrderDrafts projection. Each test projects the drafts of a new client user, so it starts with

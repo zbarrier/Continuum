@@ -11,7 +11,7 @@ using ManagedCode.Orleans.Identity.Core.Constants;
 
 using Orleans.Runtime;
 
-namespace GetRDone.Orders.Grains.Tests;
+namespace GetRDone.Orders.Grains.Tests.ReadModels;
 
 /// <summary>Tests for the pre-populated read models, seeded with <see cref="TestData"/> for the test tenant.</summary>
 public sealed class ReadModelGrainTests(OrdersCluster fixture) : IClassFixture<OrdersCluster>
