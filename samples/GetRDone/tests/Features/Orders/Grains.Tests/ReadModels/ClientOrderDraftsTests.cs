@@ -54,6 +54,19 @@ public sealed class ClientOrderDraftsTests
     }
 
     [Fact]
+    public async Task BorrowerAndAccessContactSaved_UpdatesTheDraftsLastSavedTime()
+    {
+        var orderId = NewOrderId();
+
+        await Given(
+            DraftStarted(Command1, orderId, _user, TestData.At),
+            SaveBorrowerAndAccessContactTestData.Saved(
+                SaveBorrowerAndAccessContactTestData.Command1, orderId, _user, TestData.At.AddMinutes(5)));
+
+        Then(state => Assert.Equal(TestData.At.AddMinutes(5), state.Drafts[orderId].LastSavedAt));
+    }
+
+    [Fact]
     public async Task Drafts_ListTheUsersDraftsMostRecentlySavedFirst()
     {
         var (order1, order2, order3) = (NewOrderId(), NewOrderId(), NewOrderId());

@@ -15,6 +15,8 @@ namespace Continuum.Domain.Orleans.TestHarness;
 ///     Create a new harness for every test (xUnit does this by default by creating a new test class instance per test).
 ///     When the operation under test runs a multi-stream transaction, set up the other grains in it with
 ///     <c>GivenParticipant</c> and check what was saved to them with <c>ThenParticipant</c> and <c>ThenNoChanges</c>.
+///     To test a read-only query instead, such as a read model the grain builds from its events, call
+///     <see cref="WhenQuery{TValue}"/> and check its value with <see cref="ThenQuery{TValue}"/>.
 /// </remarks>
 /// <typeparam name="TEventBase">The base type of events applied to the grain state.</typeparam>
 public abstract class GrainTestHarness<TEventBase>
@@ -119,6 +121,29 @@ public abstract class GrainTestHarness<TEventBase>
         {
             _exception = ex;
         }
+    }
+
+    /// <summary>
+    ///     Runs the read-only query under test, such as a read model the grain builds from its events, and captures its
+    ///     result or exception. Call it instead of <c>When</c>, once per test.
+    /// </summary>
+    /// <typeparam name="TValue">The query's value type.</typeparam>
+    /// <param name="func">The query to run.</param>
+    /// <returns>A task that completes when the query has run.</returns>
+    /// <exception cref="InvalidOperationException"><c>When</c> or <c>WhenQuery</c> has already been called in this test.</exception>
+    protected Task WhenQuery<TValue>(Func<Task<Result<TValue>>> func) where TValue : class => Capture(func);
+
+    /// <summary>Asserts the query succeeded and checks its value.</summary>
+    /// <typeparam name="TValue">The expected value type.</typeparam>
+    /// <param name="checkValue">Assertions over the value.</param>
+    protected void ThenQuery<TValue>(Action<TValue> checkValue) where TValue : class
+    {
+        if (GetSuccessValue() is TValue value)
+        {
+            checkValue(value);
+            return;
+        }
+        throw new Exception("Unexpected query value type.");
     }
 
     /// <summary>

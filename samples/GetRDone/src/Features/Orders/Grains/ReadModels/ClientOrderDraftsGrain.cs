@@ -59,6 +59,7 @@ public sealed class ClientOrderDraftsState : HandlerProjectionState<ClientOrderD
     public ClientOrderDraftsState()
     {
         On<OrderDraftStarted>(Apply);
+        On<BorrowerAndAccessContactSaved>(Apply);
     }
 
     /// <summary>The drafts by order ID.</summary>
@@ -71,6 +72,17 @@ public sealed class ClientOrderDraftsState : HandlerProjectionState<ClientOrderD
             $"{evt.PropertyStreet}, {evt.PropertyCity}, {evt.PropertyState} {evt.PropertyZip}",
             evt.FormTypeName,
             evt.OccurredAt);
+        return true;
+    }
+
+    private bool Apply(BorrowerAndAccessContactSaved evt, IStreamedEvent<object> streamedEvent)
+    {
+        if (!Drafts.TryGetValue(evt.OrderId, out var draft))
+        {
+            return false;
+        }
+
+        Drafts[evt.OrderId] = draft with { LastSavedAt = evt.OccurredAt };
         return true;
     }
 }

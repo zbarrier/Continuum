@@ -17,6 +17,8 @@ public interface IOrderPermissions
     Task<Result> CanStartOrderAsync(UserId userId, ClientId clientId);
 
     Result CanChangeOrder(UserId userId, OrderState order);
+
+    Result CanViewOrder(UserId userId, OrderState order);
 }
 
 public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermissions
@@ -32,4 +34,10 @@ public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermiss
             ? Result.Success()
             : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
                 "You can only change orders you started."));
+
+    public Result CanViewOrder(UserId userId, OrderState order)
+        => order.StartedBy == (string)userId
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "You can only view orders you started."));
 }

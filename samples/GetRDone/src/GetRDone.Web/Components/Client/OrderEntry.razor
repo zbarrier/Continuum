@@ -1,0 +1,480 @@
+@* Order entry (event model chapter 1, New order screens): starts a draft on tab 1 and saves its tabs. The tabs show the
+   OrderDraft read model, which the order builds from its own events, so they show every save at once (no waiting for a
+   projection). Tabs 3 and 4 come with their slices. *@
+@page "/orders/new"
+@page "/orders/drafts/{OrderGuid:guid}"
+@attribute [Authorize(Roles = "client")]
+@using System.Globalization
+@using Continuum.CSharpFunctionalExtensions
+@using Continuum.Orleans.Tenancy
+@using GetRDone.Orders.Abstractions
+@using GetRDone.Orders.Abstractions.OrderAggregate
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject ILogger<OrderEntry> Logger
+
+<PageTitle>New order · Get-R-Done</PageTitle>
+
+<MudPaper Elevation="1" Class="pa-6">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4">
+        <MudText Typo="Typo.h5">@(_draft is null ? "New order" : $"New order · {_draft.PropertyAddress}")</MudText>
+        @if (_draft is not null)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Success">Draft saved @_draft.LastSavedAt.ToLocalTime().ToString("h:mm tt")</MudChip>
+        }
+    </MudStack>
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+    }
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (!_ready)
+    {
+        <MudStack Row="true" Justify="Justify.FlexEnd">
+            <MudButton Variant="Variant.Text" Href="/">Home</MudButton>
+            @if (_canRetry)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadAsync">Try again</MudButton>
+            }
+        </MudStack>
+    }
+    else
+    {
+        <MudTabs @bind-ActivePanelIndex="_activeTab" Elevation="0" TabPanelsClass="pt-6">
+            <MudTabPanel Text="1 Request & Property">
+                @if (_draft is null)
+                {
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="ServiceFormOption" Label="Service · form type" @bind-Value="_serviceForm" ToStringFunc="@(option => option?.Display)"
+                                       Error="@HasError(ServiceFormField)" ErrorText="@ErrorText(ServiceFormField)">
+                                @foreach (var option in _serviceForms)
+                                {
+                                    <MudSelectItem Value="option">@option.Display</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_street" Label="Street" MaxLength="PropertyStreet.MaxLength"
+                                          Error="@HasError(nameof(StartOrderDraftCommand.PropertyStreet))" ErrorText="@ErrorText(nameof(StartOrderDraftCommand.PropertyStreet))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_city" Label="City" MaxLength="PropertyCity.MaxLength"
+                                          Error="@HasError(nameof(StartOrderDraftCommand.PropertyCity))" ErrorText="@ErrorText(nameof(StartOrderDraftCommand.PropertyCity))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_state" Label="State" MaxLength="2" Placeholder="VA"
+                                          Error="@HasError(nameof(StartOrderDraftCommand.PropertyState))" ErrorText="@ErrorText(nameof(StartOrderDraftCommand.PropertyState))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_zip" Label="ZIP" MaxLength="10"
+                                          Error="@HasError(nameof(StartOrderDraftCommand.PropertyZip))" ErrorText="@ErrorText(nameof(StartOrderDraftCommand.PropertyZip))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Property type" @bind-Value="_propertyType"
+                                       Error="@HasError(nameof(StartOrderDraftCommand.PropertyType))" ErrorText="@ErrorText(nameof(StartOrderDraftCommand.PropertyType))">
+                                @foreach (var propertyType in PropertyTypes)
+                                {
+                                    <MudSelectItem Value="propertyType">@propertyType</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="IntendedUse" Label="Intended use" @bind-Value="_intendedUse" ToStringFunc="@(use => use?.Name)"
+                                       Error="@HasError(IntendedUseField)" ErrorText="@ErrorText(IntendedUseField)">
+                                @foreach (var use in _intendedUses)
+                                {
+                                    <MudSelectItem Value="use">@use.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_loanNumber" Label="Loan number" MaxLength="LoanNumber.MaxLength"
+                                          Error="@HasError(nameof(StartOrderDraftCommand.LoanNumber))" ErrorText="@ErrorText(nameof(StartOrderDraftCommand.LoanNumber))" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker @bind-Date="_dueDate" Label="Due date" DateFormat="MMM d, yyyy" MinDate="DateTime.Today"
+                                           Error="@HasError(nameof(StartOrderDraftCommand.DueDate))" ErrorText="@ErrorText(nameof(StartOrderDraftCommand.DueDate))" />
+                        </MudItem>
+                    </MudGrid>
+                    <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+                        <MudButton Variant="Variant.Text" Href="/">Cancel</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_saving || _clientId is null)" OnClick="StartDraftAsync">Save &amp; continue</MudButton>
+                    </MudStack>
+                }
+                else
+                {
+                    <MudGrid Spacing="3">
+                        @foreach (var (label, value) in RequestAndProperty(_draft))
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@label</MudText>
+                                <MudText Typo="Typo.body1">@value</MudText>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary mt-4">The request and property can't be changed once the draft is saved.</MudText>
+                    <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+                        <MudButton Variant="Variant.Text" Href="/">Home</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => _activeTab = BorrowerTab)">Continue</MudButton>
+                    </MudStack>
+                }
+            </MudTabPanel>
+            <MudTabPanel Text="2 Borrower & Access contact" Disabled="@(_draft is null)">
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_borrowerName" Label="Borrower name" MaxLength="BorrowerName.MaxLength"
+                                      Error="@HasError(nameof(SaveBorrowerAndAccessContactCommand.BorrowerName))" ErrorText="@ErrorText(nameof(SaveBorrowerAndAccessContactCommand.BorrowerName))" />
+                    </MudItem>
+                    <MudItem sm="6" Class="d-none d-sm-flex" />
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_accessContactName" Label="Access contact" MaxLength="AccessContactName.MaxLength"
+                                      HelperText="Optional; the person who gives the appraiser access"
+                                      Error="@HasError(nameof(SaveBorrowerAndAccessContactCommand.AccessContactName))" ErrorText="@ErrorText(nameof(SaveBorrowerAndAccessContactCommand.AccessContactName))" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_accessContactPhone" Label="Access contact phone" InputType="InputType.Telephone" Placeholder="540-555-0142"
+                                      Error="@HasError(nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone))" ErrorText="@ErrorText(nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone))" />
+                    </MudItem>
+                </MudGrid>
+                <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+                    <MudButton Variant="Variant.Text" OnClick="@(() => _activeTab = RequestTab)">Back</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_saving" OnClick="SaveBorrowerAndAccessContactAsync">Save &amp; continue</MudButton>
+                </MudStack>
+            </MudTabPanel>
+            <MudTabPanel Text="3 Supporting documents" Disabled="true" />
+            <MudTabPanel Text="4 Review & Submit" Disabled="true" />
+        </MudTabs>
+    }
+</MudPaper>
+
+@code {
+    private const int RequestTab = 0;
+    private const int BorrowerTab = 1;
+
+    private const string ServiceFormField = "ServiceForm";
+    private const string IntendedUseField = "IntendedUse";
+
+    /// <summary>Property type is free text on the order; the page offers the common ones.</summary>
+    private static readonly string[] PropertyTypes =
+    [
+        "Single Family", "Condominium", "Townhouse", "2-4 Unit", "Manufactured Home", "Multifamily (5+)",
+        "Commercial – Office", "Commercial – Retail", "Commercial – Industrial", "Land"
+    ];
+
+    /// <summary>The field that shows a validation error, for the targets that are not a field of their own.</summary>
+    private static readonly Dictionary<string, string> FieldByTarget = new()
+    {
+        [nameof(StartOrderDraftCommand.ServiceRequestTypeId)] = ServiceFormField,
+        [nameof(StartOrderDraftCommand.ServiceRequestTypeVersion)] = ServiceFormField,
+        [nameof(StartOrderDraftCommand.ServiceRequestTypeName)] = ServiceFormField,
+        [nameof(StartOrderDraftCommand.FormTypeId)] = ServiceFormField,
+        [nameof(StartOrderDraftCommand.FormTypeVersion)] = ServiceFormField,
+        [nameof(StartOrderDraftCommand.FormTypeName)] = ServiceFormField,
+        [nameof(StartOrderDraftCommand.IntendedUseId)] = IntendedUseField,
+        [nameof(StartOrderDraftCommand.IntendedUseVersion)] = IntendedUseField,
+        [nameof(StartOrderDraftCommand.IntendedUseName)] = IntendedUseField
+    };
+
+    /// <summary>The label of each field, also used as the display name in its validation messages.</summary>
+    private static readonly Dictionary<string, string> FieldLabels = new()
+    {
+        [ServiceFormField] = "Service · form type",
+        [nameof(StartOrderDraftCommand.PropertyStreet)] = "Street",
+        [nameof(StartOrderDraftCommand.PropertyCity)] = "City",
+        [nameof(StartOrderDraftCommand.PropertyState)] = "State",
+        [nameof(StartOrderDraftCommand.PropertyZip)] = "ZIP",
+        [nameof(StartOrderDraftCommand.PropertyType)] = "Property type",
+        [IntendedUseField] = "Intended use",
+        [nameof(StartOrderDraftCommand.LoanNumber)] = "Loan number",
+        [nameof(StartOrderDraftCommand.DueDate)] = "Due date",
+        [nameof(SaveBorrowerAndAccessContactCommand.BorrowerName)] = "Borrower name",
+        [nameof(SaveBorrowerAndAccessContactCommand.AccessContactName)] = "Access contact",
+        [nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone)] = "Access contact phone"
+    };
+
+    private static readonly ErrorMessageLocalizer FieldNames = new()
+    {
+        DisplayNameResolver = (target, _) => FieldLabels.GetValueOrDefault(FieldOf(target))
+    };
+
+    private readonly Dictionary<string, string> _fieldErrors = [];
+
+    private bool _initialized;
+    private Guid? _loadedFor;
+    private bool _loading = true;
+    private bool _ready;
+    private bool _canRetry;
+    private bool _saving;
+    private string? _error;
+    private int _activeTab;
+
+    private string _tenantId = "";
+    private string _tenantUserId = "";
+    private Guid _newOrderGuid;
+    private string? _clientId;
+    private ServiceFormOption[] _serviceForms = [];
+    private IntendedUse[] _intendedUses = [];
+    private OrderDraft? _draft;
+
+    private ServiceFormOption? _serviceForm;
+    private string _street = "";
+    private string _city = "";
+    private string _state = "";
+    private string _zip = "";
+    private string? _propertyType;
+    private IntendedUse? _intendedUse;
+    private string _loanNumber = "";
+    private DateTime? _dueDate;
+
+    private string _borrowerName = "";
+    private string _accessContactName = "";
+    private string _accessContactPhone = "";
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    /// <summary>The draft to resume, or <see langword="null"/> for a new order. The URL carries only the GUID part of the order ID.</summary>
+    [Parameter]
+    public Guid? OrderGuid { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Starting a draft replaces /orders/new with the draft's URL; the page already shows that draft.
+        if (_initialized && OrderGuid == _loadedFor)
+        {
+            return;
+        }
+
+        _initialized = true;
+        _loadedFor = OrderGuid;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _ready = false;
+        _canRetry = false;
+        _error = null;
+        _fieldErrors.Clear();
+        _draft = null;
+        _activeTab = RequestTab;
+
+        var user = (await AuthenticationState).User;
+        var tenantId = user.FindFirst("tenant_id")?.Value;
+        var userId = user.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(userId))
+        {
+            _error = "Your account has no tenant.";
+            _loading = false;
+            return;
+        }
+        _tenantId = tenantId;
+        _tenantUserId = TenantKey.Create(tenantId, userId);
+
+        try
+        {
+            if (OrderGuid is { } orderGuid)
+            {
+                await LoadDraftAsync(TenantKey.Create(_tenantId, orderGuid.ToString()));
+            }
+            else
+            {
+                await LoadNewOrderAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The order entry page could not load.");
+            _error = "The order could not be loaded. Try again in a moment.";
+            _canRetry = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadNewOrderAsync()
+    {
+        var servicesTask = ClusterClient.GetOrderableServicesGrain(_tenantId).GetOrderableServicesAsync();
+        var intendedUsesTask = ClusterClient.GetIntendedUsesGrain(_tenantId).GetIntendedUsesAsync();
+        var usersTask = ClusterClient.GetUserDirectoryGrain(_tenantId).GetUsersAsync();
+        await Task.WhenAll(servicesTask, intendedUsesTask, usersTask);
+
+        _serviceForms = [.. servicesTask.Result.SelectMany(service => service.FormTypes.Select(formType => new ServiceFormOption(
+            service.ServiceRequestTypeId, service.ServiceRequestTypeVersion, service.ServiceRequestTypeName,
+            formType.FormTypeId, formType.FormTypeVersion, formType.FormTypeName)))];
+        _intendedUses = intendedUsesTask.Result;
+        _clientId = usersTask.Result.FirstOrDefault(entry => entry.UserId == _tenantUserId)?.ClientId;
+        if (_clientId is null)
+        {
+            _error = "Your account is not linked to a client, so you can't order.";
+        }
+
+        _newOrderGuid = Guid.NewGuid();
+        _ready = true;
+    }
+
+    private async Task LoadDraftAsync(string orderId)
+    {
+        var result = await ClusterClient.GetGrain<IOrderGrain>(orderId).GetOrderDraftAsync();
+        if (result.IsFailure)
+        {
+            _error = result.Error.GetFormattedMessage();
+            return;
+        }
+
+        ShowDraft(result.Value);
+        _activeTab = FirstUnfinishedTab(result.Value);
+        _ready = true;
+    }
+
+    /// <summary>Tab 1 is finished once the draft exists, so until tabs 3 and 4 are built, every draft resumes on tab 2.</summary>
+    private static int FirstUnfinishedTab(OrderDraft draft) => BorrowerTab;
+
+    private async Task StartDraftAsync()
+    {
+        var orderGuid = _newOrderGuid;
+        var command = new StartOrderDraftCommand(
+            _clientId!,
+            _serviceForm?.ServiceRequestTypeId ?? "", _serviceForm?.ServiceRequestTypeVersion ?? 0, _serviceForm?.ServiceRequestTypeName ?? "",
+            _serviceForm?.FormTypeId ?? "", _serviceForm?.FormTypeVersion ?? 0, _serviceForm?.FormTypeName ?? "",
+            _street, _city, _state, _zip, _propertyType ?? "",
+            _intendedUse?.IntendedUseId ?? "", _intendedUse?.IntendedUseVersion ?? 0, _intendedUse?.Name ?? "",
+            _loanNumber, _dueDate is { } dueDate ? DateOnly.FromDateTime(dueDate) : default);
+
+        var order = ClusterClient.GetGrain<IOrderGrain>(TenantKey.Create(_tenantId, orderGuid.ToString()));
+        var draft = await SaveAsync(() => order.StartOrderDraftAsync(command).Bind(_ => order.GetOrderDraftAsync()));
+        if (draft is null)
+        {
+            return;
+        }
+
+        ShowDraft(draft);
+        _activeTab = BorrowerTab;
+        _loadedFor = orderGuid;
+        Navigation.NavigateTo($"orders/drafts/{orderGuid}", replace: true);
+    }
+
+    private async Task SaveBorrowerAndAccessContactAsync()
+    {
+        var order = ClusterClient.GetGrain<IOrderGrain>(_draft!.OrderId);
+        var command = new SaveBorrowerAndAccessContactCommand(
+            _borrowerName,
+            string.IsNullOrWhiteSpace(_accessContactName) ? null : _accessContactName,
+            string.IsNullOrWhiteSpace(_accessContactPhone) ? null : _accessContactPhone);
+
+        var draft = await SaveAsync(() => order.SaveBorrowerAndAccessContactAsync(command).Bind(_ => order.GetOrderDraftAsync()));
+        if (draft is null)
+        {
+            return;
+        }
+
+        ShowDraft(draft);
+        Snackbar.Add("Borrower & Access contact saved.", Severity.Success);
+    }
+
+    /// <summary>Runs a command and reads the draft after it, showing any errors; returns the draft, or <see langword="null"/> when either failed.</summary>
+    private async Task<TResponse?> SaveAsync<TResponse>(Func<Task<Result<TResponse>>> command) where TResponse : class
+    {
+        _saving = true;
+        _error = null;
+        _fieldErrors.Clear();
+        try
+        {
+            var result = await command();
+            if (result.IsSuccess)
+            {
+                return result.Value;
+            }
+
+            ShowErrors(result.Error);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "An order entry command failed.");
+            _error = "The order could not be saved. Try again in a moment.";
+            return null;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void ShowDraft(OrderDraft draft)
+    {
+        _draft = draft;
+        _borrowerName = draft.BorrowerName ?? "";
+        _accessContactName = draft.AccessContactName ?? "";
+        _accessContactPhone = FormatPhone(draft.AccessContactPhone);
+    }
+
+    /// <summary>Shows each validation error on its field, and any other error above the form.</summary>
+    private void ShowErrors(Error error)
+    {
+        if (error is not ValidationError validation)
+        {
+            _error = error.GetFormattedMessage();
+            return;
+        }
+
+        var unplaced = new List<string>();
+        foreach (var entry in validation.Entries)
+        {
+            var field = FieldOf(entry.Target);
+            var message = entry.GetFormattedMessage(CultureInfo.CurrentUICulture, FieldNames);
+            if (FieldLabels.ContainsKey(field))
+            {
+                _fieldErrors.TryAdd(field, message);
+            }
+            else
+            {
+                unplaced.Add(message);
+            }
+        }
+        _error = unplaced.Count > 0 ? string.Join(" ", unplaced) : null;
+    }
+
+    private static string FieldOf(string target) => FieldByTarget.GetValueOrDefault(target, target);
+
+    private bool HasError(string field) => _fieldErrors.ContainsKey(field);
+
+    private string? ErrorText(string field) => _fieldErrors.GetValueOrDefault(field);
+
+    private static IEnumerable<(string Label, string Value)> RequestAndProperty(OrderDraft draft) =>
+    [
+        ("Service · form type", $"{draft.ServiceRequestTypeName} · {draft.FormTypeName}"),
+        ("Property address", draft.PropertyAddress),
+        ("Property type", draft.PropertyType),
+        ("Intended use", draft.IntendedUseName),
+        ("Loan number", draft.LoanNumber),
+        ("Due date", draft.DueDate.ToString("MMM d, yyyy"))
+    ];
+
+    /// <summary>Formats the 10 digits the order records as 540-555-0142.</summary>
+    private static string FormatPhone(string? digits) =>
+        digits is { Length: 10 } ? $"{digits[..3]}-{digits[3..6]}-{digits[6..]}" : digits ?? "";
+
+    /// <summary>One choice of the combined Service · form type select.</summary>
+    private sealed record ServiceFormOption(
+        string ServiceRequestTypeId,
+        int ServiceRequestTypeVersion,
+        string ServiceRequestTypeName,
+        string FormTypeId,
+        int FormTypeVersion,
+        string FormTypeName)
+    {
+        public string Display => $"{ServiceRequestTypeName} · {FormTypeName}";
+    }
+}

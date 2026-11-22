@@ -16,10 +16,9 @@
     <RowTemplate>
         <MudTd DataLabel="Property">@context.PropertyAddress</MudTd>
         <MudTd DataLabel="Form type">@context.FormTypeName</MudTd>
-        <MudTd DataLabel="Last saved">@context.LastSavedAt.ToString("MMM d, h:mm tt")</MudTd>
+        <MudTd DataLabel="Last saved">@context.LastSavedAt.ToLocalTime().ToString("MMM d, h:mm tt")</MudTd>
         <MudTd Style="text-align:right">
-            @* The order entry page that resumes a draft is not built yet. *@
-            <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="true">Resume</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@ResumeHref(context.OrderId)">Resume</MudButton>
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>
@@ -68,5 +67,12 @@
             StateHasChanged();
         }
         return new TableData<ClientOrderDraft> { Items = drafts, TotalItems = total };
+    }
+
+    /// <summary>The order entry page of a draft; its URL carries only the GUID part of the order ID.</summary>
+    private static string ResumeHref(string orderId)
+    {
+        TenantKey.Split(orderId, out _, out var orderGuid);
+        return $"orders/drafts/{orderGuid}";
     }
 }
