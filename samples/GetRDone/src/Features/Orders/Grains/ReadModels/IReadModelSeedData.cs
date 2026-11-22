@@ -13,5 +13,6 @@ public interface IReadModelSeedData
 /// <summary>The reference data seeded into one tenant's read models.</summary>
 public sealed record ReadModelSeed(
     IntendedUse[] IntendedUses,
+    DocumentType[] DocumentTypes,
     OrderableService[] OrderableServices,
     UserDirectoryEntry[] Users);

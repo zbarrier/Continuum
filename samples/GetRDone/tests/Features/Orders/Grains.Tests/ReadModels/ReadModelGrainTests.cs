@@ -25,10 +25,12 @@ public sealed class ReadModelGrainTests(OrdersCluster fixture) : IClassFixture<O
         GivenSignedIn(RequestedByUsers.ClientUser1);
 
         Assert.Equal(TestData.IntendedUses, await grainFactory.GetIntendedUsesGrain(TenantId).GetIntendedUsesAsync());
+        Assert.Equal(TestData.DocumentTypes, await grainFactory.GetDocumentTypesGrain(TenantId).GetDocumentTypesAsync());
         Assert.Equivalent(TestData.OrderableServices, await grainFactory.GetOrderableServicesGrain(TenantId).GetOrderableServicesAsync(), strict: true);
         Assert.Equal(TestData.Users, await grainFactory.GetUserDirectoryGrain(TenantId).GetUsersAsync());
 
         Assert.Empty(await grainFactory.GetIntendedUsesGrain(TestData.OtherTenantId).GetIntendedUsesAsync());
+        Assert.Empty(await grainFactory.GetDocumentTypesGrain(TestData.OtherTenantId).GetDocumentTypesAsync());
         Assert.Empty(await grainFactory.GetOrderableServicesGrain(TestData.OtherTenantId).GetOrderableServicesAsync());
         Assert.Empty(await grainFactory.GetUserDirectoryGrain(TestData.OtherTenantId).GetUsersAsync());
     }

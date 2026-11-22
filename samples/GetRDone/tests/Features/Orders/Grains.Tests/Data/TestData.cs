@@ -24,6 +24,9 @@ public static class TestData
     public static IntendedUse Refinance { get; } = new("summit|7a1d0c42", 2, "Refinance");
     public static IntendedUse Purchase { get; } = new("summit|3e8b5f19", 1, "Purchase");
 
+    public static DocumentType PurchaseContract { get; } = new("summit|4a8e2c61", 2, "Purchase contract");
+    public static DocumentType Survey { get; } = new("summit|c3f7b905", 1, "Survey");
+
     public static OrderableFormType UniformResidentialAppraisal { get; } = new("summit|d05e9b37", 1, "Uniform Residential Appraisal Report");
     public static OrderableFormType DesktopAppraisal { get; } = new("summit|8e2b6f41", 2, "Desktop Appraisal");
 
@@ -46,6 +49,8 @@ public static class TestData
         RequestedByUsers.Coordinator1, "Coordinator", "Summit Valuation", clientId: null);
 
     public static IntendedUse[] IntendedUses { get; } = [Refinance, Purchase];
+
+    public static DocumentType[] DocumentTypes { get; } = [PurchaseContract, Survey];
 
     public static OrderableService[] OrderableServices { get; } = [ResidentialAppraisal, CommercialAppraisal];
 

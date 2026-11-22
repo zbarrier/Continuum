@@ -14,6 +14,9 @@ public static class ReadModelGrainFactoryExtensions
     public static IIntendedUsesGrain GetIntendedUsesGrain(this IGrainFactory grainFactory, string? tenantId)
         => grainFactory.GetGrain<IIntendedUsesGrain>(TenantKey.Create(tenantId, DefaultKey));
 
+    public static IDocumentTypesGrain GetDocumentTypesGrain(this IGrainFactory grainFactory, string? tenantId)
+        => grainFactory.GetGrain<IDocumentTypesGrain>(TenantKey.Create(tenantId, DefaultKey));
+
     public static IOrderableServicesGrain GetOrderableServicesGrain(this IGrainFactory grainFactory, string? tenantId)
         => grainFactory.GetGrain<IOrderableServicesGrain>(TenantKey.Create(tenantId, DefaultKey));
 

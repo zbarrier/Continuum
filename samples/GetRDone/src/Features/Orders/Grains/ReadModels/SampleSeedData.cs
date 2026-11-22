@@ -22,6 +22,13 @@ public sealed class SampleSeedData : IReadModelSeedData
             new("elliott|4c19e7a2", 1, "Construction"),
             new("elliott|e81d3f06", 1, "Other")
         ],
+        DocumentTypes:
+        [
+            new("elliott|3e7a9c15", 1, "Lease agreements"),
+            new("elliott|5f1c8e24", 1, "Rent roll"),
+            new("elliott|9b4d2a71", 1, "Operating statements"),
+            new("elliott|7d2e9b40", 1, "Other")
+        ],
         OrderableServices:
         [
             new("elliott|5a1f0c3e", 1, "Appraisal Commercial",
