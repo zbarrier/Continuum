@@ -19,7 +19,8 @@ public interface IProjectionGrain : IGrainWithStringKey
 }
 
 /// <summary>
-/// Base class for a grain that maintains a single persistent projection state.
+/// Base class for a grain that maintains a single persistent projection state, applied with the dependencies in
+/// <typeparamref name="TContext"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -33,26 +34,39 @@ public interface IProjectionGrain : IGrainWithStringKey
 ///     The grain holds exactly one persistent state. Prefer a separate grain per read model over fanning a delivery
 ///     out across several states.
 /// </para>
+/// <para>
+///     The context wraps the dependencies the state needs to apply events, such as other grains or services. The
+///     derived grain builds it once from its injected services and passes it to the constructor, and the grain hands
+///     it to the state with every delivery. Use <see cref="ProjectionGrain{TGrain, TState}"/> when no dependencies
+///     are needed.
+/// </para>
 /// </remarks>
-public abstract class ProjectionGrain<TGrain, TState> : Grain, IProjectionGrain, IStreamSubscriptionObserver
-    where TGrain : ProjectionGrain<TGrain, TState>
-    where TState : class, IProjectionState, new()
+/// <typeparam name="TGrain">The concrete grain type.</typeparam>
+/// <typeparam name="TState">The projection state.</typeparam>
+/// <typeparam name="TContext">The dependencies passed to the state.</typeparam>
+public abstract class ProjectionGrain<TGrain, TState, TContext> : Grain, IProjectionGrain, IStreamSubscriptionObserver
+    where TGrain : ProjectionGrain<TGrain, TState, TContext>
+    where TState : class, IProjectionState<TContext>, new()
+    where TContext : class
 {
     private StreamSubscriptionManager<TGrain>? _subscriptionManager;
 
     /// <summary>
-    /// Initializes the projection with the storage for its state and the logger to report failures to.
+    /// Initializes the projection with the storage for its state, the dependencies the state is applied with, and
+    /// the logger to report failures to.
     /// </summary>
     /// <remarks>
     /// Declare <c>[PersistentState]</c> on the derived grain's constructor parameter and pass it through; Orleans
     /// reads the attribute from the concrete grain, so the derived grain still chooses the state name and provider.
     /// </remarks>
-    protected ProjectionGrain(IPersistentState<TState> storage, ILogger logger)
+    protected ProjectionGrain(IPersistentState<TState> storage, TContext context, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(storage);
+        ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(logger);
 
         Storage = storage;
+        Context = context;
         Logger = logger;
     }
 
@@ -65,6 +79,11 @@ public abstract class ProjectionGrain<TGrain, TState> : Grain, IProjectionGrain,
     /// The projection state, as held by <see cref="Storage"/>.
     /// </summary>
     protected TState State => Storage.State;
+
+    /// <summary>
+    /// The dependencies the state is applied with.
+    /// </summary>
+    protected TContext Context { get; }
 
     /// <summary>
     /// Logger used to report subscription and delivery failures.
@@ -220,11 +239,37 @@ public abstract class ProjectionGrain<TGrain, TState> : Grain, IProjectionGrain,
     /// </remarks>
     protected virtual async Task ApplyAsync(IReadOnlyList<IStreamedEvent<object>> streamedEvents)
     {
-        var hasChanges = await State.WhenAsync(streamedEvents);
+        var hasChanges = await State.WhenAsync(streamedEvents, Context);
         if (hasChanges)
         {
             await Storage.WriteStateAsync();
         }
+    }
+}
+
+/// <summary>
+/// Base class for a grain that maintains a single persistent projection state that needs no dependencies.
+/// </summary>
+/// <remarks>
+/// Delivery follows <see cref="ProjectionGrain{TGrain, TState, TContext}"/>. Use that class when applying an event
+/// needs dependencies such as other grains or services.
+/// </remarks>
+/// <typeparam name="TGrain">The concrete grain type.</typeparam>
+/// <typeparam name="TState">The projection state.</typeparam>
+public abstract class ProjectionGrain<TGrain, TState> : ProjectionGrain<TGrain, TState, NoProjectionContext>
+    where TGrain : ProjectionGrain<TGrain, TState>
+    where TState : class, IProjectionState<NoProjectionContext>, new()
+{
+    /// <summary>
+    /// Initializes the projection with the storage for its state and the logger to report failures to.
+    /// </summary>
+    /// <remarks>
+    /// Declare <c>[PersistentState]</c> on the derived grain's constructor parameter and pass it through; Orleans
+    /// reads the attribute from the concrete grain, so the derived grain still chooses the state name and provider.
+    /// </remarks>
+    protected ProjectionGrain(IPersistentState<TState> storage, ILogger logger)
+        : base(storage, NoProjectionContext.Instance, logger)
+    {
     }
 }
 
