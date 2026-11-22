@@ -18,13 +18,13 @@ namespace GetRDone.Orders.Grains.Tests.OrderAggregate.Slices;
 ///     Given/When/Then tests for the OrderDraft read model the order builds from its own events. Each test uses a new order
 ///     in the test tenant.
 /// </summary>
-public sealed class OrderDraftTests
+public sealed class GetOrderDraftTests
     : EventDrivenStateMachineGrainTestHarness<IOrderGrain, OrderGrain, OrderState, OrderEvent, OrderStatus, OrderCommand>,
       IClassFixture<OrdersCluster>
 {
     private static readonly DateTimeOffset SavedAt = TestData.At.AddMinutes(5);
 
-    public OrderDraftTests(OrdersCluster fixture)
+    public GetOrderDraftTests(OrdersCluster fixture)
         : base(fixture.Cluster, TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString())) { }
 
     private IOrderGrain Order => Cluster.GrainFactory.GetGrain<IOrderGrain>(GrainId);
@@ -62,7 +62,8 @@ public sealed class OrderDraftTests
             BorrowerName: null,
             AccessContactName: null,
             AccessContactPhone: null,
-            TestData.At), draft));
+            TestData.At,
+            Version: 1), draft));
     }
 
     [Fact]
@@ -80,6 +81,7 @@ public sealed class OrderDraftTests
             Assert.Equal(Command1.AccessContactName, draft.AccessContactName);
             Assert.Equal(Command1.AccessContactPhone, draft.AccessContactPhone);
             Assert.Equal(SavedAt, draft.LastSavedAt);
+            Assert.Equal(2, draft.Version);
         });
     }
 
@@ -98,6 +100,7 @@ public sealed class OrderDraftTests
             Assert.Null(draft.AccessContactName);
             Assert.Null(draft.AccessContactPhone);
             Assert.Equal(SavedAt, draft.LastSavedAt);
+            Assert.Equal(3, draft.Version);
         });
     }
 
@@ -134,7 +137,8 @@ public sealed class OrderDraftTests
             Command1.BorrowerName,
             Command1.AccessContactName,
             Command1.AccessContactPhone,
-            SavedAt), draft));
+            SavedAt,
+            Version: 3), draft));
     }
 
     [Fact]

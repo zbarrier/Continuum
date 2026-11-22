@@ -1,5 +1,4 @@
 @* Tab 2 of order entry: saves the borrower and the access contact of the draft. *@
-@using Continuum.CSharpFunctionalExtensions
 @using GetRDone.Orders.Abstractions
 @using GetRDone.Orders.Abstractions.OrderAggregate
 @inject IClusterClient ClusterClient
@@ -82,7 +81,7 @@
             string.IsNullOrWhiteSpace(_accessContactName) ? null : _accessContactName,
             string.IsNullOrWhiteSpace(_accessContactPhone) ? null : _accessContactPhone);
 
-        var draft = await _form.SaveAsync(() => order.SaveBorrowerAndAccessContactAsync(command).Bind(_ => order.GetOrderDraftAsync()));
+        var draft = await _form.SaveDraftAsync(order, Draft, () => order.SaveBorrowerAndAccessContactAsync(command));
         if (draft is null)
         {
             return;

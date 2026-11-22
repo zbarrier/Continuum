@@ -1,5 +1,4 @@
 @* Tab 1 of order entry: starts the draft, or saves the request and property of a draft that was already started. *@
-@using Continuum.CSharpFunctionalExtensions
 @using Continuum.Orleans.Tenancy
 @using GetRDone.Orders.Abstractions
 @using GetRDone.Orders.Abstractions.OrderAggregate
@@ -213,7 +212,7 @@
             tab.LoanNumber, tab.DueDate);
 
         var order = ClusterClient.GetGrain<IOrderGrain>(TenantKey.Create(TenantId, NewOrderGuid.ToString()));
-        var draft = await _form.SaveAsync(() => order.StartOrderDraftAsync(command).Bind(_ => order.GetOrderDraftAsync()));
+        var draft = await _form.SaveDraftAsync(order, current: null, () => order.StartOrderDraftAsync(command));
         if (draft is not null)
         {
             await OnSaved.InvokeAsync(draft);
@@ -223,7 +222,7 @@
     private async Task SaveChangesAsync(OrderDraft current, SaveRequestAndPropertyCommand command)
     {
         var order = ClusterClient.GetGrain<IOrderGrain>(current.OrderId);
-        var draft = await _form.SaveAsync(() => order.SaveRequestAndPropertyAsync(command).Bind(_ => order.GetOrderDraftAsync()));
+        var draft = await _form.SaveDraftAsync(order, current, () => order.SaveRequestAndPropertyAsync(command));
         if (draft is null)
         {
             return;

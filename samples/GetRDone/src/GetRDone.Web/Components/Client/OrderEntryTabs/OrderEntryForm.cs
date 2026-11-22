@@ -1,6 +1,9 @@
 using System.Globalization;
 
 using Continuum.CSharpFunctionalExtensions;
+using Continuum.Domain;
+
+using GetRDone.Orders.Abstractions.OrderAggregate;
 
 namespace GetRDone.Web.Components.Client.OrderEntryTabs;
 
@@ -69,6 +72,25 @@ internal sealed class OrderEntryForm
             Saving = false;
         }
     }
+
+    /// <summary>
+    ///     Runs <paramref name="save"/> on <paramref name="order"/> and shows its errors; returns the draft after the save, or
+    ///     <see langword="null"/> when it failed. The draft is <paramref name="current"/> with the events the save returns
+    ///     applied (or built from them, when the save starts the draft), so the order is not read again. When the order moved
+    ///     past <paramref name="current"/> (another browser saved the draft), the draft is read from the order instead.
+    /// </summary>
+    public Task<OrderDraft?> SaveDraftAsync<TResponse>(
+        IOrderGrain order, OrderDraft? current, Func<Task<Result<TResponse>>> save) where TResponse : ICommandResponseWithChanges
+        => SaveAsync(() => save().Bind(async response =>
+        {
+            var events = response.Changes.Select(change => (OrderEvent)change.Event).ToList();
+            if (response.Version != (current?.Version ?? 0) + events.Count)
+            {
+                return await order.GetOrderDraftAsync();
+            }
+
+            return Result.Success(current is null ? OrderDraft.Build(events) : current.Apply(events));
+        }));
 
     private void ShowErrors(Error error)
     {
