@@ -464,6 +464,72 @@ public sealed record LoanNumber : StringValueObject<LoanNumber>
     private LoanNumber(string value) : base(value) { }
 }
 
+[Alias("Orders.BorrowerName.V1"), GenerateSerializer, Immutable]
+public sealed record BorrowerName : StringValueObject<BorrowerName>
+{
+    public const int MaxLength = 100;
+
+    public static Result<BorrowerName> Create(string? value, string propertyName = nameof(BorrowerName))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new BorrowerName(validatedValue));
+    }
+    public static Result<BorrowerName> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new BorrowerName(validatedValue));
+    }
+
+    private BorrowerName(string value) : base(value) { }
+}
+
+/// <summary>The name of the person who gives the appraiser access to the property (see <see cref="AccessContact"/>).</summary>
+[Alias("Orders.AccessContactName.V1"), GenerateSerializer, Immutable]
+public sealed record AccessContactName : StringValueObject<AccessContactName>
+{
+    public const int MaxLength = 100;
+
+    public static Result<AccessContactName> Create(string? value, string propertyName = nameof(AccessContactName))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new AccessContactName(validatedValue));
+    }
+    public static Result<AccessContactName> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new AccessContactName(validatedValue));
+    }
+
+    private AccessContactName(string value) : base(value) { }
+}
+
+/// <summary>
+///     The 10-digit US phone number of the property's access contact (see <see cref="AccessContact"/>), stored as digits
+///     only (formatting such as <c>(540) 555-0142</c> is accepted and removed).
+/// </summary>
+[Alias("Orders.AccessContactPhone.V1"), GenerateSerializer, Immutable]
+public sealed record AccessContactPhone : StringValueObject<AccessContactPhone>
+{
+    public static Result<AccessContactPhone> Create(string? value, string propertyName = nameof(AccessContactPhone))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsUSPhoneNumber(propertyName)
+            .Map(validatedValue => new AccessContactPhone(validatedValue));
+    }
+    public static Result<AccessContactPhone> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsUSPhoneNumber(propertyPath, member)
+            .Map(validatedValue => new AccessContactPhone(validatedValue));
+    }
+
+    private AccessContactPhone(string value) : base(value) { }
+}
+
 [Alias("Orders.DueDate.V1"), GenerateSerializer, Immutable]
 public sealed record DueDate : DateOnlyValueObject<DueDate>
 {

@@ -8,15 +8,17 @@ namespace GetRDone.Orders.Tests;
 
 public sealed class OrderEventTypeMapTests
 {
-    [Fact]
-    public void OrderDraftStarted_IsRegisteredAsADomainEvent()
+    [Theory]
+    [InlineData(typeof(OrderDraftStarted), "Orders.OrderDraftStarted.V1")]
+    [InlineData(typeof(BorrowerAndAccessContactSaved), "Orders.BorrowerAndAccessContactSaved.V1")]
+    public void OrderEvent_IsRegisteredAsADomainEvent(Type eventType, string typeIdentifier)
     {
-        RuntimeHelpers.RunModuleConstructor(typeof(OrderDraftStarted).Module.ModuleHandle);
+        RuntimeHelpers.RunModuleConstructor(eventType.Module.ModuleHandle);
 
         var registration = Assert.Single(
             TypeMapRegistry.GetRegistrations(TypeMapKinds.DomainEvent),
-            item => item.Type == typeof(OrderDraftStarted));
+            item => item.Type == eventType);
 
-        Assert.Equal("Orders.OrderDraftStarted.V1", registration.TypeIdentifier);
+        Assert.Equal(typeIdentifier, registration.TypeIdentifier);
     }
 }

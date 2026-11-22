@@ -44,6 +44,46 @@ public sealed record PropertyAddress
     }
 }
 
+/// <summary>
+///     The person who gives the appraiser access to the property. The access contact is optional, but its name and phone
+///     number go together: when either is given, both are required.
+/// </summary>
+[Alias("Orders.AccessContact.V1"), GenerateSerializer, Immutable]
+public sealed record AccessContact
+{
+    [Id(0)] public AccessContactName Name { get; }
+    [Id(1)] public AccessContactPhone Phone { get; }
+
+    /// <summary>Creates the access contact, or returns <see langword="null"/> when both the name and phone are empty.</summary>
+    public static Result<AccessContact?> CreateOptional(string? name, string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(phone))
+            return Result.Success<AccessContact?>(null);
+
+        return Result.CombineForValidation(
+                AccessContactName.Create(name).Deconstruct(out var validName),
+                AccessContactPhone.Create(phone).Deconstruct(out var validPhone))
+            .Map(() => (AccessContact?)new AccessContact(validName!, validPhone!));
+    }
+    /// <summary>Creates the access contact, or returns <see langword="null"/> when both the name and phone are empty.</summary>
+    public static Result<AccessContact?> CreateOptional(string? name, string? phone, PropertyPath propertyPath)
+    {
+        if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(phone))
+            return Result.Success<AccessContact?>(null);
+
+        return Result.CombineForValidation(
+                AccessContactName.Create(name, propertyPath, nameof(AccessContactName)).Deconstruct(out var validName),
+                AccessContactPhone.Create(phone, propertyPath, nameof(AccessContactPhone)).Deconstruct(out var validPhone))
+            .Map(() => (AccessContact?)new AccessContact(validName!, validPhone!));
+    }
+
+    private AccessContact(AccessContactName name, AccessContactPhone phone)
+    {
+        Name = name;
+        Phone = phone;
+    }
+}
+
 /// <summary>A selected version of a service request type, identified by its ID, version, and name.</summary>
 [Alias("Orders.ServiceRequestTypeRef.V1"), GenerateSerializer, Immutable]
 public sealed record ServiceRequestTypeRef

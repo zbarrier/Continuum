@@ -51,7 +51,8 @@ public enum OrderStatus
 
 public enum OrderCommand
 {
-    StartDraft
+    StartDraft,
+    SaveBorrowerAndAccessContact
 }
 
 [GenerateSerializer]
@@ -70,5 +71,6 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     protected override void ConfigureStateMachine()
     {
         StateMachine.Configure(OrderStatus.None).Permit(OrderCommand.StartDraft, OrderStatus.Draft);
+        StateMachine.Configure(OrderStatus.Draft).PermitReentry(OrderCommand.SaveBorrowerAndAccessContact);
     }
 }
