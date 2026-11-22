@@ -59,8 +59,8 @@ public sealed class ClientOrderDraftsState : ProjectionState<ClientOrderDraftsSt
     /// <summary>The drafts by order ID.</summary>
     [Id(0)] public Dictionary<string, ClientOrderDraft> Drafts { get; init; } = [];
 
-    protected override ValueTask<bool> Handle(IStreamedEvent<object> streamedEvent)
-        => ValueTask.FromResult(streamedEvent.Event switch
+    protected override Task<bool> Handle(IStreamedEvent<object> streamedEvent)
+        => Task.FromResult(streamedEvent.Event switch
         {
             OrderDraftStarted evt => Handle(evt),
             _ => false

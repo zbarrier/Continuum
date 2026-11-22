@@ -47,17 +47,17 @@ public interface IProjectionState
     /// Applies a single event if it has not already been applied.
     /// </summary>
     /// <returns>True if the state changed and must be written.</returns>
-    ValueTask<bool> WhenAsync(IStreamedEvent<object> streamedEvent);
+    Task<bool> WhenAsync(IStreamedEvent<object> streamedEvent);
 
     /// <summary>
     /// Applies each event in order, skipping any that have already been applied.
     /// </summary>
     /// <returns>True if any event changed the state and it must be written.</returns>
-    ValueTask<bool> WhenAsync(IReadOnlyList<IStreamedEvent<object>> streamedEvents);
+    Task<bool> WhenAsync(IReadOnlyList<IStreamedEvent<object>> streamedEvents);
 }
 
 /// <summary>
-/// Base class for projection state, applied from either single-event stream delivery or a catch-up batch.
+/// Base class for projection state, applied from either Orleans stream delivery or a catch-up batch.
 /// </summary>
 /// <remarks>
 /// Both delivery paths share one de-duplication watermark, so an event seen through one path is not
@@ -108,7 +108,7 @@ public abstract class ProjectionState<TState> : IProjectionState
     }
 
     /// <inheritdoc/>
-    public virtual async ValueTask<bool> WhenAsync(IStreamedEvent<object> streamedEvent)
+    public virtual async Task<bool> WhenAsync(IStreamedEvent<object> streamedEvent)
     {
         ArgumentNullException.ThrowIfNull(streamedEvent);
 
@@ -124,7 +124,7 @@ public abstract class ProjectionState<TState> : IProjectionState
     }
 
     /// <inheritdoc/>
-    public virtual async ValueTask<bool> WhenAsync(IReadOnlyList<IStreamedEvent<object>> streamedEvents)
+    public virtual async Task<bool> WhenAsync(IReadOnlyList<IStreamedEvent<object>> streamedEvents)
     {
         ArgumentNullException.ThrowIfNull(streamedEvents);
 
@@ -141,5 +141,5 @@ public abstract class ProjectionState<TState> : IProjectionState
     /// Handles the given event by updating the state.
     /// </summary>
     /// <returns>True if the event was applied and false if the event was ignored.</returns>
-    protected abstract ValueTask<bool> Handle(IStreamedEvent<object> streamedEvent);
+    protected abstract Task<bool> Handle(IStreamedEvent<object> streamedEvent);
 }

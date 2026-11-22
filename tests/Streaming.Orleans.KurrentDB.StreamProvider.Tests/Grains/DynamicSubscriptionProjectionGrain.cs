@@ -48,14 +48,14 @@ public class DynamicSubscriptionProjectionState : ProjectionState<DynamicSubscri
 {
     [Id(0)] public List<string> Authors { get; init; } = new();
 
-    protected override ValueTask<bool> Handle(IStreamedEvent<object> streamedEvent)
+    protected override Task<bool> Handle(IStreamedEvent<object> streamedEvent)
     {
         if (streamedEvent.Event is not ChatMessage message)
         {
-            return ValueTask.FromResult(false);
+            return Task.FromResult(false);
         }
 
         Authors.Add(message.Author);
-        return ValueTask.FromResult(true);
+        return Task.FromResult(true);
     }
 }

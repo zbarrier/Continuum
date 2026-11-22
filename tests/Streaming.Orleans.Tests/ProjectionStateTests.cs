@@ -285,10 +285,10 @@ public class ProjectionStateTests
 
         public bool Handled { get; init; } = true;
 
-        protected override ValueTask<bool> Handle(IStreamedEvent<object> streamedEvent)
+        protected override Task<bool> Handle(IStreamedEvent<object> streamedEvent)
         {
             Applied++;
-            return ValueTask.FromResult(Handled);
+            return Task.FromResult(Handled);
         }
     }
 }

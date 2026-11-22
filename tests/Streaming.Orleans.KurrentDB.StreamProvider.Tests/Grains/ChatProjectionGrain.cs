@@ -45,16 +45,16 @@ public class ChatProjectionState : ProjectionState<ChatProjectionState>
 
     [Id(2)] public IStreamedEvent<object>? LastApplied { get; set; }
 
-    protected override ValueTask<bool> Handle(IStreamedEvent<object> streamedEvent)
+    protected override Task<bool> Handle(IStreamedEvent<object> streamedEvent)
     {
         if (streamedEvent.Event is not ChatMessage message)
         {
-            return ValueTask.FromResult(false);
+            return Task.FromResult(false);
         }
 
         Authors.Add(message.Author);
         AppliedCount++;
         LastApplied = streamedEvent;
-        return ValueTask.FromResult(true);
+        return Task.FromResult(true);
     }
 }
