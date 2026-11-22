@@ -169,6 +169,12 @@ public sealed record OrderDraft(
             LastSavedAt = attached.OccurredAt,
             Version = Version + 1
         },
+        SupportingDocumentRemoved removed => this with
+        {
+            SupportingDocuments = [.. SupportingDocuments.Where(document => document.DocumentId != removed.DocumentId)],
+            LastSavedAt = removed.OccurredAt,
+            Version = Version + 1
+        },
         _ => this with { Version = Version + 1 }
     };
 }

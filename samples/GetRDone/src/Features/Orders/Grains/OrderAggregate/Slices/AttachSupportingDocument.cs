@@ -32,7 +32,7 @@ public sealed partial class OrderGrain
                 .Bind(() => _permissions.CanChangeOrder(initiatedBy!, State))
                 .Ensure(() => State.StateMachine.CanFire(OrderCommand.AttachSupportingDocument),
                     () => RequestErrors.NewFailedPrecondition("The order has been submitted and can no longer be changed."))
-                .Ensure(() => !State.SupportingDocumentIds.Contains(documentId!),
+                .Ensure(() => !State.SupportingDocumentBlobPaths.ContainsKey(documentId!),
                     () => RequestErrors.NewAlreadyExists("The document is already attached to the order."))
                 .Bind(() => GrainFactory.GetDocumentTypesGrain(tenantId).IsCurrentDocumentTypeAsync(documentType!))
                 .BindWithStreamTransaction(this, transaction => transaction.Apply(new SupportingDocumentAttached
@@ -57,5 +57,5 @@ public sealed partial class OrderGrain
 
 public sealed partial class OrderState
 {
-    private void Handle(SupportingDocumentAttached evt) => SupportingDocumentIds.Add(evt.DocumentId);
+    private void Handle(SupportingDocumentAttached evt) => SupportingDocumentBlobPaths[evt.DocumentId] = evt.BlobPath;
 }

@@ -62,6 +62,7 @@ public sealed class ClientOrderDraftsState : HandlerProjectionState<ClientOrderD
         On<RequestAndPropertySaved>(Apply);
         On<BorrowerAndAccessContactSaved>(Apply);
         On<SupportingDocumentAttached>(Apply);
+        On<SupportingDocumentRemoved>(Apply);
     }
 
     /// <summary>The drafts by order ID.</summary>
@@ -105,6 +106,17 @@ public sealed class ClientOrderDraftsState : HandlerProjectionState<ClientOrderD
     }
 
     private bool Apply(SupportingDocumentAttached evt, IStreamedEvent<object> streamedEvent)
+    {
+        if (!Drafts.TryGetValue(evt.OrderId, out var draft))
+        {
+            return false;
+        }
+
+        Drafts[evt.OrderId] = draft with { LastSavedAt = evt.OccurredAt };
+        return true;
+    }
+
+    private bool Apply(SupportingDocumentRemoved evt, IStreamedEvent<object> streamedEvent)
     {
         if (!Drafts.TryGetValue(evt.OrderId, out var draft))
         {

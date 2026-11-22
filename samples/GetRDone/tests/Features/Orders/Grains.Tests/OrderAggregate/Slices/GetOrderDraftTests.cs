@@ -174,6 +174,27 @@ public sealed class GetOrderDraftTests
     }
 
     [Fact]
+    public async Task GetOrderDraft_LeavesOutRemovedDocuments()
+    {
+        var kept = AttachSupportingDocumentTestData.Command3;
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given(
+            StartOrderDraftTestData.DraftStarted1(GrainId),
+            AttachSupportingDocumentTestData.Attached1(GrainId, TestData.At.AddMinutes(2)),
+            AttachSupportingDocumentTestData.Attached(kept, GrainId, RequestedByUsers.ClientUser1, TestData.At.AddMinutes(3)),
+            RemoveSupportingDocumentTestData.Removed1(GrainId, SavedAt));
+
+        await WhenQuery(() => Order.GetOrderDraftAsync());
+
+        ThenQuery<OrderDraft>(draft =>
+        {
+            Assert.Equal(kept.DocumentId, Assert.Single(draft.SupportingDocuments).DocumentId);
+            Assert.Equal(SavedAt, draft.LastSavedAt);
+            Assert.Equal(4, draft.Version);
+        });
+    }
+
+    [Fact]
     public async Task GetOrderDraft_RejectsAnOrderThatWasNotStarted()
     {
         GivenSignedIn(RequestedByUsers.ClientUser1);

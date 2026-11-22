@@ -26,8 +26,8 @@ internal sealed class SupportingDocumentStore(BlobContainerClient container, ILo
     }
 
     /// <summary>
-    ///     Deletes the file of a document the order rejected, as a best effort: a failure is only logged, since an orphaned
-    ///     file does no harm beyond the space it takes.
+    ///     Deletes the file of a document the order rejected or removed, as a best effort: a failure is only logged, since an
+    ///     orphaned file does no harm beyond the space it takes.
     /// </summary>
     public async Task TryDeleteAsync(string blobPath)
     {
@@ -37,7 +37,7 @@ internal sealed class SupportingDocumentStore(BlobContainerClient container, ILo
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "The file {BlobPath} of a document the order rejected could not be deleted.", blobPath);
+            logger.LogWarning(ex, "The supporting document file {BlobPath} could not be deleted.", blobPath);
         }
     }
 }

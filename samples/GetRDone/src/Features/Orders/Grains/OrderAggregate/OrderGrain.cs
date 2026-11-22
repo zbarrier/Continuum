@@ -54,7 +54,8 @@ public enum OrderCommand
     StartDraft,
     SaveRequestAndProperty,
     SaveBorrowerAndAccessContact,
-    AttachSupportingDocument
+    AttachSupportingDocument,
+    RemoveSupportingDocument
 }
 
 [GenerateSerializer]
@@ -65,13 +66,17 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>The user who started the order, as a tenant-qualified user ID.</summary>
     [Id(0)] public string? StartedBy { get; private set; }
 
-    /// <summary>The documents attached to the order, so a document can't be attached twice.</summary>
-    [Id(1)] public HashSet<string> SupportingDocumentIds { get; private set; } = [];
+    /// <summary>
+    ///     The blob path of each document attached to the order, by document ID, so a document can't be attached twice and its
+    ///     removal records where its file is.
+    /// </summary>
+    [Id(1)] public Dictionary<string, string> SupportingDocumentBlobPaths { get; private set; } = [];
 
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
         On<SupportingDocumentAttached>(Handle);
+        On<SupportingDocumentRemoved>(Handle);
     }
 
     protected override void ConfigureStateMachine()
@@ -80,6 +85,7 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         StateMachine.Configure(OrderStatus.Draft)
             .PermitReentry(OrderCommand.SaveRequestAndProperty)
             .PermitReentry(OrderCommand.SaveBorrowerAndAccessContact)
-            .PermitReentry(OrderCommand.AttachSupportingDocument);
+            .PermitReentry(OrderCommand.AttachSupportingDocument)
+            .PermitReentry(OrderCommand.RemoveSupportingDocument);
     }
 }

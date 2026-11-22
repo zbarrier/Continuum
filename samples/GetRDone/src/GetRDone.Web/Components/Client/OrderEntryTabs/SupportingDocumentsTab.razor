@@ -1,5 +1,6 @@
-@* Tab 3 of order entry: lists the draft's supporting documents and attaches more. The file is uploaded to blob storage first
-   and then attached; when the order rejects the document, the upload is deleted again (as a best effort). *@
+@* Tab 3 of order entry: lists the draft's supporting documents, attaches more, and removes them. The file is uploaded to
+   blob storage first and then attached; when the order rejects the document, the upload is deleted again. Removing a
+   document deletes its file once the order has recorded the removal. Both deletes are a best effort. *@
 @using Continuum.CSharpFunctionalExtensions
 @using Continuum.Orleans.Tenancy
 @using GetRDone.Orders.Abstractions
@@ -7,6 +8,7 @@
 @using GetRDone.Orders.Abstractions.ReadModels
 @inject IClusterClient ClusterClient
 @inject SupportingDocumentStore DocumentStore
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject ILogger<SupportingDocumentsTab> Logger
 
@@ -16,13 +18,14 @@
             <th>File</th>
             <th>Type</th>
             <th>Description</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
         @if (Draft.SupportingDocuments.Count == 0)
         {
             <tr>
-                <td colspan="3"><MudText Typo="Typo.body2" Color="Color.Secondary">No documents yet.</MudText></td>
+                <td colspan="4"><MudText Typo="Typo.body2" Color="Color.Secondary">No documents yet.</MudText></td>
             </tr>
         }
         @foreach (var document in Draft.SupportingDocuments)
@@ -31,6 +34,10 @@
                 <td>@document.FileName <MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true">(@FormatSize(document.FileSize))</MudText></td>
                 <td>@document.DocumentTypeName</td>
                 <td>@document.Description</td>
+                <td style="width: 1%">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Disabled="_form.Saving"
+                                   aria-label="@($"Remove {document.FileName}")" OnClick="@(() => RemoveAsync(document))" />
+                </td>
             </tr>
         }
     </tbody>
@@ -178,6 +185,38 @@
         {
             await _fileUpload.ClearAsync();
         }
+        await OnSaved.InvokeAsync(draft);
+    }
+
+    private async Task RemoveAsync(SupportingDocument document)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Remove document", $"Remove {document.FileName} from the order?", yesText: "Remove", cancelText: "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        var order = ClusterClient.GetGrain<IOrderGrain>(Draft.OrderId);
+        var draft = await _form.SaveDraftAsync(order, Draft, async () =>
+        {
+            var result = await order.RemoveSupportingDocumentAsync(new RemoveSupportingDocumentCommand(document.DocumentId));
+            if (result.IsSuccess)
+            {
+                // The order no longer references the file, so it is deleted from where the order recorded it.
+                foreach (var removed in result.Value.Changes.Select(change => change.Event).OfType<SupportingDocumentRemoved>())
+                {
+                    await DocumentStore.TryDeleteAsync(removed.BlobPath);
+                }
+            }
+            return result;
+        });
+        if (draft is null)
+        {
+            return;
+        }
+
+        Snackbar.Add("Document removed.", Severity.Success);
         await OnSaved.InvokeAsync(draft);
     }
 
