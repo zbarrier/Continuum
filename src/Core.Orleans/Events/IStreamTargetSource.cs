@@ -13,6 +13,10 @@ namespace Continuum.Orleans.Events;
 ///         transaction out without a projection.
 ///     </para>
 ///     <para>
+///         A grain always chooses the targets of its own events. When it takes part in another grain's multi-stream
+///         transaction, it chooses them while it prepares its events, and the coordinator appends them unchanged.
+///     </para>
+///     <para>
 ///         There is deliberately no cap on the number of targets. Every target receives a copy of the transaction, so
 ///         the cost grows with the number of targets and with the size of the transaction.
 ///     </para>

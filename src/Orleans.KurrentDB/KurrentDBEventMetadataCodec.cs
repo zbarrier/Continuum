@@ -77,8 +77,13 @@ public static class KurrentDBEventMetadataCodec
     public const string TransactionCoordinatorIdName = "transactionCoordinatorId";
 
     /// <summary>
-    ///     The metadata name the additional stream targets are written under, as a JSON array of grain identifiers.
+    ///     The metadata name the additional stream targets are written under, as a string holding a JSON array of grain
+    ///     identifiers.
     /// </summary>
+    /// <remarks>
+    ///     KurrentDB's multi-stream append reads metadata as a flat map of string values and rejects an array, so the
+    ///     targets are written as text rather than as a JSON array.
+    /// </remarks>
     public const string StreamTargetsName = "streamTargets";
 
     // Utf8JsonWriter writes straight into an IBufferWriter, avoiding the intermediate copy a MemoryStream needs.
@@ -163,18 +168,7 @@ public static class KurrentDBEventMetadataCodec
                 }
                 if (property.NameEquals(StreamTargetsName))
                 {
-                    // Anything other than an array of strings is ignored; malformed targets are skipped on read.
-                    if (property.Value.ValueKind == JsonValueKind.Array)
-                    {
-                        streamTargets = [];
-                        foreach (var target in property.Value.EnumerateArray())
-                        {
-                            if (target.ValueKind == JsonValueKind.String)
-                            {
-                                streamTargets.Add(target.GetString());
-                            }
-                        }
-                    }
+                    streamTargets = ReadStreamTargets(property.Value);
                     continue;
                 }
                 // Create drops the remaining reserved names, so any the client adds later cannot leak into the bag.
@@ -215,6 +209,43 @@ public static class KurrentDBEventMetadataCodec
 
     private static bool TryParseCount(string? value, out int result)
         => int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out result);
+
+    /// <summary>
+    ///     Reads the stream targets from the string that holds their JSON array, or <see langword="null" /> when there
+    ///     are none.
+    /// </summary>
+    /// <remarks>
+    ///     Malformed targets are ignored rather than failing the whole document, so the event's other metadata is kept.
+    ///     Entries that are not strings are skipped.
+    /// </remarks>
+    private static List<string?>? ReadStreamTargets(JsonElement value)
+    {
+        if (value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+        try
+        {
+            using var document = JsonDocument.Parse(value.GetString()!);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return null;
+            }
+            var targets = new List<string?>();
+            foreach (var target in document.RootElement.EnumerateArray())
+            {
+                if (target.ValueKind == JsonValueKind.String)
+                {
+                    targets.Add(target.GetString());
+                }
+            }
+            return targets;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     ///     Writes a metadata document for an event being appended, or <see langword="null" /> when there is nothing to write.
@@ -346,12 +377,17 @@ public static class KurrentDBEventMetadataCodec
         {
             return;
         }
-        writer.WriteStartArray(StreamTargetsName);
-        foreach (var target in streamTargets)
+        var buffer = new ArrayBufferWriter<byte>();
+        using (var targets = new Utf8JsonWriter(buffer))
         {
-            writer.WriteStringValue(target);
+            targets.WriteStartArray();
+            foreach (var target in streamTargets)
+            {
+                targets.WriteStringValue(target);
+            }
+            targets.WriteEndArray();
         }
-        writer.WriteEndArray();
+        writer.WriteString(StreamTargetsName, buffer.WrittenSpan);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 ﻿using Continuum.EventSourcing.Orleans.KurrentDB.Tests.Cluster;
 using Continuum.EventSourcing.Orleans.KurrentDB.Tests.MultiStream.Banking;
+using Continuum.Orleans.KurrentDB;
 
 using KurrentDB.Client;
 
@@ -203,4 +204,37 @@ public class MoneyTransferTests(ClusterFixture fixture)
             ("Debited", checkingId), ("Credited", rentId)
         ], moved.Select(e => (e.EventType.Contains("Debited", StringComparison.Ordinal) ? "Debited" : "Credited", e.AccountId)));
     }
+
+    [Fact]
+    public async Task Should_Record_The_Stream_Targets_Each_Account_Chooses_For_Its_Own_Events()
+    {
+        var (checking, checkingId) = await OpenAccountAsync(100m);
+        var (_, rentId) = await OpenAccountAsync(0m);
+
+        var result = await checking.TransferAsync(new TransferMoneyCommand(rentId, 30m));
+        Assert.True(result.IsSuccess);
+
+        var client = SiloServices.GetRequiredKeyedService<KurrentDBClient>("journaledGrainLog");
+        var moved = await client.ReadAllAsync(Direction.Backwards, Position.End, maxCount: 500,
+                cancellationToken: TestContext.Current.CancellationToken)
+            .Where(e => e.Event.EventType.Contains("Money", StringComparison.Ordinal)
+                && (e.Event.EventStreamId.Contains(checkingId.ToString(), StringComparison.Ordinal)
+                    || e.Event.EventStreamId.Contains(rentId.ToString(), StringComparison.Ordinal)))
+            .Take(2)
+            .ToListAsync(TestContext.Current.CancellationToken);
+        var debited = Assert.Single(moved, e => e.Event.EventType.Contains("Debited", StringComparison.Ordinal));
+        var credited = Assert.Single(moved, e => e.Event.EventType.Contains("Credited", StringComparison.Ordinal));
+
+        Assert.Equal([BankAccountGrain.ActivityStreamTarget(checkingId.ToString()).ToString()], ReadStreamTargets(debited.Event.Metadata));
+        // The credit is the destination's event in the transfer the source coordinates. The destination chooses its
+        // targets, and one of them may be the coordinator's own stream.
+        Assert.Equal(
+        [
+            BankAccountGrain.ActivityStreamTarget(rentId.ToString()).ToString(),
+            fixture.Cluster.GrainFactory.GetGrain<IBankAccountGrain>(checkingId.ToString()).GetGrainId().ToString()
+        ], ReadStreamTargets(credited.Event.Metadata));
+    }
+
+    private static IReadOnlyList<string> ReadStreamTargets(ReadOnlyMemory<byte> metadata)
+        => KurrentDBEventMetadataCodec.Read(metadata.Span).StreamTargets;
 }

@@ -18,15 +18,17 @@ internal sealed class TransactionParticipation<TSession>
     private readonly Func<TSession, IReadOnlyList<object>> _getEvents;
     private readonly Func<int> _getVersion;
     private readonly Func<Task> _refresh;
+    private readonly Func<object, IReadOnlyList<string>?> _getStreamTargets;
 
     public TransactionParticipation(Grain grain, Func<TSession> createSession, Func<TSession, IReadOnlyList<object>> getEvents,
-        Func<int> getVersion, Func<Task> refresh)
+        Func<int> getVersion, Func<Task> refresh, Func<object, IReadOnlyList<string>?> getStreamTargets)
     {
         _grain = grain;
         _createSession = createSession;
         _getEvents = getEvents;
         _getVersion = getVersion;
         _refresh = refresh;
+        _getStreamTargets = getStreamTargets;
     }
 
     public void Register<TCommand>(Func<TCommand, TSession, Task<Result>> handler, bool checkVersion)
@@ -81,10 +83,37 @@ internal sealed class TransactionParticipation<TSession>
             return Result.Failure<PreparedTransaction>(result.Error);
         }
 
+        var newEvents = events.Skip(eventCount).ToArray();
+        IReadOnlyList<IReadOnlyList<string>?>? targets;
+        try
+        {
+            targets = GetStreamTargets(newEvents);
+        }
+        catch
+        {
+            // The session holds events the coordinator will never receive.
+            prepared.Faulted = true;
+            throw;
+        }
         return Result.Success(new PreparedTransaction(
             _grain.GetGrainId(),
-            events.Skip(eventCount).ToArray(),
-            registration.CheckVersion ? prepared.Version : null));
+            newEvents,
+            registration.CheckVersion ? prepared.Version : null,
+            targets));
+    }
+
+    // The owner of an event chooses its targets, so they are the same whether the grain saves the event itself or
+    // prepares it for another grain's transaction.
+    private IReadOnlyList<string>?[]? GetStreamTargets(object[] events)
+    {
+        var targets = new IReadOnlyList<string>?[events.Length];
+        var any = false;
+        for (var index = 0; index < events.Length; index++)
+        {
+            targets[index] = _getStreamTargets(events[index]);
+            any |= targets[index] is not null;
+        }
+        return any ? targets : null;
     }
 
     // Always refreshes, even for an unknown ID (the grain may have been reactivated since it prepared). The refresh

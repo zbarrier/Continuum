@@ -321,13 +321,13 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
             streams.Add(new(participant.GrainId.Type.ToString()!, participant.GrainId, participant.ExpectedVersion));
         }
         // Participants may use a different event base type, so entries are appended as objects; they are serialized
-        // by their runtime type.
+        // by their runtime type. A participant's events keep the targets the participant chose while it prepared.
         var records = new List<LogRecord<object>>(transaction.Records.Count);
         var nextEntry = 0;
         foreach (var record in transaction.Records)
         {
             records.Add(record.Participant is { } participant
-                ? new(participant + 1, record.Event!, GetStreamTargets(record.Event!))
+                ? new(participant + 1, record.Event!, record.StreamTargets)
                 : new(0, logEntries[nextEntry], GetStreamTargets(logEntries[nextEntry++])));
         }
         if (nextEntry != logEntries.Count)

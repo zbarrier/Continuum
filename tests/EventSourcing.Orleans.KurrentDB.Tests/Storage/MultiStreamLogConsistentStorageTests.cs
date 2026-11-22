@@ -87,6 +87,23 @@ public class MultiStreamLogConsistentStorageTests(ClusterFixture fixture)
     }
 
     [Fact]
+    public async Task Should_Record_Each_Events_Stream_Targets()
+    {
+        var first = NewGrainId();
+        var second = NewGrainId();
+        var target = GrainId.Create("snackreport", Guid.NewGuid().ToString("N")).ToString();
+        var events = CreateEvents(2);
+
+        await Storage.AppendAsync(
+            [new LogStream(GrainTypeName, first, 0), new LogStream(GrainTypeName, second, 0)],
+            [new LogRecord<SnackEvent>(0, events[0], [target, second.ToString()]), new LogRecord<SnackEvent>(1, events[1], null)],
+            Guid.NewGuid());
+
+        Assert.Equal([target, second.ToString()], Assert.Single(await ReadMetadataAsync(first)).StreamTargets);
+        Assert.Empty(Assert.Single(await ReadMetadataAsync(second)).StreamTargets);
+    }
+
+    [Fact]
     public async Task Should_Append_Nothing_When_Any_Stream_Conflicts()
     {
         var first = NewGrainId();

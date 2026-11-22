@@ -137,6 +137,31 @@ public class KurrentDBEventMetadataCodecTests
         Assert.Null(read.TraceId);
     }
 
+    // KurrentDB's multi-stream append only accepts string metadata values, so the targets must not be a JSON array.
+    [Fact]
+    public void Write_Records_Stream_Targets_As_A_String_That_Reads_Back()
+    {
+        string[] targets = ["report/a|1", "other/\"quoted\""];
+
+        var bytes = KurrentDBEventMetadataCodec.Write(null, new TransactionInfo(Guid.CreateVersion7(), 1, 1, 0), "coordinator/1", targets);
+
+        Assert.Equal(JsonValueKind.String, Parse(bytes)[KurrentDBEventMetadataCodec.StreamTargetsName].ValueKind);
+        Assert.Equal(targets, KurrentDBEventMetadataCodec.Read(bytes).StreamTargets);
+        Assert.Equal(targets, KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.WriteAll(KurrentDBEventMetadataCodec.Read(bytes))).StreamTargets);
+    }
+
+    [Theory]
+    [InlineData("\"not json\"")]
+    [InlineData("\"{}\"")]
+    [InlineData("[\"report/1\"]")]
+    public void Read_Ignores_Malformed_Stream_Targets_And_Keeps_Other_Metadata(string targets)
+    {
+        var metadata = KurrentDBEventMetadataCodec.Read(Utf8($"{{\"name\":\"value\",\"streamTargets\":{targets}}}"));
+
+        Assert.Empty(metadata.StreamTargets);
+        Assert.Equal("value", metadata["name"]);
+    }
+
     [Fact]
     public void Write_Handles_Documents_Larger_Than_The_Initial_Buffer()
     {

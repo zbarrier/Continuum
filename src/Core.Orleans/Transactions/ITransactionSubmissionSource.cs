@@ -54,4 +54,8 @@ public sealed record TransactionParticipantLog(GrainId GrainId, int? ExpectedVer
 ///     the coordinator's next submitted event.
 /// </param>
 /// <param name="Event">The participant's event, or <see langword="null"/> for a coordinator event.</param>
-public sealed record TransactionRecord(int? Participant, object? Event);
+/// <param name="StreamTargets">
+///     The participant event's validated stream targets, chosen by the participant, or <see langword="null"/> for none.
+///     Always <see langword="null"/> for a coordinator event, whose targets the coordinator chooses when it is appended.
+/// </param>
+public sealed record TransactionRecord(int? Participant, object? Event, IReadOnlyList<string>? StreamTargets = null);

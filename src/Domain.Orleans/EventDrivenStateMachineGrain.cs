@@ -53,7 +53,11 @@ public abstract class EventDrivenStateMachineGrain<TState, TEventBase, TStatus, 
     ///     Gets the additional grains whose streams should receive the transaction an event is appended in. The event
     ///     always goes to its own grain's stream as well. Targets must belong to the same tenant as this grain.
     /// </summary>
-    /// <param name="event">The event being appended, which may be a participant's event in a multi-stream transaction.</param>
+    /// <param name="event">
+    ///     One of this grain's events, either while this grain saves it or while this grain prepares it for another
+    ///     grain's multi-stream transaction. <see cref="JournaledGrain{TGrainState, TEventBase}.State"/> does not include
+    ///     it yet.
+    /// </param>
     /// <returns>The targets; none by default.</returns>
     protected virtual IReadOnlyList<GrainId> GetStreamTargets(object @event) => [];
 
@@ -70,7 +74,8 @@ public abstract class EventDrivenStateMachineGrain<TState, TEventBase, TStatus, 
         _typeMapper = serviceProvider.GetRequiredKeyedService<ITypeMapper>(connectionName);
         Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
         _transactions = new TransactionParticipation<IStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>>(
-            this, CreateParticipantTransaction, transaction => transaction.UncommittedEvents, () => Version, RefreshNow);
+            this, CreateParticipantTransaction, transaction => transaction.UncommittedEvents, () => Version, RefreshNow,
+            evt => StreamTargets.Format(this.GetGrainId(), GetStreamTargets(evt)));
     }
 
     /// <summary>

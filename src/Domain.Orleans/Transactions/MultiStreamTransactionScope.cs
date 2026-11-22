@@ -56,15 +56,19 @@ internal sealed class MultiStreamTransactionScope : IAsyncDisposable
         }
 
         var prepared = result.Value;
+        if (prepared.StreamTargets is { } targets && targets.Count != prepared.Events.Count)
+        {
+            throw new InvalidOperationException("The participant returned stream targets that do not match its events.");
+        }
         if (!_participantIndexes.TryGetValue(prepared.GrainId, out var index))
         {
             index = _participants.Count;
             _participantIndexes[prepared.GrainId] = index;
             _participants.Add(new TransactionParticipantLog(prepared.GrainId, prepared.ExpectedVersion));
         }
-        foreach (var evt in prepared.Events)
+        for (var i = 0; i < prepared.Events.Count; i++)
         {
-            _records.Add(new TransactionRecord(index, evt));
+            _records.Add(new TransactionRecord(index, prepared.Events[i], prepared.StreamTargets?[i]));
         }
         return result;
     }
