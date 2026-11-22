@@ -9,3 +9,5 @@ Microsoft Orleans integration for Continuum streaming.
 - `StreamedEventCursor` - Orleans-serializable implementation of `IStreamedEventCursor`.
 - `ProjectionWatermarks` - per topic/partition high-water marks used for duplicate detection.
 - `StreamedEventSequence` - comparable sequence/sub-sequence position.
+
+Test projection grains with `ProjectionGrainTestHarness` in `Continuum.Streaming.Orleans.TestHarness`, a Given/When/Then harness that also checks the projection is safe under at-least-once delivery (duplicate batches, and replay after the grain reactivates from storage).

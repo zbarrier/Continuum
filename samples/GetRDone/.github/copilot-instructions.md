@@ -24,6 +24,7 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 - The Silo's `OrderProjections` KurrentDB stream provider runs a catch-up subscription on `$all` (prefix `order-`, `StartFromNow = false`) with `StreamPubSubType.ImplicitOnly`. Projection grains derive from `ProjectionGrain`, implicitly subscribe to `OrderProjections:clientUserOrders` (one grain per user), and must not override `Subscriptions`.
 - Projection state uses the `Projections` memory storage with `OrleansGrainStorageSerializer`. The checkpoint store is in memory too, so both rebuild from the start after a restart.
 - Stream delivery carries no user, so projection grains put `[Authorize]` on query methods, not the class, and check that the caller owns the data.
+- Projection tests use `ProjectionGrainTestHarness` (Continuum.Streaming.Orleans.TestHarness): `Given` delivers events straight to the grain, and by default checks duplicate delivery and replay after reactivation. A test checks either the projected state (`Given` then `Then(state => ...)`, no `When`) or a query (`Given`, `When`, `Then<TValue>`/`ThenError`), never both. Keep one test per projection that produces on its stream, to cover the implicit subscription wiring the harness bypasses.
 - Tests replace the provider with memory streams (`OrdersCluster`) and produce `StreamedEvent<object>` items directly; `GetStreamTargets` itself is not exercised by tests.
 
 

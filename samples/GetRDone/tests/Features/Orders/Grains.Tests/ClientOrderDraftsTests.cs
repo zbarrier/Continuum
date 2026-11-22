@@ -5,6 +5,7 @@ using Continuum.Orleans.Streams;
 using Continuum.Orleans.Tenancy;
 using Continuum.Streaming;
 using Continuum.Streaming.Orleans;
+using Continuum.Streaming.Orleans.TestHarness;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
 using GetRDone.Orders.Abstractions.ReadModels;
@@ -20,63 +21,90 @@ using static GetRDone.Orders.Grains.Tests.Data.StartOrderDraftTestData;
 namespace GetRDone.Orders.Grains.Tests;
 
 /// <summary>
-///     Tests for the ClientOrderDrafts projection. The events are produced on the user's client orders stream the way the
-///     KurrentDB stream provider delivers them; each test uses a new user so it starts with no drafts.
+///     Tests for the ClientOrderDrafts projection. Each test projects the drafts of a new client user, so it starts with
+///     none.
 /// </summary>
-public sealed class ClientOrderDraftsTests(OrdersCluster fixture) : IClassFixture<OrdersCluster>
+public sealed class ClientOrderDraftsTests
+    : ProjectionGrainTestHarness<IClientOrderDraftsGrain, ClientOrderDraftsGrain, ClientOrderDraftsState>,
+      IClassFixture<OrdersCluster>
 {
-    private static long _commitPosition;
+    private readonly ClaimsPrincipal _user;
+
+    public ClientOrderDraftsTests(OrdersCluster fixture) : this(fixture, RequestedByUsers.NewClientUser()) { }
+
+    private ClientOrderDraftsTests(OrdersCluster fixture, ClaimsPrincipal user) : base(fixture.Cluster, user.GetTenantUserId())
+        => _user = user;
+
+    [Fact]
+    public async Task DraftStarted_AddsTheDraftByOrderId()
+    {
+        var (order1, order2) = (NewOrderId(), NewOrderId());
+
+        await Given(
+            DraftStarted(Command1, order1, _user, TestData.At),
+            DraftStarted(Command2, order2, _user, TestData.At.AddHours(1)));
+
+        Then(state => Assert.Equal(
+            new Dictionary<string, ClientOrderDraft>
+            {
+                [order1] = new(order1, "48 Birch Hollow Rd, Asheville, NC 28803", TestData.UniformResidentialAppraisal.FormTypeName, TestData.At),
+                [order2] = new(order2, "715 Commerce Blvd, Greenville, SC 29601", TestData.RestrictedAppraisal.FormTypeName, TestData.At.AddHours(1))
+            },
+            state.Drafts));
+    }
 
     [Fact]
     public async Task Drafts_ListTheUsersDraftsMostRecentlySavedFirst()
     {
-        var user = RequestedByUsers.NewClientUser();
         var (order1, order2, order3) = (NewOrderId(), NewOrderId(), NewOrderId());
-        GivenSignedIn(user);
-        await GivenProjected(
-            DraftStarted(Command1, order1, user, TestData.At),
-            DraftStarted(Command2, order2, user, TestData.At.AddHours(2)),
-            DraftStarted(Command3, order3, user, TestData.At.AddHours(1)));
+        GivenSignedIn(_user);
+        await Given(
+            DraftStarted(Command1, order1, _user, TestData.At),
+            DraftStarted(Command2, order2, _user, TestData.At.AddHours(2)),
+            DraftStarted(Command3, order3, _user, TestData.At.AddHours(1)));
 
-        var page = await WhenProjectedAsync(user, totalCount: 3);
+        await When(() => Grain.GetDraftsAsync(0, 10));
 
-        Assert.Equal(
-        [
-            new ClientOrderDraft(order2, "715 Commerce Blvd, Greenville, SC 29601", TestData.RestrictedAppraisal.FormTypeName, TestData.At.AddHours(2)),
-            new ClientOrderDraft(order3, "9 Laurel Ridge Ct, Black Mountain, NC 28711", TestData.DesktopAppraisal.FormTypeName, TestData.At.AddHours(1)),
-            new ClientOrderDraft(order1, "48 Birch Hollow Rd, Asheville, NC 28803", TestData.UniformResidentialAppraisal.FormTypeName, TestData.At)
-        ], page.Drafts);
+        Then<ClientOrderDraftsPage>(page =>
+        {
+            Assert.Equal(
+            [
+                new ClientOrderDraft(order2, "715 Commerce Blvd, Greenville, SC 29601", TestData.RestrictedAppraisal.FormTypeName, TestData.At.AddHours(2)),
+                new ClientOrderDraft(order3, "9 Laurel Ridge Ct, Black Mountain, NC 28711", TestData.DesktopAppraisal.FormTypeName, TestData.At.AddHours(1)),
+                new ClientOrderDraft(order1, "48 Birch Hollow Rd, Asheville, NC 28803", TestData.UniformResidentialAppraisal.FormTypeName, TestData.At)
+            ], page.Drafts);
+            Assert.Equal(3, page.TotalCount);
+        });
     }
 
     [Fact]
     public async Task Drafts_ArePaged()
     {
-        var user = RequestedByUsers.NewClientUser();
         var (order1, order2, order3) = (NewOrderId(), NewOrderId(), NewOrderId());
-        GivenSignedIn(user);
-        await GivenProjected(
-            DraftStarted(Command1, order1, user, TestData.At),
-            DraftStarted(Command2, order2, user, TestData.At.AddHours(2)),
-            DraftStarted(Command3, order3, user, TestData.At.AddHours(1)));
-        await WhenProjectedAsync(user, totalCount: 3);
+        GivenSignedIn(_user);
+        await Given(
+            DraftStarted(Command1, order1, _user, TestData.At),
+            DraftStarted(Command2, order2, _user, TestData.At.AddHours(2)),
+            DraftStarted(Command3, order3, _user, TestData.At.AddHours(1)));
 
-        var result = await fixture.Cluster.GrainFactory.GetClientOrderDraftsGrain(user.GetTenantUserId()).GetDraftsAsync(1, 1);
+        await When(() => Grain.GetDraftsAsync(1, 1));
 
-        Assert.True(result.IsSuccess);
-        Assert.Equal(order3, Assert.Single(result.Value.Drafts).OrderId);
-        Assert.Equal(3, result.Value.TotalCount);
+        Then<ClientOrderDraftsPage>(page =>
+        {
+            Assert.Equal(order3, Assert.Single(page.Drafts).OrderId);
+            Assert.Equal(3, page.TotalCount);
+        });
     }
 
     [Fact]
     public async Task Drafts_CanOnlyBeReadByTheirUser()
     {
-        var user = RequestedByUsers.NewClientUser();
         GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given(DraftStarted(Command1, NewOrderId(), _user, TestData.At));
 
-        var result = await fixture.Cluster.GrainFactory.GetClientOrderDraftsGrain(user.GetTenantUserId()).GetDraftsAsync(0, 10);
+        await When(() => Grain.GetDraftsAsync(0, 10));
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(ErrorCodes.PermissionDenied, result.Error.Code);
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.PermissionDenied, error.Code));
     }
 
     [Theory]
@@ -84,43 +112,50 @@ public sealed class ClientOrderDraftsTests(OrdersCluster fixture) : IClassFixtur
     [InlineData(0, 0)]
     public async Task Drafts_RejectAnInvalidPage(int skip, int take)
     {
-        var user = RequestedByUsers.NewClientUser();
-        GivenSignedIn(user);
+        GivenSignedIn(_user);
 
-        var result = await fixture.Cluster.GrainFactory.GetClientOrderDraftsGrain(user.GetTenantUserId()).GetDraftsAsync(skip, take);
+        await When(() => Grain.GetDraftsAsync(skip, take));
 
-        Assert.True(result.IsFailure);
-        Assert.Equal(ErrorCodes.InvalidArgument, result.Error.Code);
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.InvalidArgument, error.Code));
+    }
+
+    /// <summary>
+    ///     Checks the stream wiring the harness bypasses: an event produced on the user's client orders stream, as the
+    ///     stream provider does for the stream target the order grain names, reaches the user's projection through its
+    ///     implicit subscription.
+    /// </summary>
+    [Fact]
+    public async Task Drafts_AreProjectedFromTheUsersClientOrdersStream()
+    {
+        var orderId = NewOrderId();
+        GivenSignedIn(_user);
+        var evt = DraftStarted(Command1, orderId, _user, TestData.At);
+
+        TenantKey.Split(orderId, out var tenantId, out var key);
+        var stream = Cluster.Client.GetStreamProvider(OrderProjections.ProviderName)
+            .GetStream<IStreamedEvent<object>>(StreamId.Create(OrderProjections.ClientUserOrdersNamespace, _user.GetTenantUserId()));
+        await stream.OnNextAsync(new StreamedEvent<object>(
+            Guid.NewGuid(),
+            "Orders.OrderDraftStarted.V1",
+            new StreamName($"order-{orderId}", "order", tenantId, key),
+            0,
+            new StreamedEventCursor("kurrentdb", "order", orderId, NextPosition(), 0),
+            evt.OccurredAt.UtcDateTime,
+            evt));
+
+        var page = await WaitForDraftsAsync(totalCount: 1);
+        Assert.Equal(orderId, Assert.Single(page.Drafts).OrderId);
     }
 
     private static string NewOrderId() => TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString());
 
-    /// <summary>
-    ///     Produces each event on the client orders stream of the user who started the order, as the stream provider does for
-    ///     the stream target the order grain names. The event keeps its order stream name and cursor.
-    /// </summary>
-    private async Task GivenProjected(params OrderDraftStarted[] events)
-    {
-        var provider = fixture.Cluster.Client.GetStreamProvider(OrderProjections.ProviderName);
-        foreach (var evt in events)
-        {
-            TenantKey.Split(evt.OrderId, out var tenantId, out var key);
-            var streamName = new StreamName($"order-{evt.OrderId}", "order", tenantId, key);
-            var cursor = new StreamedEventCursor("kurrentdb", "order", evt.OrderId, Interlocked.Increment(ref _commitPosition), 0);
-            var stream = provider.GetStream<IStreamedEvent<object>>(StreamId.Create(OrderProjections.ClientUserOrdersNamespace, evt.InitiatedBy));
-            await stream.OnNextAsync(new StreamedEvent<object>(
-                Guid.NewGuid(), "Orders.OrderDraftStarted.V1", streamName, 0, cursor, evt.OccurredAt.UtcDateTime, evt));
-        }
-    }
-
     /// <summary>Waits until the projection has applied <paramref name="totalCount"/> drafts, then returns them all.</summary>
-    private async Task<ClientOrderDraftsPage> WhenProjectedAsync(ClaimsPrincipal user, int totalCount)
+    private async Task<ClientOrderDraftsPage> WaitForDraftsAsync(int totalCount)
     {
-        var grain = fixture.Cluster.GrainFactory.GetClientOrderDraftsGrain(user.GetTenantUserId());
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (true)
         {
-            var result = await grain.GetDraftsAsync(0, int.MaxValue);
+            var result = await Grain.GetDraftsAsync(0, int.MaxValue);
             Assert.True(result.IsSuccess);
             if (result.Value.TotalCount >= totalCount)
             {

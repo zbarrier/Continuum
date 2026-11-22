@@ -36,6 +36,7 @@
     <Project Path="src/Streaming.Orleans.KurrentDB.Abstractions/Continuum.Streaming.Orleans.KurrentDB.Abstractions.csproj" />
     <Project Path="src/Streaming.Orleans.KurrentDB.SelfHostedSubscriptions/Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.csproj" />
     <Project Path="src/Streaming.Orleans.KurrentDB.StreamProvider/Continuum.Streaming.Orleans.KurrentDB.StreamProvider.csproj" />
+    <Project Path="src/Streaming.Orleans.TestHarness/Continuum.Streaming.Orleans.TestHarness.csproj" />
     <Project Path="src/Streaming.Orleans/Continuum.Streaming.Orleans.csproj" />
     <Project Path="src/Streaming/Continuum.Streaming.csproj" />
   </Folder>
