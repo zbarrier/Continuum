@@ -1,6 +1,9 @@
 @* The client's submitted orders (ClientOrders) with their number and current status, with View. *@
+@using Continuum.Orleans.Tenancy
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
 
-<MudTable T="ClientOrderRow" ServerData="LoadAsync" RowsPerPage="5" Hover="true" Elevation="1" Class="@Class">
+<MudTable T="ClientOrder" ServerData="LoadAsync" RowsPerPage="5" Hover="true" Elevation="1" Class="@Class">
     <ToolBarContent>
         <MudText Typo="Typo.h6">My orders (@_total)</MudText>
     </ToolBarContent>
@@ -13,20 +16,30 @@
         <MudTh />
     </HeaderContent>
     <RowTemplate>
-        <MudTd DataLabel="Order #">@context.OrderNumber</MudTd>
+        <MudTd DataLabel="Order #">
+            @if (context.OrderNumber is { } orderNumber)
+            {
+                @orderNumber
+            }
+            else
+            {
+                @* The order number assigner gives the order its number shortly after it is submitted. *@
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Pending</MudText>
+            }
+        </MudTd>
         <MudTd DataLabel="Property">@context.PropertyAddress</MudTd>
         <MudTd DataLabel="Form type">@context.FormTypeName</MudTd>
         <MudTd DataLabel="Status">
-            <MudChip T="string" Size="Size.Small" Color="StatusColor(context.Status)">@context.Status</MudChip>
+            <MudChip T="string" Size="Size.Small" Color="StatusColor(context.Status)">@StatusText(context.Status)</MudChip>
         </MudTd>
-        <MudTd DataLabel="Submitted">@context.SubmittedAt.ToString("MMM d, h:mm tt")</MudTd>
+        <MudTd DataLabel="Submitted">@context.SubmittedAt.ToLocalTime().ToString("MMM d, h:mm tt")</MudTd>
         <MudTd Style="text-align:right">
             @* The client's order page is not built yet. *@
             <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="true">View</MudButton>
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>
-        <MudText Typo="Typo.body2">No orders</MudText>
+        <MudText Typo="Typo.body2">@(_error ?? "No orders")</MudText>
     </NoRecordsContent>
     <PagerContent>
         <MudTablePager PageSizeOptions="PageSizes" />
@@ -37,31 +50,51 @@
     private static readonly int[] PageSizes = [5, 10, 25];
 
     private int _total;
+    private string? _error;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
     [Parameter]
     public string? Class { get; set; }
 
-    private Task<TableData<ClientOrderRow>> LoadAsync(TableState state, CancellationToken cancellationToken)
+    private async Task<TableData<ClientOrder>> LoadAsync(TableState state, CancellationToken cancellationToken)
     {
-        // The ClientOrders read model is not built yet (it starts with OrderSubmitted), so there are no orders to show.
-        var page = new TableData<ClientOrderRow> { Items = [], TotalItems = 0 };
-        UpdateTotal(page.TotalItems);
-        return Task.FromResult(page);
+        var user = (await AuthenticationState).User;
+        var tenantId = user.FindFirst("tenant_id")?.Value;
+        var userId = user.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(userId))
+        {
+            return Show([], 0, "Your account has no tenant.");
+        }
+
+        var result = await ClusterClient.GetClientOrdersGrain(TenantKey.Create(tenantId, userId))
+            .GetOrdersAsync(state.Page * state.PageSize, state.PageSize);
+        return result.IsSuccess
+            ? Show(result.Value.Orders, result.Value.TotalCount, null)
+            : Show([], 0, "Your orders could not be loaded.");
     }
 
-    private void UpdateTotal(int total)
+    private TableData<ClientOrder> Show(ClientOrder[] orders, int total, string? error)
     {
+        _error = error;
         if (_total != total)
         {
             _total = total;
             StateHasChanged();
         }
+        return new TableData<ClientOrder> { Items = orders, TotalItems = total };
     }
 
-    private static Color StatusColor(string status) => status switch
+    private static string StatusText(ClientOrderStatus status) => status switch
     {
-        "Shipped" => Color.Success,
-        "DoW awaiting approval" => Color.Warning,
-        _ => Color.Info
+        ClientOrderStatus.Submitted => "Submitted",
+        _ => status.ToString()
+    };
+
+    private static Color StatusColor(ClientOrderStatus status) => status switch
+    {
+        ClientOrderStatus.Submitted => Color.Info,
+        _ => Color.Default
     };
 }

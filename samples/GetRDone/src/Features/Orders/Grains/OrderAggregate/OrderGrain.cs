@@ -33,7 +33,8 @@ public sealed partial class OrderGrain
 
     /// <summary>
     ///     Sends every order event to the stream of the user who started the order as well, so the client user's read
-    ///     models (such as <see cref="ClientOrderDraftsGrain"/>) see all of that user's orders on one stream.
+    ///     models (such as <see cref="ClientOrderDraftsGrain"/> and <see cref="ClientOrdersGrain"/>) see all of that user's
+    ///     orders on one stream.
     /// </summary>
     protected override IReadOnlyList<GrainId> GetStreamTargets(object @event)
     {

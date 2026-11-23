@@ -26,4 +26,8 @@ public static class ReadModelGrainFactoryExtensions
     /// <summary>Gets the drafts of one client user, keyed by their tenant user ID <c>{TenantId}|{UserGuid}</c>.</summary>
     public static IClientOrderDraftsGrain GetClientOrderDraftsGrain(this IGrainFactory grainFactory, string tenantUserId)
         => grainFactory.GetGrain<IClientOrderDraftsGrain>(tenantUserId);
+
+    /// <summary>Gets the submitted orders of one client user, keyed by their tenant user ID <c>{TenantId}|{UserGuid}</c>.</summary>
+    public static IClientOrdersGrain GetClientOrdersGrain(this IGrainFactory grainFactory, string tenantUserId)
+        => grainFactory.GetGrain<IClientOrdersGrain>(tenantUserId);
 }

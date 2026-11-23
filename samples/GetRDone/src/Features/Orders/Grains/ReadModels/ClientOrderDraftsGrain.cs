@@ -73,7 +73,7 @@ public sealed class ClientOrderDraftsState : HandlerProjectionState<ClientOrderD
     {
         Drafts[evt.OrderId] = new ClientOrderDraft(
             evt.OrderId,
-            $"{evt.PropertyStreet}, {evt.PropertyCity}, {evt.PropertyState} {evt.PropertyZip}",
+            PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip),
             evt.FormTypeName,
             evt.OccurredAt);
         return true;
@@ -88,7 +88,7 @@ public sealed class ClientOrderDraftsState : HandlerProjectionState<ClientOrderD
 
         Drafts[evt.OrderId] = draft with
         {
-            PropertyAddress = $"{evt.PropertyStreet}, {evt.PropertyCity}, {evt.PropertyState} {evt.PropertyZip}",
+            PropertyAddress = PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip),
             FormTypeName = evt.FormTypeName,
             LastSavedAt = evt.OccurredAt
         };

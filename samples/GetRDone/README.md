@@ -18,7 +18,7 @@ Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only
 - `GetRDone.ServiceDefaults` - OpenTelemetry, health checks, service discovery.
 - `GetRDone.Identity` - Duende IdentityServer with ASP.NET Core Identity on SQL Server and the Duende Razor Pages UI (`role`, `tenant_id` claims).
 - `GetRDone.Silo` - Orleans silo; multi-tenant KurrentDB event log; KurrentDB stream provider for projections; ManagedCode.Orleans.Identity authorization.
-- `GetRDone.Web` - Blazor Server; OIDC sign-in; forwards the circuit user to grains via an outgoing grain-call filter. A client user's Home has My drafts and My orders sections (paged lists). My drafts loads from the ClientOrderDrafts projection; My orders stays empty until the ClientOrders read model is built. Other roles' home pages are not built yet.
+- `GetRDone.Web` - Blazor Server; OIDC sign-in; forwards the circuit user to grains via an outgoing grain-call filter. A client user's Home has My drafts and My orders sections (paged lists). My drafts loads from the ClientOrderDrafts projection, and My orders from the ClientOrders projection. Other roles' home pages are not built yet.
 - `Features/<Domain>/GetRDone.<Domain>.Abstractions` / `.Grains` - feature slices. `Hello` is temporary and proves the round trip (the Hello page, `/hello`).
 
 ## Starting an order draft
@@ -42,13 +42,14 @@ Order entry tab 3 attaches supporting documents to a draft. Files are stored in 
 
 ## Submitting an order
 
-Order entry tab 4 (Review & Submit) shows everything saved on the draft and calls `SubmitOrderAsync`, which records `OrderSubmitted` with the draft's client. The draft needs a borrower (tab 2); supporting documents are optional, and the tab opens only once the borrower is saved. A submitted order can't be submitted again or changed with the draft commands (`FailedPrecondition`), and `GetOrderDraftAsync` rejects it, since it is no longer a draft. After submitting, the web app goes back to Home, where the draft is gone from My drafts. The order number and the ClientOrders read model behind My orders come with later slices.
+Order entry tab 4 (Review & Submit) shows everything saved on the draft and calls `SubmitOrderAsync`, which records `OrderSubmitted` with the draft's client. The draft needs a borrower (tab 2); supporting documents are optional, and the tab opens only once the borrower is saved. A submitted order can't be submitted again or changed with the draft commands (`FailedPrecondition`), and `GetOrderDraftAsync` rejects it, since it is no longer a draft. After submitting, the web app goes back to Home, where the draft has moved from My drafts to My orders. The order shows its number as Pending until the order number slice assigns one.
 
 ## Client order projections
 
 Every order event also targets the per-user stream `clientUserOrders-{tenantId}|{userGuid}` of the user who started the order (`OrderGrain.GetStreamTargets`), so one projection can group all of a user's orders. The Silo's `OrderProjections` KurrentDB stream provider runs a catch-up subscription on `$all` filtered to the `order-` stream prefix and delivers each event to its order stream and its target streams. Projection grains implicitly subscribe to the `OrderProjections:clientUserOrders` namespace, so Orleans activates one grain per user, keyed by the user's tenant user ID.
 
 - `IClientOrderDraftsGrain` (grain type `clientOrderDrafts`; `GetClientOrderDraftsGrain(tenantUserId)`): the user's drafts that are not submitted yet, most recently saved first (`OrderSubmitted` removes a draft). `GetDraftsAsync(skip, take)` returns one page and the total count. Only the user can read their own drafts.
+- `IClientOrdersGrain` (grain type `clientOrders`; `GetClientOrdersGrain(tenantUserId)`): the user's submitted orders, most recently submitted first, each with its property address, form type, order number (null until one is assigned) and status (`ClientOrderStatus`, only `Submitted` so far). It keeps the address and form type of the user's drafts from `OrderDraftStarted` and `RequestAndPropertySaved`, since `OrderSubmitted` carries neither, and `OrderSubmitted` turns the draft into an order. `GetOrdersAsync(skip, take)` returns one page and the total count. Only the user can read their own orders.
 
 The checkpoint and the projections are stored in memory, so after a silo restart the subscription replays from the start and rebuilds them.
 
