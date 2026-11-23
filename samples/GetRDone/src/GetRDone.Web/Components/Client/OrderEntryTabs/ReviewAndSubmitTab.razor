@@ -39,7 +39,7 @@
             <td>
                 @(Draft.AccessContactName is null
                     ? "None"
-                    : $"{Draft.AccessContactName} · {BorrowerAndAccessContactTab.FormatPhone(Draft.AccessContactPhone)}")
+                    : $"{Draft.AccessContactName} · {DisplayFormat.Phone(Draft.AccessContactPhone)}")
             </td>
         </tr>
         <tr>

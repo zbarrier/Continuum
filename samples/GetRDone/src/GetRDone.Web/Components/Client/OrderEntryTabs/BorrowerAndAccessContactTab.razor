@@ -21,7 +21,7 @@
                       Error="@_form.HasError(nameof(SaveBorrowerAndAccessContactCommand.AccessContactName))" ErrorText="@_form.ErrorText(nameof(SaveBorrowerAndAccessContactCommand.AccessContactName))" />
     </MudItem>
     <MudItem xs="12" sm="6">
-        <MudTextField @bind-Value="_accessContactPhone" Label="@FieldLabels[nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone)]" InputType="InputType.Telephone" Placeholder="540-555-0142"
+        <MudTextField @bind-Value="_accessContactPhone" Label="@FieldLabels[nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone)]" InputType="InputType.Telephone" Placeholder="(540) 555-0142"
                       Error="@_form.HasError(nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone))" ErrorText="@_form.ErrorText(nameof(SaveBorrowerAndAccessContactCommand.AccessContactPhone))" />
     </MudItem>
 </MudGrid>
@@ -70,7 +70,7 @@
         _shownDraft = Draft;
         _borrowerName = Draft.BorrowerName ?? "";
         _accessContactName = Draft.AccessContactName ?? "";
-        _accessContactPhone = FormatPhone(Draft.AccessContactPhone);
+        _accessContactPhone = DisplayFormat.Phone(Draft.AccessContactPhone);
     }
 
     private async Task SaveAsync()
@@ -90,8 +90,4 @@
         Snackbar.Add("Borrower & Access contact saved.", Severity.Success);
         await OnSaved.InvokeAsync(draft);
     }
-
-    /// <summary>Formats the 10 digits the order records as 540-555-0142.</summary>
-    internal static string FormatPhone(string? digits) =>
-        digits is { Length: 10 } ? $"{digits[..3]}-{digits[3..6]}-{digits[6..]}" : digits ?? "";
 }
