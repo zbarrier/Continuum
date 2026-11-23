@@ -92,6 +92,6 @@
     }
 
     /// <summary>Formats the 10 digits the order records as 540-555-0142.</summary>
-    private static string FormatPhone(string? digits) =>
+    internal static string FormatPhone(string? digits) =>
         digits is { Length: 10 } ? $"{digits[..3]}-{digits[3..6]}-{digits[6..]}" : digits ?? "";
 }

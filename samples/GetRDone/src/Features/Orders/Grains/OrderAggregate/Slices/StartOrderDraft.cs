@@ -71,5 +71,6 @@ public sealed partial class OrderState
     {
         Status = OrderStatus.Draft;
         StartedBy = evt.InitiatedBy;
+        ClientId = evt.ClientId;
     }
 }

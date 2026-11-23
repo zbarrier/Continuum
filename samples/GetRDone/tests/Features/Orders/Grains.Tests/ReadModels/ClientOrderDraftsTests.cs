@@ -95,6 +95,21 @@ public sealed class ClientOrderDraftsTests
     }
 
     [Fact]
+    public async Task OrderSubmitted_RemovesTheDraft()
+    {
+        var (submittedOrder, otherOrder) = (NewOrderId(), NewOrderId());
+
+        await Given(
+            DraftStarted(Command1, submittedOrder, _user, TestData.At),
+            DraftStarted(Command2, otherOrder, _user, TestData.At.AddMinutes(1)),
+            SaveBorrowerAndAccessContactTestData.Saved(
+                SaveBorrowerAndAccessContactTestData.Command1, submittedOrder, _user, TestData.At.AddMinutes(2)),
+            SubmitOrderTestData.Submitted(Command1, submittedOrder, _user, TestData.At.AddMinutes(3)));
+
+        Then(state => Assert.Equal([otherOrder], state.Drafts.Keys));
+    }
+
+    [Fact]
     public async Task RequestAndPropertySaved_UpdatesTheDraftsAddressFormTypeAndLastSavedTime()
     {
         var orderId = NewOrderId();

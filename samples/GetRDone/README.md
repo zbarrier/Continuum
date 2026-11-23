@@ -40,11 +40,15 @@ The lookups come from pre-populated read models, seeded on activation when their
 
 Order entry tab 3 attaches supporting documents to a draft. Files are stored in blob storage (Azurite locally), never in events: the web app generates the document ID (`{tenantId}|{guid}`), uploads the file to `SupportingDocumentStorage.BlobPath` (`{tenantId}/{orderGuid}/{documentGuid}` in the `order-documents` container), and then calls `AttachSupportingDocumentAsync` with the file's name, content type, and size. `SupportingDocumentAttached` records the blob path. Files can be up to 100 MB, of any type. The upload never overwrites an existing blob. When the order rejects the document (a failed `Result`), the web app deletes the upload as a best effort; when the call throws, it keeps the file, since the order may have attached it. Removing a document (the delete button on tab 3, after a confirmation) calls `RemoveSupportingDocumentAsync`; `SupportingDocumentRemoved` records the blob path the document was attached with, and the web app deletes that file as a best effort once the removal succeeded. A failed or throwing removal keeps the file. Downloading a document's file comes with a later slice.
 
+## Submitting an order
+
+Order entry tab 4 (Review & Submit) shows everything saved on the draft and calls `SubmitOrderAsync`, which records `OrderSubmitted` with the draft's client. The draft needs a borrower (tab 2); supporting documents are optional, and the tab opens only once the borrower is saved. A submitted order can't be submitted again or changed with the draft commands (`FailedPrecondition`), and `GetOrderDraftAsync` rejects it, since it is no longer a draft. After submitting, the web app goes back to Home, where the draft is gone from My drafts. The order number and the ClientOrders read model behind My orders come with later slices.
+
 ## Client order projections
 
 Every order event also targets the per-user stream `clientUserOrders-{tenantId}|{userGuid}` of the user who started the order (`OrderGrain.GetStreamTargets`), so one projection can group all of a user's orders. The Silo's `OrderProjections` KurrentDB stream provider runs a catch-up subscription on `$all` filtered to the `order-` stream prefix and delivers each event to its order stream and its target streams. Projection grains implicitly subscribe to the `OrderProjections:clientUserOrders` namespace, so Orleans activates one grain per user, keyed by the user's tenant user ID.
 
-- `IClientOrderDraftsGrain` (grain type `clientOrderDrafts`; `GetClientOrderDraftsGrain(tenantUserId)`): the user's drafts, most recently saved first. `GetDraftsAsync(skip, take)` returns one page and the total count. Only the user can read their own drafts.
+- `IClientOrderDraftsGrain` (grain type `clientOrderDrafts`; `GetClientOrderDraftsGrain(tenantUserId)`): the user's drafts that are not submitted yet, most recently saved first (`OrderSubmitted` removes a draft). `GetDraftsAsync(skip, take)` returns one page and the total count. Only the user can read their own drafts.
 
 The checkpoint and the projections are stored in memory, so after a silo restart the subscription replays from the start and rebuilds them.
 

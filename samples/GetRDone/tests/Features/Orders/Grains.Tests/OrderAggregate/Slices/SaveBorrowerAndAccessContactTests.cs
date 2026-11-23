@@ -183,6 +183,17 @@ public sealed class SaveBorrowerAndAccessContactTests
     }
 
     [Fact]
+    public async Task Save_RejectsAnOrderThatWasSubmitted()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given(StartOrderDraftTestData.DraftStarted1(GrainId), Saved1(GrainId), SubmitOrderTestData.Submitted1(GrainId));
+
+        await When(() => Order.SaveBorrowerAndAccessContactAsync(Command3));
+
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.FailedPrecondition, error.Code));
+    }
+
+    [Fact]
     public async Task Save_RejectsAUserWhoDidNotStartTheOrder()
     {
         GivenSignedIn(RequestedByUsers.ClientUser2);

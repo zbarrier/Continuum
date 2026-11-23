@@ -19,6 +19,8 @@ public sealed partial class OrderGrain
                 )
                 .Ensure(() => State.Status != OrderStatus.None, () => RequestErrors.NewNotFound("The order draft was not found."))
                 .Bind(() => _permissions.CanViewOrder(userId!, State))
+                .Ensure(() => State.Status == OrderStatus.Draft,
+                    () => RequestErrors.NewFailedPrecondition("The order has been submitted, so it is no longer a draft."))
                 .Map(async () => OrderDraft.Build(await RetrieveConfirmedEvents(0, Version)));
         }, _grainCallErrorHandler);
     }

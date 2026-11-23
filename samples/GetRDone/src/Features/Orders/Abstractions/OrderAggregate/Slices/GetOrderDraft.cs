@@ -9,7 +9,8 @@ public partial interface IOrderGrain : IEventDrivenStateMachineGrain
 {
     /// <summary>
     ///     Gets the order entry form of the draft (the OrderDraft read model). The order builds it from its own events, so
-    ///     the tabs always show the latest save. Only the user who started the draft can read it.
+    ///     the tabs always show the latest save. Only the user who started the draft can read it, and only until the order is
+    ///     submitted.
     /// </summary>
     [ReadOnly]
     Task<Result<OrderDraft>> GetOrderDraftAsync();

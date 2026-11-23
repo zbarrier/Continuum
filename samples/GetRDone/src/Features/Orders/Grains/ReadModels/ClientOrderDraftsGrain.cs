@@ -63,6 +63,7 @@ public sealed class ClientOrderDraftsState : HandlerProjectionState<ClientOrderD
         On<BorrowerAndAccessContactSaved>(Apply);
         On<SupportingDocumentAttached>(Apply);
         On<SupportingDocumentRemoved>(Apply);
+        On<OrderSubmitted>(Apply);
     }
 
     /// <summary>The drafts by order ID.</summary>
@@ -126,4 +127,7 @@ public sealed class ClientOrderDraftsState : HandlerProjectionState<ClientOrderD
         Drafts[evt.OrderId] = draft with { LastSavedAt = evt.OccurredAt };
         return true;
     }
+
+    /// <summary>A submitted order is no longer a draft.</summary>
+    private bool Apply(OrderSubmitted evt, IStreamedEvent<object> streamedEvent) => Drafts.Remove(evt.OrderId);
 }

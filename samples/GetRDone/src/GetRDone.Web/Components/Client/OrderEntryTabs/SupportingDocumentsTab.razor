@@ -86,7 +86,9 @@
 }
 <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
     <MudButton Variant="Variant.Text" OnClick="OnBack">Back</MudButton>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_form.Saving" OnClick="AttachAsync">Attach</MudButton>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_form.Saving" OnClick="AttachAsync">Attach</MudButton>
+    @* Each attach and removal is saved as it happens, so continuing has nothing left to save. *@
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_form.Saving" OnClick="OnContinue">Continue</MudButton>
 </MudStack>
 
 @code {
@@ -126,13 +128,17 @@
     [Parameter, EditorRequired]
     public DocumentType[] DocumentTypes { get; set; } = [];
 
-    /// <summary>Called with the draft as it is after a document is attached.</summary>
+    /// <summary>Called with the draft as it is after a document is attached or removed.</summary>
     [Parameter]
     public EventCallback<OrderDraft> OnSaved { get; set; }
 
     /// <summary>Called when the user goes back to the previous tab.</summary>
     [Parameter]
     public EventCallback OnBack { get; set; }
+
+    /// <summary>Called when the user continues to the next tab.</summary>
+    [Parameter]
+    public EventCallback OnContinue { get; set; }
 
     protected override void OnInitialized() => _form = new OrderEntryForm(Logger, FieldLabels, FieldByTarget);
 

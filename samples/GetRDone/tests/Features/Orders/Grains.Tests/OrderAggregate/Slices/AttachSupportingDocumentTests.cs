@@ -183,6 +183,20 @@ public sealed class AttachSupportingDocumentTests
     }
 
     [Fact]
+    public async Task Attach_RejectsAnOrderThatWasSubmitted()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given(
+            StartOrderDraftTestData.DraftStarted1(GrainId),
+            SaveBorrowerAndAccessContactTestData.Saved1(GrainId),
+            SubmitOrderTestData.Submitted1(GrainId));
+
+        await When(() => Order.AttachSupportingDocumentAsync(Command1));
+
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.FailedPrecondition, error.Code));
+    }
+
+    [Fact]
     public async Task Attach_RejectsAUserWhoDidNotStartTheOrder()
     {
         GivenSignedIn(RequestedByUsers.ClientUser2);

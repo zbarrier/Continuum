@@ -206,6 +206,20 @@ public sealed class GetOrderDraftTests
     }
 
     [Fact]
+    public async Task GetOrderDraft_RejectsAnOrderThatWasSubmitted()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given(
+            StartOrderDraftTestData.DraftStarted1(GrainId),
+            SaveBorrowerAndAccessContactTestData.Saved1(GrainId),
+            SubmitOrderTestData.Submitted1(GrainId));
+
+        await WhenQuery(() => Order.GetOrderDraftAsync());
+
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.FailedPrecondition, error.Code));
+    }
+
+    [Fact]
     public async Task GetOrderDraft_RejectsAUserWhoDidNotStartTheOrder()
     {
         GivenSignedIn(RequestedByUsers.ClientUser2);

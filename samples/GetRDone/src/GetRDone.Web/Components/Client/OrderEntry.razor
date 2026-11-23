@@ -1,6 +1,6 @@
-@* Order entry (event model chapter 1, New order screens): each tab is a component that saves its part of the draft. The
-   tabs show the OrderDraft read model, which the order builds from its own events, so they show every save at once (no
-   waiting for a projection). Tab 4 comes with its slice. *@
+@* Order entry (event model chapter 1, New order screens): each tab is a component that saves its part of the draft, and
+   tab 4 submits it. The tabs show the OrderDraft read model, which the order builds from its own events, so they show
+   every save at once (no waiting for a projection). *@
 @page "/orders/new"
 @page "/orders/drafts/{OrderGuid:guid}"
 @attribute [Authorize(Roles = "client")]
@@ -61,10 +61,17 @@
             <MudTabPanel Text="3 Supporting documents" Disabled="@(_draft is null)">
                 @if (_draft is not null)
                 {
-                    <SupportingDocumentsTab Draft="_draft" DocumentTypes="_documentTypes" OnSaved="SupportingDocumentAttached" OnBack="@(() => _activeTab = BorrowerTab)" />
+                    <SupportingDocumentsTab Draft="_draft" DocumentTypes="_documentTypes" OnSaved="SupportingDocumentsSaved"
+                                            OnBack="@(() => _activeTab = BorrowerTab)" OnContinue="@(() => _activeTab = ReviewTab)" />
                 }
             </MudTabPanel>
-            <MudTabPanel Text="4 Review & Submit" Disabled="true" />
+            @* The order needs a borrower to be submitted, so the review opens once tab 2 is saved. *@
+            <MudTabPanel Text="4 Review & Submit" Disabled="@(_draft?.BorrowerName is null)">
+                @if (_draft?.BorrowerName is not null)
+                {
+                    <ReviewAndSubmitTab Draft="_draft" OnSubmitted="GoHomeAfterSubmit" OnBack="@(() => _activeTab = DocumentsTab)" />
+                }
+            </MudTabPanel>
         </MudTabs>
     }
 </MudPaper>
@@ -73,6 +80,7 @@
     private const int RequestTab = 0;
     private const int BorrowerTab = 1;
     private const int DocumentsTab = 2;
+    private const int ReviewTab = 3;
 
     private bool _initialized;
     private Guid? _loadedFor;
@@ -195,10 +203,10 @@
     }
 
     /// <summary>
-    ///     Tab 1 is finished once the draft exists and tab 2 once it has a borrower. Documents are optional, so until tab 4 is
-    ///     built, a draft with a borrower resumes on tab 3.
+    ///     Tab 1 is finished once the draft exists and tab 2 once it has a borrower. Documents are optional, so a draft with a
+    ///     borrower resumes on the review.
     /// </summary>
-    private static int FirstUnfinishedTab(OrderDraft draft) => draft.BorrowerName is null ? BorrowerTab : DocumentsTab;
+    private static int FirstUnfinishedTab(OrderDraft draft) => draft.BorrowerName is null ? BorrowerTab : ReviewTab;
 
     private void RequestAndPropertySaved(OrderDraft draft)
     {
@@ -220,5 +228,8 @@
         _activeTab = DocumentsTab;
     }
 
-    private void SupportingDocumentAttached(OrderDraft draft) => _draft = draft;
+    private void SupportingDocumentsSaved(OrderDraft draft) => _draft = draft;
+
+    /// <summary>The submitted order is no longer a draft, so the user goes back to their dashboard.</summary>
+    private void GoHomeAfterSubmit() => Navigation.NavigateTo("/");
 }

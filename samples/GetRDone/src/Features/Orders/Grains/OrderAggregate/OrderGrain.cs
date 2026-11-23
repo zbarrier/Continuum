@@ -46,7 +46,8 @@ public sealed partial class OrderGrain
 public enum OrderStatus
 {
     None,
-    Draft
+    Draft,
+    Submitted
 }
 
 public enum OrderCommand
@@ -55,7 +56,8 @@ public enum OrderCommand
     SaveRequestAndProperty,
     SaveBorrowerAndAccessContact,
     AttachSupportingDocument,
-    RemoveSupportingDocument
+    RemoveSupportingDocument,
+    SubmitOrder
 }
 
 [GenerateSerializer]
@@ -72,11 +74,19 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// </summary>
     [Id(1)] public Dictionary<string, string> SupportingDocumentBlobPaths { get; private set; } = [];
 
+    /// <summary>The client the order is for, as a tenant-qualified client ID.</summary>
+    [Id(2)] public string? ClientId { get; private set; }
+
+    /// <summary>Whether the Borrower &amp; Access contact tab was saved, which the order needs to be submitted.</summary>
+    [Id(3)] public bool HasBorrower { get; private set; }
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
+        On<BorrowerAndAccessContactSaved>(Handle);
         On<SupportingDocumentAttached>(Handle);
         On<SupportingDocumentRemoved>(Handle);
+        On<OrderSubmitted>(Handle);
     }
 
     protected override void ConfigureStateMachine()
@@ -86,6 +96,7 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
             .PermitReentry(OrderCommand.SaveRequestAndProperty)
             .PermitReentry(OrderCommand.SaveBorrowerAndAccessContact)
             .PermitReentry(OrderCommand.AttachSupportingDocument)
-            .PermitReentry(OrderCommand.RemoveSupportingDocument);
+            .PermitReentry(OrderCommand.RemoveSupportingDocument)
+            .Permit(OrderCommand.SubmitOrder, OrderStatus.Submitted);
     }
 }

@@ -38,3 +38,8 @@ public sealed partial class OrderGrain
         }, _grainCallErrorHandler);
     }
 }
+
+public sealed partial class OrderState
+{
+    private void Handle(BorrowerAndAccessContactSaved evt) => HasBorrower = true;
+}

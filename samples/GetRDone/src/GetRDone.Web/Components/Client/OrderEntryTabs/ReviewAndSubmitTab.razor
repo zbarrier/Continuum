@@ -1,0 +1,99 @@
+@* Tab 4 of order entry: shows everything saved on the draft (the OrderDraft read model) and submits the order. *@
+@using GetRDone.Orders.Abstractions.OrderAggregate
+@inject IClusterClient ClusterClient
+@inject ISnackbar Snackbar
+@inject ILogger<ReviewAndSubmitTab> Logger
+
+@if (_form.Error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_form.Error</MudAlert>
+}
+<MudSimpleTable Dense="true" Elevation="0" Outlined="true">
+    <tbody>
+        <tr>
+            <th style="width: 30%">Service · form type</th>
+            <td>@Draft.ServiceRequestTypeName · @Draft.FormTypeName</td>
+        </tr>
+        <tr>
+            <th>Property</th>
+            <td>@Draft.PropertyAddress · @Draft.PropertyType</td>
+        </tr>
+        <tr>
+            <th>Intended use</th>
+            <td>@Draft.IntendedUseName</td>
+        </tr>
+        <tr>
+            <th>Loan number</th>
+            <td>@Draft.LoanNumber</td>
+        </tr>
+        <tr>
+            <th>Due date</th>
+            <td>@Draft.DueDate.ToString("MMM d, yyyy")</td>
+        </tr>
+        <tr>
+            <th>Borrower</th>
+            <td>@Draft.BorrowerName</td>
+        </tr>
+        <tr>
+            <th>Access contact</th>
+            <td>
+                @(Draft.AccessContactName is null
+                    ? "None"
+                    : $"{Draft.AccessContactName} · {BorrowerAndAccessContactTab.FormatPhone(Draft.AccessContactPhone)}")
+            </td>
+        </tr>
+        <tr>
+            <th>Documents (@Draft.SupportingDocuments.Count)</th>
+            <td>
+                @if (Draft.SupportingDocuments.Count == 0)
+                {
+                    <text>None</text>
+                }
+                @foreach (var document in Draft.SupportingDocuments)
+                {
+                    <div>@document.FileName · @document.DocumentTypeName</div>
+                }
+            </td>
+        </tr>
+    </tbody>
+</MudSimpleTable>
+@if (_form.Saving)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+}
+<MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+    <MudButton Variant="Variant.Text" OnClick="OnBack">Back</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_form.Saving" OnClick="SubmitAsync">Submit order</MudButton>
+</MudStack>
+
+@code {
+    private OrderEntryForm _form = default!;
+
+    /// <summary>The draft whose tab this is.</summary>
+    [Parameter, EditorRequired]
+    public OrderDraft Draft { get; set; } = default!;
+
+    /// <summary>Called once the order is submitted.</summary>
+    [Parameter]
+    public EventCallback OnSubmitted { get; set; }
+
+    /// <summary>Called when the user goes back to the previous tab.</summary>
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    protected override void OnInitialized() => _form = new OrderEntryForm(Logger, new Dictionary<string, string>());
+
+    private async Task SubmitAsync()
+    {
+        // A submitted order is no longer a draft, so unlike the other tabs, this doesn't apply the response to the draft.
+        var order = ClusterClient.GetGrain<IOrderGrain>(Draft.OrderId);
+        var response = await _form.SaveAsync(() => order.SubmitOrderAsync());
+        if (response is null)
+        {
+            return;
+        }
+
+        Snackbar.Add("Order submitted.", Severity.Success);
+        await OnSubmitted.InvokeAsync();
+    }
+}
