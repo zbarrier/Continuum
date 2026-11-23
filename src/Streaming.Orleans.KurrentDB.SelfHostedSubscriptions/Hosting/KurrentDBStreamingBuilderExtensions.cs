@@ -71,7 +71,10 @@ public static class KurrentDBStreamingBuilderExtensions
         builder.Services.TryAddSingleton<KurrentDBCatchupSubscriptionStatusRegistry>();
         builder.Services.TryAddSingleton(sp => new KurrentDBCatchupSubscriptionMetrics(
             sp.GetRequiredService<KurrentDBCatchupSubscriptionStatusRegistry>(), sp.GetService<IMeterFactory>()));
-        builder.Services.AddSingleton(typeof(IStreamSubscription), subscriptionInfo.Type);
+        var subscriptionType = subscriptionInfo.Type;
+        builder.Services.AddSingleton(subscriptionType);
+        builder.Services.AddSingleton(sp => (IStreamSubscription)sp.GetRequiredService(subscriptionType));
+        builder.Services.AddSingleton(sp => (IHostedService)sp.GetRequiredService(subscriptionType));
 
         return builder;
     }

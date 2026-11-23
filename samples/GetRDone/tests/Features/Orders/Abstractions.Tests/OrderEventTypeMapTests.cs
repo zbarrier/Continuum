@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Continuum.TypeMapping;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
+using GetRDone.Orders.Abstractions.OrderNumbers;
 
 namespace GetRDone.Orders.Tests;
 
@@ -15,6 +16,8 @@ public sealed class OrderEventTypeMapTests
     [InlineData(typeof(SupportingDocumentAttached), "Orders.SupportingDocumentAttached.V1")]
     [InlineData(typeof(SupportingDocumentRemoved), "Orders.SupportingDocumentRemoved.V1")]
     [InlineData(typeof(OrderSubmitted), "Orders.OrderSubmitted.V1")]
+    [InlineData(typeof(OrderNumberAssigned), "Orders.OrderNumberAssigned.V1")]
+    [InlineData(typeof(OrderNumbersIssued), "Orders.OrderNumbersIssued.V1")]
     public void OrderEvent_IsRegisteredAsADomainEvent(Type eventType, string typeIdentifier)
     {
         RuntimeHelpers.RunModuleConstructor(eventType.Module.ModuleHandle);

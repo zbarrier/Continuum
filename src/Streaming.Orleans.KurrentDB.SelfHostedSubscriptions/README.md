@@ -14,6 +14,8 @@ dotnet add package Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions
 
 Each subscription reads exactly one source. Pick the base class and matching registration method for it, handle each batch in `OnNextBatchAsync`, and register a checkpoint store such as `AddKurrentDBCheckpointStore`.
 
+The registration method adds the subscription as a hosted service, so it starts and stops with the host. Hosted services start in registration order: when a subscription calls grains from the same silo, register it after `UseOrleans` so the silo is running before the first batch arrives.
+
 | Source | Derive from | Register with |
 | --- | --- | --- |
 | `$all`, optionally filtered by overriding `Filter` (any KurrentDB `IEventFilter`) | `KurrentDBAllStreamCatchupSubscription<TSubscription, TOptions>` | `AddKurrentDBAllStreamCatchupSubscription(MySubscription.Info)` |

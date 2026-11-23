@@ -58,6 +58,26 @@ public sealed class ClientOrdersTests
     }
 
     [Fact]
+    public async Task OrderNumberAssigned_GivesTheOrderItsNumber()
+    {
+        var (numberedOrder, otherOrder) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(_user);
+
+        await Given(
+        [
+            .. StartedAndSubmitted(Command1, numberedOrder, TestData.At.AddMinutes(3)),
+            .. StartedAndSubmitted(Command2, otherOrder, TestData.At.AddMinutes(4)),
+            AssignOrderNumberTestData.Assigned(Command1, numberedOrder, 610_696, TestData.At.AddMinutes(5))
+        ]);
+
+        Then(state =>
+        {
+            Assert.Equal(610_696, state.Orders[numberedOrder].OrderNumber);
+            Assert.Null(state.Orders[otherOrder].OrderNumber);
+        });
+    }
+
+    [Fact]
     public async Task DraftStarted_IsNotAnOrderUntilItIsSubmitted()
     {
         var (submittedOrder, draftOrder) = (NewOrderId(), NewOrderId());

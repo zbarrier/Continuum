@@ -58,7 +58,8 @@ public enum OrderCommand
     SaveBorrowerAndAccessContact,
     AttachSupportingDocument,
     RemoveSupportingDocument,
-    SubmitOrder
+    SubmitOrder,
+    AssignOrderNumber
 }
 
 [GenerateSerializer]
@@ -81,6 +82,9 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>Whether the Borrower &amp; Access contact tab was saved, which the order needs to be submitted.</summary>
     [Id(3)] public bool HasBorrower { get; private set; }
 
+    /// <summary>The order's number, or null until the Order Number Assigner gives the submitted order its number.</summary>
+    [Id(4)] public long? OrderNumber { get; private set; }
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
@@ -88,6 +92,7 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         On<SupportingDocumentAttached>(Handle);
         On<SupportingDocumentRemoved>(Handle);
         On<OrderSubmitted>(Handle);
+        On<OrderNumberAssigned>(Handle);
     }
 
     protected override void ConfigureStateMachine()
@@ -99,5 +104,7 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
             .PermitReentry(OrderCommand.AttachSupportingDocument)
             .PermitReentry(OrderCommand.RemoveSupportingDocument)
             .Permit(OrderCommand.SubmitOrder, OrderStatus.Submitted);
+        StateMachine.Configure(OrderStatus.Submitted)
+            .PermitReentry(OrderCommand.AssignOrderNumber);
     }
 }

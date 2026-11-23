@@ -14,12 +14,13 @@ Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only
 
 ## Projects
 
-- `GetRDone.AppHost` - Aspire: Azurite (Orleans clustering, and the `order-documents` blob container for supporting document files), KurrentDB, SQL Server (Identity, persistent volume), Mailpit, Identity, Silo, Web.
+- `GetRDone.AppHost` - Aspire: Azurite (Orleans clustering, and the `order-documents` blob container for supporting document files), KurrentDB, SQL Server (Identity, persistent volume), Mailpit, Identity, Silo, Subscriptions Worker, Web.
 - `GetRDone.ServiceDefaults` - OpenTelemetry, health checks, service discovery.
 - `GetRDone.Identity` - Duende IdentityServer with ASP.NET Core Identity on SQL Server and the Duende Razor Pages UI (`role`, `tenant_id` claims).
 - `GetRDone.Silo` - Orleans silo; multi-tenant KurrentDB event log; KurrentDB stream provider for projections; ManagedCode.Orleans.Identity authorization.
 - `GetRDone.Web` - Blazor Server; OIDC sign-in; forwards the circuit user to grains via an outgoing grain-call filter. A client user's Home has My drafts and My orders sections (paged lists). My drafts loads from the ClientOrderDrafts projection, and My orders from the ClientOrders projection. Other roles' home pages are not built yet.
-- `Features/<Domain>/GetRDone.<Domain>.Abstractions` / `.Grains` - feature slices. `Hello` is temporary and proves the round trip (the Hello page, `/hello`).
+- `GetRDone.Subscriptions.Worker` - hosts the self-hosted KurrentDB catch-up subscriptions (one folder per feature) and calls the silo's grains as an Orleans cluster client. It runs as exactly one instance (`WithReplicas(1)`), since a catch-up subscription doesn't share its work with other instances. Its health check reports the subscriptions' state.
+- `Features/<Domain>/GetRDone.<Domain>.Abstractions` / `.Grains` / `.Automations` - feature slices. `.Automations` holds the logic of the domain's automations, which the worker runs; like any client it references only `.Abstractions`. `Hello` is temporary and proves the round trip (the Hello page, `/hello`).
 
 ## Starting an order draft
 
@@ -42,7 +43,16 @@ Order entry tab 3 attaches supporting documents to a draft. Files are stored in 
 
 ## Submitting an order
 
-Order entry tab 4 (Review & Submit) shows everything saved on the draft and calls `SubmitOrderAsync`, which records `OrderSubmitted` with the draft's client. The draft needs a borrower (tab 2); supporting documents are optional, and the tab opens only once the borrower is saved. A submitted order can't be submitted again or changed with the draft commands (`FailedPrecondition`), and `GetOrderDraftAsync` rejects it, since it is no longer a draft. After submitting, the web app goes back to Home, where the draft has moved from My drafts to My orders. The order shows its number as Pending until the order number slice assigns one.
+Order entry tab 4 (Review & Submit) shows everything saved on the draft and calls `SubmitOrderAsync`, which records `OrderSubmitted` with the draft's client. The draft needs a borrower (tab 2); supporting documents are optional, and the tab opens only once the borrower is saved. A submitted order can't be submitted again or changed with the draft commands (`FailedPrecondition`), and `GetOrderDraftAsync` rejects it, since it is no longer a draft. After submitting, the web app goes back to Home, where the draft has moved from My drafts to My orders. The order shows its number as Pending until it is assigned one (see Order numbers).
+
+## Order numbers
+
+Each tenant numbers its submitted orders one after another, starting at 610696. Two automations do this, both running as the `OrderNumberAssigner` service account (`AutomationUser`) on self-hosted KurrentDB catch-up subscriptions in `GetRDone.Subscriptions.Worker` (`Orders`), which read `$all` in batches and call the silo as a cluster client. Their logic is in `GetRDone.Orders.Automations`:
+
+1. **Order Number Issuer** (`OrderNumberIssuerSubscription`, prefix `order-`): for the `OrderSubmitted` events of a batch, asks each tenant's `IOrderNumberGeneratorGrain` (grain type `orderNumberGenerator`, keyed `{tenantId}|default`; `GetOrderNumberGeneratorGrain(tenantId)`) to issue numbers with `IssueOrderNumbersAsync`, which records `OrderNumbersIssued`. The generator issues an order only one number: asking again returns the number already issued and records nothing.
+2. **Order Number Assigner** (`OrderNumberAssignerSubscription`, prefix `orderNumberGenerator-`): for the `OrderNumbersIssued` events of a batch, calls `AssignOrderNumberAsync` on each order in parallel, which records `OrderNumberAssigned` with the order's client. An order that already has its number succeeds without changes.
+
+Only the `OrderNumberAssigner` account may issue or assign numbers (`IOrderPermissions`). Numbers are never reserved, so a number issued to an order that can't take it (for example, one that isn't submitted) is skipped and leaves a gap. A call that fails with an error worth retrying (an exception, or gRPC status `Unavailable`, `DeadlineExceeded`, `Aborted` or `ResourceExhausted`) is retried with the same numbers, and the subscription doesn't move its checkpoint past the batch until no order is waiting; the assigner retries only the orders still waiting. Any other error is logged and skipped. The ClientOrders projection shows the number once `OrderNumberAssigned` arrives. Both subscriptions keep their checkpoints in KurrentDB (`AddKurrentDBCheckpointStore`), since what they produce is stored there too.
 
 ## Client order projections
 

@@ -20,6 +20,7 @@
 	<ProjectReference Include="..\GetRDone.Identity\GetRDone.Identity.csproj" />
 	<ProjectReference Include="..\GetRDone.Silo\GetRDone.Silo.csproj" />
 	<ProjectReference Include="..\GetRDone.Web\GetRDone.Web.csproj" />
+	<ProjectReference Include="..\GetRDone.Subscriptions.Worker\GetRDone.Subscriptions.Worker.csproj" />
   </ItemGroup>
 
 </Project>

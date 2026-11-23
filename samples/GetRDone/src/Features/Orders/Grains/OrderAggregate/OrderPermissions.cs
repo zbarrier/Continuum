@@ -19,6 +19,12 @@ public interface IOrderPermissions
     Result CanChangeOrder(UserId userId, OrderState order);
 
     Result CanViewOrder(UserId userId, OrderState order);
+
+    /// <summary>Only the Order Number Assigner automation issues order numbers.</summary>
+    Result CanIssueOrderNumbers(UserId userId);
+
+    /// <summary>Only the Order Number Assigner automation gives orders their numbers.</summary>
+    Result CanAssignOrderNumber(UserId userId);
 }
 
 public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermissions
@@ -40,4 +46,19 @@ public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermiss
             ? Result.Success()
             : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
                 "You can only view orders you started."));
+
+    public Result CanIssueOrderNumbers(UserId userId)
+        => IsOrderNumberAssigner(userId)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the Order Number Assigner can issue order numbers."));
+
+    public Result CanAssignOrderNumber(UserId userId)
+        => IsOrderNumberAssigner(userId)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the Order Number Assigner can assign order numbers."));
+
+    private static bool IsOrderNumberAssigner(UserId userId)
+        => userId.TenantId is { } tenantId && (string)userId == AutomationUser.OrderNumberAssigner.GetTenantUserId(tenantId);
 }

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Orders automations GetRDone.Subscriptions.Worker hosts. They call the silo as a cluster client, so they reference only the
+	   Abstractions, like any other client. -->
+
+  <ItemGroup>
+	<PackageReference Include="ManagedCode.Orleans.Identity.Core" Version="10.4.6" />
+	<PackageReference Include="Microsoft.Orleans.Sdk" Version="$(OrleansVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\Abstractions\GetRDone.Orders.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

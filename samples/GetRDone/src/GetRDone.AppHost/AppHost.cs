@@ -37,6 +37,14 @@ var silo = builder.AddProject<Projects.GetRDone_Silo>("silo")
     .WaitFor(kurrentdb)
     .WaitFor(clustering);
 
+// Hosts the automations' KurrentDB catch-up subscriptions and calls the silo as a cluster client. Exactly one instance:
+// a catch-up subscription doesn't share its work with other instances, so a second one would handle every event again.
+builder.AddProject<Projects.GetRDone_Subscriptions_Worker>("subscriptions-worker")
+    .WithReplicas(1)
+    .WithReference(orleans.AsClient())
+    .WithReference(kurrentdb)
+    .WaitFor(silo);
+
 var web = builder.AddProject<Projects.GetRDone_Web>("web")
     .WithExternalHttpEndpoints()
     .WithReference(orleans.AsClient())

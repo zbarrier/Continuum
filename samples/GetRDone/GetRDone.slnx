@@ -9,6 +9,7 @@
     <Project Path="src/GetRDone.ServiceDefaults/GetRDone.ServiceDefaults.csproj" />
     <Project Path="src/GetRDone.Silo/GetRDone.Silo.csproj" />
     <Project Path="src/GetRDone.Web/GetRDone.Web.csproj" />
+    <Project Path="src/GetRDone.Subscriptions.Worker/GetRDone.Subscriptions.Worker.csproj" />
   </Folder>
   <Folder Name="/src/Features/" />
   <Folder Name="/src/Features/Hello/">
@@ -17,6 +18,7 @@
   </Folder>
   <Folder Name="/src/Features/Orders/">
     <Project Path="src/Features/Orders/Abstractions/GetRDone.Orders.Abstractions.csproj" Id="c8c1fdda-90a4-4e4f-bb14-7a6f1bee7cb5" />
+    <Project Path="src/Features/Orders/Automations/GetRDone.Orders.Automations.csproj" />
     <Project Path="src/Features/Orders/Grains/GetRDone.Orders.Grains.csproj" Id="83739dd6-41bf-4701-9f48-ad5c06317021" />
   </Folder>
   <Folder Name="/tests/" />

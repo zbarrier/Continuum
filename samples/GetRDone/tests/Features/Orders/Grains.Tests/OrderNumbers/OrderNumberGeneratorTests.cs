@@ -1,0 +1,147 @@
+using System.Security.Claims;
+
+using Continuum.CSharpFunctionalExtensions;
+using Continuum.Domain;
+using Continuum.Domain.Orleans;
+using Continuum.Domain.Orleans.TestHarness;
+using Continuum.Orleans.Tenancy;
+
+using GetRDone.Orders.Abstractions;
+using GetRDone.Orders.Abstractions.OrderNumbers;
+using GetRDone.Orders.Grains.OrderNumbers;
+using GetRDone.Orders.Grains.Tests.Data;
+
+using ManagedCode.Orleans.Identity.Core.Constants;
+
+namespace GetRDone.Orders.Grains.Tests.OrderNumbers;
+
+/// <summary>
+///     Given/When/Then tests for issuing order numbers. A tenant has one generator, so each test uses a new tenant to
+///     start from a generator that has issued nothing.
+/// </summary>
+public sealed class OrderNumberGeneratorTests
+    : EventDrivenGrainTestHarness<IOrderNumberGeneratorGrain, OrderNumberGeneratorGrain, OrderNumberGeneratorState, OrderNumberGeneratorEvent>,
+      IClassFixture<OrdersCluster>
+{
+    private readonly string _tenantId;
+
+    public OrderNumberGeneratorTests(OrdersCluster fixture) : this(fixture, "t" + Guid.NewGuid().ToString("N")) { }
+
+    private OrderNumberGeneratorTests(OrdersCluster fixture, string tenantId)
+        : base(fixture.Cluster, TenantKey.Create(tenantId, "default"))
+        => _tenantId = tenantId;
+
+    private IOrderNumberGeneratorGrain Generator => Cluster.GrainFactory.GetOrderNumberGeneratorGrain(_tenantId);
+
+    [Fact]
+    public async Task Issue_IssuesTheTenantsFirstNumbersInTheOrderAskedFor()
+    {
+        var (order1, order2) = (NewOrderId(), NewOrderId());
+        var before = DateTimeOffset.UtcNow;
+        GivenSignedIn(Automation);
+        await Given();
+
+        await When(() => Generator.IssueOrderNumbersAsync([order1, order2]));
+
+        Then<IssueOrderNumbersResponse>(response =>
+        {
+            Assert.Equal(1, response.Version);
+            var recorded = Assert.IsType<OrderNumbersIssued>(SingleEvent(response.Changes));
+            Assert.InRange(recorded.OccurredAt, before, DateTimeOffset.UtcNow);
+            Assert.Equivalent(Issued(recorded.OccurredAt, (order1, 610_696), (order2, 610_697)), recorded, strict: true);
+            Assert.Equal(new Dictionary<string, long> { [order1] = 610_696, [order2] = 610_697 }, response.OrderNumbers);
+        });
+    }
+
+    [Fact]
+    public async Task Issue_ContinuesFromTheLastNumberIssued()
+    {
+        var order = NewOrderId();
+        GivenSignedIn(Automation);
+        await Given(Issued(TestData.At, (NewOrderId(), 610_696), (NewOrderId(), 610_697)));
+
+        await When(() => Generator.IssueOrderNumbersAsync([order]));
+
+        Then<IssueOrderNumbersResponse>(response =>
+            Assert.Equal(new Dictionary<string, long> { [order] = 610_698 }, response.OrderNumbers));
+    }
+
+    [Fact]
+    public async Task Issue_ReturnsTheNumbersAlreadyIssuedWithoutIssuingAgain()
+    {
+        var (order1, order2) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(Automation);
+        await Given(Issued(TestData.At, (order1, 610_696), (order2, 610_697)));
+
+        await When(() => Generator.IssueOrderNumbersAsync([order2, order1, order2]));
+
+        Then<IssueOrderNumbersResponse>(response =>
+        {
+            Assert.Empty(response.Changes);
+            Assert.Equal(new Dictionary<string, long> { [order1] = 610_696, [order2] = 610_697 }, response.OrderNumbers);
+        });
+        await ThenNoChanges();
+    }
+
+    [Fact]
+    public async Task Issue_IssuesOnlyTheOrdersWithoutANumber()
+    {
+        var (issuedOrder, newOrder) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(Automation);
+        await Given(Issued(TestData.At, (issuedOrder, 610_696)));
+
+        await When(() => Generator.IssueOrderNumbersAsync([issuedOrder, newOrder]));
+
+        Then<IssueOrderNumbersResponse>(response =>
+        {
+            var recorded = Assert.IsType<OrderNumbersIssued>(SingleEvent(response.Changes));
+            Assert.Equivalent(new[] { new IssuedOrderNumber { OrderId = newOrder, OrderNumber = 610_697 } }, recorded.Numbers, strict: true);
+            Assert.Equal(new Dictionary<string, long> { [issuedOrder] = 610_696, [newOrder] = 610_697 }, response.OrderNumbers);
+        });
+    }
+
+    [Fact]
+    public async Task Issue_RejectsAnOrderOfAnotherTenant()
+    {
+        GivenSignedIn(Automation);
+        await Given();
+
+        await When(() => Generator.IssueOrderNumbersAsync([NewOrderId(), TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString())]));
+
+        ThenError<ValidationError>(error => Assert.Equal("OrderIds[1]", Assert.Single(error.Entries).Target));
+    }
+
+    [Fact]
+    public async Task Issue_RejectsAUserWhoIsNotTheAutomation()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await Given();
+
+        await When(() => Generator.IssueOrderNumbersAsync([NewOrderId()]));
+
+        ThenError<RequestError>(error => Assert.Equal(ErrorCodes.PermissionDenied, error.Code));
+    }
+
+    [Fact]
+    public async Task Issue_RejectsAnUnauthenticatedCaller()
+    {
+        // Orleans Identity rejects the call before it reaches the grain, so this calls the grain directly instead of using When.
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Generator.IssueOrderNumbersAsync([NewOrderId()]));
+    }
+
+    private ClaimsPrincipal Automation => AutomationUser.OrderNumberAssigner.CreatePrincipal(_tenantId);
+
+    private string NewOrderId() => TenantKey.Create(_tenantId, Guid.NewGuid().ToString());
+
+    private OrderNumbersIssued Issued(DateTimeOffset occurredAt, params (string OrderId, long OrderNumber)[] numbers) => new()
+    {
+        Numbers = [.. numbers.Select(number => new IssuedOrderNumber { OrderId = number.OrderId, OrderNumber = number.OrderNumber })],
+        InitiatedBy = AutomationUser.OrderNumberAssigner.GetTenantUserId(_tenantId),
+        OccurredAt = occurredAt
+    };
+
+    /// <summary>Signs in <paramref name="user"/> for the rest of the test; Orleans Identity reads the user from the request context.</summary>
+    private static void GivenSignedIn(ClaimsPrincipal user) => RequestContext.Set(OrleansIdentityConstants.USER_CLAIMS, user);
+
+    private static object SingleEvent(IReadOnlyList<IChange> changes) => Assert.IsType<Change>(Assert.Single(changes)).Event;
+}

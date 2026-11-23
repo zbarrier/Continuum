@@ -2,19 +2,18 @@ using System.Security.Claims;
 
 using Continuum.Orleans.Tenancy;
 
-using ManagedCode.Orleans.Identity.Core.Constants;
-
-namespace GetRDone.Orders.Grains;
+namespace GetRDone.Orders.Abstractions;
 
 /// <summary>
-///     A service account an in-silo automation runs as, so its grain calls pass <c>[Authorize]</c> and the events they
-///     record name it as <c>InitiatedBy</c>. The event model gives each automation its own account.
+///     A service account an automation runs as, so its grain calls pass <c>[Authorize]</c> and the events they record
+///     name it as <c>InitiatedBy</c>. The event model gives each automation its own account.
 /// </summary>
 /// <remarks>
 ///     GetRDone.Identity seeds the same accounts (<c>IdentitySeeder</c>) with no password, so nobody can sign in as them,
-///     and <c>SampleSeedData</c> lists them in the user directory; keep the IDs in sync. The silo is trusted, so an
-///     automation signs in by building its own principal, with the claims GetRDone.Identity issues, rather than
-///     requesting a token.
+///     and <c>SampleSeedData</c> lists them in the user directory; keep the IDs in sync. The worker is a trusted cluster
+///     client, so an automation signs in by building its own principal, with the claims GetRDone.Identity issues, rather
+///     than requesting a token (see <c>SignIn</c> in GetRDone.Orders.Automations). The grains use the accounts to
+///     authorize the automations' commands.
 /// </remarks>
 public sealed class AutomationUser
 {
@@ -53,10 +52,4 @@ public sealed class AutomationUser
             new Claim("tenant_id", tenantId)
         ], "GetRDone.Automation", "name", "role"));
     }
-
-    /// <summary>
-    ///     Signs the account in for the grain calls that follow in the current async flow, as Orleans Identity reads the
-    ///     user from the request context. An automation that works on several tenants signs in again for each one.
-    /// </summary>
-    public void SignIn(string tenantId) => RequestContext.Set(OrleansIdentityConstants.USER_CLAIMS, CreatePrincipal(tenantId));
 }

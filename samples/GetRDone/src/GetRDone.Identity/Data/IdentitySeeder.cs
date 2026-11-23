@@ -18,11 +18,11 @@ public static class IdentitySeeder
     public const string ScottRiggsbeeUserId = "3005c2d8-6e1f-4a7b-9c3d-5e8f1a2b4c6d";
 
     /// <summary>The service account the Order Number Assigner automation runs as.</summary>
-    /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Grains.AutomationUser); keep them in sync.</remarks>
+    /// <remarks>The worker signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
     public const string OrderNumberAssignerUserId = "0a1b2c01-5d3e-4f7a-8b9c-1d2e3f4a5b6c";
 
     /// <summary>The service account the New Order Notifier automation runs as.</summary>
-    /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Grains.AutomationUser); keep them in sync.</remarks>
+    /// <remarks>The worker signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
     public const string NewOrderNotifierUserId = "0a1b2c02-6e4f-4a8b-9c0d-2e3f4a5b6c7d";
 
     public static async Task MigrateAndSeedAsync(IServiceProvider services, bool seedDemoUsers)

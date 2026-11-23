@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 
+using Continuum.Orleans.Hosting;
 using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Configuration;
 using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Diagnostics;
 using Continuum.Streams;
@@ -8,8 +9,10 @@ using Continuum.TypeMapping;
 
 using KurrentDB.Client;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using Orleans.Storage;
@@ -335,6 +338,43 @@ public class KurrentDBCatchupSubscriptionIntegrationTests(KurrentDBFixture fixtu
 
         Assert.Equal(["event-0", "event-2"], harness.Settings.Received(FirstCatchupSubscription.Name));
         Assert.Equal(2UL, harness.CheckpointStore.Positions[FirstCatchupSubscription.Name]);
+    }
+
+    [Fact]
+    public async Task A_registered_subscription_runs_as_a_hosted_service_of_the_host()
+    {
+        var checkpointStore = new InMemoryCheckpointStore();
+        var typeMapper = new TestTypeMapper();
+        typeMapper.AddType(typeof(string), EventType);
+        var settings = new TestSubscriptionSettings();
+        settings.Streams[FirstCatchupSubscription.Name] = await AppendAsync(2);
+
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [$"Continuum:KurrentDB:Subscriptions:{FirstCatchupSubscription.Name}:ConnectionName"] = ConnectionName
+        });
+        builder.Services.AddLogging();
+        builder.Services.AddSingleton(settings);
+        builder.Services.AddKeyedSingleton(ConnectionName, (_, _) => new KurrentDBClient(KurrentDBClientSettings.Create(fixture.ConnectionString)));
+        builder.Services.Configure<KurrentDBCatchupSubscriptionOptions>(FirstCatchupSubscription.Name, options =>
+        {
+            options.CheckpointStore = checkpointStore;
+            options.GrainStorageSerializer = new Utf8StringSerializer();
+            options.TypeMapper = typeMapper;
+        });
+        builder.AddKurrentDBStreamCatchupSubscription(FirstCatchupSubscription.Info);
+
+        using var host = builder.Build();
+        var subscription = Assert.Single(host.Services.GetServices<IHostedService>().OfType<FirstCatchupSubscription>());
+        Assert.Same(subscription, Assert.Single(host.Services.GetServices<IStreamSubscription>()));
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => settings.Received(FirstCatchupSubscription.Name).Count == 2);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event-0", "event-1"], settings.Received(FirstCatchupSubscription.Name));
+        Assert.Equal(1UL, checkpointStore.Positions[FirstCatchupSubscription.Name]);
     }
 
     private Harness CreateHarness(InMemoryCheckpointStore? checkpointStore = null, bool enabled = true,

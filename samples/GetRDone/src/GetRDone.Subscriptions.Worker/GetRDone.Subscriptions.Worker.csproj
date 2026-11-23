@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Hosts the self-hosted KurrentDB catch-up subscriptions of the automations. Runs as a single instance and calls
+	   the silo as an Orleans cluster client. A web app only so it serves the Aspire health endpoints. -->
+
+  <ItemGroup>
+	<PackageReference Include="Aspire.Azure.Data.Tables" Version="13.6.4" />
+	<PackageReference Include="CommunityToolkit.Aspire.KurrentDB" Version="13.6.1" />
+	<PackageReference Include="Microsoft.Orleans.Client" Version="$(OrleansVersion)" />
+	<PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(OrleansVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="$(ContinuumSrc)Streaming.Orleans.KurrentDB.SelfHostedSubscriptions\Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.csproj" />
+	<!-- Reads events, so like the Silo it registers the referenced type-mapped types before the mappers are built. -->
+	<ProjectReference Include="$(ContinuumSrc)Core.SourceGenerators\Continuum.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	<ProjectReference Include="..\Features\Orders\Automations\GetRDone.Orders.Automations.csproj" />
+	<ProjectReference Include="..\GetRDone.ServiceDefaults\GetRDone.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>
