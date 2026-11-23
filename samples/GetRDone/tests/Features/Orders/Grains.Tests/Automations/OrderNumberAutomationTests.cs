@@ -54,6 +54,22 @@ public sealed class OrderNumberAutomationTests(OrdersCluster fixture) : IClassFi
     }
 
     [Fact]
+    public async Task Issuer_SkipsOnlyAnOrderThatCanNeverBeIssuedANumber()
+    {
+        var tenant = NewTenantId();
+        var (order1, corruptOrder, order2) = (NewOrderId(tenant), TenantKey.Create(tenant, "not-a-guid"), NewOrderId(tenant));
+
+        await Issuer.IssueAsync(
+        [
+            SubmitOrderTestData.Submitted1(order1),
+            SubmitOrderTestData.Submitted1(corruptOrder),
+            SubmitOrderTestData.Submitted1(order2)
+        ]);
+
+        Assert.Equal(new Dictionary<string, long> { [order1] = 610_696, [order2] = 610_697 }, await IssuedNumbersAsync(tenant, order1, order2));
+    }
+
+    [Fact]
     public async Task Assigner_GivesEachSubmittedOrderItsNumber()
     {
         var (order1, order2) = (NewOrderId(TestData.TenantId), NewOrderId(TestData.TenantId));

@@ -20,7 +20,10 @@ public static class CosmosDBStreamingBuilderExtensions
 {
     const string CatchupSubscriptionsConfigKeyPrefix = "Continuum:CosmosDB:Subscriptions";
 
-    /// <summary>Registers a catch-up subscription, binding its options from configuration.</summary>
+    /// <summary>
+    ///     Registers a catch-up subscription, binding its options from configuration. The subscription is a hosted service,
+    ///     so it starts and stops with the host.
+    /// </summary>
     public static IHostApplicationBuilder AddCosmosDBCatchupSubscription(this IHostApplicationBuilder builder,
         CosmosDBCatchupSubscriptionInfo subscriptionInfo,
         TypeMapKinds typeMapKinds = TypeMapKinds.DomainEvent | TypeMapKinds.Metadata)
@@ -40,7 +43,10 @@ public static class CosmosDBStreamingBuilderExtensions
         builder.Services.TryAddSingleton(sp => new CosmosDBCatchupSubscriptionMetrics(
             sp.GetRequiredService<CosmosDBCatchupSubscriptionStatusRegistry>(), sp.GetService<IMeterFactory>()));
 
-        builder.Services.AddSingleton(typeof(IStreamSubscription), subscriptionInfo.Type);
+        var subscriptionType = subscriptionInfo.Type;
+        builder.Services.AddSingleton(subscriptionType);
+        builder.Services.AddSingleton(sp => (IStreamSubscription)sp.GetRequiredService(subscriptionType));
+        builder.Services.AddSingleton(sp => (IHostedService)sp.GetRequiredService(subscriptionType));
 
         return builder;
     }

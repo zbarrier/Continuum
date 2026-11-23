@@ -15,9 +15,9 @@ namespace GetRDone.Orders.Automations;
 /// </summary>
 /// <remarks>
 ///     Runs as <see cref="AutomationUser.OrderNumberAssigner"/>. An order that already has its number succeeds without
-///     changes, and one that can't be given its number (a business error) is logged and skipped. When calls fail in a
-///     way worth retrying, the orders already handled are remembered so the retried batch calls only those still
-///     waiting. Batches are handled one at a time, so the instance is not thread-safe.
+///     changes, and one that can never be given its number (see <see cref="OrderNumbersPendingException.IsRetryable"/>)
+///     is logged and skipped. When other calls fail, the orders already handled are remembered so the retried batch
+///     calls only those still waiting. Batches are handled one at a time, so the instance is not thread-safe.
 /// </remarks>
 public sealed partial class OrderNumberAssigner(IGrainFactory grainFactory, ILogger<OrderNumberAssigner> logger)
 {
@@ -96,6 +96,6 @@ public sealed partial class OrderNumberAssigner(IGrainFactory grainFactory, ILog
     [LoggerMessage(Level = LogLevel.Warning, Message = "Giving order {OrderId} order number {OrderNumber} failed and will be retried.")]
     private partial void LogAssignThrewRetrying(Exception exception, string orderId, long orderNumber);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Order {OrderId} was not given order number {OrderNumber} and is skipped: {Error}")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "Order {OrderId} can never be given order number {OrderNumber} and is skipped: {Error}")]
     private partial void LogAssignFailedSkipped(string orderId, long orderNumber, Error error);
 }

@@ -17,6 +17,29 @@ public class CosmosDBCatchupSubscriptionHostingTests
 {
     private sealed class FakeSubscription;
 
+    private abstract class RecordingSubscription(string name) : IStreamSubscription, IHostedService
+    {
+        public string SubscriptionName => name;
+        public int StartCount { get; private set; }
+        public int StopCount { get; private set; }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            StartCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            StopCount++;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class OrdersSubscription() : RecordingSubscription("Orders");
+
+    private sealed class InvoicesSubscription() : RecordingSubscription("Invoices");
+
     private static HostApplicationBuilder CreateBuilder(params string[] subscriptionNames)
     {
         var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
@@ -25,6 +48,29 @@ public class CosmosDBCatchupSubscriptionHostingTests
             builder.AddCosmosDBCatchupSubscription(new CosmosDBCatchupSubscriptionInfo(name, typeof(FakeSubscription)));
         }
         return builder;
+    }
+
+    [Fact]
+    public async Task Registered_subscriptions_start_and_stop_with_the_host()
+    {
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        builder.AddCosmosDBCatchupSubscription(new CosmosDBCatchupSubscriptionInfo("Orders", typeof(OrdersSubscription)));
+        builder.AddCosmosDBCatchupSubscription(new CosmosDBCatchupSubscriptionInfo("Invoices", typeof(InvoicesSubscription)));
+
+        using var host = builder.Build();
+        var orders = host.Services.GetRequiredService<OrdersSubscription>();
+        var invoices = host.Services.GetRequiredService<InvoicesSubscription>();
+        Assert.Equal<IStreamSubscription>([orders, invoices], host.Services.GetServices<IStreamSubscription>());
+        Assert.Equal<IHostedService>([orders, invoices], host.Services.GetServices<IHostedService>().OfType<RecordingSubscription>());
+
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.All(new RecordingSubscription[] { orders, invoices }, subscription =>
+        {
+            Assert.Equal(1, subscription.StartCount);
+            Assert.Equal(1, subscription.StopCount);
+        });
     }
 
     [Fact]

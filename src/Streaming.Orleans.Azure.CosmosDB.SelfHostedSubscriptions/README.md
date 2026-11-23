@@ -14,6 +14,8 @@ dotnet add package Continuum.Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscrip
 
 Register it with `AddCosmosDBCatchupSubscription`. Options bind from `Continuum:CosmosDB:Subscriptions:{SubscriptionName}`, so a subscription named `Projections-V1` reads its settings from `Continuum:CosmosDB:Subscriptions:Projections-V1`. Values set in code with `Configure` are applied after configuration binding.
 
+Each subscription is registered as a hosted service, so it starts and stops with the host. Hosted services start in registration order: when a subscription calls grains from the same silo, register it after `UseOrleans` so the silo is running before the first batch arrives.
+
 ```json
 {
   "Continuum": {

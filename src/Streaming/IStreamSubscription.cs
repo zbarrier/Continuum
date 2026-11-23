@@ -10,22 +10,3 @@ public interface IStreamSubscription
     /// </summary>
     string SubscriptionName { get; }
 }
-
-/// <summary>
-/// A stream subscription whose lifetime is managed by a host.
-/// </summary>
-public interface IHostedStreamSubscription : IStreamSubscription
-{
-    /// <summary>
-    /// Starts the subscription.
-    /// </summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that completes when the subscription has started.</returns>
-    Task StartAsync(CancellationToken cancellationToken);
-    /// <summary>
-    /// Stops the subscription.
-    /// </summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that completes when the subscription has stopped.</returns>
-    Task StopAsync(CancellationToken cancellationToken);
-}

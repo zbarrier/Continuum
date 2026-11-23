@@ -16,7 +16,8 @@ namespace GetRDone.Orders.Automations;
 /// </summary>
 /// <remarks>
 ///     Runs as <see cref="AutomationUser.OrderNumberAssigner"/>. The generator issues an order only one number, so
-///     retrying a batch that was partly issued issues nothing twice.
+///     retrying a batch that was partly issued issues nothing twice. Only an order that can never be issued a number is
+///     skipped (see <see cref="OrderNumbersPendingException.IsRetryable"/>); every other failure is retried.
 /// </remarks>
 public sealed partial class OrderNumberIssuer(IGrainFactory grainFactory, ILogger<OrderNumberIssuer> logger)
 {
@@ -42,6 +43,7 @@ public sealed partial class OrderNumberIssuer(IGrainFactory grainFactory, ILogge
     private async Task<bool> IssueTenantAsync(string tenantId, string[] orderIds)
     {
         AutomationUser.OrderNumberAssigner.SignIn(tenantId);
+        Error error;
         try
         {
             var result = await grainFactory.GetOrderNumberGeneratorGrain(tenantId).IssueOrderNumbersAsync(orderIds);
@@ -49,19 +51,33 @@ public sealed partial class OrderNumberIssuer(IGrainFactory grainFactory, ILogge
             {
                 return true;
             }
-            if (OrderNumbersPendingException.IsRetryable(result.Error))
-            {
-                LogIssueFailedRetrying(tenantId, orderIds.Length, result.Error);
-                return false;
-            }
-            LogIssueFailedSkipped(tenantId, orderIds.Length, result.Error);
-            return true;
+            error = result.Error;
         }
         catch (Exception exception)
         {
             LogIssueThrewRetrying(exception, tenantId, orderIds.Length);
             return false;
         }
+        if (OrderNumbersPendingException.IsRetryable(error))
+        {
+            LogIssueFailedRetrying(tenantId, orderIds.Length, error);
+            return false;
+        }
+        if (orderIds.Length == 1)
+        {
+            LogIssueFailedSkipped(orderIds[0], error);
+            return true;
+        }
+
+        // One order the generator can never number (such as a corrupt ID) fails the whole call, so the orders are
+        // issued one at a time to skip only that one.
+        LogIssueFailedIssuingSeparately(tenantId, orderIds.Length, error);
+        var allIssued = true;
+        foreach (var orderId in orderIds)
+        {
+            allIssued &= await IssueTenantAsync(tenantId, [orderId]);
+        }
+        return allIssued;
     }
 
     private static string TenantOf(string orderId)
@@ -76,6 +92,9 @@ public sealed partial class OrderNumberIssuer(IGrainFactory grainFactory, ILogge
     [LoggerMessage(Level = LogLevel.Warning, Message = "Issuing the numbers of {OrderCount} orders of tenant {TenantId} failed and will be retried.")]
     private partial void LogIssueThrewRetrying(Exception exception, string tenantId, int orderCount);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "The {OrderCount} orders of tenant {TenantId} were not issued numbers and are skipped: {Error}")]
-    private partial void LogIssueFailedSkipped(string tenantId, int orderCount, Error error);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Issuing the numbers of {OrderCount} orders of tenant {TenantId} failed, so they are issued one at a time: {Error}")]
+    private partial void LogIssueFailedIssuingSeparately(string tenantId, int orderCount, Error error);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Order {OrderId} can never be issued a number and is skipped: {Error}")]
+    private partial void LogIssueFailedSkipped(string orderId, Error error);
 }

@@ -16,7 +16,7 @@ dotnet add package Continuum.Streaming
 | `IStreamedEventMetadata` | Read-only string metadata attached to a streamed event, with typed accessors for tracing and transaction information. Names starting with `$` are reserved. |
 | `IStreamedEventCursor` | Where an event was delivered from: topic, partition and sequence position. |
 | `ICheckpointStore<TStreamPosition>` | Loads and stores the last processed position of a named subscription. |
-| `IStreamSubscription` / `IHostedStreamSubscription` | A named subscription and one whose lifetime is managed by a host. |
+| `IStreamSubscription` | A named subscription. |
 
 ## Register a stream name parser
 

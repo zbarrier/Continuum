@@ -9,6 +9,7 @@ using Continuum.TypeMapping;
 
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -22,8 +23,11 @@ namespace Continuum.Streaming.Orleans.Azure.CosmosDB.SelfHostedSubscriptions;
 /// <summary>Identifies a catch-up subscription by name and implementing type.</summary>
 public record CosmosDBCatchupSubscriptionInfo(string Name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)][property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type Type);
 
-/// <summary>A subscription that reads the Cosmos DB change feed of a container written by the Cosmos DB log-consistency provider.</summary>
-public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TSubscription, TOptions> : IHostedStreamSubscription
+/// <summary>
+///     A subscription that reads the Cosmos DB change feed of a container written by the Cosmos DB log-consistency provider.
+///     It is a hosted service, so it starts and stops with the host.
+/// </summary>
+public abstract class CosmosDBCatchupSubscription<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TSubscription, TOptions> : IStreamSubscription, IHostedService
     where TSubscription : CosmosDBCatchupSubscription<TSubscription, TOptions>
     where TOptions : CosmosDBCatchupSubscriptionOptions, new()
 {
