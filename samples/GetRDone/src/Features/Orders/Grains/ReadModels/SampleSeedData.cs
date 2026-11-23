@@ -1,3 +1,5 @@
+using GetRDone.Orders.Abstractions.ReadModels;
+
 namespace GetRDone.Orders.Grains.ReadModels;
 
 /// <summary>
@@ -13,6 +15,12 @@ public sealed class SampleSeedData : IReadModelSeedData
     /// <summary>Ana Ruiz, a client user of Carter Bank &amp; Trust.</summary>
     /// <remarks>GetRDone.Identity seeds the same user ID (IdentitySeeder.AnaRuizUserId); keep them in sync.</remarks>
     public const string AnaRuizUserId = "elliott|7304a1f2-3c5d-4e6f-8a9b-0c1d2e3f4a5b";
+
+    /// <summary>Scott Riggsbee, Elliott &amp; Company's Client Services Director, who is told about new orders.</summary>
+    /// <remarks>GetRDone.Identity seeds the same user ID (IdentitySeeder.ScottRiggsbeeUserId); keep them in sync.</remarks>
+    public const string ScottRiggsbeeUserId = "elliott|3005c2d8-6e1f-4a7b-9c3d-5e8f1a2b4c6d";
+
+    private const string ElliottAndCompany = "Elliott & Company";
 
     private static readonly ReadModelSeed Seed = new(
         IntendedUses:
@@ -45,8 +53,15 @@ public sealed class SampleSeedData : IReadModelSeedData
         Users:
         [
             new(AnaRuizUserId, "Ana Ruiz", "Commercial Loan Officer", "Carter Bank & Trust", "ana.ruiz@carterbank.example",
-                CarterBankAndTrustClientId)
+                CarterBankAndTrustClientId),
+            new(ScottRiggsbeeUserId, "Scott Riggsbee", "Client Services Director", ElliottAndCompany,
+                "scott.riggsbee@elliott.example", null),
+            Automation(AutomationUser.OrderNumberAssigner, "order-number-assigner@elliott.example"),
+            Automation(AutomationUser.NewOrderNotifier, "new-order-notifier@elliott.example")
         ]);
 
     public ReadModelSeed? GetSeed(string? tenantId) => tenantId == TenantId ? Seed : null;
+
+    private static UserDirectoryEntry Automation(AutomationUser account, string email)
+        => new(account.GetTenantUserId(TenantId), account.DisplayName, "Automation", ElliottAndCompany, email, null);
 }

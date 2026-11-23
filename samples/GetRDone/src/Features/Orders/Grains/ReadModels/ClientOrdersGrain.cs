@@ -18,16 +18,18 @@ namespace GetRDone.Orders.Grains.ReadModels;
 /// </summary>
 /// <remarks>
 ///     The stream provider activates the grain whose key is the stream key, the user's tenant user ID, so there is one
-///     instance per user. Only the query is authorized: stream delivery carries no signed-in user.
+///     instance per user. <see cref="AuthorizeAttribute"/> on the class covers the query and
+///     <see cref="IProjectionGrain.OnNextBatchAsync"/>, which a catch-up subscription calls signed in as its automation
+///     account; stream deliveries arrive through Orleans' stream consumer extension, which it does not cover.
 /// </remarks>
 [ImplicitStreamSubscription(OrderProjections.ClientUserOrdersNamespace)]
 [GrainType("clientOrders")]
+[Authorize]
 public sealed class ClientOrdersGrain(
     [PersistentState("clientOrders", OrderProjections.StorageName)] IPersistentState<ClientOrdersState> storage,
     ILogger<ClientOrdersGrain> logger)
     : ProjectionGrain<ClientOrdersGrain, ClientOrdersState>(storage, logger), IClientOrdersGrain
 {
-    [Authorize]
     public Task<Result<ClientOrdersPage>> GetOrdersAsync(int skip, int take)
     {
         var tenantUserId = this.GetPrimaryKeyString();

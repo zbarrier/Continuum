@@ -10,7 +10,7 @@ Requires Docker. From this folder:
 dotnet run --project src/GetRDone.AppHost
 ```
 
-Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only, password `Pass123$`): `ana.ruiz@carterbank.example` (client user of Carter Bank & Trust), `coordinator@getrdone.local`, `reviewer@getrdone.local` (tenant `elliott`), and `vendor@getrdone.local` (no tenant). If your local Identity database was seeded before the tenant became `elliott`, delete the SQL Server data volume so the users are re-seeded. Vendors can also self-register from the sign-in page; confirmation and password-reset emails appear in Mailpit.
+Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only, password `Pass123$`): `ana.ruiz@carterbank.example` (client user of Carter Bank & Trust), `scott.riggsbee@elliott.example` (Elliott & Company's Client Services Director, a coordinator), `coordinator@getrdone.local`, `reviewer@getrdone.local` (tenant `elliott`), and `vendor@getrdone.local` (no tenant). The automations' service accounts (`order-number-assigner@` and `new-order-notifier@elliott.example`) are seeded with no password, so nobody can sign in as them. If your local Identity database was seeded before the tenant became `elliott`, delete the SQL Server data volume so the users are re-seeded. Vendors can also self-register from the sign-in page; confirmation and password-reset emails appear in Mailpit.
 
 ## Projects
 
@@ -32,7 +32,7 @@ The lookups come from pre-populated read models, seeded on activation when their
 - `IIntendedUsesGrain` (grain type `intendedUses`): Refinance, Purchase, Construction, Other. `IsCurrentIntendedUseAsync` checks the selected ID, version, and name.
 - `IDocumentTypesGrain` (grain type `documentTypes`): the types a supporting document can have: Lease agreements, Rent roll, Operating statements, Other. `IsCurrentDocumentTypeAsync` checks the selected ID, version, and name.
 - `IOrderableServicesGrain` (grain type `orderableServices`): the service request types, each with the form types that can be ordered with it (the user picks a service request type, then one of its form types). Appraisal Commercial has Market Value Interior Inspection and Market Value Exterior Inspection; Appraisal Residential has Uniform Residential Appraisal Report (1004) and Exterior-Only Inspection (2055). `IsCurrentOrderableServiceAsync` checks the selected service and form IDs, versions, and names, and that the form belongs to the service.
-- `IUserDirectoryGrain` (grain type `userDirectory`): Ana Ruiz of Carter Bank & Trust. `IsClientUserAsync` checks that a user belongs to a client.
+- `IUserDirectoryGrain` (grain type `userDirectory`): Ana Ruiz of Carter Bank & Trust, Scott Riggsbee of Elliott & Company, and the automations' service accounts. `IsClientUserAsync` checks that a user belongs to a client.
 
 `IOrderPermissions` decides who may act on an order. Starting a draft requires the current user to be a user of the selected client; later commands will allow the user who started the order. Real tenant and permission checks belong to a full application. There is no order-entry UI yet.
 

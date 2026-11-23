@@ -22,7 +22,8 @@ namespace GetRDone.Orders.Grains.Tests.ReadModels;
 
 /// <summary>
 ///     Tests for the ClientOrderDrafts projection. Each test projects the drafts of a new client user, so it starts with
-///     none.
+///     none. The grain is <c>[Authorize]</c>d and <c>Given</c> calls <c>OnNextBatchAsync</c> directly, so tests sign in
+///     first.
 /// </summary>
 public sealed class ClientOrderDraftsTests
     : ProjectionGrainTestHarness<IClientOrderDraftsGrain, ClientOrderDraftsGrain, ClientOrderDraftsState>,
@@ -39,6 +40,7 @@ public sealed class ClientOrderDraftsTests
     public async Task DraftStarted_AddsTheDraftByOrderId()
     {
         var (order1, order2) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(_user);
 
         await Given(
             DraftStarted(Command1, order1, _user, TestData.At),
@@ -57,6 +59,7 @@ public sealed class ClientOrderDraftsTests
     public async Task BorrowerAndAccessContactSaved_UpdatesTheDraftsLastSavedTime()
     {
         var orderId = NewOrderId();
+        GivenSignedIn(_user);
 
         await Given(
             DraftStarted(Command1, orderId, _user, TestData.At),
@@ -70,6 +73,7 @@ public sealed class ClientOrderDraftsTests
     public async Task SupportingDocumentAttached_UpdatesTheDraftsLastSavedTime()
     {
         var orderId = NewOrderId();
+        GivenSignedIn(_user);
 
         await Given(
             DraftStarted(Command1, orderId, _user, TestData.At),
@@ -83,6 +87,7 @@ public sealed class ClientOrderDraftsTests
     public async Task SupportingDocumentRemoved_UpdatesTheDraftsLastSavedTime()
     {
         var orderId = NewOrderId();
+        GivenSignedIn(_user);
 
         await Given(
             DraftStarted(Command1, orderId, _user, TestData.At),
@@ -98,6 +103,7 @@ public sealed class ClientOrderDraftsTests
     public async Task OrderSubmitted_RemovesTheDraft()
     {
         var (submittedOrder, otherOrder) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(_user);
 
         await Given(
             DraftStarted(Command1, submittedOrder, _user, TestData.At),
@@ -113,6 +119,7 @@ public sealed class ClientOrderDraftsTests
     public async Task RequestAndPropertySaved_UpdatesTheDraftsAddressFormTypeAndLastSavedTime()
     {
         var orderId = NewOrderId();
+        GivenSignedIn(_user);
 
         await Given(
             DraftStarted(Command3, orderId, _user, TestData.At),
@@ -196,13 +203,14 @@ public sealed class ClientOrderDraftsTests
     /// <summary>
     ///     Checks the stream wiring the harness bypasses: an event produced on the user's client orders stream, as the
     ///     stream provider does for the stream target the order grain names, reaches the user's projection through its
-    ///     implicit subscription.
+    ///     implicit subscription. The event is published signed out, as the stream provider delivers it with no signed-in
+    ///     user, to check that delivery isn't blocked by the grain's <c>[Authorize]</c>.
     /// </summary>
     [Fact]
     public async Task Drafts_AreProjectedFromTheUsersClientOrdersStream()
     {
         var orderId = NewOrderId();
-        GivenSignedIn(_user);
+        RequestContext.Clear();
         var evt = DraftStarted(Command1, orderId, _user, TestData.At);
 
         TenantKey.Split(orderId, out var tenantId, out var key);
@@ -217,6 +225,7 @@ public sealed class ClientOrderDraftsTests
             evt.OccurredAt.UtcDateTime,
             evt));
 
+        GivenSignedIn(_user);
         var page = await WaitForDraftsAsync(totalCount: 1);
         Assert.Equal(orderId, Assert.Single(page.Drafts).OrderId);
     }

@@ -22,6 +22,7 @@ namespace GetRDone.Orders.Grains.Tests.ReadModels;
 
 /// <summary>
 ///     Tests for the ClientOrders projection. Each test projects the orders of a new client user, so it starts with none.
+///     The grain is <c>[Authorize]</c>d and <c>Given</c> calls <c>OnNextBatchAsync</c> directly, so tests sign in first.
 /// </summary>
 public sealed class ClientOrdersTests
     : ProjectionGrainTestHarness<IClientOrdersGrain, ClientOrdersGrain, ClientOrdersState>,
@@ -38,6 +39,7 @@ public sealed class ClientOrdersTests
     public async Task OrderSubmitted_AddsTheOrderWithoutANumber()
     {
         var orderId = NewOrderId();
+        GivenSignedIn(_user);
 
         await Given(StartedAndSubmitted(Command1, orderId, TestData.At.AddMinutes(3)));
 
@@ -59,6 +61,7 @@ public sealed class ClientOrdersTests
     public async Task DraftStarted_IsNotAnOrderUntilItIsSubmitted()
     {
         var (submittedOrder, draftOrder) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(_user);
 
         await Given(
             DraftStarted(Command1, submittedOrder, _user, TestData.At),
@@ -76,6 +79,7 @@ public sealed class ClientOrdersTests
     public async Task RequestAndPropertySaved_BeforeSubmitting_ChangesTheOrdersAddressAndFormType()
     {
         var orderId = NewOrderId();
+        GivenSignedIn(_user);
 
         await Given(
             DraftStarted(Command3, orderId, _user, TestData.At),
@@ -171,13 +175,14 @@ public sealed class ClientOrdersTests
     /// <summary>
     ///     Checks the stream wiring the harness bypasses: events produced on the user's client orders stream, as the stream
     ///     provider does for the stream target the order grain names, reach the user's projection through its implicit
-    ///     subscription.
+    ///     subscription. Events are published signed out, as the stream provider delivers them with no signed-in user, to
+    ///     check that delivery isn't blocked by the grain's <c>[Authorize]</c>.
     /// </summary>
     [Fact]
     public async Task Orders_AreProjectedFromTheUsersClientOrdersStream()
     {
         var orderId = NewOrderId();
-        GivenSignedIn(_user);
+        RequestContext.Clear();
         var stream = Cluster.Client.GetStreamProvider(OrderProjections.ProviderName)
             .GetStream<IStreamedEvent<object>>(StreamId.Create(OrderProjections.ClientUserOrdersNamespace, _user.GetTenantUserId()));
 
@@ -186,6 +191,7 @@ public sealed class ClientOrdersTests
         await stream.OnNextAsync(OnOrderStream(orderId, "Orders.OrderDraftStarted.V1", 0, started, started.OccurredAt));
         await stream.OnNextAsync(OnOrderStream(orderId, "Orders.OrderSubmitted.V1", 1, submitted, submitted.OccurredAt));
 
+        GivenSignedIn(_user);
         var page = await WaitForOrdersAsync(totalCount: 1);
         Assert.Equal(orderId, Assert.Single(page.Orders).OrderId);
     }
