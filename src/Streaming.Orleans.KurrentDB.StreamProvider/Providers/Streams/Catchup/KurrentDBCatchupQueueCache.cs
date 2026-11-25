@@ -257,13 +257,17 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
     /// <summary>
     ///     Caches the pending transaction once under each stream its events belong to, holding that stream's events;
     ///     once under each of its transaction-scoped targets, holding every event; and once under each of its
-    ///     event-scoped targets, holding the events that name it. Every record is positioned at the last event, so
-    ///     each stream sees the same sequence token for the transaction.
+    ///     event-scoped targets, holding the events that name it. Every record is positioned at the last event and
+    ///     numbered by its event index in the order it is cached.
     /// </summary>
     /// <remarks>
     ///     A stream that receives part of the transaction, as a participant or an event-scoped target, receives its
     ///     events merged in transaction order, and receives the whole transaction instead when it is also a
     ///     transaction-scoped target.
+    ///
+    ///     The records share the commit position, so the event index is what tells them apart. The cache positions a
+    ///     cursor opened at a token on the newest record at or before it and reads forward, so records sharing one token
+    ///     would put every stream's cursor on the last record, past the records of the streams cached before it.
     /// </remarks>
     private ulong? CacheTransaction(DateTime dequeueTimeUtc, List<CachedMessage> cachedMessages, List<StreamPosition> streamPositions, ulong? skippedTail)
     {
@@ -297,16 +301,17 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
         _pending.Clear();
         _pendingSkipped = 0;
         var cachedAny = false;
+        var eventIndex = 0;
         foreach (var streamId in partialStreams)
         {
             if (!wholeStreams.Contains(streamId))
             {
-                cachedAny |= TryCacheRecord(streamId, eventsByStream[streamId], last, dequeueTimeUtc, cachedMessages, streamPositions);
+                cachedAny |= TryCacheRecord(streamId, eventsByStream[streamId], last, eventIndex++, dequeueTimeUtc, cachedMessages, streamPositions);
             }
         }
         foreach (var streamId in wholeStreams)
         {
-            cachedAny |= TryCacheRecord(streamId, events, last, dequeueTimeUtc, cachedMessages, streamPositions);
+            cachedAny |= TryCacheRecord(streamId, events, last, eventIndex++, dequeueTimeUtc, cachedMessages, streamPositions);
         }
         return cachedAny ? null : (ulong)last.Cursor.SequenceNumber;
 
@@ -342,7 +347,7 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
         }
     }
 
-    private bool TryCacheRecord(StreamId streamId, IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> events, StreamedEvent<KurrentDBRawEvent> last, DateTime dequeueTimeUtc,
+    private bool TryCacheRecord(StreamId streamId, IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> events, StreamedEvent<KurrentDBRawEvent> last, int eventIndex, DateTime dequeueTimeUtc,
         List<CachedMessage> cachedMessages, List<StreamPosition> streamPositions)
     {
         CachedMessage cachedMessage;
@@ -358,8 +363,9 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
             _logger.TransactionTooLargeForCache(last.Metadata.TransactionId, events.Count, last.EventId, last.EventType, last.StreamName.Value, last.Cursor.SequenceNumber, streamId, ex.Size, ex.BlockSize);
             throw new KurrentDBTransactionTooLargeForCacheException(last.Metadata.TransactionId, (ulong)last.Cursor.SequenceNumber, ex.Size, ex.BlockSize, ex);
         }
+        cachedMessage.EventIndex = eventIndex;
         cachedMessages.Add(cachedMessage);
-        streamPositions.Add(new StreamPosition(streamId, new EventSequenceToken(cachedMessage.SequenceNumber, 0)));
+        streamPositions.Add(new StreamPosition(streamId, _dataAdapter.GetSequenceToken(ref cachedMessage)));
         return true;
     }
 

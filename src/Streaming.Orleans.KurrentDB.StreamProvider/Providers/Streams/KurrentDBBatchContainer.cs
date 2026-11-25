@@ -37,14 +37,15 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     /// </summary>
     /// <param name="kurrentDBMessage"></param>
     /// <param name="materialization">The outcome of materializing the event, produced by the data adapter.</param>
-    public KurrentDBBatchContainer(KurrentDBMessage kurrentDBMessage, KurrentDBEventMaterialization materialization)
+    /// <param name="eventIndex">The event index of the cached record, which the batch token carries.</param>
+    public KurrentDBBatchContainer(KurrentDBMessage kurrentDBMessage, KurrentDBEventMaterialization materialization, int eventIndex = 0)
     {
         ArgumentNullException.ThrowIfNull(kurrentDBMessage, nameof(kurrentDBMessage));
         KurrentDBMessage = kurrentDBMessage;
         Payload = materialization.Event;
         Fault = materialization.Fault;
         IsSuppressed = materialization.IsSuppressed;
-        Token = new EventSequenceToken(kurrentDBMessage.SequenceNumber, 0);
+        Token = new EventSequenceToken(kurrentDBMessage.SequenceNumber, eventIndex);
     }
 
     /// <summary>
@@ -53,11 +54,12 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
     /// </summary>
     /// <param name="kurrentDBMessages">The events of the transaction, in log order.</param>
     /// <param name="materializations">The outcome of materializing each event.</param>
+    /// <param name="eventIndex">The event index of the cached record, which the batch token carries.</param>
     /// <remarks>
     ///     The container is positioned at the last event, so a consumer's token, the cache cursor and the checkpoint all
     ///     move past the transaction only once every event of it has been delivered.
     /// </remarks>
-    public KurrentDBBatchContainer(IReadOnlyList<KurrentDBMessage> kurrentDBMessages, IReadOnlyList<KurrentDBEventMaterialization> materializations)
+    public KurrentDBBatchContainer(IReadOnlyList<KurrentDBMessage> kurrentDBMessages, IReadOnlyList<KurrentDBEventMaterialization> materializations, int eventIndex = 0)
     {
         ArgumentNullException.ThrowIfNull(kurrentDBMessages, nameof(kurrentDBMessages));
         ArgumentNullException.ThrowIfNull(materializations, nameof(materializations));
@@ -69,7 +71,7 @@ public class KurrentDBBatchContainer : IBatchContainer, IKurrentDBCommitPosition
         Payload = materializations[^1].Event;
         Fault = materializations[^1].Fault;
         IsSuppressed = materializations[^1].IsSuppressed;
-        Token = new EventSequenceToken(KurrentDBMessage.SequenceNumber, 0);
+        Token = new EventSequenceToken(KurrentDBMessage.SequenceNumber, eventIndex);
         if (kurrentDBMessages.Count > 1)
         {
             Preceding = new KurrentDBBatchContainer[kurrentDBMessages.Count - 1];

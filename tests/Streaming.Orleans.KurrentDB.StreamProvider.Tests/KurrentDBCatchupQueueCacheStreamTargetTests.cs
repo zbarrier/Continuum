@@ -108,4 +108,58 @@ public class KurrentDBCatchupQueueCacheStreamTargetTests
         // A stream named in both scopes receives the whole transaction once.
         Assert.Equal(["e0", "e1", "e2"], Delivered(cache, adapter.GetTargetStreamId("report/1")));
     }
+
+    [Fact]
+    public void A_Cursor_Opened_At_A_Streams_Position_Reads_Its_Record_When_A_Transaction_Fans_Out_To_Several_Streams()
+    {
+        var (cache, adapter) = CreateCache();
+        // The pulling agent opens a cursor for each stream at the position the cache reported for it, as it does when an
+        // implicit subscriber's stream first appears.
+        var positions = cache.Add(
+        [
+            CreateEvent("e0", "order", 100, new TransactionInfo(Guid.NewGuid(), 1, 1, 0), transactionScoped: ["client/1", "tenant/1"]),
+        ], DateTime.UtcNow);
+
+        Assert.Equal(3, positions.Count);
+        foreach (var position in positions)
+        {
+            var cursor = cache.GetCursor(position.StreamId, position.SequenceToken);
+            try
+            {
+                Assert.True(cache.TryGetNextMessage(cursor, out var container), $"Stream {position.StreamId} did not receive its record.");
+                Assert.Equal(position.StreamId, container.StreamId);
+            }
+            finally
+            {
+                cache.ReleaseCursor(cursor);
+            }
+        }
+    }
+
+    [Fact]
+    public void A_Caught_Up_Cursor_Reads_Its_Record_When_A_Later_Transaction_Fans_Out_To_Several_Streams()
+    {
+        var (cache, adapter) = CreateCache();
+        var client = adapter.GetTargetStreamId("client/1");
+        cache.Add([CreateEvent("e0", "order", 100, new TransactionInfo(Guid.NewGuid(), 1, 1, 0), transactionScoped: ["client/1", "tenant/1"])], DateTime.UtcNow);
+        var cursor = cache.GetCursorAtPosition(client, StreamSubscriptionStartPosition.EarliestAvailable);
+        try
+        {
+            while (cache.TryGetNextMessage(cursor, out _))
+            {
+            }
+            cache.RecordCaughtUp(cursor);
+
+            // Waking the caught-up cursor reopens it at the token of its stream's record in the new transaction.
+            cache.Add([CreateEvent("e1", "order", 200, new TransactionInfo(Guid.NewGuid(), 1, 1, 0), transactionScoped: ["client/1", "tenant/1"])], DateTime.UtcNow);
+
+            Assert.True(cache.TryGetNextMessage(cursor, out var container));
+            Assert.Equal(client, container.StreamId);
+            Assert.Equal(["e1"], container.GetEvents<IStreamedEvent<object>>().Select(e => ((NamedEvent)e.Item1.Event).Name));
+        }
+        finally
+        {
+            cache.ReleaseCursor(cursor);
+        }
+    }
 }

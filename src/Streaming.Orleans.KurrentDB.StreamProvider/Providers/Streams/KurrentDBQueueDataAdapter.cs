@@ -74,25 +74,26 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
         var messages = KurrentDBMessage.ReadAll(cachedMessage, _options.ConnectionName);
         if (messages.Length == 1)
         {
-            return GetBatchContainer(messages[0]);
+            return GetBatchContainer(messages[0], cachedMessage.EventIndex);
         }
         var materializations = new KurrentDBEventMaterialization[messages.Length];
         for (var i = 0; i < messages.Length; i++)
         {
             materializations[i] = DeserializeEvent(messages[i]);
         }
-        return new KurrentDBBatchContainer(messages, materializations);
+        return new KurrentDBBatchContainer(messages, materializations, cachedMessage.EventIndex);
     }
 
     /// <summary>
     ///     Convert an KurrentDBMessage to a batch container
     /// </summary>
     /// <param name="kurrentDBMessage"></param>
+    /// <param name="eventIndex">The event index of the cached record, which the batch token carries.</param>
     /// <returns></returns>
-    protected virtual IBatchContainer GetBatchContainer(KurrentDBMessage kurrentDBMessage)
+    protected virtual IBatchContainer GetBatchContainer(KurrentDBMessage kurrentDBMessage, int eventIndex = 0)
     {
         ArgumentNullException.ThrowIfNull(kurrentDBMessage, nameof(kurrentDBMessage));
-        return new KurrentDBBatchContainer(kurrentDBMessage, DeserializeEvent(kurrentDBMessage));
+        return new KurrentDBBatchContainer(kurrentDBMessage, DeserializeEvent(kurrentDBMessage), eventIndex);
     }
 
     /// <summary>
@@ -157,13 +158,13 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
     /// <param name="cachedMessage"></param>
     /// <returns></returns>
     /// <remarks>
-    ///     A cached record holds a whole transaction and is positioned at the commit position of its last event. Commit
-    ///     positions are unique across the log, so no event index is needed, and every stream a transaction is fanned
-    ///     out to sees the same token.
+    ///     A cached record holds a whole transaction and is positioned at the commit position of its last event. A
+    ///     transaction fanned out to several streams is cached once per stream at that position, and the event index
+    ///     numbers those records, so a cursor opened at a stream's token lands on that stream's record.
     /// </remarks>
     public virtual StreamSequenceToken GetSequenceToken(ref CachedMessage cachedMessage)
     {
-        return new EventSequenceToken(cachedMessage.SequenceNumber, 0);
+        return new EventSequenceToken(cachedMessage.SequenceNumber, cachedMessage.EventIndex);
     }
 
     /// <summary>
@@ -225,6 +226,7 @@ public class KurrentDBQueueDataAdapter : IKurrentDBDataAdapter, IDisposable
         {
             StreamId = streamId,
             SequenceNumber = ToOrleansSequenceToken(positionedAt.Cursor.SequenceNumber, positionedAt.StreamName.Value),
+            // The cache numbers the records of a transaction fanned out to several streams.
             EventIndex = 0,
             EnqueueTimeUtc = positionedAt.Timestamp,
             DequeueTimeUtc = dequeueTime,
