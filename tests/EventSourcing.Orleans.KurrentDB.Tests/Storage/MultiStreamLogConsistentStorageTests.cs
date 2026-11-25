@@ -96,10 +96,12 @@ public class MultiStreamLogConsistentStorageTests(ClusterFixture fixture)
 
         await Storage.AppendAsync(
             [new LogStream(GrainTypeName, first, 0), new LogStream(GrainTypeName, second, 0)],
-            [new LogRecord<SnackEvent>(0, events[0], [target, second.ToString()]), new LogRecord<SnackEvent>(1, events[1], null)],
+            [new LogRecord<SnackEvent>(0, events[0], new FormattedStreamTargets([target], [second.ToString()])), new LogRecord<SnackEvent>(1, events[1], null)],
             Guid.NewGuid());
 
-        Assert.Equal([target, second.ToString()], Assert.Single(await ReadMetadataAsync(first)).StreamTargets);
+        var firstMetadata = Assert.Single(await ReadMetadataAsync(first));
+        Assert.Equal([target], firstMetadata.StreamTargets);
+        Assert.Equal([second.ToString()], firstMetadata.EventScopedStreamTargets);
         Assert.Empty(Assert.Single(await ReadMetadataAsync(second)).StreamTargets);
     }
 

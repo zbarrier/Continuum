@@ -16,9 +16,10 @@ namespace GetRDone.Orders.Abstractions.OrderNumbers;
 public interface IOrderNumberGeneratorGrain : IEventDrivenGrain
 {
     /// <summary>
-    ///     Issues the next numbers to the orders that don't have one yet, and returns the number of every order asked
-    ///     for, including those issued earlier. Asking again for the same orders issues nothing, so the automation can
-    ///     safely retry. Only the Order Number Issuer automation may issue numbers.
+    ///     Issues the next numbers to the orders that don't have one yet, recording one <see cref="OrderNumberIssued"/>
+    ///     per order in the order they were asked for, and returns the number of every order asked for, including those
+    ///     issued earlier. Asking again for the same orders issues nothing, so the automation can safely retry. Only the
+    ///     Order Number Issuer automation may issue numbers.
     /// </summary>
     Task<Result<IssueOrderNumbersResponse>> IssueOrderNumbersAsync(string[] orderIds);
 }
@@ -35,16 +36,12 @@ public sealed class IssueOrderNumbersResponse(IReadOnlyList<IChange> changes, in
 [GenerateSerializer, Immutable]
 public abstract class OrderNumberGeneratorEvent : DomainEvent;
 
-/// <summary>Order numbers were issued to submitted orders, in the order they were asked for.</summary>
-[Alias("Orders.OrderNumbersIssued.V1"), DomainEventType("Orders.OrderNumbersIssued.V1"), GenerateSerializer, Immutable]
-public sealed class OrderNumbersIssued : OrderNumberGeneratorEvent
-{
-    [Id(0)] public required IssuedOrderNumber[] Numbers { get; init; }
-}
-
-/// <summary>The number issued to one order.</summary>
-[Alias("Orders.IssuedOrderNumber.V1"), GenerateSerializer, Immutable]
-public sealed class IssuedOrderNumber
+/// <summary>
+///     An order number was issued to a submitted order. A batch of orders is issued in one transaction, one event per
+///     order, and each event also goes to its order's stream alone.
+/// </summary>
+[Alias("Orders.OrderNumberIssued.V1"), DomainEventType("Orders.OrderNumberIssued.V1"), GenerateSerializer, Immutable]
+public sealed class OrderNumberIssued : OrderNumberGeneratorEvent
 {
     [Id(0)] public required string OrderId { get; init; }
     [Id(1)] public required long OrderNumber { get; init; }

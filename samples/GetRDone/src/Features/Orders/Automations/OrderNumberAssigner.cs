@@ -23,9 +23,9 @@ public sealed partial class OrderNumberAssigner(IGrainFactory grainFactory, ILog
 {
     private readonly HashSet<string> _handledOrderIds = new(StringComparer.Ordinal);
 
-    /// <summary>Gives the orders their <paramref name="issuedNumbers"/>.</summary>
+    /// <summary>Gives each order the number <paramref name="issuedNumbers"/> recorded for it.</summary>
     /// <exception cref="OrderNumbersPendingException">Some orders were not given their numbers and are worth retrying.</exception>
-    public async Task AssignAsync(IEnumerable<IssuedOrderNumber> issuedNumbers)
+    public async Task AssignAsync(IEnumerable<OrderNumberIssued> issuedNumbers)
     {
         var tenants = issuedNumbers
             .DistinctBy(issued => issued.OrderId, StringComparer.Ordinal)
@@ -53,14 +53,14 @@ public sealed partial class OrderNumberAssigner(IGrainFactory grainFactory, ILog
     }
 
     /// <summary>Gives one tenant's orders their numbers, signed in to the tenant.</summary>
-    private async Task<(string OrderId, bool IsHandled)[]> AssignTenantAsync(string tenantId, IssuedOrderNumber[] issuedNumbers)
+    private async Task<(string OrderId, bool IsHandled)[]> AssignTenantAsync(string tenantId, OrderNumberIssued[] issuedNumbers)
     {
         AutomationUser.OrderNumberAssigner.SignIn(tenantId);
         return await Task.WhenAll(issuedNumbers.Select(AssignOrderAsync));
     }
 
     /// <returns>Whether the order is handled; <see langword="false"/> when the call is worth retrying.</returns>
-    private async Task<(string OrderId, bool IsHandled)> AssignOrderAsync(IssuedOrderNumber issued)
+    private async Task<(string OrderId, bool IsHandled)> AssignOrderAsync(OrderNumberIssued issued)
     {
         try
         {

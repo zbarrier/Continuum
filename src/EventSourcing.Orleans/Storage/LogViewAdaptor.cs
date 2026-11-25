@@ -373,13 +373,13 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
     /// <summary>
     ///     Gets the validated stream targets of each entry, or <see langword="null"/> when no entry names any.
     /// </summary>
-    private IReadOnlyList<string>?[]? GetStreamTargets(IList<TLogEntry> logEntries)
+    private FormattedStreamTargets?[]? GetStreamTargets(IList<TLogEntry> logEntries)
     {
         if (Host is not IStreamTargetSource)
         {
             return null;
         }
-        var targets = new IReadOnlyList<string>?[logEntries.Count];
+        var targets = new FormattedStreamTargets?[logEntries.Count];
         var any = false;
         for (var index = 0; index < targets.Length; index++)
         {
@@ -392,7 +392,7 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
     /// <summary>
     ///     Gets an event's validated stream targets from the host, or <see langword="null"/> for none.
     /// </summary>
-    private string[]? GetStreamTargets(object @event)
+    private FormattedStreamTargets? GetStreamTargets(object @event)
         => Host is IStreamTargetSource source ? StreamTargets.Format(Services.GrainId, source.GetStreamTargets(@event)) : null;
 
     /// <summary>

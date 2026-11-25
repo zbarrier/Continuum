@@ -142,12 +142,29 @@ public class KurrentDBEventMetadataCodecTests
     public void Write_Records_Stream_Targets_As_A_String_That_Reads_Back()
     {
         string[] targets = ["report/a|1", "other/\"quoted\""];
+        string[] eventScoped = ["order/a|2"];
 
-        var bytes = KurrentDBEventMetadataCodec.Write(null, new TransactionInfo(Guid.CreateVersion7(), 1, 1, 0), "coordinator/1", targets);
+        var bytes = KurrentDBEventMetadataCodec.Write(null, new TransactionInfo(Guid.CreateVersion7(), 1, 1, 0), "coordinator/1", targets, eventScoped);
 
         Assert.Equal(JsonValueKind.String, Parse(bytes)[KurrentDBEventMetadataCodec.StreamTargetsName].ValueKind);
-        Assert.Equal(targets, KurrentDBEventMetadataCodec.Read(bytes).StreamTargets);
-        Assert.Equal(targets, KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.WriteAll(KurrentDBEventMetadataCodec.Read(bytes))).StreamTargets);
+        Assert.Equal(JsonValueKind.String, Parse(bytes)[KurrentDBEventMetadataCodec.EventScopedStreamTargetsName].ValueKind);
+        var read = KurrentDBEventMetadataCodec.Read(bytes);
+        Assert.Equal(targets, read.StreamTargets);
+        Assert.Equal(eventScoped, read.EventScopedStreamTargets);
+        var rewritten = KurrentDBEventMetadataCodec.Read(KurrentDBEventMetadataCodec.WriteAll(read));
+        Assert.Equal(targets, rewritten.StreamTargets);
+        Assert.Equal(eventScoped, rewritten.EventScopedStreamTargets);
+    }
+
+    [Fact]
+    public void Write_Records_Event_Scoped_Targets_On_Their_Own()
+    {
+        var bytes = KurrentDBEventMetadataCodec.Write(null, eventScopedStreamTargets: ["order/a|2"]);
+
+        var read = KurrentDBEventMetadataCodec.Read(bytes);
+        Assert.Empty(read.StreamTargets);
+        Assert.Equal(["order/a|2"], read.EventScopedStreamTargets);
+        Assert.NotNull(KurrentDBEventMetadataCodec.WriteAll(read));
     }
 
     [Theory]

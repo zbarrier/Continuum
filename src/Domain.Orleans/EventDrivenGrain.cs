@@ -73,19 +73,23 @@ public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TSta
     TransactionSubmission? ITransactionSubmissionSource.PendingTransaction => _coordination.PendingTransaction;
 
     /// <inheritdoc/>
-    IReadOnlyList<GrainId> IStreamTargetSource.GetStreamTargets(object @event) => GetStreamTargets(@event);
+    IReadOnlyList<StreamTarget> IStreamTargetSource.GetStreamTargets(object @event) => GetStreamTargets(@event);
 
     /// <summary>
-    ///     Gets the additional grains whose streams should receive the transaction an event is appended in. The event
-    ///     always goes to its own grain's stream as well. Targets must belong to the same tenant as this grain.
+    ///     Gets the additional grains whose streams should receive an event. The event always goes to its own grain's
+    ///     stream as well. Targets must belong to the same tenant as this grain.
     /// </summary>
     /// <param name="event">
     ///     One of this grain's events, either while this grain saves it or while this grain prepares it for another
     ///     grain's multi-stream transaction. <see cref="JournaledGrain{TGrainState, TEventBase}.State"/> does not include
     ///     it yet.
     /// </param>
-    /// <returns>The targets; none by default.</returns>
-    protected virtual IReadOnlyList<GrainId> GetStreamTargets(object @event) => [];
+    /// <returns>
+    ///     The targets; none by default. A <see cref="StreamTargetScope.Transaction"/> target receives the whole
+    ///     transaction the event is appended in, and a <see cref="StreamTargetScope.Event"/> target only the events
+    ///     that name it.
+    /// </returns>
+    protected virtual IReadOnlyList<StreamTarget> GetStreamTargets(object @event) => [];
 
     /// <summary>Gets the grain's logger.</summary>
     public ILogger Logger { get; }

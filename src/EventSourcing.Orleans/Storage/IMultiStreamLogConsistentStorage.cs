@@ -1,3 +1,5 @@
+using Continuum.Orleans.Events;
+
 namespace Continuum.EventSourcing.Orleans;
 
 /// <summary>
@@ -46,8 +48,8 @@ public sealed record LogStream(string GrainTypeName, GrainId GrainId, int? Expec
 /// <param name="StreamIndex">The index of the entry's log in the append's streams.</param>
 /// <param name="Entry">The entry to append.</param>
 /// <param name="StreamTargets">
-///     Additional grain identifiers whose streams should receive the entry's whole transaction, or
-///     <see langword="null"/> for none. Already validated by the producer.
+///     Additional grain identifiers whose streams should receive the entry, by scope, or <see langword="null"/> for
+///     none. Already validated by the producer.
 /// </param>
 /// <typeparam name="TLogEntry">The log entry type.</typeparam>
-public sealed record LogRecord<TLogEntry>(int StreamIndex, TLogEntry Entry, IReadOnlyList<string>? StreamTargets = null);
+public sealed record LogRecord<TLogEntry>(int StreamIndex, TLogEntry Entry, FormattedStreamTargets? StreamTargets = null);

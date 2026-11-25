@@ -69,12 +69,20 @@ public sealed class EventItem
     public Guid? TransactionId { get; set; }
 
     /// <summary>
-    ///     Additional grain identifiers whose streams should receive the event's append (events only), or
+    ///     Additional grain identifiers whose streams should receive the event's whole append (events only), or
     ///     <see langword="null"/> for none.
     /// </summary>
     [JsonPropertyName("streamTargets")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string[]? StreamTargets { get; set; }
+
+    /// <summary>
+    ///     Additional grain identifiers whose streams should receive only this event (events only), or
+    ///     <see langword="null"/> for none.
+    /// </summary>
+    [JsonPropertyName("eventScopedStreamTargets")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? EventScopedStreamTargets { get; set; }
 
     /// <summary>The Cosmos DB ETag; read only.</summary>
     [JsonPropertyName("_etag")]

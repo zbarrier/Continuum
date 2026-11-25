@@ -225,16 +225,15 @@ public class MoneyTransferTests(ClusterFixture fixture)
         var debited = Assert.Single(moved, e => e.Event.EventType.Contains("Debited", StringComparison.Ordinal));
         var credited = Assert.Single(moved, e => e.Event.EventType.Contains("Credited", StringComparison.Ordinal));
 
-        Assert.Equal([BankAccountGrain.ActivityStreamTarget(checkingId.ToString()).ToString()], ReadStreamTargets(debited.Event.Metadata));
+        var debitedMetadata = KurrentDBEventMetadataCodec.Read(debited.Event.Metadata.Span);
+        var creditedMetadata = KurrentDBEventMetadataCodec.Read(credited.Event.Metadata.Span);
+        Assert.Equal([BankAccountGrain.ActivityStreamTarget(checkingId.ToString()).ToString()], debitedMetadata.StreamTargets);
+        Assert.Empty(debitedMetadata.EventScopedStreamTargets);
         // The credit is the destination's event in the transfer the source coordinates. The destination chooses its
-        // targets, and one of them may be the coordinator's own stream.
+        // targets, and one of them may be the coordinator's own stream, which receives only the credit.
+        Assert.Equal([BankAccountGrain.ActivityStreamTarget(rentId.ToString()).ToString()], creditedMetadata.StreamTargets);
         Assert.Equal(
-        [
-            BankAccountGrain.ActivityStreamTarget(rentId.ToString()).ToString(),
-            fixture.Cluster.GrainFactory.GetGrain<IBankAccountGrain>(checkingId.ToString()).GetGrainId().ToString()
-        ], ReadStreamTargets(credited.Event.Metadata));
+            [fixture.Cluster.GrainFactory.GetGrain<IBankAccountGrain>(checkingId.ToString()).GetGrainId().ToString()],
+            creditedMetadata.EventScopedStreamTargets);
     }
-
-    private static IReadOnlyList<string> ReadStreamTargets(ReadOnlyMemory<byte> metadata)
-        => KurrentDBEventMetadataCodec.Read(metadata.Span).StreamTargets;
 }

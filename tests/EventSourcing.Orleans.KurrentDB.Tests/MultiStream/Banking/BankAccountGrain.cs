@@ -1,4 +1,5 @@
 using Continuum.Domain.Orleans;
+using Continuum.Orleans.Events;
 
 using Orleans.Providers;
 
@@ -23,15 +24,15 @@ public partial class BankAccountGrain : EventDrivenGrain<BankAccountState, BankA
     }
 
     /// <summary>
-    ///     Sends each event to this account's activity stream as well, and a credit to the paying account's stream too.
-    ///     A credit made during a transfer is this account's event, so this account chooses its targets, even though the
-    ///     paying account coordinates the transfer.
+    ///     Sends each event's whole transaction to this account's activity stream as well, and a credit alone to the
+    ///     paying account's stream too. A credit made during a transfer is this account's event, so this account chooses
+    ///     its targets, even though the paying account coordinates the transfer.
     /// </summary>
-    protected override IReadOnlyList<GrainId> GetStreamTargets(object @event)
+    protected override IReadOnlyList<StreamTarget> GetStreamTargets(object @event)
     {
-        var activity = ActivityStreamTarget(this.GetPrimaryKeyString());
+        var activity = StreamTarget.Transaction(ActivityStreamTarget(this.GetPrimaryKeyString()));
         return @event is MoneyCreditedEvent credit
-            ? [activity, GrainFactory.GetGrain<IBankAccountGrain>(credit.FromAccountId.ToString()).GetGrainId()]
+            ? [activity, StreamTarget.Event(GrainFactory.GetGrain<IBankAccountGrain>(credit.FromAccountId.ToString()).GetGrainId())]
             : [activity];
     }
 

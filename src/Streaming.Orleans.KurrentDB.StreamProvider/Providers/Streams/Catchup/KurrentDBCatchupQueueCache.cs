@@ -255,10 +255,16 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
     }
 
     /// <summary>
-    ///     Caches the pending transaction once under each stream its events belong to, holding that stream's events, and
-    ///     once under each of its stream targets, holding every event. Every record is positioned at the last event, so
+    ///     Caches the pending transaction once under each stream its events belong to, holding that stream's events;
+    ///     once under each of its transaction-scoped targets, holding every event; and once under each of its
+    ///     event-scoped targets, holding the events that name it. Every record is positioned at the last event, so
     ///     each stream sees the same sequence token for the transaction.
     /// </summary>
+    /// <remarks>
+    ///     A stream that receives part of the transaction, as a participant or an event-scoped target, receives its
+    ///     events merged in transaction order, and receives the whole transaction instead when it is also a
+    ///     transaction-scoped target.
+    /// </remarks>
     private ulong? CacheTransaction(DateTime dequeueTimeUtc, List<CachedMessage> cachedMessages, List<StreamPosition> streamPositions, ulong? skippedTail)
     {
         var events = new StreamedEvent<KurrentDBRawEvent>[_pending.Count];
@@ -267,63 +273,73 @@ public class KurrentDBCatchupQueueCache : IKurrentDBCatchupQueueCache
             events[i] = _pending[i].Message;
         }
         var last = events[^1];
-        var streams = new List<StreamId>();
+        var partialStreams = new List<StreamId>();
         var eventsByStream = new Dictionary<StreamId, List<StreamedEvent<KurrentDBRawEvent>>>();
+        var wholeStreams = new List<StreamId>();
         foreach (var (message, position) in _pending)
         {
-            if (!eventsByStream.TryGetValue(position.StreamId, out var streamEvents))
+            AddPartial(position.StreamId, message);
+            foreach (var target in message.Metadata.EventScopedStreamTargets)
             {
-                streamEvents = [];
-                eventsByStream[position.StreamId] = streamEvents;
-                streams.Add(position.StreamId);
+                if (TryGetTargetStreamId(message, target, out var streamId))
+                {
+                    AddPartial(streamId, message);
+                }
             }
-            streamEvents.Add(message);
+            foreach (var target in message.Metadata.StreamTargets)
+            {
+                if (TryGetTargetStreamId(message, target, out var streamId) && !wholeStreams.Contains(streamId))
+                {
+                    wholeStreams.Add(streamId);
+                }
+            }
         }
-        var targets = GetTargetStreams(events, eventsByStream);
         _pending.Clear();
         _pendingSkipped = 0;
         var cachedAny = false;
-        foreach (var streamId in streams)
+        foreach (var streamId in partialStreams)
         {
-            if (eventsByStream.TryGetValue(streamId, out var streamEvents))
+            if (!wholeStreams.Contains(streamId))
             {
-                cachedAny |= TryCacheRecord(streamId, streamEvents, last, dequeueTimeUtc, cachedMessages, streamPositions);
+                cachedAny |= TryCacheRecord(streamId, eventsByStream[streamId], last, dequeueTimeUtc, cachedMessages, streamPositions);
             }
         }
-        foreach (var streamId in targets)
+        foreach (var streamId in wholeStreams)
         {
             cachedAny |= TryCacheRecord(streamId, events, last, dequeueTimeUtc, cachedMessages, streamPositions);
         }
         return cachedAny ? null : (ulong)last.Cursor.SequenceNumber;
-    }
 
-    private List<StreamId> GetTargetStreams(StreamedEvent<KurrentDBRawEvent>[] events, Dictionary<StreamId, List<StreamedEvent<KurrentDBRawEvent>>> eventsByStream)
-    {
-        var targets = new List<StreamId>();
-        foreach (var message in events)
+        void AddPartial(StreamId streamId, StreamedEvent<KurrentDBRawEvent> message)
         {
-            foreach (var target in message.Metadata.StreamTargets)
+            if (!eventsByStream.TryGetValue(streamId, out var streamEvents))
             {
-                StreamId streamId;
-                try
-                {
-                    streamId = _dataAdapter.GetTargetStreamId(target);
-                }
-                catch (Exception ex) when (ex is ArgumentException or InvalidStreamNamespaceException)
-                {
-                    // A bad target must not cost the transaction its other streams.
-                    _logger.InvalidStreamTarget(ex, message.EventId, message.StreamName.Value, message.Cursor.SequenceNumber, target);
-                    continue;
-                }
-                // A target that is already a participant stream receives the whole transaction instead of its own part.
-                eventsByStream.Remove(streamId);
-                if (!targets.Contains(streamId))
-                {
-                    targets.Add(streamId);
-                }
+                streamEvents = [];
+                eventsByStream[streamId] = streamEvents;
+                partialStreams.Add(streamId);
+            }
+            // An event reaches the same stream at most once, however many of its routes lead there.
+            if (streamEvents.Count == 0 || !ReferenceEquals(streamEvents[^1], message))
+            {
+                streamEvents.Add(message);
             }
         }
-        return targets;
+    }
+
+    private bool TryGetTargetStreamId(StreamedEvent<KurrentDBRawEvent> message, string target, out StreamId streamId)
+    {
+        try
+        {
+            streamId = _dataAdapter.GetTargetStreamId(target);
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidStreamNamespaceException)
+        {
+            // A bad target must not cost the transaction its other streams.
+            _logger.InvalidStreamTarget(ex, message.EventId, message.StreamName.Value, message.Cursor.SequenceNumber, target);
+            streamId = default;
+            return false;
+        }
     }
 
     private bool TryCacheRecord(StreamId streamId, IReadOnlyList<StreamedEvent<KurrentDBRawEvent>> events, StreamedEvent<KurrentDBRawEvent> last, DateTime dequeueTimeUtc,

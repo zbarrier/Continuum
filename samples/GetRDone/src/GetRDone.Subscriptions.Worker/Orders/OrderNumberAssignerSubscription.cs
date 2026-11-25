@@ -21,8 +21,7 @@ public sealed class OrderNumberAssignerSubscription(IServiceProvider serviceProv
     protected override Task OnNextBatchAsync(List<IStreamedEvent<object>> streamEvents)
         => assigner.AssignAsync(streamEvents
             .Select(streamEvent => streamEvent.Event)
-            .OfType<OrderNumbersIssued>()
-            .SelectMany(issued => issued.Numbers));
+            .OfType<OrderNumberIssued>());
 
     protected override bool IsTransient(Exception exception)
         => exception is OrderNumbersPendingException || base.IsTransient(exception);

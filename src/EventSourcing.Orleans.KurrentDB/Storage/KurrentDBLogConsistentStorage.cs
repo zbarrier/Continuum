@@ -1,4 +1,5 @@
 using Continuum.Events;
+using Continuum.Orleans.Events;
 using Continuum.Orleans.KurrentDB;
 using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
@@ -211,7 +212,7 @@ public class KurrentDBLogConsistentStorage : IMultiStreamLogConsistentStorage, I
 
     /// <inheritdoc />
     public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId,
-        IReadOnlyList<IReadOnlyList<string>?>? streamTargets = null)
+        IReadOnlyList<FormattedStreamTargets?>? streamTargets = null)
     {
         EnsureInitialized();
         ArgumentNullException.ThrowIfNull(entries);
@@ -423,14 +424,14 @@ public class KurrentDBLogConsistentStorage : IMultiStreamLogConsistentStorage, I
     /// <param name="entry"></param>
     /// <param name="transaction">The append this entry belongs to, recorded so a subscriber can regroup the events.</param>
     /// <param name="coordinatorId">The grain coordinating a multi-stream append, recorded for diagnostics only.</param>
-    /// <param name="streamTargets">Additional grains whose streams should receive the whole transaction.</param>
+    /// <param name="streamTargets">Additional grains whose streams should receive the event, by scope.</param>
     /// <typeparam name="TLogEntry"></typeparam>
     /// <returns></returns>
     private EventData SerializeEvent<TLogEntry>(TLogEntry entry, TransactionInfo transaction, string? coordinatorId = null,
-        IReadOnlyList<string>? streamTargets = null)
+        FormattedStreamTargets? streamTargets = null)
     {
         var eventId = Uuid.FromGuid(_eventIdGenerator());
-        var metadata = KurrentDBEventMetadataCodec.Write(null, transaction, coordinatorId, streamTargets);
+        var metadata = KurrentDBEventMetadataCodec.Write(null, transaction, coordinatorId, streamTargets?.TransactionScoped, streamTargets?.EventScoped);
         var readonlyMetadata = metadata is null ? null : (ReadOnlyMemory<byte>?)metadata;
         var entryTypeName = _typeMapper.GetTypeName(entry!.GetType());
         var entryData = _storageSerializer.Serialize(entry);

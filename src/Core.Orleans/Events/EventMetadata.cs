@@ -17,10 +17,11 @@ public sealed class EventMetadata : IEventMetadata
     [Id(0)]
     private readonly Dictionary<string, string> _values;
 
-    private EventMetadata(Dictionary<string, string> values, string[]? streamTargets = null)
+    private EventMetadata(Dictionary<string, string> values, string[]? streamTargets = null, string[]? eventScopedStreamTargets = null)
     {
         _values = values;
         _streamTargets = streamTargets;
+        _eventScopedStreamTargets = eventScopedStreamTargets;
     }
 
     /// <inheritdoc />
@@ -56,6 +57,12 @@ public sealed class EventMetadata : IEventMetadata
 
     /// <inheritdoc />
     public IReadOnlyList<string> StreamTargets => _streamTargets ?? [];
+
+    [Id(9)]
+    private readonly string[]? _eventScopedStreamTargets;
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> EventScopedStreamTargets => _eventScopedStreamTargets ?? [];
 
     /// <summary>
     ///     Creates metadata from the supplied entries, ignoring any whose name is reserved by a transport.
@@ -104,18 +111,21 @@ public sealed class EventMetadata : IEventMetadata
     ///     The coordinating grain's identifier, or <see langword="null" />. Only kept when <paramref name="transaction"/>
     ///     is present, since a coordinator without a transaction means nothing.
     /// </param>
-    /// <param name="streamTargets">The additional target identifiers. Null or empty entries are skipped.</param>
+    /// <param name="streamTargets">
+    ///     The identifiers of the targets that receive the whole transaction. Null or empty entries are skipped.
+    /// </param>
+    /// <param name="eventScopedStreamTargets">
+    ///     The identifiers of the targets that receive only this event. Null or empty entries are skipped.
+    /// </param>
     /// <exception cref="ArgumentException"><paramref name="transaction"/> does not describe a consistent group.</exception>
     public static EventMetadata Create(IEnumerable<KeyValuePair<string, string?>>? values, string? traceId, string? spanId,
-        TransactionInfo? transaction, string? transactionCoordinatorId, IEnumerable<string?>? streamTargets)
+        TransactionInfo? transaction, string? transactionCoordinatorId, IEnumerable<string?>? streamTargets,
+        IEnumerable<string?>? eventScopedStreamTargets = null)
     {
         transaction?.EnsureValid(nameof(transaction));
         var coordinator = transaction is null || string.IsNullOrEmpty(transactionCoordinatorId) ? null : transactionCoordinatorId;
-        var targets = streamTargets?.Where(static target => !string.IsNullOrEmpty(target)).Select(static target => target!).ToArray();
-        if (targets is { Length: 0 })
-        {
-            targets = null;
-        }
+        var targets = ToTargets(streamTargets);
+        var eventScopedTargets = ToTargets(eventScopedStreamTargets);
         var copy = new Dictionary<string, string>(values?.TryGetNonEnumeratedCount(out var count) == true ? count : 0, StringComparer.Ordinal);
         if (values is not null)
         {
@@ -129,11 +139,11 @@ public sealed class EventMetadata : IEventMetadata
             }
         }
         var hasTracing = traceId is not null || spanId is not null;
-        if (copy.Count == 0 && !hasTracing && transaction is null && targets is null)
+        if (copy.Count == 0 && !hasTracing && transaction is null && targets is null && eventScopedTargets is null)
         {
             return Empty;
         }
-        return new EventMetadata(copy, targets)
+        return new EventMetadata(copy, targets, eventScopedTargets)
         {
             TransactionCoordinatorId = coordinator,
             TraceId = traceId,
@@ -143,6 +153,12 @@ public sealed class EventMetadata : IEventMetadata
             TransactionPartitionSize = transaction?.TransactionPartitionSize,
             TransactionPartitionIndex = transaction?.TransactionPartitionIndex,
         };
+    }
+
+    private static string[]? ToTargets(IEnumerable<string?>? targets)
+    {
+        var result = targets?.Where(static target => !string.IsNullOrEmpty(target)).Select(static target => target!).ToArray();
+        return result is { Length: > 0 } ? result : null;
     }
 
     /// <summary>

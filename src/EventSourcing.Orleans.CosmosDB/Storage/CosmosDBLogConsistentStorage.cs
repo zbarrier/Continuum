@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 
+using Continuum.Orleans.Events;
 using Continuum.Serialization.Orleans;
 using Continuum.TypeMapping;
 
@@ -284,7 +285,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
 
     /// <inheritdoc />
     public async Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId,
-        IReadOnlyList<IReadOnlyList<string>?>? streamTargets = null)
+        IReadOnlyList<FormattedStreamTargets?>? streamTargets = null)
     {
         EnsureInitialized();
         ArgumentNullException.ThrowIfNull(entries);
@@ -322,7 +323,7 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     }
 
     private async Task<int> AppendCoreAsync<TLogEntry>(string grainTypeName, GrainId grainId, string streamName, IList<TLogEntry> entries, int expectedVersion,
-        Guid transactionId, IReadOnlyList<IReadOnlyList<string>?>? streamTargets, LogConsistentStorageInstrumentation.Operation operation)
+        Guid transactionId, IReadOnlyList<FormattedStreamTargets?>? streamTargets, LogConsistentStorageInstrumentation.Operation operation)
     {
         var transaction = _container.CreateTransactionalBatch(new PartitionKey(streamName));
         ulong currentVersion = (ulong)expectedVersion;
@@ -387,7 +388,8 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
                 Version = ++currentVersion,
                 SubSequenceNumber = subSequenceNumber++,
                 TransactionId = transactionId,
-                StreamTargets = targets is { Count: > 0 } ? [.. targets] : null,
+                StreamTargets = targets?.TransactionScoped is { Count: > 0 } transactionScoped ? [.. transactionScoped] : null,
+                EventScopedStreamTargets = targets?.EventScoped is { Count: > 0 } eventScoped ? [.. eventScoped] : null,
                 DataType = _typeMapper.GetTypeName(entry.GetType()),
                 Data = SerializeEntry(entry),
             };

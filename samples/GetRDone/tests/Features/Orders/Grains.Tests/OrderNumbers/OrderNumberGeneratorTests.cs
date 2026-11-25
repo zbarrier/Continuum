@@ -35,35 +35,35 @@ public sealed class OrderNumberGeneratorTests
     private IOrderNumberGeneratorGrain Generator => Cluster.GrainFactory.GetOrderNumberGeneratorGrain(_tenantId);
 
     [Fact]
-    public void ApplyingOrderNumbersIssued_RecordsEachOrdersNumberAndTheLastNumber()
+    public void ApplyingOrderNumberIssued_RecordsTheOrdersNumberAndTheLastNumber()
     {
-        var (order1, order2, order3) = (NewOrderId(), NewOrderId(), NewOrderId());
+        var (order1, order2) = (NewOrderId(), NewOrderId());
         var state = new OrderNumberGeneratorState();
-        state.When(Issued(TestData.At, (order1, 610_696)));
+        state.When(Issued(TestData.At, order1, 610_696));
 
-        state.When(Issued(TestData.At, (order2, 610_697), (order3, 610_698)));
+        state.When(Issued(TestData.At, order2, 610_697));
 
         Assert.Equivalent(new
         {
-            LastOrderNumber = 610_698L,
-            OrderNumbers = new Dictionary<string, long> { [order1] = 610_696, [order2] = 610_697, [order3] = 610_698 },
-            RecentOrderIds = new[] { new[] { order1 }, [order2, order3] }
+            LastOrderNumber = 610_697L,
+            OrderNumbers = new Dictionary<string, long> { [order1] = 610_696, [order2] = 610_697 },
+            RecentOrderIds = new[] { order1, order2 }
         }, state, strict: true);
     }
 
     [Fact]
-    public void ApplyingOrderNumbersIssued_KeepsOnlyTheOrdersOfTheMostRecentEvents()
+    public void ApplyingOrderNumberIssued_KeepsOnlyTheMostRecentOrders()
     {
         var orderIds = Enumerable.Range(0, OrderNumberGeneratorGrain.RecentEventCount + 1).Select(_ => NewOrderId()).ToArray();
         var state = new OrderNumberGeneratorState();
         foreach (var (orderId, i) in orderIds.Select((orderId, i) => (orderId, i)))
         {
-            state.When(Issued(TestData.At, (orderId, 610_696 + i)));
+            state.When(Issued(TestData.At, orderId, 610_696 + i));
         }
 
         Assert.Equal(610_696 + OrderNumberGeneratorGrain.RecentEventCount, state.LastOrderNumber);
         Assert.Equal(orderIds.Skip(1).Select((orderId, i) => (orderId, Number: 610_697L + i)).ToDictionary(), state.OrderNumbers);
-        Assert.Equal(orderIds.Skip(1).Select(orderId => new[] { orderId }), state.RecentOrderIds);
+        Assert.Equal(orderIds.Skip(1), state.RecentOrderIds);
     }
 
     [Fact]
@@ -78,10 +78,13 @@ public sealed class OrderNumberGeneratorTests
 
         Then<IssueOrderNumbersResponse>(response =>
         {
-            Assert.Equal(1, response.Version);
-            var recorded = Assert.IsType<OrderNumbersIssued>(SingleEvent(response.Changes));
-            Assert.InRange(recorded.OccurredAt, before, DateTimeOffset.UtcNow);
-            Assert.Equivalent(Issued(recorded.OccurredAt, (order1, 610_696), (order2, 610_697)), recorded, strict: true);
+            Assert.Equal(2, response.Version);
+            var recorded = Events(response.Changes).Select(Assert.IsType<OrderNumberIssued>).ToArray();
+            Assert.Equal(2, recorded.Length);
+            Assert.InRange(recorded[0].OccurredAt, before, DateTimeOffset.UtcNow);
+            Assert.Equivalent(
+                new[] { Issued(recorded[0].OccurredAt, order1, 610_696), Issued(recorded[0].OccurredAt, order2, 610_697) },
+                recorded, strict: true);
             Assert.Equal(new Dictionary<string, long> { [order1] = 610_696, [order2] = 610_697 }, response.OrderNumbers);
         });
     }
@@ -91,7 +94,7 @@ public sealed class OrderNumberGeneratorTests
     {
         var order = NewOrderId();
         GivenSignedIn(Automation);
-        await Given(Issued(TestData.At, (NewOrderId(), 610_696), (NewOrderId(), 610_697)));
+        await Given(Issued(TestData.At, NewOrderId(), 610_696), Issued(TestData.At, NewOrderId(), 610_697));
 
         await When(() => Generator.IssueOrderNumbersAsync([order]));
 
@@ -104,7 +107,7 @@ public sealed class OrderNumberGeneratorTests
     {
         var (order1, order2) = (NewOrderId(), NewOrderId());
         GivenSignedIn(Automation);
-        await Given(Issued(TestData.At, (order1, 610_696), (order2, 610_697)));
+        await Given(Issued(TestData.At, order1, 610_696), Issued(TestData.At, order2, 610_697));
 
         await When(() => Generator.IssueOrderNumbersAsync([order2, order1, order2]));
 
@@ -121,14 +124,14 @@ public sealed class OrderNumberGeneratorTests
     {
         var (issuedOrder, newOrder) = (NewOrderId(), NewOrderId());
         GivenSignedIn(Automation);
-        await Given(Issued(TestData.At, (issuedOrder, 610_696)));
+        await Given(Issued(TestData.At, issuedOrder, 610_696));
 
         await When(() => Generator.IssueOrderNumbersAsync([issuedOrder, newOrder]));
 
         Then<IssueOrderNumbersResponse>(response =>
         {
-            var recorded = Assert.IsType<OrderNumbersIssued>(SingleEvent(response.Changes));
-            Assert.Equivalent(new[] { new IssuedOrderNumber { OrderId = newOrder, OrderNumber = 610_697 } }, recorded.Numbers, strict: true);
+            var recorded = Assert.IsType<OrderNumberIssued>(Assert.Single(Events(response.Changes)));
+            Assert.Equal((newOrder, 610_697L), (recorded.OrderId, recorded.OrderNumber));
             Assert.Equal(new Dictionary<string, long> { [issuedOrder] = 610_696, [newOrder] = 610_697 }, response.OrderNumbers);
         });
     }
@@ -166,9 +169,10 @@ public sealed class OrderNumberGeneratorTests
 
     private string NewOrderId() => TenantKey.Create(_tenantId, Guid.NewGuid().ToString());
 
-    private OrderNumbersIssued Issued(DateTimeOffset occurredAt, params (string OrderId, long OrderNumber)[] numbers) => new()
+    private OrderNumberIssued Issued(DateTimeOffset occurredAt, string orderId, long orderNumber) => new()
     {
-        Numbers = [.. numbers.Select(number => new IssuedOrderNumber { OrderId = number.OrderId, OrderNumber = number.OrderNumber })],
+        OrderId = orderId,
+        OrderNumber = orderNumber,
         InitiatedBy = AutomationUser.OrderNumberAssigner.GetTenantUserId(_tenantId),
         OccurredAt = occurredAt
     };
@@ -176,5 +180,5 @@ public sealed class OrderNumberGeneratorTests
     /// <summary>Signs in <paramref name="user"/> for the rest of the test; Orleans Identity reads the user from the request context.</summary>
     private static void GivenSignedIn(ClaimsPrincipal user) => RequestContext.Set(OrleansIdentityConstants.USER_CLAIMS, user);
 
-    private static object SingleEvent(IReadOnlyList<IChange> changes) => Assert.IsType<Change>(Assert.Single(changes)).Event;
+    private static IEnumerable<object> Events(IReadOnlyList<IChange> changes) => changes.Select(change => Assert.IsType<Change>(change).Event);
 }

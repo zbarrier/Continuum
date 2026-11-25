@@ -1,4 +1,6 @@
-﻿namespace Continuum.EventSourcing.Orleans;
+﻿using Continuum.Orleans.Events;
+
+namespace Continuum.EventSourcing.Orleans;
 
 /// <summary>
 ///     Stores the event log of a log-consistent grain.
@@ -69,15 +71,15 @@ public interface ILogConsistentStorage
     ///     The transaction ID to store on every appended entry, which <see cref="GetTransactionIdAsync" /> returns.
     /// </param>
     /// <param name="streamTargets">
-    ///     The additional grain identifiers whose streams should receive the append, one list per entry in the order of
-    ///     <paramref name="entries"/> (a <see langword="null"/> list for an entry with none), or <see langword="null"/>
-    ///     when no entry has any. Already validated by the producer.
+    ///     The additional grain identifiers whose streams should receive each entry, by scope, one per entry in the
+    ///     order of <paramref name="entries"/> (<see langword="null"/> for an entry with none), or
+    ///     <see langword="null"/> when no entry has any. Already validated by the producer.
     /// </param>
     /// <typeparam name="TLogEntry">The log entry type.</typeparam>
     /// <returns>The event count after the append.</returns>
     /// <exception cref="global::Orleans.Storage.InconsistentStateException">The log does not have <paramref name="expectedVersion"/> events.</exception>
     Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId,
-        IReadOnlyList<IReadOnlyList<string>?>? streamTargets = null);
+        IReadOnlyList<FormattedStreamTargets?>? streamTargets = null);
 
     /// <summary>
     ///     Gets the transaction ID stored on the entry that produced a version.

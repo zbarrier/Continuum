@@ -1,3 +1,5 @@
+using Continuum.Orleans.Events;
+
 namespace Continuum.Orleans.Transactions;
 
 /// <summary>One grain's part of a multi-stream transaction, returned when a participant prepares.</summary>
@@ -14,4 +16,4 @@ public sealed record PreparedTransaction(
 	[property: Id(0)] GrainId GrainId,
 	[property: Id(1)] IReadOnlyList<object> Events,
 	[property: Id(2)] int? ExpectedVersion,
-	[property: Id(3)] IReadOnlyList<IReadOnlyList<string>?>? StreamTargets = null);
+	[property: Id(3)] IReadOnlyList<FormattedStreamTargets?>? StreamTargets = null);

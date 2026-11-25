@@ -112,6 +112,16 @@ public interface IEventMetadata : IReadOnlyDictionary<string, string>
     IReadOnlyList<string> StreamTargets { get; }
 
     /// <summary>
+    ///     The identifiers of additional grains whose streams should receive this event alone, not the rest of its
+    ///     transaction.
+    /// <para>
+    ///     Written by the producer at append time. Values are passed through as text; a consumer that routes on them
+    ///     parses and validates each one. Empty when the event names no event-scoped targets.
+    /// </para>
+    /// </summary>
+    IReadOnlyList<string> EventScopedStreamTargets { get; }
+
+    /// <summary>
     ///     Determines whether a name is reserved for use by a transport.
     /// </summary>
     public static bool IsReservedName(string name)

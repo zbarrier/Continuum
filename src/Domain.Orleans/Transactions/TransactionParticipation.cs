@@ -1,4 +1,5 @@
 using Continuum.CSharpFunctionalExtensions;
+using Continuum.Orleans.Events;
 using Continuum.Orleans.Transactions;
 
 namespace Continuum.Domain.Orleans;
@@ -18,10 +19,10 @@ internal sealed class TransactionParticipation<TSession>
     private readonly Func<TSession, IReadOnlyList<object>> _getEvents;
     private readonly Func<int> _getVersion;
     private readonly Func<Task> _refresh;
-    private readonly Func<object, IReadOnlyList<string>?> _getStreamTargets;
+    private readonly Func<object, FormattedStreamTargets?> _getStreamTargets;
 
     public TransactionParticipation(Grain grain, Func<TSession> createSession, Func<TSession, IReadOnlyList<object>> getEvents,
-        Func<int> getVersion, Func<Task> refresh, Func<object, IReadOnlyList<string>?> getStreamTargets)
+        Func<int> getVersion, Func<Task> refresh, Func<object, FormattedStreamTargets?> getStreamTargets)
     {
         _grain = grain;
         _createSession = createSession;
@@ -84,7 +85,7 @@ internal sealed class TransactionParticipation<TSession>
         }
 
         var newEvents = events.Skip(eventCount).ToArray();
-        IReadOnlyList<IReadOnlyList<string>?>? targets;
+        IReadOnlyList<FormattedStreamTargets?>? targets;
         try
         {
             targets = GetStreamTargets(newEvents);
@@ -104,9 +105,9 @@ internal sealed class TransactionParticipation<TSession>
 
     // The owner of an event chooses its targets, so they are the same whether the grain saves the event itself or
     // prepares it for another grain's transaction.
-    private IReadOnlyList<string>?[]? GetStreamTargets(object[] events)
+    private FormattedStreamTargets?[]? GetStreamTargets(object[] events)
     {
-        var targets = new IReadOnlyList<string>?[events.Length];
+        var targets = new FormattedStreamTargets?[events.Length];
         var any = false;
         for (var index = 0; index < events.Length; index++)
         {

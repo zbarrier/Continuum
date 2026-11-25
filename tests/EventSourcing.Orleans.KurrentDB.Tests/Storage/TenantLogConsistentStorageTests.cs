@@ -1,4 +1,5 @@
 using Continuum.EventSourcing.Orleans;
+using Continuum.Orleans.Events;
 using Continuum.Orleans.Tenancy;
 
 namespace Continuum.EventSourcing.Orleans.KurrentDB.Tests.Storage;
@@ -90,7 +91,7 @@ public class TenantLogConsistentStorageTests
         }
 
         public Task<int> AppendAsync<TLogEntry>(string grainTypeName, GrainId grainId, IList<TLogEntry> entries, int expectedVersion, Guid transactionId,
-            IReadOnlyList<IReadOnlyList<string>?>? streamTargets = null)
+            IReadOnlyList<FormattedStreamTargets?>? streamTargets = null)
         {
             Calls++;
             return Task.FromResult(expectedVersion + entries.Count);

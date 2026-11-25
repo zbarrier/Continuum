@@ -86,6 +86,12 @@ public static class KurrentDBEventMetadataCodec
     /// </remarks>
     public const string StreamTargetsName = "streamTargets";
 
+    /// <summary>
+    ///     The metadata name the event-scoped stream targets are written under, as a string holding a JSON array of
+    ///     grain identifiers. Written as text for the same reason as <see cref="StreamTargetsName"/>.
+    /// </summary>
+    public const string EventScopedStreamTargetsName = "eventScopedStreamTargets";
+
     // Utf8JsonWriter writes straight into an IBufferWriter, avoiding the intermediate copy a MemoryStream needs.
     // A transaction-only document is about 141 bytes and one carrying tracing about 218, so 256 covers both with
     // room for a few extra entries before the buffer has to grow.
@@ -126,6 +132,7 @@ public static class KurrentDBEventMetadataCodec
             string? partitionIndex = null;
             string? coordinatorId = null;
             List<string?>? streamTargets = null;
+            List<string?>? eventScopedStreamTargets = null;
             List<KeyValuePair<string, string?>>? values = null;
             foreach (var property in document.RootElement.EnumerateObject())
             {
@@ -171,11 +178,16 @@ public static class KurrentDBEventMetadataCodec
                     streamTargets = ReadStreamTargets(property.Value);
                     continue;
                 }
+                if (property.NameEquals(EventScopedStreamTargetsName))
+                {
+                    eventScopedStreamTargets = ReadStreamTargets(property.Value);
+                    continue;
+                }
                 // Create drops the remaining reserved names, so any the client adds later cannot leak into the bag.
                 (values ??= []).Add(new KeyValuePair<string, string?>(property.Name, ReadValue(property.Value)));
             }
             var transaction = ReadTransaction(transactionId, transactionSize, partitionSize, partitionIndex);
-            return EventMetadata.Create(values, traceId, spanId, transaction, coordinatorId, streamTargets);
+            return EventMetadata.Create(values, traceId, spanId, transaction, coordinatorId, streamTargets, eventScopedStreamTargets);
         }
         catch (JsonException)
         {
@@ -259,17 +271,18 @@ public static class KurrentDBEventMetadataCodec
     ///     The coordinating grain's identifier, written only alongside <paramref name="transaction"/>.
     /// </param>
     /// <param name="streamTargets">Additional grain identifiers whose streams should receive the whole transaction.</param>
+    /// <param name="eventScopedStreamTargets">Additional grain identifiers whose streams should receive only this event.</param>
     /// <remarks>
     ///     Tracing is deliberately not written here. The client injects it during the append, merging it into this
     ///     document, and it is the only component that knows the activity actually in effect at that moment.
     /// </remarks>
     /// <exception cref="ArgumentException"><paramref name="transaction"/> does not describe a consistent group.</exception>
     public static byte[]? Write(IEventMetadata? metadata, TransactionInfo? transaction = null, string? transactionCoordinatorId = null,
-        IReadOnlyList<string>? streamTargets = null)
+        IReadOnlyList<string>? streamTargets = null, IReadOnlyList<string>? eventScopedStreamTargets = null)
     {
         transaction?.EnsureValid(nameof(transaction));
         var hasMetadata = metadata is not null && metadata.Count > 0;
-        var hasTargets = streamTargets is { Count: > 0 };
+        var hasTargets = streamTargets is { Count: > 0 } || eventScopedStreamTargets is { Count: > 0 };
         if (!hasMetadata && transaction is null && !hasTargets)
         {
             return null;
@@ -286,7 +299,8 @@ public static class KurrentDBEventMetadataCodec
             {
                 WriteTransaction(writer, info, transactionCoordinatorId);
             }
-            WriteStreamTargets(writer, streamTargets);
+            WriteStreamTargets(writer, StreamTargetsName, streamTargets);
+            WriteStreamTargets(writer, EventScopedStreamTargetsName, eventScopedStreamTargets);
             writer.WriteEndObject();
         }
         return buffer.WrittenSpan.ToArray();
@@ -300,7 +314,7 @@ public static class KurrentDBEventMetadataCodec
     /// <remarks>
     ///     This is for storing metadata that was already read back from the log, such as when caching an event, where
     ///     the tracing context belongs to the original append and must survive. It is the opposite of
-    ///     <see cref="Write(IEventMetadata?, TransactionInfo?, string?, IReadOnlyList{string}?)" />, which omits tracing because the client
+    ///     <see cref="Write(IEventMetadata?, TransactionInfo?, string?, IReadOnlyList{string}?, IReadOnlyList{string}?)" />, which omits tracing because the client
     ///     injects the live activity's context during an append.
     /// </remarks>
     public static byte[]? WriteAll(IEventMetadata? metadata)
@@ -318,7 +332,8 @@ public static class KurrentDBEventMetadataCodec
                 ? new TransactionInfo(id, size, partitionSize, partitionIndex)
                 : null;
         transaction?.EnsureValid(nameof(metadata));
-        if (metadata.Count == 0 && transaction is null && metadata.TraceId is null && metadata.SpanId is null && metadata.StreamTargets.Count == 0)
+        if (metadata.Count == 0 && transaction is null && metadata.TraceId is null && metadata.SpanId is null && metadata.StreamTargets.Count == 0 &&
+            metadata.EventScopedStreamTargets.Count == 0)
         {
             return null;
         }
@@ -339,7 +354,8 @@ public static class KurrentDBEventMetadataCodec
             {
                 WriteTransaction(writer, info, metadata.TransactionCoordinatorId);
             }
-            WriteStreamTargets(writer, metadata.StreamTargets);
+            WriteStreamTargets(writer, StreamTargetsName, metadata.StreamTargets);
+            WriteStreamTargets(writer, EventScopedStreamTargetsName, metadata.EventScopedStreamTargets);
             writer.WriteEndObject();
         }
         return buffer.WrittenSpan.ToArray();
@@ -371,7 +387,7 @@ public static class KurrentDBEventMetadataCodec
         }
     }
 
-    private static void WriteStreamTargets(Utf8JsonWriter writer, IReadOnlyList<string>? streamTargets)
+    private static void WriteStreamTargets(Utf8JsonWriter writer, string name, IReadOnlyList<string>? streamTargets)
     {
         if (streamTargets is not { Count: > 0 })
         {
@@ -387,7 +403,7 @@ public static class KurrentDBEventMetadataCodec
             }
             targets.WriteEndArray();
         }
-        writer.WriteString(StreamTargetsName, buffer.WrittenSpan);
+        writer.WriteString(name, buffer.WrittenSpan);
     }
 
     /// <summary>

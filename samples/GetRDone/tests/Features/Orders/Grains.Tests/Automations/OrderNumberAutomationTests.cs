@@ -116,7 +116,13 @@ public sealed class OrderNumberAutomationTests(OrdersCluster fixture) : IClassFi
 
     private static string NewOrderId(string tenantId) => TenantKey.Create(tenantId, Guid.NewGuid().ToString());
 
-    private static IssuedOrderNumber Issued(string orderId, long orderNumber) => new() { OrderId = orderId, OrderNumber = orderNumber };
+    private static OrderNumberIssued Issued(string orderId, long orderNumber) => new()
+    {
+        OrderId = orderId,
+        OrderNumber = orderNumber,
+        InitiatedBy = AutomationUser.OrderNumberAssigner.GetTenantUserId(TestData.TenantId),
+        OccurredAt = TestData.At
+    };
 
     /// <summary>Sets up submitted orders in the test tenant.</summary>
     private async Task GivenSubmittedAsync(params string[] orderIds)

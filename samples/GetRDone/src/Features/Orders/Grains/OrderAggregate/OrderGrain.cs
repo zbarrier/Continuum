@@ -1,6 +1,7 @@
 using Continuum.CSharpFunctionalExtensions;
 using Continuum.CSharpFunctionalExtensions.Orleans;
 using Continuum.Domain.Orleans;
+using Continuum.Orleans.Events;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
 using GetRDone.Orders.Abstractions.ReadModels;
@@ -36,11 +37,11 @@ public sealed partial class OrderGrain
     ///     models (such as <see cref="ClientOrderDraftsGrain"/> and <see cref="ClientOrdersGrain"/>) see all of that user's
     ///     orders on one stream.
     /// </summary>
-    protected override IReadOnlyList<GrainId> GetStreamTargets(object @event)
+    protected override IReadOnlyList<StreamTarget> GetStreamTargets(object @event)
     {
         // The draft started event is what records the starter, so it is not in the state yet while it is appended.
         var startedBy = @event is OrderDraftStarted started ? started.InitiatedBy : State.StartedBy;
-        return startedBy is null ? [] : [OrderProjections.ClientUserOrdersStreamTarget(startedBy)];
+        return startedBy is null ? [] : [StreamTarget.Transaction(OrderProjections.ClientUserOrdersStreamTarget(startedBy))];
     }
 }
 
