@@ -1,4 +1,5 @@
 using GetRDone.Orders.Abstractions.OrderAggregate;
+using GetRDone.Web;
 using GetRDone.Web.Components;
 using GetRDone.Web.Components.Client.OrderEntryTabs;
 
@@ -73,6 +74,7 @@ app.MapStaticAssets();
 app.MapGet("/login", (string? returnUrl) => TypedResults.Challenge(new AuthenticationProperties { RedirectUri = returnUrl ?? "/" }));
 app.MapPost("/logout", () => TypedResults.SignOut(new AuthenticationProperties { RedirectUri = "/" },
     [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]));
+app.MapOrderDocumentDownloads();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

@@ -1,6 +1,6 @@
 @* The staff order page (event model chapter 2, Order screens): the OrderDetails read model, with the actions the signed-in
-   user can take, such as requesting documents from the client. OrderDetails is a projection, so after an action the page
-   waits for it to show the change. *@
+   user can take, such as requesting documents from the client. Each document links to its download (OrderDocumentDownloads).
+   OrderDetails is a projection, so after an action the page waits for it to show the change. *@
 @page "/staff/orders/{OrderGuid:guid}"
 @attribute [Authorize(Roles = StaffRoles.AnyStaff)]
 @using Continuum.CSharpFunctionalExtensions
@@ -100,6 +100,28 @@
                         </tbody>
                     </MudSimpleTable>
                 }
+
+                <MudText Typo="Typo.h6" Class="mt-6 mb-2">Documents</MudText>
+                <MudSimpleTable Dense="true" Elevation="0" Outlined="true">
+                    <tbody>
+                        @if (details.Documents.Length == 0)
+                        {
+                            <tr><td><MudText Typo="Typo.body2" Color="Color.Secondary">No documents.</MudText></td></tr>
+                        }
+                        @foreach (var document in details.Documents)
+                        {
+                            <tr>
+                                <td><MudLink Href="@OrderDocumentDownloads.Url(details.OrderId, document.DocumentId)" download="@document.FileName">@document.FileName</MudLink></td>
+                                <td>@document.DocumentTypeName</td>
+                                <td>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Added by @(document.AddedByName ?? "an unknown user"), @document.AddedAt.ToLocalTime().ToString("MMM d, h:mm tt")
+                                    </MudText>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
             </MudItem>
             <MudItem xs="12" md="5">
                 <MudText Typo="Typo.h6" Class="mb-2">Timeline</MudText>

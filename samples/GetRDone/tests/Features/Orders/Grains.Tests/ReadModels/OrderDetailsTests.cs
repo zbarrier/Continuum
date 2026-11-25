@@ -62,6 +62,7 @@ public sealed class OrderDetailsTests
             RequestedByUsers.Director1.GetTenantUserId(),
             "Tommy Jones",
             [],
+            [],
             [
                 new OrderTimelineEntry(TestData.At.AddMinutes(4), "Acknowledged by Tommy Jones"),
                 new OrderTimelineEntry(TestData.At.AddMinutes(3), "Assigned to Tommy Jones"),
@@ -197,6 +198,35 @@ public sealed class OrderDetailsTests
                 ["Survey provided by John Doe", "Document requested: Purchase contract", "Document requested: Survey"],
                 details.Timeline.Take(3).Select(entry => entry.Entry));
         });
+    }
+
+    [Fact]
+    public async Task OrderDetails_ShowTheDocumentsAttachedAndProvidedWithWhoAddedThem()
+    {
+        GivenSignedIn(RequestedByUsers.Coordinator1);
+        await Given(
+            DraftStarted1(_orderId, TestData.At),
+            AttachSupportingDocumentTestData.Attached1(_orderId, TestData.At),
+            AttachSupportingDocumentTestData.Attached3(_orderId, TestData.At),
+            RemoveSupportingDocumentTestData.Removed3(_orderId, TestData.At),
+            SubmitOrderTestData.Submitted1(_orderId, TestData.At.AddMinutes(1)),
+            AssignOrderTestData.OrderAssigned1(_orderId, TestData.At.AddMinutes(2)),
+            AcknowledgeOrderTestData.Acknowledged1(_orderId, TestData.At.AddMinutes(3)),
+            DocumentRequestTestData.Requested1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DocumentRequestTestData.Provided1(_orderId, TestData.At.AddMinutes(5)));
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details => Assert.Equal(
+            [
+                new OrderDocumentSummary(
+                    AttachSupportingDocumentTestData.Command1.DocumentId, "Purchase_Contract_48BirchHollow.pdf", "Purchase contract",
+                    "John Doe", TestData.At),
+                new OrderDocumentSummary(
+                    DocumentRequestTestData.ProvideCommand1.DocumentId, "Survey_48BirchHollow.pdf", "Survey",
+                    "John Doe", TestData.At.AddMinutes(5))
+            ],
+            details.Documents));
     }
 
     [Fact]

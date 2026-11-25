@@ -6,8 +6,8 @@ namespace GetRDone.Orders.Abstractions.ReadModels;
 
 /// <summary>
 ///     The staff order page of one submitted order (the OrderDetails read model): its summary, who it is assigned to, its
-///     timeline and what the signed-in user can do next. Each order has one instance, keyed by the order ID, and only AMC staff
-///     (<see cref="StaffRoles.Staff"/>) can read it.
+///     open document requests, its documents, its timeline and what the signed-in user can do next. Each order has one
+///     instance, keyed by the order ID, and only AMC staff (<see cref="StaffRoles.Staff"/>) can read it.
 /// </summary>
 public interface IOrderDetailsGrain : IGrainWithStringKey
 {
@@ -31,6 +31,7 @@ public interface IOrderDetailsGrain : IGrainWithStringKey
 /// <param name="AssignedToUserId">The staff member the order is assigned to, or null until it is assigned.</param>
 /// <param name="AssignedToName">Their name, or null when unassigned or the user directory doesn't know them.</param>
 /// <param name="OpenRequests">The documents requested from the client that it has not provided yet, oldest first.</param>
+/// <param name="Documents">The order's supporting documents, in the order they were added.</param>
 /// <param name="Timeline">What happened to the order, newest first.</param>
 /// <param name="AllowedActions">What the signed-in user can do next.</param>
 [GenerateSerializer, Immutable]
@@ -49,8 +50,23 @@ public sealed record OrderDetails(
     string? AssignedToUserId,
     string? AssignedToName,
     OrderDocumentRequestSummary[] OpenRequests,
+    OrderDocumentSummary[] Documents,
     OrderTimelineEntry[] Timeline,
     OrderActions AllowedActions);
+
+/// <summary>A supporting document of the order, which staff can download.</summary>
+/// <param name="DocumentId">The document.</param>
+/// <param name="FileName">The name of its file.</param>
+/// <param name="DocumentTypeName">What kind of document it is.</param>
+/// <param name="AddedByName">Who attached or provided it, or null when the user directory doesn't know them.</param>
+/// <param name="AddedAt">When it was added.</param>
+[GenerateSerializer, Immutable]
+public sealed record OrderDocumentSummary(
+    string DocumentId,
+    string FileName,
+    string DocumentTypeName,
+    string? AddedByName,
+    DateTimeOffset AddedAt);
 
 /// <summary>A request for a document from the client that it has not provided yet.</summary>
 /// <param name="RequestId">The request.</param>

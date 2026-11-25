@@ -86,7 +86,10 @@
                         }
                         @foreach (var document in details.Documents)
                         {
-                            <tr><td>@document.FileName</td><td>@document.DocumentTypeName</td></tr>
+                            <tr>
+                                <td><MudLink Href="@OrderDocumentDownloads.Url(details.OrderId, document.DocumentId)" download="@document.FileName">@document.FileName</MudLink></td>
+                                <td>@document.DocumentTypeName</td>
+                            </tr>
                         }
                     </tbody>
                 </MudSimpleTable>

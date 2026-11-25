@@ -26,6 +26,24 @@ internal sealed class SupportingDocumentStore(BlobContainerClient container, ILo
     }
 
     /// <summary>
+    ///     Opens the file at <paramref name="blobPath"/> for download, with the content type it was uploaded with, or returns
+    ///     null when there is no file there.
+    /// </summary>
+    public async Task<(Stream Content, string ContentType)?> OpenReadAsync(string blobPath, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var download = await container.GetBlobClient(blobPath).DownloadStreamingAsync(cancellationToken: cancellationToken);
+            var contentType = download.Value.Details.ContentType;
+            return (download.Value.Content, string.IsNullOrEmpty(contentType) ? "application/octet-stream" : contentType);
+        }
+        catch (RequestFailedException ex) when (ex.Status == StatusCodes.Status404NotFound)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     ///     Deletes the file of a document the order rejected or removed, as a best effort: a failure is only logged, since an
     ///     orphaned file does no harm beyond the space it takes.
     /// </summary>

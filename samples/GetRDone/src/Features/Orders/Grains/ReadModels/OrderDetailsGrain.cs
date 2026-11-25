@@ -56,6 +56,11 @@ public sealed class OrderDetailsGrain(
                     State.AssignedTo,
                     names.UserName(State.AssignedTo),
                     State.OpenRequests.ToArray(),
+                    State.Documents
+                        .Select(document => new OrderDocumentSummary(
+                            document.DocumentId, document.FileName, document.DocumentTypeName,
+                            names.UserName(document.AddedBy), document.AddedAt))
+                        .ToArray(),
                     OrderTimeline.Describe(State.Timeline, names),
                     GetAllowedActions(tenantId)));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
@@ -79,6 +84,8 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         On<OrderDraftStarted>(Apply);
         On<RequestAndPropertySaved>(Apply);
         On<BorrowerAndAccessContactSaved>(Apply);
+        On<SupportingDocumentAttached>(Apply);
+        On<SupportingDocumentRemoved>(Apply);
         On<OrderSubmitted>(Apply);
         On<OrderNumberAssigned>(Apply);
         On<OrderAssigned>(Apply);
@@ -120,6 +127,9 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
     /// <summary>The documents requested from the client that it has not provided yet, oldest first.</summary>
     [Id(12)] public List<OrderDocumentRequestSummary> OpenRequests { get; init; } = [];
 
+    /// <summary>The order's supporting documents, in the order they were added, with the IDs the query turns into names.</summary>
+    [Id(13)] public List<OrderDocumentItem> Documents { get; init; } = [];
+
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
         ClientId = evt.ClientId;
@@ -143,6 +153,15 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         AccessContactPhone = evt.AccessContactPhone;
         return true;
     }
+
+    private bool Apply(SupportingDocumentAttached evt, IStreamedEvent<object> streamedEvent)
+    {
+        Documents.Add(new OrderDocumentItem(evt.DocumentId, evt.FileName, evt.DocumentTypeName, evt.InitiatedBy, evt.OccurredAt));
+        return true;
+    }
+
+    private bool Apply(SupportingDocumentRemoved evt, IStreamedEvent<object> streamedEvent)
+        => Documents.RemoveAll(document => document.DocumentId == evt.DocumentId) > 0;
 
     private bool Apply(OrderSubmitted evt, IStreamedEvent<object> streamedEvent)
     {
@@ -186,8 +205,23 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
     private bool Apply(RequestedDocumentProvided evt, IStreamedEvent<object> streamedEvent)
     {
         OpenRequests.RemoveAll(request => request.RequestId == evt.RequestId);
+        Documents.Add(new OrderDocumentItem(evt.DocumentId, evt.FileName, evt.DocumentTypeName, evt.InitiatedBy, evt.OccurredAt));
         Timeline.Add(new OrderTimelineItem(
             evt.OccurredAt, OrderTimelineKind.DocumentProvided, evt.InitiatedBy, null, evt.DocumentTypeName));
         return true;
     }
 }
+
+/// <summary>A supporting document of the order as the staff order page's projection stores it.</summary>
+/// <param name="DocumentId">The document.</param>
+/// <param name="FileName">The name of its file.</param>
+/// <param name="DocumentTypeName">What kind of document it is.</param>
+/// <param name="AddedBy">Who attached or provided it, as a tenant user ID.</param>
+/// <param name="AddedAt">When it was added.</param>
+[GenerateSerializer, Immutable]
+public sealed record OrderDocumentItem(
+    string DocumentId,
+    string FileName,
+    string DocumentTypeName,
+    string? AddedBy,
+    DateTimeOffset AddedAt);
