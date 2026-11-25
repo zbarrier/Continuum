@@ -62,11 +62,13 @@ public class KurrentDBStreamProviderBuilderTests
             ["Orleans:Streaming:Provider:BufferCapacityMultiplier"] = "4",
             ["Orleans:Streaming:Provider:CheckpointMonitorOptions:MaxEventsBeforeCommit"] = "50",
             ["Orleans:Streaming:Provider:UnknownEventTypeBehavior"] = "Skip",
+            ["Orleans:Streaming:Provider:TypeMapperKey"] = "events",
         });
         var adapterDescriptor = builder.Services.First(d => d.ServiceType == typeof(IConfigureOptions<KurrentDBDataAdapterOptions>) && d.ImplementationInstance is IConfigureNamedOptions<KurrentDBDataAdapterOptions>);
         var adapterOptions = new KurrentDBDataAdapterOptions();
         ((IConfigureNamedOptions<KurrentDBDataAdapterOptions>)adapterDescriptor.ImplementationInstance!).Configure("Provider", adapterOptions);
         Assert.Equal(UnknownEventTypeBehavior.Skip, adapterOptions.UnknownEventTypeBehavior);
+        Assert.Equal("events", adapterOptions.TypeMapperKey);
 
         var descriptor = builder.Services.First(d => d.ServiceType == typeof(IConfigureOptions<KurrentDBAllStreamCatchupSubscriptionReceiverOptions>));
         var configure = (IConfigureNamedOptions<KurrentDBAllStreamCatchupSubscriptionReceiverOptions>)descriptor.ImplementationInstance!;

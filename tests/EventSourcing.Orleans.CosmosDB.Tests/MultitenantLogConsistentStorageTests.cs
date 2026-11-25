@@ -81,11 +81,9 @@ public class MultitenantLogConsistentStorageTests
             resolvedConnections.Add(DedicatedConnectionName);
             return dedicatedClient;
         });
-        foreach (var connectionName in new[] { SharedConnectionName, DedicatedConnectionName })
-        {
-            services.AddDefaultTypeMapAttributeMappers(connectionName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
-            services.AddTypeMappedJsonGrainStorageSerializer(connectionName);
-        }
+        // Registered once: the dedicated tenant connection keeps the provider's TypeMapperKey.
+        services.AddDefaultTypeMapAttributeMappers(SharedConnectionName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
+        services.AddTypeMappedJsonGrainStorageSerializer(SharedConnectionName);
         services.AddMultitenantAzureCosmosDBBasedLogConsistencyProvider(ProviderName,
             (tenantId, options) =>
             {

@@ -44,7 +44,8 @@ Each subscription is registered as a hosted service, so it starts and stops with
 | Option | Default | Description |
 | --- | --- | --- |
 | `Enabled` | `true` | When `false`, the subscription is registered but does not start. |
-| `ConnectionName` | (required) | Name of the keyed `CosmosClient`, serializer, and type mapper to use. |
+| `ConnectionName` | (required) | Name of the keyed `CosmosClient` to use. |
+| `TypeMapperKey` | `ConnectionName` | Name of the keyed serializer and type mapper to use. Subscriptions on different connections can share one key and one set of registrations. |
 | `DatabaseName` | (required) | Database that holds the monitored and lease containers. |
 | `MonitoredContainerName` | (required) | Container whose change feed is read (the event store container). |
 | `LeaseContainerName` | (required) | Container where the change feed processor stores leases (progress). |

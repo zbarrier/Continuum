@@ -140,7 +140,7 @@ This format is KurrentDB-specific and lives in `Continuum.Orleans.KurrentDB.Kurr
   - `AddMultitenantKurrentDBBasedLogConsistencyProvider` (KurrentDB event sourcing)
   - `AddMultitenantAzureCosmosDBBasedLogConsistencyProvider` (CosmosDB event sourcing)
   - `AddMultitenantKurrentDBGrainStorage` (KurrentDB grain state)
-- Each takes `configureTenantOptions(tenantId, options)` plus the normal options callback. A tenant's options start from a copy of the provider's options; grains without a tenant use the provider's own storage. When the callback changes `ConnectionName`, the serializer and type mapper are resolved again for the new connection unless the callback set them.
+- Each takes `configureTenantOptions(tenantId, options)` plus the normal options callback. A tenant's options start from a copy of the provider's options; grains without a tenant use the provider's own storage. The serializer and type mapper are resolved by `TypeMapperKey` (default `ConnectionName`), which is already filled in from the provider's options, so a tenant that changes only `ConnectionName` keeps them and they are registered once. If the callback changes `TypeMapperKey`, they are resolved again for that key unless the callback set them.
 - The routing is done by `TenantLogConsistentStorage` and `TenantGrainStorage`. A tenant's storage is created and validated on first use and reused afterwards. If creation fails, the error is rethrown to the caller and the next call retries.
 - `TenantStorageFailureLogger` logs every creation failure as an error, with the tenant ID, provider name and failure count. After a tenant has been failing for 5 minutes, it logs at most once a minute for that tenant, with the number of failures not logged. A later success is logged once and resets the tenant.
 - Per-tenant provider instances set `ConnectionName` in `configureTenantOptions` from a tenant-to-connection map (default `"shared"`).
@@ -159,7 +159,7 @@ This format is KurrentDB-specific and lives in `Continuum.Orleans.KurrentDB.Kurr
 2. ~~Add a stream name builder and parser in Continuum following the rules above, with validation.~~ Done: `TenantKey`, `StreamNameParsing`, `KurrentDBStreamName`.
 3. ~~Event-sourced grains: build stream names as `GrainType + "-" + grainId.Key`.~~ Done.
 4. ~~Stream providers and subscriptions: build the Orleans `StreamId` key from the stream name's remainder.~~ Done.
-5. ~~Per-tenant storage, mapping tenants to connection names.~~ Done with Continuum's own multitenant registrations (see above). Tenant instances of event-sourcing providers keep `TypeMappedJsonGrainStorageSerializer(requireStoredType: true)` because the serializer is resolved per connection.
+5. ~~Per-tenant storage, mapping tenants to connection names.~~ Done with Continuum's own multitenant registrations (see above). Tenant instances of event-sourcing providers keep `TypeMappedJsonGrainStorageSerializer(requireStoredType: true)` because they keep the provider's `TypeMapperKey`.
 6. ~~Remove the `KurrentDBStateManager` client fallback.~~ Done.
 7. ~~Confirm AOT: Continuum library builds stay free of AOT/trim warnings.~~ Done.
 8. Database per tenant for subscriptions (checkpoints and de-duplication scoped by tenant or connection): not done.

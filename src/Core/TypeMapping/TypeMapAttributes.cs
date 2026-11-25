@@ -108,14 +108,14 @@ public static class TypeMapKindsExtensions
     private const int MinTypeMapKindsValue = 1;
     internal const int MaxTypeMapKindsValue = 63;
 
-    /// <summary>Builds the keyed-service key for the type mapper of <paramref name="value"/> on <paramref name="connectionName"/>.</summary>
+    /// <summary>Builds the keyed-service key for the type mapper of <paramref name="value"/> registered under <paramref name="typeMapperKey"/>.</summary>
     /// <param name="value">The kind or combination of kinds.</param>
-    /// <param name="connectionName">The connection name.</param>
+    /// <param name="typeMapperKey">The key the type mappers were registered under.</param>
     /// <returns>The service key.</returns>
-    public static string ToTypeMapperKey(this TypeMapKinds value, string connectionName) => ToTypeMapperKey((int)value, connectionName);
+    public static string ToTypeMapperKey(this TypeMapKinds value, string typeMapperKey) => ToTypeMapperKey((int)value, typeMapperKey);
 
     /// <inheritdoc cref="ToTypeMapperKey(TypeMapKinds, string)"/>
-    public static string ToTypeMapperKey(this int value, string connectionName) => $"{connectionName}-{value}";
+    public static string ToTypeMapperKey(this int value, string typeMapperKey) => $"{typeMapperKey}-{value}";
 
     /// <summary>Converts an integer to <see cref="TypeMapKinds"/>, validating that it is a non-empty combination of defined kinds.</summary>
     /// <param name="value">The integer value.</param>

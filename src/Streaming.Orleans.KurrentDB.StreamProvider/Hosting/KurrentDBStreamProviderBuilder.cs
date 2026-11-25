@@ -27,7 +27,10 @@ internal sealed class KurrentDBStreamProviderBuilder : IProviderBuilder<ISiloBui
         {
             configurator.ConfigureKurrentDB(ob => ob.Configure(options => BindKurrentDBOptions(configurationSection, options)));
             configurator.Configure<KurrentDBDataAdapterOptions>(ob => ob.Configure(options =>
-                options.UnknownEventTypeBehavior = configurationSection.GetValue(nameof(options.UnknownEventTypeBehavior), options.UnknownEventTypeBehavior)));
+            {
+                options.UnknownEventTypeBehavior = configurationSection.GetValue(nameof(options.UnknownEventTypeBehavior), options.UnknownEventTypeBehavior);
+                options.TypeMapperKey = configurationSection[nameof(options.TypeMapperKey)] ?? options.TypeMapperKey;
+            }));
             if (string.IsNullOrWhiteSpace(subscriptionType) || string.Equals(subscriptionType, "Persistent", StringComparison.OrdinalIgnoreCase))
             {
                 configurator.UsePersistentSubscriptions(ob => ob.Configure(options =>

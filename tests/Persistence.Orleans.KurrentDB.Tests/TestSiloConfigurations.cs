@@ -60,10 +60,9 @@ public class TestSiloConfigurations : ISiloConfigurator
                 return new KurrentDBClient(KurrentDBClientSettings.Create(connectionString));
             });
 
+            // Registered once: the dedicated tenant connection keeps the provider's TypeMapperKey.
             services.AddDefaultTypeMapAttributeMappers(ConnectionName, TypeMapKinds.Snapshot);
             services.AddTypeMappedJsonGrainStorageSerializer(ConnectionName);
-            services.AddDefaultTypeMapAttributeMappers(DedicatedConnectionName, TypeMapKinds.Snapshot);
-            services.AddTypeMappedJsonGrainStorageSerializer(DedicatedConnectionName);
         });
     }
 }

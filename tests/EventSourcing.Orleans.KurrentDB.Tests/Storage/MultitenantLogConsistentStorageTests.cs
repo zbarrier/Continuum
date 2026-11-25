@@ -79,11 +79,9 @@ public class MultitenantLogConsistentStorageTests(ClusterFixture fixture)
             resolvedConnections.Add(DedicatedConnectionName);
             return createDedicatedClient();
         });
-        foreach (var connectionName in new[] { SharedConnectionName, DedicatedConnectionName })
-        {
-            services.AddDefaultTypeMapAttributeMappers(connectionName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
-            services.AddTypeMappedJsonGrainStorageSerializer(connectionName);
-        }
+        // Registered once: the dedicated tenant connection keeps the provider's TypeMapperKey.
+        services.AddDefaultTypeMapAttributeMappers(SharedConnectionName, TypeMapKinds.DomainEvent | TypeMapKinds.Metadata);
+        services.AddTypeMappedJsonGrainStorageSerializer(SharedConnectionName);
         services.AddMultitenantKurrentDBBasedLogConsistencyProvider(ProviderName,
             configureTenantOptions ?? ((tenantId, options) =>
             {

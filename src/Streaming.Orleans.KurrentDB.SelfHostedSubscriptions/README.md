@@ -29,7 +29,7 @@ The registration method adds the subscription as a hosted service, so it starts 
 - With no stored checkpoint, a subscription reads from the beginning of its source. Set `StartFromNow` to start at the latest event instead; that position is saved as the checkpoint right away, and a stream that doesn't exist yet is read from its first event.
 - An event whose type can't be mapped stops the subscription (`UnknownEventTypeBehavior.Halt`, the default) without saving a checkpoint past it. Set `UnknownEventTypeBehavior.Skip` to log and continue. For `$all`, use `Filter` to read only the event types the subscription handles.
 
-Options are bound from `Continuum:KurrentDB:Subscriptions:{Name}`, where `{Name}` is the subscription name. Set `Enabled` to `false` to keep a registered subscription from starting.
+Options are bound from `Continuum:KurrentDB:Subscriptions:{Name}`, where `{Name}` is the subscription name. Set `Enabled` to `false` to keep a registered subscription from starting. `ConnectionName` selects the keyed `KurrentDBClient`; the keyed serializer and type mapper are resolved by `TypeMapperKey`, which defaults to `ConnectionName`, so subscriptions on different connections can share one set of registrations.
 
 ```json
 {

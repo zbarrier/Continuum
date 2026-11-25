@@ -34,8 +34,9 @@ namespace Orleans.Hosting;
 ///     <para>
 ///         Both differences are resolved per storage provider through keyed registrations rather than by
 ///         special casing inside <c>KurrentDBGrainStorage</c>, which stays free of any knowledge of Orleans'
-///         streaming internals. Because <c>KurrentDBGrainStorageOptions.GrainStorageSerializer</c> and
-///         <c>TypeMapper</c> are resolved by <c>ConnectionName</c>, these registrations affect only this store.
+///         streaming internals. The registrations use the store's own <c>TypeMapperKey</c>,
+///         <see cref="PubSubStoreName" />, so they affect only this store, and it can share a <c>ConnectionName</c>
+///         (and so a <c>KurrentDBClient</c>) with other providers.
 ///     </para>
 ///     <para>
 ///         Pub/sub subscription state is rebuildable cluster bookkeeping. Persisting it couples stored data to
@@ -48,7 +49,8 @@ namespace Orleans.Hosting;
 public static class KurrentDBPubSubStoreServiceCollectionExtensions
 {
     /// <summary>
-    ///     The grain storage provider name Orleans reserves for streaming pub/sub subscription state.
+    ///     The grain storage provider name Orleans reserves for streaming pub/sub subscription state. It is also the
+    ///     <c>TypeMapperKey</c> the pub/sub store's serializer and type mapper are registered under.
     /// </summary>
     public const string PubSubStoreName = "PubSubStore";
 
@@ -65,7 +67,8 @@ public static class KurrentDBPubSubStoreServiceCollectionExtensions
     /// <param name="configureOptions">Configures the grain storage options for the pub/sub store.</param>
     /// <remarks>
     ///     The caller is still responsible for registering the keyed <c>KurrentDBClient</c> for the
-    ///     <c>ConnectionName</c> chosen in <paramref name="configureOptions" />.
+    ///     <c>ConnectionName</c> chosen in <paramref name="configureOptions" />. Any <c>TypeMapperKey</c> set there is
+    ///     replaced with <see cref="PubSubStoreName" />.
     /// </remarks>
     public static ISiloBuilder AddKurrentDBPubSubStore(this ISiloBuilder builder,
         Action<KurrentDBGrainStorageOptions> configureOptions)
@@ -82,7 +85,8 @@ public static class KurrentDBPubSubStoreServiceCollectionExtensions
     /// <param name="configureOptions">Configures the grain storage options for the pub/sub store.</param>
     /// <remarks>
     ///     The caller is still responsible for registering the keyed <c>KurrentDBClient</c> for the
-    ///     <c>ConnectionName</c> chosen in <paramref name="configureOptions" />.
+    ///     <c>ConnectionName</c> chosen in <paramref name="configureOptions" />. Any <c>TypeMapperKey</c> set there is
+    ///     replaced with <see cref="PubSubStoreName" />.
     /// </remarks>
     public static IServiceCollection AddKurrentDBPubSubStore(this IServiceCollection services,
         Action<KurrentDBGrainStorageOptions> configureOptions)
@@ -90,27 +94,21 @@ public static class KurrentDBPubSubStoreServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services, nameof(services));
         ArgumentNullException.ThrowIfNull(configureOptions, nameof(configureOptions));
 
-        // The connection name drives the keyed lookups below, so it is read back from the configured options
-        // rather than assumed to match the provider name.
-        var options = new KurrentDBGrainStorageOptions();
-        configureOptions(options);
-        var connectionName = options.ConnectionName;
-        if (string.IsNullOrWhiteSpace(connectionName))
-        {
-            throw new ArgumentException($"{nameof(KurrentDBGrainStorageOptions.ConnectionName)} must be set when configuring the KurrentDB pub/sub store.", nameof(configureOptions));
-        }
-        var typeMapKinds = options.TypeMapKinds;
+        // The type mapper is keyed by the configured kinds, so they are read back from the configured options.
+        var configured = new KurrentDBGrainStorageOptions();
+        configureOptions(configured);
+        var typeMapKinds = configured.TypeMapKinds;
 
         // Orleans' own serializer handles the [GenerateSerializer] pub/sub state type, including its internal
-        // members. Resolved per provider, so other stores keep their configured serializer.
-        var serializerDescriptor = ServiceDescriptor.KeyedSingleton<IGrainStorageSerializer>(connectionName, (sp, _) =>
+        // members. Keyed by the store's own type mapper key, so other stores keep their configured serializer.
+        services.AddKeyedSingleton<IGrainStorageSerializer>(PubSubStoreName, (sp, _) =>
         {
             return new OrleansGrainStorageSerializer(sp.GetRequiredService<Serializer>());
         });
 
         // A dedicated type mapper carries the explicit pub/sub mapping so it never leaks into stores that
         // persist application state.
-        var typeMapperDescriptor = ServiceDescriptor.KeyedSingleton<ITypeMapper>(typeMapKinds.ToTypeMapperKey(connectionName), (_, _) =>
+        services.AddKeyedSingleton<ITypeMapper>(typeMapKinds.ToTypeMapperKey(PubSubStoreName), (_, _) =>
         {
             var pubSubStateType = Type.GetType(PubSubGrainStateTypeName)
                 ?? throw new InvalidOperationException($"Could not resolve '{PubSubGrainStateTypeName}'. The referenced Orleans version may have moved or renamed this type, so {nameof(AddKurrentDBPubSubStore)} needs to be updated.");
@@ -118,14 +116,11 @@ public static class KurrentDBPubSubStoreServiceCollectionExtensions
             typeMapper.AddType(pubSubStateType, pubSubStateType.Name);
             return typeMapper;
         });
-        services.Add(serializerDescriptor);
-        services.Add(typeMapperDescriptor);
 
-        // The serializer and type mapper above are keyed by connection name, so the pub/sub store must not share
-        // it with anything else. Checked at silo startup, once every registration has been made.
-        var ownDescriptors = new HashSet<ServiceDescriptor> { serializerDescriptor, typeMapperDescriptor };
-        services.AddTransient<IConfigurationValidator>(sp => new KurrentDBPubSubStoreValidator(sp, services, connectionName, ownDescriptors));
-
-        return services.AddKurrentDBGrainStorage(PubSubStoreName, configureOptions);
+        return services.AddKurrentDBGrainStorage(PubSubStoreName, options =>
+        {
+            configureOptions(options);
+            options.TypeMapperKey = PubSubStoreName;
+        });
     }
 }

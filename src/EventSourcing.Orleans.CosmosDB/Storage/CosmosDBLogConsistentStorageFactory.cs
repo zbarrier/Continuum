@@ -59,14 +59,14 @@ public static class CosmosDBLogConsistentStorageFactory
         Action<string, CosmosDBLogConsistentStorageOptions> configureTenantOptions)
     {
         var options = serviceProvider.GetRequiredService<IOptionsFactory<CosmosDBLogConsistentStorageOptions>>().Create(name);
-        var connectionName = options.ConnectionName;
+        var typeMapperKey = options.TypeMapperKey;
         var serializer = options.GrainStorageSerializer;
         var typeMapper = options.TypeMapper;
         configureTenantOptions(tenantId, options);
-        if (!string.Equals(connectionName, options.ConnectionName, StringComparison.Ordinal))
+        if (!string.Equals(typeMapperKey, options.TypeMapperKey, StringComparison.Ordinal))
         {
-            // Values resolved from the provider's connection must be resolved again for the tenant's connection,
-            // unless the tenant callback set them explicitly.
+            // The serializer and type mapper depend only on the type mapper key, not the connection, so they are
+            // resolved again only when the tenant callback changes the key without setting them itself.
             if (ReferenceEquals(serializer, options.GrainStorageSerializer))
             {
                 options.GrainStorageSerializer = null!;

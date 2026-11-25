@@ -25,10 +25,22 @@ namespace Orleans.Configuration;
 public class KurrentDBDataAdapterOptions
 {
     /// <summary>
-    ///     The name of the KurrentDB connection used to resolve the keyed serializer and type mapper.
+    ///     The name of the KurrentDB connection the events are read from, recorded as the source connection of each
+    ///     delivered message. Defaults to the stream provider's <see cref="KurrentDBOptions.ConnectionName" />.
     /// </summary>
     [Redact]
     public string ConnectionName { get; set; } = default!;
+
+    /// <summary>
+    ///     The key used to resolve the keyed <see cref="GrainStorageSerializer" /> and <see cref="TypeMapper" /> when they
+    ///     are not set. Defaults to <see cref="ConnectionName" />.
+    /// </summary>
+    /// <remarks>
+    ///     Event type names do not depend on the connection, so stream providers on different connections can share one
+    ///     key and one set of registrations.
+    /// </remarks>
+    [Redact]
+    public string TypeMapperKey { get; set; } = default!;
 
     /// <summary>
     ///     The Orleans stream provider name that qualifies every delivered stream namespace.
@@ -46,7 +58,7 @@ public class KurrentDBDataAdapterOptions
     ///     <c>AddDefaultTypeMapAttributeMappers</c> keys a mapper by each individual flag and by the exact combined
     ///     value it was called with, so this must match one of those keys. Defaulting to
     ///     <see cref="TypeMapKinds.DomainEvent" /> alone keeps the lookup working when a provider registers only that
-    ///     kind; widen it to match whatever the connection actually registered.
+    ///     kind; widen it to match whatever the type mapper key actually registered.
     /// </remarks>
     [Redact]
     public TypeMapKinds TypeMapKinds { get; set; } = TypeMapKinds.DomainEvent;
@@ -116,7 +128,7 @@ public class KurrentDBDataAdapterOptions
 }
 
 /// <summary>
-///     Resolves the serializer and type mapper for <see cref="KurrentDBDataAdapterOptions" /> from the connection name.
+///     Resolves the serializer and type mapper for <see cref="KurrentDBDataAdapterOptions" /> from the type mapper key.
 /// </summary>
 public class DefaultKurrentDBDataAdapterOptionsConfigurator : IPostConfigureOptions<KurrentDBDataAdapterOptions>
 {
@@ -142,7 +154,11 @@ public class DefaultKurrentDBDataAdapterOptionsConfigurator : IPostConfigureOpti
             // Fall back to the connection name configured on the matching stream provider.
             options.ConnectionName = _serviceProvider.GetOptionsByName<KurrentDBOptions>(name).ConnectionName;
         }
-        if (string.IsNullOrWhiteSpace(options.ConnectionName))
+        if (string.IsNullOrWhiteSpace(options.TypeMapperKey))
+        {
+            options.TypeMapperKey = options.ConnectionName;
+        }
+        if (string.IsNullOrWhiteSpace(options.TypeMapperKey))
         {
             // Validator will throw an exception, so we will let it handle it.
             return;
@@ -151,11 +167,11 @@ public class DefaultKurrentDBDataAdapterOptionsConfigurator : IPostConfigureOpti
         // stream provider and the key that was looked for, rather than as a bare DI exception during silo start up.
         if (options.GrainStorageSerializer is null)
         {
-            options.GrainStorageSerializer = _serviceProvider.GetKeyedService<IGrainStorageSerializer>(options.ConnectionName)!;
+            options.GrainStorageSerializer = _serviceProvider.GetKeyedService<IGrainStorageSerializer>(options.TypeMapperKey)!;
         }
         if (options.TypeMapper is null)
         {
-            string key = options.TypeMapKinds.ToTypeMapperKey(options.ConnectionName);
+            string key = options.TypeMapKinds.ToTypeMapperKey(options.TypeMapperKey);
             options.TypeMapper = _serviceProvider.GetKeyedService<ITypeMapper>(key)!;
         }
     }
@@ -199,11 +215,11 @@ public class KurrentDBDataAdapterOptionsValidator : IConfigurationValidator
         }
         if (_options.GrainStorageSerializer is null)
         {
-            throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.GrainStorageSerializer)} could not be resolved. Register a keyed IGrainStorageSerializer (for example with AddTypeMappedJsonGrainStorageSerializer) for \"{_options.ConnectionName}\" or set it explicitly.");
+            throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.GrainStorageSerializer)} could not be resolved. Register a keyed IGrainStorageSerializer (for example with AddTypeMappedJsonGrainStorageSerializer) for \"{_options.TypeMapperKey}\" or set it explicitly.");
         }
         if (_options.TypeMapper is null)
         {
-            throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.TypeMapper)} could not be resolved. Register a keyed ITypeMapper for \"{_options.TypeMapKinds.ToTypeMapperKey(_options.ConnectionName)}\" or set it explicitly.");
+            throw new OrleansConfigurationException($"{nameof(KurrentDBDataAdapterOptions)} on stream provider {_name} is invalid. {nameof(KurrentDBDataAdapterOptions.TypeMapper)} could not be resolved. Register a keyed ITypeMapper for \"{_options.TypeMapKinds.ToTypeMapperKey(_options.TypeMapperKey ?? string.Empty)}\" or set it explicitly.");
         }
     }
 }

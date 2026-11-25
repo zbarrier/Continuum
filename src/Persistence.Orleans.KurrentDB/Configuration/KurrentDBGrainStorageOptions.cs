@@ -46,6 +46,16 @@ public class KurrentDBGrainStorageOptions : IStorageProviderSerializerOptions
     public string ConnectionName { get; set; } = default!;
 
     /// <summary>
+    ///     The key used to resolve the keyed <see cref="GrainStorageSerializer"/> and <see cref="TypeMapper"/> when they
+    ///     are not set. Defaults to <see cref="ConnectionName"/>.
+    /// </summary>
+    /// <remarks>
+    ///     State type names do not depend on the connection, so providers on different connections can share one key and
+    ///     one set of registrations. A tenant callback that changes <see cref="ConnectionName"/> keeps the provider's key.
+    /// </remarks>
+    public string TypeMapperKey { get; set; } = default!;
+
+    /// <summary>
     ///     The credentials that have permissions to append/read events.
     ///     UseDefault should be true for insecure localhost connections.
     /// </summary>
@@ -54,7 +64,7 @@ public class KurrentDBGrainStorageOptions : IStorageProviderSerializerOptions
 
     /// <summary>
     ///     The serializer used to serialize state to a KurrentDB stream.
-    ///     Gets set based on the connection name.
+    ///     Resolved from <see cref="TypeMapperKey"/> when not set.
     /// </summary>
     public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;
 
@@ -99,13 +109,13 @@ public class KurrentDBGrainStorageOptions : IStorageProviderSerializerOptions
     /// <summary>
     ///     Used to set the EventData.Type property to the provided name instead of the CLR
     ///     type name. Allows us to rename state classes without breaking deserialization.
-    ///     Gets set based on the connection name and type map kinds.
+    ///     Resolved from <see cref="TypeMapperKey"/> and <see cref="TypeMapKinds"/> when not set.
     /// </summary>
     public ITypeMapper TypeMapper { get; set; } = default!;
 }
 
 /// <summary>
-///     Fills in options that depend on the connection name, such as the serializer and type mapper.
+///     Fills in options that depend on the connection name and type mapper key, such as the serializer and type mapper.
 /// </summary>
 public class DefaultKurrentDBGrainStorageOptionsConfigurator : IPostConfigureOptions<KurrentDBGrainStorageOptions>
 {
@@ -128,9 +138,13 @@ public class DefaultKurrentDBGrainStorageOptionsConfigurator : IPostConfigureOpt
             // Validator will throw an exception, so we will let it handle it.
             return;
         }
+        if (string.IsNullOrWhiteSpace(options.TypeMapperKey))
+        {
+            options.TypeMapperKey = options.ConnectionName;
+        }
         if (options.GrainStorageSerializer is null)
         {
-            options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.ConnectionName);
+            options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.TypeMapperKey);
         }
         if (options.StreamNameFormatter is null)
         {
@@ -142,7 +156,7 @@ public class DefaultKurrentDBGrainStorageOptionsConfigurator : IPostConfigureOpt
         }
         if (options.TypeMapper is null)
         {
-            string key = options.TypeMapKinds.ToTypeMapperKey(options.ConnectionName);
+            string key = options.TypeMapKinds.ToTypeMapperKey(options.TypeMapperKey);
             options.TypeMapper = _serviceProvider.GetRequiredKeyedService<ITypeMapper>(key);
         }
     }

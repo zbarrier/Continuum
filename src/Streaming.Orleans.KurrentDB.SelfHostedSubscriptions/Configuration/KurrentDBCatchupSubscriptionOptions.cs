@@ -48,6 +48,13 @@ public class KurrentDBCatchupSubscriptionOptions
     /// <summary>The keyed KurrentDB client connection name to read from.</summary>
     public string ConnectionName { get; set; } = default!;
 
+    /// <summary>
+    ///     The key used to resolve the keyed <see cref="GrainStorageSerializer" /> and <see cref="TypeMapper" /> when they
+    ///     are not set. Defaults to <see cref="ConnectionName" />. Event type names do not depend on the connection, so
+    ///     subscriptions on different connections can share one key and one set of registrations.
+    /// </summary>
+    public string TypeMapperKey { get; set; } = default!;
+
     /// <summary>The buffering options between reading and processing.</summary>
     public KurrentDBChannelBufferOptions BufferOptions { get; set; } = new();
 
@@ -66,13 +73,13 @@ public class KurrentDBCatchupSubscriptionOptions
     /// <summary>The checkpoint store, resolved from <see cref="CheckpointConnectionName" /> when not set.</summary>
     public ICheckpointStore<ulong> CheckpointStore { get; set; } = default!;
 
-    /// <summary>The serializer for event payloads, resolved from <see cref="ConnectionName" /> when not set.</summary>
+    /// <summary>The serializer for event payloads, resolved from <see cref="TypeMapperKey" /> when not set.</summary>
     public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;
 
     /// <summary>The kinds of mapped types events are resolved with.</summary>
     public TypeMapKinds TypeMapKinds { get; set; } = TypeMapKinds.DomainEvent;
 
-    /// <summary>The type mapper, resolved from <see cref="TypeMapKinds" /> and <see cref="ConnectionName" /> when not set.</summary>
+    /// <summary>The type mapper, resolved from <see cref="TypeMapKinds" /> and <see cref="TypeMapperKey" /> when not set.</summary>
     public ITypeMapper TypeMapper { get; set; } = default!;
 
     /// <summary>The stream name parser, resolved from <see cref="ConnectionName" /> when not set, falling back to <see cref="DefaultKurrentDBStreamNameParser" />.</summary>
@@ -147,13 +154,17 @@ public class DefaultKurrentDBChannelCatchupSubscriptionOptionsConfigurator : IPo
                 ? _serviceProvider.GetRequiredService<ICheckpointStore<ulong>>()
                 : _serviceProvider.GetRequiredKeyedService<ICheckpointStore<ulong>>(options.CheckpointConnectionName);
         }
+        if (string.IsNullOrWhiteSpace(options.TypeMapperKey))
+        {
+            options.TypeMapperKey = options.ConnectionName;
+        }
         if (options.GrainStorageSerializer is null)
         {
-            options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.ConnectionName);
+            options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.TypeMapperKey);
         }
         if (options.TypeMapper is null)
         {
-            string key = options.TypeMapKinds.ToTypeMapperKey(options.ConnectionName);
+            string key = options.TypeMapKinds.ToTypeMapperKey(options.TypeMapperKey);
             options.TypeMapper = _serviceProvider.GetRequiredKeyedService<ITypeMapper>(key);
         }
         if (options.StreamNameParser is null)

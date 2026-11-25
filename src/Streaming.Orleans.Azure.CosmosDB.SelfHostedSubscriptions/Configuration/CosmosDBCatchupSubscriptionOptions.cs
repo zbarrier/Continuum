@@ -28,6 +28,13 @@ public class CosmosDBCatchupSubscriptionOptions
     /// <summary>The keyed CosmosClient connection name.</summary>
     public string ConnectionName { get; set; } = default!;
 
+    /// <summary>
+    ///     The key used to resolve the keyed <see cref="GrainStorageSerializer" /> and <see cref="TypeMapper" /> when they
+    ///     are not set. Defaults to <see cref="ConnectionName" />. Event type names do not depend on the connection, so
+    ///     subscriptions on different connections can share one key and one set of registrations.
+    /// </summary>
+    public string TypeMapperKey { get; set; } = default!;
+
     /// <summary>The database containing the monitored and lease containers.</summary>
     public string DatabaseName { get; set; } = default!;
 
@@ -59,7 +66,7 @@ public class CosmosDBCatchupSubscriptionOptions
     /// </summary>
     public UnknownEventTypeBehavior UnknownEventTypeBehavior { get; set; } = UnknownEventTypeBehavior.Halt;
 
-    /// <summary>Deserializes event payloads; resolved by connection name when not set.</summary>
+    /// <summary>Deserializes event payloads; resolved by <see cref="TypeMapperKey" /> when not set.</summary>
     public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;
 
     /// <summary>Parses stream names; resolved by connection name or defaulted when not set.</summary>
@@ -68,7 +75,7 @@ public class CosmosDBCatchupSubscriptionOptions
     /// <summary>The kinds of mapped types used to resolve event types.</summary>
     public TypeMapKinds TypeMapKinds { get; set; } = TypeMapKinds.DomainEvent | TypeMapKinds.Metadata;
 
-    /// <summary>Resolves event types; resolved by connection name and type map kinds when not set.</summary>
+    /// <summary>Resolves event types; resolved by <see cref="TypeMapperKey" /> and type map kinds when not set.</summary>
     public ITypeMapper TypeMapper { get; set; } = default!;
 }
 
@@ -91,9 +98,13 @@ public class DefaultCosmosDBCatchupSubscriptionOptionsConfigurator : IPostConfig
             // Validator will throw an exception, so we will let it handle it.
             return;
         }
+        if (string.IsNullOrWhiteSpace(options.TypeMapperKey))
+        {
+            options.TypeMapperKey = options.ConnectionName;
+        }
         if (options.GrainStorageSerializer is null)
         {
-            options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.ConnectionName);
+            options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.TypeMapperKey);
         }
         if (options.StreamNameParser is null)
         {
@@ -101,7 +112,7 @@ public class DefaultCosmosDBCatchupSubscriptionOptionsConfigurator : IPostConfig
         }
         if (options.TypeMapper is null)
         {
-            string key = options.TypeMapKinds.ToTypeMapperKey(options.ConnectionName);
+            string key = options.TypeMapKinds.ToTypeMapperKey(options.TypeMapperKey);
             options.TypeMapper = _serviceProvider.GetRequiredKeyedService<ITypeMapper>(key);
         }
     }

@@ -18,43 +18,43 @@ namespace Continuum.Hosting.Orleans;
 public static class TypeMappedJsonGrainStorageSerializerBuilderExtensions
 {
     /// <summary>
-    /// Registers a keyed <see cref="IGrainStorageSerializer"/> for <paramref name="connectionName"/> backed by <see cref="TypeMappedJsonGrainStorageSerializer"/>.
+    /// Registers a keyed <see cref="IGrainStorageSerializer"/> for <paramref name="typeMapperKey"/> backed by <see cref="TypeMappedJsonGrainStorageSerializer"/>.
     /// </summary>
     /// <param name="builder">The host application builder.</param>
-    /// <param name="connectionName">The service key for the serializer.</param>
+    /// <param name="typeMapperKey">The key to register the serializer under. Providers and subscriptions resolve it by their <c>TypeMapperKey</c> option, which defaults to their <c>ConnectionName</c>.</param>
     /// <param name="includeDefaultConverters">Whether to add <see cref="NewIdConverter"/>.</param>
     /// <param name="typeInfoResolver">Optional JSON metadata resolver, such as a <see cref="JsonSerializerContext"/>. Required for Native AOT.</param>
     /// <param name="jsonConverters">Additional converters.</param>
     /// <param name="requireStoredType">Whether deserialization requires a <see cref="BinaryDataWithType"/> input. Enable for type-mapped event-sourcing storage.</param>
     /// <returns>The host application builder.</returns>
     public static IHostApplicationBuilder AddTypeMappedJsonGrainStorageSerializer(this IHostApplicationBuilder builder,
-        string connectionName,
+        string typeMapperKey,
         bool includeDefaultConverters = true,
         IJsonTypeInfoResolver? typeInfoResolver = null,
         bool requireStoredType = false,
         params JsonConverter[] jsonConverters)
     {
-        _ = builder.Services.AddTypeMappedJsonGrainStorageSerializer(connectionName, includeDefaultConverters, typeInfoResolver, requireStoredType, jsonConverters);
+        _ = builder.Services.AddTypeMappedJsonGrainStorageSerializer(typeMapperKey, includeDefaultConverters, typeInfoResolver, requireStoredType, jsonConverters);
 
         return builder;
     }
 
     /// <inheritdoc cref="AddTypeMappedJsonGrainStorageSerializer(IServiceCollection, string, Func{IServiceProvider, IEnumerable{JsonConverter}}, bool, IJsonTypeInfoResolver?, bool)"/>
     /// <param name="builder">The host application builder.</param>
-    /// <param name="connectionName">The service key for the serializer.</param>
+    /// <param name="typeMapperKey">The key to register the serializer under. Providers and subscriptions resolve it by their <c>TypeMapperKey</c> option, which defaults to their <c>ConnectionName</c>.</param>
     /// <param name="jsonConverterFactory">Creates additional converters when the serializer is resolved.</param>
     /// <param name="includeDefaultConverters">Whether to add <see cref="NewIdConverter"/>.</param>
     /// <param name="typeInfoResolver">Optional JSON metadata resolver, such as a <see cref="JsonSerializerContext"/>. Required for Native AOT.</param>
     /// <param name="requireStoredType">Whether deserialization requires a <see cref="BinaryDataWithType"/> input. Enable for type-mapped event-sourcing storage.</param>
     /// <returns>The host application builder.</returns>
     public static IHostApplicationBuilder AddTypeMappedJsonGrainStorageSerializer(this IHostApplicationBuilder builder,
-        string connectionName,
+        string typeMapperKey,
         Func<IServiceProvider, IEnumerable<JsonConverter>> jsonConverterFactory,
         bool includeDefaultConverters = true,
         IJsonTypeInfoResolver? typeInfoResolver = null,
         bool requireStoredType = false)
     {
-        _ = builder.Services.AddTypeMappedJsonGrainStorageSerializer(connectionName, jsonConverterFactory, includeDefaultConverters,
+        _ = builder.Services.AddTypeMappedJsonGrainStorageSerializer(typeMapperKey, jsonConverterFactory, includeDefaultConverters,
             typeInfoResolver, requireStoredType);
 
         return builder;
@@ -62,36 +62,36 @@ public static class TypeMappedJsonGrainStorageSerializerBuilderExtensions
 
     /// <inheritdoc cref="AddTypeMappedJsonGrainStorageSerializer(IHostApplicationBuilder, string, bool, IJsonTypeInfoResolver?, bool, JsonConverter[])"/>
     /// <param name="services">The service collection.</param>
-    /// <param name="connectionName">The service key for the serializer.</param>
+    /// <param name="typeMapperKey">The key to register the serializer under. Providers and subscriptions resolve it by their <c>TypeMapperKey</c> option, which defaults to their <c>ConnectionName</c>.</param>
     /// <param name="includeDefaultConverters">Whether to add <see cref="NewIdConverter"/>.</param>
     /// <param name="typeInfoResolver">Optional JSON metadata resolver, such as a <see cref="JsonSerializerContext"/>. Required for Native AOT.</param>
     /// <param name="requireStoredType">Whether deserialization requires a <see cref="BinaryDataWithType"/> input. Enable for type-mapped event-sourcing storage.</param>
     /// <param name="jsonConverters">Additional converters.</param>
     /// <returns>The service collection.</returns>
     public static IServiceCollection AddTypeMappedJsonGrainStorageSerializer(this IServiceCollection services,
-        string connectionName,
+        string typeMapperKey,
         bool includeDefaultConverters = true,
         IJsonTypeInfoResolver? typeInfoResolver = null,
         bool requireStoredType = false,
         params JsonConverter[] jsonConverters)
     {
-        return services.AddTypeMappedJsonGrainStorageSerializer(connectionName, _ => jsonConverters, includeDefaultConverters,
+        return services.AddTypeMappedJsonGrainStorageSerializer(typeMapperKey, _ => jsonConverters, includeDefaultConverters,
             typeInfoResolver, requireStoredType);
     }
 
     /// <summary>
-    /// Registers a keyed <see cref="IGrainStorageSerializer"/> for <paramref name="connectionName"/> backed by <see cref="TypeMappedJsonGrainStorageSerializer"/>,
+    /// Registers a keyed <see cref="IGrainStorageSerializer"/> for <paramref name="typeMapperKey"/> backed by <see cref="TypeMappedJsonGrainStorageSerializer"/>,
     /// with converters created from the service provider so they can depend on services such as a type mapper.
     /// </summary>
     /// <param name="services">The service collection.</param>
-    /// <param name="connectionName">The service key for the serializer.</param>
+    /// <param name="typeMapperKey">The key to register the serializer under. Providers and subscriptions resolve it by their <c>TypeMapperKey</c> option, which defaults to their <c>ConnectionName</c>.</param>
     /// <param name="jsonConverterFactory">Creates additional converters when the serializer is resolved.</param>
     /// <param name="includeDefaultConverters">Whether to add <see cref="NewIdConverter"/>.</param>
     /// <param name="typeInfoResolver">Optional JSON metadata resolver, such as a <see cref="JsonSerializerContext"/>. Required for Native AOT.</param>
     /// <param name="requireStoredType">Whether deserialization requires a <see cref="BinaryDataWithType"/> input. Enable for type-mapped event-sourcing storage.</param>
     /// <returns>The service collection.</returns>
     public static IServiceCollection AddTypeMappedJsonGrainStorageSerializer(this IServiceCollection services,
-        string connectionName,
+        string typeMapperKey,
         Func<IServiceProvider, IEnumerable<JsonConverter>> jsonConverterFactory,
         bool includeDefaultConverters = true,
         IJsonTypeInfoResolver? typeInfoResolver = null,
@@ -99,7 +99,7 @@ public static class TypeMappedJsonGrainStorageSerializerBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(jsonConverterFactory);
 
-        services.AddKeyedSingleton<IGrainStorageSerializer>(connectionName, (sp, cn) =>
+        services.AddKeyedSingleton<IGrainStorageSerializer>(typeMapperKey, (sp, cn) =>
         {
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             if (includeDefaultConverters)

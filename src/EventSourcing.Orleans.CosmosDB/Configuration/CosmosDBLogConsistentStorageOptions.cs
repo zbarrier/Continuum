@@ -24,11 +24,21 @@ public class CosmosDBLogConsistentStorageOptions
     public int InitStage { get; set; } = ServiceLifecycleStage.ApplicationServices;
 
     /// <summary>
-    ///     The name of the Cosmos DB connection used to resolve the keyed CosmosClient, serializer and type mapper.
+    ///     The name of the Cosmos DB connection used to resolve the keyed CosmosClient.
     ///     Must be set to a valid Cosmos DB connection name.
     /// </summary>
     [Required]
     public string ConnectionName { get; set; } = default!;
+
+    /// <summary>
+    ///     The key used to resolve the keyed <see cref="GrainStorageSerializer"/> and <see cref="TypeMapper"/> when they
+    ///     are not set. Defaults to <see cref="ConnectionName"/>.
+    /// </summary>
+    /// <remarks>
+    ///     Event type names do not depend on the connection, so providers on different connections can share one key and
+    ///     one set of registrations. A tenant callback that changes <see cref="ConnectionName"/> keeps the provider's key.
+    /// </remarks>
+    public string TypeMapperKey { get; set; } = default!;
 
     /// <summary>
     ///     The Cosmos DB database holding the event container.
@@ -44,7 +54,7 @@ public class CosmosDBLogConsistentStorageOptions
 
     /// <summary>
     ///     The serializer used to serialize event payloads. It must produce JSON.
-    ///     Gets set based on the connection name.
+    ///     Resolved from <see cref="TypeMapperKey"/> when not set.
     /// </summary>
     public IGrainStorageSerializer GrainStorageSerializer { get; set; } = default!;
 
@@ -83,7 +93,7 @@ public class CosmosDBLogConsistentStorageOptions
     /// <summary>
     ///     Used to set the stored event DataType to the provided name instead of the CLR 
     ///     type name. Allows us to rename event classes without breaking deserialization.
-    ///     Gets set based on the connection name and type map kinds.
+    ///     Resolved from <see cref="TypeMapperKey"/> and <see cref="TypeMapKinds"/> when not set.
     /// </summary>
     public ITypeMapper TypeMapper { get; set; } = default!;
 
@@ -110,7 +120,7 @@ public class DefaultCosmosDBLogConsistentStorageOptionsConfigurator : IPostConfi
     /// <summary>
     ///     Creates the configurator.
     /// </summary>
-    /// <param name="serviceProvider">Used to resolve keyed services by connection name.</param>
+    /// <param name="serviceProvider">Used to resolve keyed services.</param>
     public DefaultCosmosDBLogConsistentStorageOptionsConfigurator(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -124,9 +134,13 @@ public class DefaultCosmosDBLogConsistentStorageOptionsConfigurator : IPostConfi
             // Validator will throw an exception, so we will let it handle it.
             return;
         }
+        if (string.IsNullOrWhiteSpace(options.TypeMapperKey))
+        {
+            options.TypeMapperKey = options.ConnectionName;
+        }
         if (options.GrainStorageSerializer is null)
         {
-            options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.ConnectionName);
+            options.GrainStorageSerializer = _serviceProvider.GetRequiredKeyedService<IGrainStorageSerializer>(options.TypeMapperKey);
         }
         if (options.GrainStorageSerializer is TypeMappedJsonGrainStorageSerializer typeMappedSerializer)
         {
@@ -142,7 +156,7 @@ public class DefaultCosmosDBLogConsistentStorageOptionsConfigurator : IPostConfi
         }
         if (options.TypeMapper is null)
         {
-            string key = options.TypeMapKinds.ToTypeMapperKey(options.ConnectionName);
+            string key = options.TypeMapKinds.ToTypeMapperKey(options.TypeMapperKey);
             options.TypeMapper = _serviceProvider.GetRequiredKeyedService<ITypeMapper>(key);
         }
     }

@@ -70,11 +70,9 @@ public class MultitenantKurrentDBGrainStorageRoutingTests(ClusterFixture fixture
             resolvedConnections.Add(DedicatedConnectionName);
             return createDedicatedClient();
         });
-        foreach (var connectionName in new[] { SharedConnectionName, DedicatedConnectionName })
-        {
-            services.AddDefaultTypeMapAttributeMappers(connectionName, TypeMapKinds.Snapshot);
-            services.AddTypeMappedJsonGrainStorageSerializer(connectionName);
-        }
+        // Registered once: the dedicated tenant connection keeps the provider's TypeMapperKey.
+        services.AddDefaultTypeMapAttributeMappers(SharedConnectionName, TypeMapKinds.Snapshot);
+        services.AddTypeMappedJsonGrainStorageSerializer(SharedConnectionName);
         services.AddMultitenantKurrentDBGrainStorage(ProviderName,
             configureTenantOptions ?? ((tenantId, options) =>
             {

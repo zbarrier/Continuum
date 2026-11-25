@@ -10,7 +10,7 @@ dotnet add package Continuum.EventSourcing.Orleans.KurrentDB
 
 ## Configure
 
-The provider resolves a keyed `KurrentDBClient`, a keyed `IGrainStorageSerializer` and a keyed `ITypeMapper` using `ConnectionName`.
+The provider resolves a keyed `KurrentDBClient` using `ConnectionName`, and a keyed `IGrainStorageSerializer` and `ITypeMapper` using `TypeMapperKey`, which defaults to `ConnectionName`.
 
 ```csharp
 siloBuilder.AddKurrentDBBasedLogConsistencyProviderAsDefault(options =>
@@ -19,11 +19,12 @@ siloBuilder.AddKurrentDBBasedLogConsistencyProviderAsDefault(options =>
 });
 ```
 
-Options can also be bound from configuration under `Orleans:EventSourcing:KurrentDB:{providerName}`. `GrainStorageSerializer`, `TypeMapper`, `StreamNameFormatter` and `EventIdGenerator` cannot be bound; set them in code or let them be resolved from `ConnectionName` and the defaults.
+Options can also be bound from configuration under `Orleans:EventSourcing:KurrentDB:{providerName}`. `GrainStorageSerializer`, `TypeMapper`, `StreamNameFormatter` and `EventIdGenerator` cannot be bound; set them in code or let them be resolved from `TypeMapperKey` and the defaults.
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `ConnectionName` | (required) | Key used to resolve the client, serializer and type mapper. |
+| `ConnectionName` | (required) | Key used to resolve the client. |
+| `TypeMapperKey` | `ConnectionName` | Key used to resolve the serializer and type mapper. Event type names don't depend on the connection, so providers on different connections can share one key and one set of registrations. |
 | `Credentials` | `UseDefault = true` | Connection default credentials, or an auth token / username and password. |
 | `StreamNameFormatter` | `{GrainType}-{GrainKey}` | Stream name for a grain. The grain type becomes the KurrentDB category. |
 | `EventIdGenerator` | `Guid.CreateVersion7` | Event id for each appended event. |
@@ -62,7 +63,7 @@ services.AddMultitenantKurrentDBBasedLogConsistencyProvider("Default",
 ```
 
 - A tenant's options start from a copy of the provider's options, then the callback runs. Grains without a tenant use the provider's own storage.
-- When the callback changes `ConnectionName`, the serializer and type mapper are resolved again for that connection, so register a keyed `KurrentDBClient`, serializer and type mapper for every connection name. Tenants that share a connection share one client.
+- `TypeMapperKey` is already filled in from the provider's options, so a tenant that changes only `ConnectionName` keeps the provider's serializer and type mapper. Register a keyed `KurrentDBClient` for every connection name; the serializer and type mapper are registered once. If the callback changes `TypeMapperKey`, they are resolved again for that key unless the callback set them. Tenants that share a connection share one client.
 - A tenant's storage is created and validated on first use. If that fails, the caller gets the exception, the next call retries, and the failure is logged as an error. Logging is throttled to once a minute only after a tenant has been failing for 5 minutes.
 - Orleans.Multitenant's `AddMultitenantGrainStorage` cannot be used with this provider.
 

@@ -12,7 +12,7 @@ If you want to run the subscription yourself in a worker service, use `Continuum
 
 ## Stream providers and subscriptions
 
-In this README, a *stream provider* is one named Orleans stream provider registered with `AddKurrentDBStreams("Name", ...)`, not KurrentDB itself. Each stream provider runs exactly one subscription, and its name is that subscription's identity: it keys the checkpoint and qualifies the stream namespaces consumers use. One KurrentDB database can, and usually will, serve many stream providers. Providers that share a `ConnectionName` share one `KurrentDBClient`, so adding a subscription does not add a connection.
+In this README, a *stream provider* is one named Orleans stream provider registered with `AddKurrentDBStreams("Name", ...)`, not KurrentDB itself. Each stream provider runs exactly one subscription, and its name is that subscription's identity: it keys the checkpoint and qualifies the stream namespaces consumers use. One KurrentDB database can, and usually will, serve many stream providers. Providers that share a `ConnectionName` share one `KurrentDBClient`, so adding a subscription does not add a connection. The keyed serializer and type mapper are resolved by `KurrentDBDataAdapterOptions.TypeMapperKey` (configuration key `TypeMapperKey`), which defaults to `ConnectionName`, so providers on different connections can share one set of registrations.
 
 ## Install
 

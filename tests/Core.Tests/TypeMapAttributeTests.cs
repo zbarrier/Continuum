@@ -58,7 +58,7 @@ public sealed class TypeMapAttributeTests
     }
 
     [Fact]
-    public void ToTypeMapperKey_combines_connection_and_value()
+    public void ToTypeMapperKey_combines_key_and_value()
     {
         Assert.Equal("conn-3", (TypeMapKinds.Command | TypeMapKinds.DomainEvent).ToTypeMapperKey("conn"));
     }
