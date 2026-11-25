@@ -71,11 +71,15 @@ public abstract class EventDrivenStateMachineGrain<TState, TEventBase, TStatus, 
 
     /// <summary>Initializes a new instance of the <see cref="EventDrivenStateMachineGrain{TState, TEventBase, TStatus, TCommand}"/> class.</summary>
     /// <param name="serviceProvider">The service provider used to resolve the deep copier and type mapper.</param>
-    /// <param name="connectionName">The service key of the <see cref="ITypeMapper"/> to use.</param>
-    protected EventDrivenStateMachineGrain(IServiceProvider serviceProvider, object connectionName)
+    /// <param name="typeMapperKey">
+    ///     The service key of the <see cref="ITypeMapper"/> that names events in command responses. Every event-sourced
+    ///     grain in a silo normally uses the same key. It does not choose where events are stored; the log-consistency
+    ///     provider uses its own type mapper and connection.
+    /// </param>
+    protected EventDrivenStateMachineGrain(IServiceProvider serviceProvider, object typeMapperKey)
     {
         _deepCopier = serviceProvider.GetRequiredService<DeepCopier<TState>>();
-        _typeMapper = serviceProvider.GetRequiredKeyedService<ITypeMapper>(connectionName);
+        _typeMapper = serviceProvider.GetRequiredKeyedService<ITypeMapper>(typeMapperKey);
         Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
         _transactions = new TransactionParticipation<IStateMachineStreamTransaction<TState, TEventBase, TStatus, TCommand>>(
             this, CreateParticipantTransaction, transaction => transaction.UncommittedEvents, () => Version, RefreshNow,

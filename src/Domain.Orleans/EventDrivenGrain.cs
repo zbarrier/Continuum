@@ -40,9 +40,13 @@ public abstract class EventDrivenGrain<TState> : EventDrivenGrain<TState, object
 {
     /// <summary>Initializes a new instance of the <see cref="EventDrivenGrain{TState}"/> class.</summary>
     /// <param name="serviceProvider">The service provider used to resolve the deep copier and type mapper.</param>
-    /// <param name="connectionName">The service key of the <see cref="ITypeMapper"/> to use.</param>
-    protected EventDrivenGrain(IServiceProvider serviceProvider, object connectionName) 
-        : base(serviceProvider, connectionName) 
+    /// <param name="typeMapperKey">
+    ///     The service key of the <see cref="ITypeMapper"/> that names events in command responses. Every event-sourced
+    ///     grain in a silo normally uses the same key. It does not choose where events are stored; the log-consistency
+    ///     provider uses its own type mapper and connection.
+    /// </param>
+    protected EventDrivenGrain(IServiceProvider serviceProvider, object typeMapperKey) 
+        : base(serviceProvider, typeMapperKey) 
     { }
 }
 
@@ -97,11 +101,15 @@ public abstract class EventDrivenGrain<TState, TEventBase> : JournaledGrain<TSta
 
     /// <summary>Initializes a new instance of the <see cref="EventDrivenGrain{TState, TEventBase}"/> class.</summary>
     /// <param name="serviceProvider">The service provider used to resolve the deep copier and type mapper.</param>
-    /// <param name="connectionName">The service key of the <see cref="ITypeMapper"/> to use.</param>
-    protected EventDrivenGrain(IServiceProvider serviceProvider, object connectionName) 
+    /// <param name="typeMapperKey">
+    ///     The service key of the <see cref="ITypeMapper"/> that names events in command responses. Every event-sourced
+    ///     grain in a silo normally uses the same key. It does not choose where events are stored; the log-consistency
+    ///     provider uses its own type mapper and connection.
+    /// </param>
+    protected EventDrivenGrain(IServiceProvider serviceProvider, object typeMapperKey) 
     {
         _deepCopier = serviceProvider.GetRequiredService<DeepCopier<TState>>(); //deepCopier;
-        _typeMapper = serviceProvider.GetRequiredKeyedService<ITypeMapper>(connectionName); //typeMapper;
+        _typeMapper = serviceProvider.GetRequiredKeyedService<ITypeMapper>(typeMapperKey); //typeMapper;
         Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
         _transactions = new TransactionParticipation<IStreamTransaction<TState, TEventBase>>(
             this, CreateParticipantTransaction, transaction => transaction.UncommittedEvents, () => Version, RefreshNow,

@@ -34,7 +34,7 @@ public sealed class CounterGrain(IServiceProvider services)
 }
 ```
 
-Event handlers match the exact event type. The grain resolves `DeepCopier<TState>` and a keyed `ITypeMapper` (keyed by the `connectionName` constructor argument) from the service provider, and needs a log-consistency provider configured.
+Event handlers match the exact event type. The grain resolves `DeepCopier<TState>` and a keyed `ITypeMapper` (keyed by the `typeMapperKey` constructor argument) from the service provider, and needs a log-consistency provider configured. The type mapper only names events in command responses; the log-consistency provider stores events with its own type mapper and connection, so the key does not affect which database (or tenant connection) events go to. Every event-sourced grain in a silo normally passes the same key, such as the name its `AddDefaultTypeMapAttributeMappers` call used.
 
 ## State machine grain
 
