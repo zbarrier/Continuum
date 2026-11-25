@@ -30,6 +30,7 @@ public interface IOrderDetailsGrain : IGrainWithStringKey
 /// <param name="AccessContactPhone">Their phone number, digits only.</param>
 /// <param name="AssignedToUserId">The staff member the order is assigned to, or null until it is assigned.</param>
 /// <param name="AssignedToName">Their name, or null when unassigned or the user directory doesn't know them.</param>
+/// <param name="OpenRequests">The documents requested from the client that it has not provided yet, oldest first.</param>
 /// <param name="Timeline">What happened to the order, newest first.</param>
 /// <param name="AllowedActions">What the signed-in user can do next.</param>
 [GenerateSerializer, Immutable]
@@ -47,8 +48,21 @@ public sealed record OrderDetails(
     string? AccessContactPhone,
     string? AssignedToUserId,
     string? AssignedToName,
+    OrderDocumentRequestSummary[] OpenRequests,
     OrderTimelineEntry[] Timeline,
     OrderActions AllowedActions);
+
+/// <summary>A request for a document from the client that it has not provided yet.</summary>
+/// <param name="RequestId">The request.</param>
+/// <param name="DocumentTypeName">The type of document requested, such as <c>Rent roll</c>.</param>
+/// <param name="Message">What the AMC told the client about it.</param>
+/// <param name="RequestedAt">When it was requested.</param>
+[GenerateSerializer, Immutable]
+public sealed record OrderDocumentRequestSummary(
+    string RequestId,
+    string DocumentTypeName,
+    string Message,
+    DateTimeOffset RequestedAt);
 
 /// <summary>An entry on an order's timeline, such as <c>Assigned to Scott Riggsbee</c>.</summary>
 /// <param name="OccurredAt">When it happened.</param>
@@ -66,5 +80,11 @@ public enum OrderActions
     AssignToMe = 1,
 
     /// <summary>Confirm they are working on the order; for the staff member it is assigned to.</summary>
-    Acknowledge = 2
+    Acknowledge = 2,
+
+    /// <summary>
+    ///     Ask the client for a document once the order is acknowledged; for the staff member it is assigned to, the Client
+    ///     Services Director or the tenant admin.
+    /// </summary>
+    RequestDocument = 4
 }

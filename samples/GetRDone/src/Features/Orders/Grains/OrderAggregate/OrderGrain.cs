@@ -102,7 +102,9 @@ public enum OrderCommand
     SubmitOrder,
     AssignOrderNumber,
     AssignOrder,
-    AcknowledgeOrder
+    AcknowledgeOrder,
+    RequestClientDocument,
+    ProvideRequestedDocument
 }
 
 [GenerateSerializer]
@@ -134,6 +136,9 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>The staff member the order is assigned to, as a tenant-qualified user ID, or null until it is assigned.</summary>
     [Id(6)] public string? AssignedTo { get; private set; }
 
+    /// <summary>The documents the AMC requested from the client, by request ID.</summary>
+    [Id(7)] public Dictionary<string, OrderDocumentRequest> DocumentRequests { get; private set; } = [];
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
@@ -145,6 +150,9 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         On<NewOrderNoticeSent>(Handle);
         On<OrderAssigned>(Handle);
         On<OrderAcknowledged>(Handle);
+        On<ClientDocumentRequested>(Handle);
+        On<DocumentRequestNoticeSent>(Handle);
+        On<RequestedDocumentProvided>(Handle);
     }
 
     /// <remarks>
@@ -167,6 +175,18 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
             .PermitReentry(OrderCommand.AssignOrderNumber)
             .Permit(OrderCommand.AcknowledgeOrder, OrderStatus.Acknowledged);
         StateMachine.Configure(OrderStatus.Acknowledged)
-            .PermitReentry(OrderCommand.AssignOrderNumber);
+            .PermitReentry(OrderCommand.AssignOrderNumber)
+            .PermitReentry(OrderCommand.RequestClientDocument)
+            .PermitReentry(OrderCommand.ProvideRequestedDocument);
     }
 }
+
+/// <summary>A request for a document from the client, and how far it is.</summary>
+[GenerateSerializer, Immutable]
+public sealed record OrderDocumentRequest(
+    string RequestedFromUserId,
+    string DocumentTypeId,
+    int DocumentTypeVersion,
+    string DocumentTypeName,
+    bool NoticeSent,
+    bool Provided);

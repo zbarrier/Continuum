@@ -19,6 +19,9 @@ public static class TestData
     /// <summary>The time of events in a Given, when the test doesn't care when they occurred.</summary>
     public static DateTimeOffset At { get; } = new(2026, 11, 17, 9, 5, 0, TimeSpan.Zero);
 
+    /// <summary>The web app's URL, which the notifiers link to.</summary>
+    public const string WebBaseUrl = "https://getrdone.test/";
+
     public const string LakeviewCreditUnionClientId = "summit|9b3e7d21";
     public const string HarborNationalBankClientId = "summit|2f6a8c14";
 

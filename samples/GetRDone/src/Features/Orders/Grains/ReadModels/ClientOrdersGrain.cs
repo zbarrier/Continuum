@@ -64,6 +64,8 @@ public sealed class ClientOrdersState : HandlerProjectionState<ClientOrdersState
         On<RequestAndPropertySaved>(Apply);
         On<OrderSubmitted>(Apply);
         On<OrderNumberAssigned>(Apply);
+        On<OrderAssigned>(Apply);
+        On<OrderAcknowledged>(Apply);
     }
 
     /// <summary>
@@ -116,6 +118,23 @@ public sealed class ClientOrdersState : HandlerProjectionState<ClientOrdersState
         }
 
         Orders[evt.OrderId] = order with { OrderNumber = evt.OrderNumber };
+        return true;
+    }
+
+    private bool Apply(OrderAssigned evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, ClientOrderStatus.Assigned);
+
+    private bool Apply(OrderAcknowledged evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, ClientOrderStatus.Acknowledged);
+
+    private bool SetStatus(string orderId, ClientOrderStatus status)
+    {
+        if (!Orders.TryGetValue(orderId, out var order))
+        {
+            return false;
+        }
+
+        Orders[orderId] = order with { Status = status };
         return true;
     }
 }

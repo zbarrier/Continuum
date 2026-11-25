@@ -1,4 +1,4 @@
-@* The client's submitted orders (ClientOrders) with their number and current status, with View. *@
+@* The client's submitted orders (ClientOrders) with their number and current status, with View to the client order page. *@
 @using Continuum.Orleans.Tenancy
 @using GetRDone.Orders.Abstractions.ReadModels
 @inject IClusterClient ClusterClient
@@ -34,8 +34,7 @@
         </MudTd>
         <MudTd DataLabel="Submitted">@context.SubmittedAt.ToLocalTime().ToString("MMM d, h:mm tt")</MudTd>
         <MudTd Style="text-align:right">
-            @* The client's order page is not built yet. *@
-            <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="true">View</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@ClientOrderPage.Url(context.OrderId)">View</MudButton>
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>
@@ -89,12 +88,10 @@
     private static string StatusText(ClientOrderStatus status) => status switch
     {
         ClientOrderStatus.Submitted => "Submitted",
+        ClientOrderStatus.Assigned => "Assigned",
+        ClientOrderStatus.Acknowledged => "Acknowledged",
         _ => status.ToString()
     };
 
-    private static Color StatusColor(ClientOrderStatus status) => status switch
-    {
-        ClientOrderStatus.Submitted => Color.Info,
-        _ => Color.Default
-    };
+    private static Color StatusColor(ClientOrderStatus status) => ClientOrderPage.StatusColor(status);
 }

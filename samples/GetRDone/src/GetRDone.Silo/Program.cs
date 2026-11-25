@@ -7,6 +7,7 @@ using Continuum.TypeMapping;
 using GetRDone;
 using GetRDone.Email;
 using GetRDone.Orders.Grains;
+using GetRDone.Orders.Grains.Notifications;
 using GetRDone.Orders.Grains.OrderAggregate;
 using GetRDone.Orders.Grains.ReadModels;
 
@@ -45,6 +46,9 @@ builder.Services.AddSingleton<IReadModelSeedData, SampleSeedData>();
 
 // The notifications email over SMTP, which is Mailpit locally (the "mailpit" connection string).
 builder.Services.AddSmtpEmailSender();
+
+// The emails link to GetRDone.Web, whose URL the AppHost passes as WEB_BASE_URL.
+builder.Services.Configure<NotificationOptions>(options => options.WebBaseUrl = builder.Configuration["WEB_BASE_URL"]);
 
 // Where the order projections' stream provider keeps its $all position. It is grain-backed and held in memory, like
 // the projections themselves, so a silo restart loses both and the projections are rebuilt from the start of $all.

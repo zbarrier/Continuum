@@ -52,7 +52,8 @@ public sealed class SubmitOrderTests
             SupportingDocumentBlobPaths = new Dictionary<string, string> { [attached.DocumentId] = attached.BlobPath },
             OrderNumber = (long?)null,
             NewOrderNoticeSent = false,
-            AssignedTo = (string?)null
+            AssignedTo = (string?)null,
+            DocumentRequests = new Dictionary<string, OrderDocumentRequest>()
         }, state, strict: true);
     }
 

@@ -1,0 +1,251 @@
+@* The client order page (event model chapter 2, Order screens): the ClientOrderDetails read model, where the client uploads
+   the documents the AMC requested. Like tab 3 of order entry, the file is uploaded to blob storage first and then provided;
+   when the order rejects it, the upload is deleted again. ClientOrderDetails is a projection, so after an upload the page
+   waits for it to show the document. *@
+@page "/orders/{OrderGuid:guid}"
+@attribute [Authorize(Roles = "client")]
+@using Continuum.CSharpFunctionalExtensions
+@using Continuum.Orleans.Tenancy
+@using GetRDone.Orders.Abstractions
+@using GetRDone.Orders.Abstractions.OrderAggregate
+@using GetRDone.Orders.Abstractions.ReadModels
+@using GetRDone.Web.Components.Client.OrderEntryTabs
+@inject IClusterClient ClusterClient
+@inject SupportingDocumentStore DocumentStore
+@inject ISnackbar Snackbar
+@inject ILogger<ClientOrderPage> Logger
+
+<PageTitle>@Title · Get-R-Done</PageTitle>
+
+<MudPaper Elevation="1" Class="pa-6">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4">
+        <MudText Typo="Typo.h5">@Title</MudText>
+        @if (_details is not null)
+        {
+            <MudChip T="string" Size="Size.Small" Color="StatusColor(_details.Status)">@_details.Status</MudChip>
+        }
+        <MudSpacer />
+        <MudButton Variant="Variant.Text" Href="/">Home</MudButton>
+    </MudStack>
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+    }
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_details is { } details)
+    {
+        <MudGrid>
+            <MudItem xs="12" md="7">
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <tbody>
+                        <tr><th>Form type</th><td>@details.FormTypeName</td></tr>
+                        <tr><th>Property</th><td>@details.PropertyAddress</td></tr>
+                        <tr><th>Due</th><td>@details.DueDate.ToString("MMM d, yyyy")</td></tr>
+                        <tr><th>Assigned to</th><td>@(details.AssignedToName ?? "Nobody yet")</td></tr>
+                    </tbody>
+                </MudSimpleTable>
+
+                @if (details.OpenRequests.Length > 0)
+                {
+                    <MudText Typo="Typo.h6" Class="mt-6 mb-2">Documents requested</MudText>
+                    @foreach (var request in details.OpenRequests)
+                    {
+                        <MudPaper Outlined="true" Class="pa-4 mb-3">
+                            <MudText Typo="Typo.subtitle1"><strong>@request.DocumentTypeName</strong></MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Requested @request.RequestedAt.ToLocalTime().ToString("MMM d, h:mm tt")</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-2">@request.Message</MudText>
+                            @if (details.AllowedActions.HasFlag(ClientOrderActions.UploadRequestedDocument))
+                            {
+                                <MudFileUpload T="IBrowserFile" FilesChanged="@(file => ProvideAsync(request, file))" Disabled="_busy">
+                                    <CustomContent>
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Upload" Class="mt-3"
+                                                   Disabled="_busy" OnClick="@context.OpenFilePickerAsync">Upload @request.DocumentTypeName</MudButton>
+                                    </CustomContent>
+                                    <SelectedTemplate />
+                                </MudFileUpload>
+                            }
+                        </MudPaper>
+                    }
+                    @if (_busy)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                    }
+                }
+
+                <MudText Typo="Typo.h6" Class="mt-6 mb-2">Documents</MudText>
+                <MudSimpleTable Dense="true" Elevation="0" Outlined="true">
+                    <tbody>
+                        @if (details.Documents.Length == 0)
+                        {
+                            <tr><td><MudText Typo="Typo.body2" Color="Color.Secondary">No documents.</MudText></td></tr>
+                        }
+                        @foreach (var document in details.Documents)
+                        {
+                            <tr><td>@document.FileName</td><td>@document.DocumentTypeName</td></tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <MudText Typo="Typo.h6" Class="mb-2">Timeline</MudText>
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <tbody>
+                        @foreach (var entry in details.Timeline)
+                        {
+                            <tr>
+                                <td style="white-space:nowrap">@entry.OccurredAt.ToLocalTime().ToString("MMM d, h:mm tt")</td>
+                                <td>@entry.Entry</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudItem>
+        </MudGrid>
+    }
+</MudPaper>
+
+@code {
+    private const int WaitAttempts = 20;
+    private static readonly TimeSpan WaitDelay = TimeSpan.FromMilliseconds(250);
+
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+    private string _orderId = "";
+    private ClientOrderDetails? _details;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    /// <summary>The order to show. The URL carries only the GUID part of the order ID.</summary>
+    [Parameter]
+    public Guid OrderGuid { get; set; }
+
+    /// <summary>The URL of the client order page of <paramref name="orderId"/>, <c>{TenantId}|{OrderGuid}</c>.</summary>
+    public static string Url(string orderId)
+    {
+        TenantKey.Split(orderId, out _, out var orderGuid);
+        return $"orders/{orderGuid}";
+    }
+
+    public static Color StatusColor(ClientOrderStatus status) => status switch
+    {
+        ClientOrderStatus.Submitted => Color.Info,
+        ClientOrderStatus.Assigned => Color.Warning,
+        ClientOrderStatus.Acknowledged => Color.Success,
+        _ => Color.Default
+    };
+
+    private string Title => _details?.OrderNumber is { } orderNumber ? $"Order {orderNumber}" : "Order";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+        _details = null;
+
+        var tenantId = (await AuthenticationState).User.FindFirst("tenant_id")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            _error = "Your account has no tenant.";
+            _loading = false;
+            return;
+        }
+        _orderId = TenantKey.Create(tenantId, OrderGuid.ToString());
+
+        try
+        {
+            var result = await ClusterClient.GetClientOrderDetailsGrain(_orderId).GetClientOrderDetailsAsync();
+            if (result.IsFailure)
+            {
+                _error = result.Error.GetFormattedMessage();
+                return;
+            }
+            _details = result.Value;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The client order page could not load order {OrderId}.", _orderId);
+            _error = "The order could not be loaded. Try again in a moment.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ProvideAsync(ClientDocumentRequest request, IBrowserFile? file)
+    {
+        if (file is null)
+        {
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+        try
+        {
+            TenantKey.Split(_orderId, out var tenantId, out _);
+            var documentId = TenantKey.Create(tenantId, Guid.NewGuid().ToString());
+            var command = new ProvideRequestedDocumentCommand(
+                request.RequestId,
+                documentId,
+                file.Name,
+                string.IsNullOrEmpty(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                file.Size);
+
+            // Checks what the order checks of the file before uploading, so an invalid file never uploads.
+            var valid = Result.CombineForValidation(
+                FileName.Create(command.FileName),
+                ContentType.Create(command.ContentType),
+                FileSize.Create(command.FileSize));
+            if (valid.IsFailure)
+            {
+                _error = valid.Error.GetFormattedMessage();
+                return;
+            }
+
+            var blobPath = SupportingDocumentStorage.BlobPath(_orderId, documentId);
+            await using (var content = file.OpenReadStream(FileSize.MaxValue))
+            {
+                await DocumentStore.UploadAsync(blobPath, content, command.ContentType);
+            }
+
+            // Only a rejected document deletes its file. When the call throws, the order may still have recorded it.
+            var result = await ClusterClient.GetGrain<IOrderGrain>(_orderId).ProvideRequestedDocumentAsync(command);
+            if (result.IsFailure)
+            {
+                await DocumentStore.TryDeleteAsync(blobPath);
+                _error = result.Error.GetFormattedMessage();
+                return;
+            }
+            Snackbar.Add($"{request.DocumentTypeName} uploaded.", Severity.Success);
+
+            for (var attempt = 0; attempt < WaitAttempts; attempt++)
+            {
+                var details = await ClusterClient.GetClientOrderDetailsGrain(_orderId).GetClientOrderDetailsAsync();
+                if (details.IsSuccess && details.Value.OpenRequests.All(open => open.RequestId != request.RequestId))
+                {
+                    _details = details.Value;
+                    return;
+                }
+                await Task.Delay(WaitDelay);
+            }
+            _error = "The document was uploaded, but the page is not showing it yet. Reload the page in a moment.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The requested document could not be provided for order {OrderId}.", _orderId);
+            _error = "The document could not be uploaded. Try again in a moment.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

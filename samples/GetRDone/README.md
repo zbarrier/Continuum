@@ -73,16 +73,25 @@ The AMC's staff roles are in `StaffRoles` (Abstractions; they match `GetRDoneRol
 
 - **Submitted.** Only the Client Services Director or the tenant admin can assign an order (`AssignOrderAsync` with the assignee's tenant user ID; `OrderAssigned`), and only to one of the AMC's staff in the user directory (otherwise `InvalidArgument`). An order that is a draft or already assigned is rejected (`FailedPrecondition`). The staff order page offers **Assign to me**.
 - **Assigned.** Only the assignee can acknowledge the order (`AcknowledgeOrderAsync`; `OrderAcknowledged`), which says they are working on it. The staff order page offers **Acknowledge**.
-- **Acknowledged.**
+- **Acknowledged.** The assignee, or anyone who may assign orders, can ask the client for a document (see Document requests). The staff order page offers **Request a document**.
 
 An order can take its number in any status after Submitted, since the number may arrive after the order is assigned.
+
+## Document requests
+
+Once an order is acknowledged, the assignee, the Client Services Director or the tenant admin can ask the client who started the order for a document of one of the tenant's document types, with a message (`RequestClientDocumentAsync`; `ClientDocumentRequested`). The staff order page generates the request ID (`{tenantId}|{guid}`); the request goes to the order's `StartedBy` and carries the order's number, when it has one. A request ID used before is rejected (`AlreadyExists`), as is an order that is not acknowledged yet (`FailedPrecondition`). An order can have several open requests at once.
+
+The **Document Request Notifier** (`DocumentRequestNotifierGrain`, grain type `documentRequestNotifier`, on the same `NotificationReactors` provider as the New Order Notifier) emails the client, signed in as the `DocumentRequestNotifier` service account, with a link to the client order page, and records `DocumentRequestNoticeSent` on the request with `SendDocumentRequestNoticeAsync`. It asks the order first (`IsDocumentRequestNoticeSentAsync`), so a redelivered request isn't emailed twice, and recording a notice again succeeds without changes. The link uses `NotificationOptions.WebBaseUrl`, which the AppHost sets from the web app's https endpoint (`WEB_BASE_URL`); without it the email has no link.
+
+The client sees the open requests on the client order page (`/orders/{orderGuid}`, opened from My orders) and uploads each one there. Like tab 3 of order entry, the web app uploads the file to `SupportingDocumentStorage.BlobPath` first and then calls `ProvideRequestedDocumentAsync` (`RequestedDocumentProvided`), which adds the document to the order's supporting documents as the requested type. Only the client the document was requested from can provide it, once per request (`FailedPrecondition` after that); the notice doesn't need to be sent first.
 
 ## Client order projections
 
 Every order event also targets the per-user stream `clientUserOrders-{tenantId}|{userGuid}` of the user who started the order (`OrderGrain.GetStreamTargets`, transaction-scoped so the stream gets every event of the order's transaction), so one projection can group all of a user's orders. The Silo's `OrderProjections` KurrentDB stream provider runs a catch-up subscription on `$all` filtered to the `order-` stream prefix and delivers each event to its order stream and its target streams. Projection grains implicitly subscribe to the `OrderProjections:clientUserOrders` namespace, so Orleans activates one grain per user, keyed by the user's tenant user ID.
 
 - `IClientOrderDraftsGrain` (grain type `clientOrderDrafts`; `GetClientOrderDraftsGrain(tenantUserId)`): the user's drafts that are not submitted yet, most recently saved first (`OrderSubmitted` removes a draft). `GetDraftsAsync(skip, take)` returns one page and the total count. Only the user can read their own drafts.
-- `IClientOrdersGrain` (grain type `clientOrders`; `GetClientOrdersGrain(tenantUserId)`): the user's submitted orders, most recently submitted first, each with its property address, form type, order number (null until one is assigned) and status (`ClientOrderStatus`, only `Submitted` so far). It keeps the address and form type of the user's drafts from `OrderDraftStarted` and `RequestAndPropertySaved`, since `OrderSubmitted` carries neither, and `OrderSubmitted` turns the draft into an order. `GetOrdersAsync(skip, take)` returns one page and the total count. Only the user can read their own orders.
+- `IClientOrdersGrain` (grain type `clientOrders`; `GetClientOrdersGrain(tenantUserId)`): the user's submitted orders, most recently submitted first, each with its property address, form type, order number (null until one is assigned) and status (`ClientOrderStatus`: `Submitted`, `Assigned` or `Acknowledged`). It keeps the address and form type of the user's drafts from `OrderDraftStarted` and `RequestAndPropertySaved`, since `OrderSubmitted` carries neither, and `OrderSubmitted` turns the draft into an order. `GetOrdersAsync(skip, take)` returns one page and the total count. Only the user can read their own orders.
+- `IClientOrderDetailsGrain` (grain type `clientOrderDetails`; `GetClientOrderDetailsGrain(orderId)`): the client order page of one submitted order (drafts are `NotFound`), projected from the order's own stream on `OrderProjections:order`. It shows the order's status, assignee, open document requests, supporting documents and timeline, and whether the client can upload a requested document (`ClientOrderActions`). Only the user who started the order can read it.
 
 ## Staff order projections
 
@@ -90,7 +99,7 @@ Every order event also targets the per-tenant stream `tenantOrders-{tenantId}|de
 
 - `IUnassignedOrdersGrain` (grain type `unassignedOrders`; `GetUnassignedOrdersGrain(tenantId)`): the dashboard's Unassigned list, the orders that have their number and are not assigned, due first first, then by order number. `OrderNumberAssigned` puts an order on the list and `OrderAssigned` takes it off; an order assigned before it has its number never appears. It keeps what the list shows of each order from `OrderDraftStarted` and `RequestAndPropertySaved`.
 - `IInProgressOrdersGrain` (grain type `inProgressOrders`; `GetInProgressOrdersGrain(tenantId)`): the dashboard's In progress list, the assigned orders with their assignee and status (`StaffOrderStatus`), due first first. `OrderAssigned` puts an order on the list; nothing takes it off yet, since shipping isn't built.
-- `IOrderDetailsGrain` (grain type `orderDetails`; `GetOrderDetailsGrain(orderId)`): the staff order page of one submitted order (drafts are `NotFound`), with a timeline of what happened to it, most recent first, and the actions the current user may take (`OrderActions`).
+- `IOrderDetailsGrain` (grain type `orderDetails`; `GetOrderDetailsGrain(orderId)`): the staff order page of one submitted order (drafts are `NotFound`), with a timeline of what happened to it, most recent first, the document requests the client hasn't provided yet, and the actions the current user may take (`OrderActions`).
 
 The checkpoint and the projections are stored in memory, so after a silo restart the subscription replays from the start and rebuilds them.
 

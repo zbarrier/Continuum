@@ -54,7 +54,8 @@ public sealed class AssignOrderTests
             SupportingDocumentBlobPaths = new Dictionary<string, string>(),
             OrderNumber = (long?)null,
             NewOrderNoticeSent = false,
-            AssignedTo = (string?)RequestedByUsers.Director1.GetTenantUserId()
+            AssignedTo = (string?)RequestedByUsers.Director1.GetTenantUserId(),
+            DocumentRequests = new Dictionary<string, OrderDocumentRequest>()
         }, state, strict: true);
     }
 

@@ -66,7 +66,8 @@ public sealed class SendNewOrderNoticeTests
             SupportingDocumentBlobPaths = new Dictionary<string, string>(),
             OrderNumber = (long?)AssignOrderNumberTestData.FirstOrderNumber,
             NewOrderNoticeSent = true,
-            AssignedTo = (string?)null
+            AssignedTo = (string?)null,
+            DocumentRequests = new Dictionary<string, OrderDocumentRequest>()
         }, state, strict: true);
     }
 

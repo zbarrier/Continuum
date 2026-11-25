@@ -62,7 +62,8 @@ public sealed class AssignOrderNumberTests
             SupportingDocumentBlobPaths = new Dictionary<string, string>(),
             OrderNumber = (long?)FirstOrderNumber,
             NewOrderNoticeSent = false,
-            AssignedTo = (string?)null
+            AssignedTo = (string?)null,
+            DocumentRequests = new Dictionary<string, OrderDocumentRequest>()
         }, state, strict: true);
     }
 

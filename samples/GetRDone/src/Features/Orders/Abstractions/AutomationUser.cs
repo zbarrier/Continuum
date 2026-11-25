@@ -33,6 +33,9 @@ public sealed class AutomationUser
     /// <summary>Tells client services about new orders.</summary>
     public static AutomationUser NewOrderNotifier { get; } = new("0a1b2c02-6e4f-4a8b-9c0d-2e3f4a5b6c7d", "New Order Notifier");
 
+    /// <summary>Emails clients the documents the AMC requests from them.</summary>
+    public static AutomationUser DocumentRequestNotifier { get; } = new("0a1b2c03-7f5a-4b9c-8d1e-3f4a5b6c7d8e", "Document Request Notifier");
+
     /// <summary>The account's user ID in the identity provider.</summary>
     public string UserGuid { get; }
 

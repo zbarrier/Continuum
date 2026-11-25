@@ -73,7 +73,8 @@ public sealed class SampleSeedData : IReadModelSeedData
             new(RileyReviewerUserId, "Riley Reviewer", "Reviewer", ElliottAndCompany, "reviewer@getrdone.local", null),
             new(AveryAdminUserId, "Avery Admin", "Tenant Admin", ElliottAndCompany, "admin@getrdone.local", null),
             Automation(AutomationUser.OrderNumberAssigner, "order-number-assigner@elliott.example"),
-            Automation(AutomationUser.NewOrderNotifier, "new-order-notifier@elliott.example")
+            Automation(AutomationUser.NewOrderNotifier, "new-order-notifier@elliott.example"),
+            Automation(AutomationUser.DocumentRequestNotifier, "document-request-notifier@elliott.example")
         ]);
 
     public ReadModelSeed? GetSeed(string? tenantId) => tenantId == TenantId ? Seed : null;

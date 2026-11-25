@@ -55,5 +55,6 @@ var web = builder.AddProject<Projects.GetRDone_Web>("web")
     .WaitFor(orderDocuments);
 
 identity.WithEnvironment("WEB_BASE_URL", web.GetEndpoint("https"));
+silo.WithEnvironment("WEB_BASE_URL", web.GetEndpoint("https"));
 
 builder.Build().Run();

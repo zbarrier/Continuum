@@ -37,6 +37,10 @@ public static class IdentitySeeder
     /// <remarks>The worker signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
     public const string NewOrderNotifierUserId = "0a1b2c02-6e4f-4a8b-9c0d-2e3f4a5b6c7d";
 
+    /// <summary>The service account the Document Request Notifier automation runs as.</summary>
+    /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
+    public const string DocumentRequestNotifierUserId = "0a1b2c03-7f5a-4b9c-8d1e-3f4a5b6c7d8e";
+
     public static async Task MigrateAndSeedAsync(IServiceProvider services, bool seedDemoUsers)
     {
         await using var scope = services.CreateAsyncScope();
@@ -71,6 +75,8 @@ public static class IdentitySeeder
             DemoTenant, OrderNumberAssignerUserId, password: null);
         await EnsureUserAsync(userManager, "new-order-notifier@elliott.example", "New Order Notifier", GetRDoneRoles.Automation,
             DemoTenant, NewOrderNotifierUserId, password: null);
+        await EnsureUserAsync(userManager, "document-request-notifier@elliott.example", "Document Request Notifier", GetRDoneRoles.Automation,
+            DemoTenant, DocumentRequestNotifierUserId, password: null);
     }
 
     /// <summary>

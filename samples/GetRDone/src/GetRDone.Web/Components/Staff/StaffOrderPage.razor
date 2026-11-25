@@ -1,5 +1,6 @@
 @* The staff order page (event model chapter 2, Order screens): the OrderDetails read model, with the actions the signed-in
-   user can take. OrderDetails is a projection, so after an action the page waits for it to show the new status. *@
+   user can take, such as requesting documents from the client. OrderDetails is a projection, so after an action the page
+   waits for it to show the change. *@
 @page "/staff/orders/{OrderGuid:guid}"
 @attribute [Authorize(Roles = StaffRoles.AnyStaff)]
 @using Continuum.CSharpFunctionalExtensions
@@ -60,7 +61,45 @@
                     {
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="AcknowledgeAsync">Acknowledge</MudButton>
                     }
+                    @if (details.AllowedActions.HasFlag(OrderActions.RequestDocument) && !_requesting)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_busy" OnClick="StartRequestAsync">Request a document</MudButton>
+                    }
                 </MudStack>
+
+                @if (_requesting)
+                {
+                    <MudPaper Outlined="true" Class="pa-4 mt-4">
+                        <MudText Typo="Typo.h6" Class="mb-2">Request a document</MudText>
+                        <MudSelect T="DocumentType" Label="Document type" @bind-Value="_requestDocumentType" ToStringFunc="@(type => type?.Name)">
+                            @foreach (var type in _documentTypes)
+                            {
+                                <MudSelectItem Value="type">@type.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudTextField @bind-Value="_requestMessage" Label="Message to the client" Lines="3" MaxLength="DocumentRequestMessage.MaxLength" Class="mt-2" />
+                        <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="mt-4">
+                            <MudButton Variant="Variant.Text" Disabled="_busy" OnClick="CancelRequest">Cancel</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="RequestDocumentAsync">Send request</MudButton>
+                        </MudStack>
+                    </MudPaper>
+                }
+
+                @if (details.OpenRequests.Length > 0)
+                {
+                    <MudText Typo="Typo.h6" Class="mt-6 mb-2">Waiting on the client</MudText>
+                    <MudSimpleTable Dense="true" Elevation="0">
+                        <tbody>
+                            @foreach (var request in details.OpenRequests)
+                            {
+                                <tr>
+                                    <td style="white-space:nowrap">@request.RequestedAt.ToLocalTime().ToString("MMM d, h:mm tt")</td>
+                                    <td><strong>@request.DocumentTypeName</strong><br />@request.Message</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
             </MudItem>
             <MudItem xs="12" md="5">
                 <MudText Typo="Typo.h6" Class="mb-2">Timeline</MudText>
@@ -90,6 +129,10 @@
     private string _orderId = "";
     private string _tenantUserId = "";
     private OrderDetails? _details;
+    private bool _requesting;
+    private DocumentType[] _documentTypes = [];
+    private DocumentType? _requestDocumentType;
+    private string _requestMessage = "";
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
@@ -156,32 +199,74 @@
 
     private Task AssignToMeAsync()
         => RunAsync(async order => (await order.AssignOrderAsync(new AssignOrderCommand(_tenantUserId))).Map(_ => true),
-            StaffOrderStatus.Assigned);
+            details => details.Status == StaffOrderStatus.Assigned);
 
     private Task AcknowledgeAsync()
-        => RunAsync(async order => (await order.AcknowledgeOrderAsync()).Map(_ => true), StaffOrderStatus.Acknowledged);
+        => RunAsync(async order => (await order.AcknowledgeOrderAsync()).Map(_ => true),
+            details => details.Status == StaffOrderStatus.Acknowledged);
 
-    /// <summary>Runs the command, then reloads the order until the projection shows <paramref name="expectedStatus"/>.</summary>
-    private async Task RunAsync(Func<IOrderGrain, Task<Result<bool>>> command, StaffOrderStatus expectedStatus)
+    private async Task StartRequestAsync()
+    {
+        _error = null;
+        try
+        {
+            TenantKey.Split(_orderId, out var tenantId, out _);
+            _documentTypes = await ClusterClient.GetDocumentTypesGrain(tenantId).GetDocumentTypesAsync();
+            _requestDocumentType = null;
+            _requestMessage = "";
+            _requesting = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The document types could not be loaded for order {OrderId}.", _orderId);
+            _error = "The document types could not be loaded. Try again in a moment.";
+        }
+    }
+
+    private void CancelRequest() => _requesting = false;
+
+    private async Task RequestDocumentAsync()
+    {
+        TenantKey.Split(_orderId, out var tenantId, out _);
+        var requestId = TenantKey.Create(tenantId, Guid.NewGuid().ToString());
+        var command = new RequestClientDocumentCommand(
+            requestId,
+            _requestDocumentType?.DocumentTypeId ?? "", _requestDocumentType?.DocumentTypeVersion ?? 0, _requestDocumentType?.Name ?? "",
+            _requestMessage);
+        var saved = await RunAsync(async order => (await order.RequestClientDocumentAsync(command)).Map(_ => true),
+            details => details.OpenRequests.Any(request => request.RequestId == requestId));
+        if (saved)
+        {
+            _requesting = false;
+        }
+    }
+
+    /// <summary>
+    ///     Runs the command, then reloads the order until the projection shows the change (<paramref name="isShown"/>).
+    ///     Returns whether the command succeeded.
+    /// </summary>
+    private async Task<bool> RunAsync(Func<IOrderGrain, Task<Result<bool>>> command, Func<OrderDetails, bool> isShown)
     {
         _busy = true;
         _error = null;
+        var saved = false;
         try
         {
             var result = await command(ClusterClient.GetGrain<IOrderGrain>(_orderId));
             if (result.IsFailure)
             {
                 _error = result.Error.GetFormattedMessage();
-                return;
+                return false;
             }
+            saved = true;
 
             for (var attempt = 0; attempt < WaitAttempts; attempt++)
             {
                 var details = await ClusterClient.GetOrderDetailsGrain(_orderId).GetOrderDetailsAsync();
-                if (details.IsSuccess && details.Value.Status == expectedStatus)
+                if (details.IsSuccess && isShown(details.Value))
                 {
                     _details = details.Value;
-                    return;
+                    return true;
                 }
                 await Task.Delay(WaitDelay);
             }
@@ -196,5 +281,6 @@
         {
             _busy = false;
         }
+        return saved;
     }
 }

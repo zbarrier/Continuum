@@ -78,6 +78,28 @@ public sealed class ClientOrdersTests
     }
 
     [Fact]
+    public async Task OrderAssignedAndAcknowledged_ShowTheOrdersProgress()
+    {
+        var (assignedOrder, acknowledgedOrder) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(_user);
+
+        await Given(
+        [
+            .. StartedAndSubmitted(Command1, assignedOrder, TestData.At.AddMinutes(3)),
+            .. StartedAndSubmitted(Command2, acknowledgedOrder, TestData.At.AddMinutes(4)),
+            AssignOrderTestData.OrderAssigned1(assignedOrder, TestData.At.AddMinutes(5)),
+            AssignOrderTestData.OrderAssigned1(acknowledgedOrder, TestData.At.AddMinutes(6)),
+            AcknowledgeOrderTestData.Acknowledged1(acknowledgedOrder, TestData.At.AddMinutes(7))
+        ]);
+
+        Then(state =>
+        {
+            Assert.Equal(ClientOrderStatus.Assigned, state.Orders[assignedOrder].Status);
+            Assert.Equal(ClientOrderStatus.Acknowledged, state.Orders[acknowledgedOrder].Status);
+        });
+    }
+
+    [Fact]
     public async Task DraftStarted_IsNotAnOrderUntilItIsSubmitted()
     {
         var (submittedOrder, draftOrder) = (NewOrderId(), NewOrderId());

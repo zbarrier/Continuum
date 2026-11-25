@@ -2,6 +2,7 @@ using Continuum.Hosting;
 using Continuum.TypeMapping;
 
 using GetRDone.Email;
+using GetRDone.Orders.Grains.Notifications;
 using GetRDone.Orders.Grains.OrderAggregate;
 using GetRDone.Orders.Grains.ReadModels;
 using GetRDone.Orders.Grains.Tests.Data;
@@ -33,6 +34,7 @@ public sealed class OrdersSiloConfigurator : ISiloConfigurator
         siloBuilder.Services.AddSingleton<IReadModelSeedData, TestReadModelSeedData>();
         siloBuilder.Services.AddSingleton<RecordingEmailSender>();
         siloBuilder.Services.AddSingleton<IEmailSender>(services => services.GetRequiredService<RecordingEmailSender>());
+        siloBuilder.Services.Configure<NotificationOptions>(options => options.WebBaseUrl = TestData.WebBaseUrl);
 
         // Memory streams stand in for the KurrentDB stream providers, so the tests produce the events they would deliver.
         siloBuilder.AddMemoryStreams(OrderProjections.ProviderName, b => b.ConfigureStreamPubSub(StreamPubSubType.ImplicitOnly));

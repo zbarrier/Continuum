@@ -61,6 +61,7 @@ public sealed class OrderDetailsTests
             "8285550142",
             RequestedByUsers.Director1.GetTenantUserId(),
             "Tommy Jones",
+            [],
             [
                 new OrderTimelineEntry(TestData.At.AddMinutes(4), "Acknowledged by Tommy Jones"),
                 new OrderTimelineEntry(TestData.At.AddMinutes(3), "Assigned to Tommy Jones"),
@@ -173,6 +174,54 @@ public sealed class OrderDetailsTests
     }
 
     [Fact]
+    public async Task OrderDetails_ShowTheRequestsTheClientHasNotProvided()
+    {
+        GivenSignedIn(RequestedByUsers.Director1);
+        await GivenAcknowledged(
+            DocumentRequestTestData.Requested1(_orderId, occurredAt: TestData.At.AddMinutes(5)),
+            DocumentRequestTestData.Requested(DocumentRequestTestData.Command2, _orderId, occurredAt: TestData.At.AddMinutes(6)),
+            DocumentRequestTestData.Provided1(_orderId, TestData.At.AddMinutes(7)));
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details =>
+        {
+            Assert.Equal(
+                [
+                    new OrderDocumentRequestSummary(
+                        DocumentRequestTestData.Command2.RequestId, "Purchase contract", DocumentRequestTestData.Command2.Message,
+                        TestData.At.AddMinutes(6))
+                ],
+                details.OpenRequests);
+            Assert.Equal(
+                ["Survey provided by John Doe", "Document requested: Purchase contract", "Document requested: Survey"],
+                details.Timeline.Take(3).Select(entry => entry.Entry));
+        });
+    }
+
+    [Fact]
+    public async Task OrderDetails_LetTheAssigneeRequestDocumentOnceTheyAcknowledgeTheOrder()
+    {
+        GivenSignedIn(RequestedByUsers.Director1);
+        await GivenAcknowledged();
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details => Assert.Equal(OrderActions.RequestDocument, details.AllowedActions));
+    }
+
+    [Fact]
+    public async Task OrderDetails_LetTheTenantAdminRequestDocumentForAnOrderAssignedToSomeoneElse()
+    {
+        GivenSignedIn(RequestedByUsers.TenantAdmin1);
+        await GivenAcknowledged();
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details => Assert.Equal(OrderActions.RequestDocument, details.AllowedActions));
+    }
+
+    [Fact]
     public async Task OrderDetails_AreNotFoundForADraft()
     {
         GivenSignedIn(RequestedByUsers.Director1);
@@ -224,6 +273,14 @@ public sealed class OrderDetailsTests
     [
         DraftStarted1(_orderId, TestData.At),
         SubmitOrderTestData.Submitted1(_orderId, TestData.At.AddMinutes(1)),
+        .. more
+    ]);
+
+    /// <summary>Sets up the order <c>Submitted1</c> submits, assigned to Director1 who acknowledged it, followed by <paramref name="more"/> events.</summary>
+    private Task GivenAcknowledged(params object[] more) => GivenSubmitted(
+    [
+        AssignOrderTestData.OrderAssigned1(_orderId, TestData.At.AddMinutes(2)),
+        AcknowledgeOrderTestData.Acknowledged1(_orderId, TestData.At.AddMinutes(3)),
         .. more
     ]);
 

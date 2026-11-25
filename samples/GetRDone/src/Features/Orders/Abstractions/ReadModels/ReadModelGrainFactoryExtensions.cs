@@ -42,4 +42,8 @@ public static class ReadModelGrainFactoryExtensions
     /// <summary>Gets the staff order page of one order, keyed by the order ID <c>{TenantId}|{OrderGuid}</c>.</summary>
     public static IOrderDetailsGrain GetOrderDetailsGrain(this IGrainFactory grainFactory, string orderId)
         => grainFactory.GetGrain<IOrderDetailsGrain>(orderId);
+
+    /// <summary>Gets the client order page of one order, keyed by the order ID <c>{TenantId}|{OrderGuid}</c>.</summary>
+    public static IClientOrderDetailsGrain GetClientOrderDetailsGrain(this IGrainFactory grainFactory, string orderId)
+        => grainFactory.GetGrain<IClientOrderDetailsGrain>(orderId);
 }

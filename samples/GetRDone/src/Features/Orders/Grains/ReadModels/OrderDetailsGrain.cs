@@ -41,13 +41,6 @@ public sealed class OrderDetailsGrain(
                 TenantKey.Split(this.GetPrimaryKeyString(), out var tenantId, out _);
                 var names = await UserDirectoryNames.LoadAsync(GrainFactory, tenantId);
 
-                var timeline = State.Timeline
-                    .Select((item, index) => (Item: item, Index: index))
-                    .OrderByDescending(entry => entry.Item.OccurredAt)
-                    .ThenByDescending(entry => entry.Index)
-                    .Select(entry => new OrderTimelineEntry(entry.Item.OccurredAt, Describe(entry.Item, names)))
-                    .ToArray();
-
                 return Result.Success(new OrderDetails(
                     this.GetPrimaryKeyString(),
                     State.OrderNumber,
@@ -62,7 +55,8 @@ public sealed class OrderDetailsGrain(
                     State.AccessContactPhone,
                     State.AssignedTo,
                     names.UserName(State.AssignedTo),
-                    timeline,
+                    State.OpenRequests.ToArray(),
+                    OrderTimeline.Describe(State.Timeline, names),
                     GetAllowedActions(tenantId)));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
     }
@@ -71,21 +65,10 @@ public sealed class OrderDetailsGrain(
     {
         StaffOrderStatus.Submitted when this.GetCurrentUser().IsInAnyRole(StaffRoles.OrderAssigners) => OrderActions.AssignToMe,
         StaffOrderStatus.Assigned when State.AssignedTo == this.GetCurrentTenantUserId(tenantId) => OrderActions.Acknowledge,
+        StaffOrderStatus.Acknowledged when State.AssignedTo == this.GetCurrentTenantUserId(tenantId)
+            || this.GetCurrentUser().IsInAnyRole(StaffRoles.OrderAssigners) => OrderActions.RequestDocument,
         _ => OrderActions.None
     };
-
-    private static string Describe(OrderTimelineItem item, UserDirectoryNames names)
-    {
-        var userName = names.UserName(item.UserId) ?? "an unknown user";
-        return item.Kind switch
-        {
-            OrderTimelineKind.Submitted => $"Submitted by {userName}",
-            OrderTimelineKind.OrderNumberAssigned => $"Order number {item.OrderNumber}",
-            OrderTimelineKind.Assigned => $"Assigned to {userName}",
-            OrderTimelineKind.Acknowledged => $"Acknowledged by {userName}",
-            _ => item.Kind.ToString()
-        };
-    }
 }
 
 [GenerateSerializer]
@@ -100,6 +83,8 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         On<OrderNumberAssigned>(Apply);
         On<OrderAssigned>(Apply);
         On<OrderAcknowledged>(Apply);
+        On<ClientDocumentRequested>(Apply);
+        On<RequestedDocumentProvided>(Apply);
     }
 
     /// <summary>Whether the client submitted the order; staff don't see drafts.</summary>
@@ -131,6 +116,9 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
 
     /// <summary>What happened to the order, oldest first, with the IDs the query turns into names.</summary>
     [Id(11)] public List<OrderTimelineItem> Timeline { get; init; } = [];
+
+    /// <summary>The documents requested from the client that it has not provided yet, oldest first.</summary>
+    [Id(12)] public List<OrderDocumentRequestSummary> OpenRequests { get; init; } = [];
 
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
@@ -186,20 +174,20 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.Acknowledged, evt.InitiatedBy, null));
         return true;
     }
-}
 
-/// <summary>An entry on an order's timeline as the projection stores it.</summary>
-/// <param name="OccurredAt">When it happened.</param>
-/// <param name="Kind">What happened.</param>
-/// <param name="UserId">Who submitted, was assigned or acknowledged the order, as a tenant user ID.</param>
-/// <param name="OrderNumber">The number the order was given.</param>
-[GenerateSerializer, Immutable]
-public sealed record OrderTimelineItem(DateTimeOffset OccurredAt, OrderTimelineKind Kind, string? UserId, long? OrderNumber);
+    private bool Apply(ClientDocumentRequested evt, IStreamedEvent<object> streamedEvent)
+    {
+        OpenRequests.Add(new OrderDocumentRequestSummary(evt.RequestId, evt.DocumentTypeName, evt.Message, evt.OccurredAt));
+        Timeline.Add(new OrderTimelineItem(
+            evt.OccurredAt, OrderTimelineKind.DocumentRequested, evt.InitiatedBy, null, evt.DocumentTypeName));
+        return true;
+    }
 
-public enum OrderTimelineKind
-{
-    Submitted,
-    OrderNumberAssigned,
-    Assigned,
-    Acknowledged
+    private bool Apply(RequestedDocumentProvided evt, IStreamedEvent<object> streamedEvent)
+    {
+        OpenRequests.RemoveAll(request => request.RequestId == evt.RequestId);
+        Timeline.Add(new OrderTimelineItem(
+            evt.OccurredAt, OrderTimelineKind.DocumentProvided, evt.InitiatedBy, null, evt.DocumentTypeName));
+        return true;
+    }
 }

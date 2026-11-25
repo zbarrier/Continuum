@@ -863,3 +863,45 @@ public sealed record DocumentDescription : StringValueObject<DocumentDescription
 
     private DocumentDescription(string value) : base(value) { }
 }
+
+/// <summary>A request the AMC made for a document from the client; the requester's client generates it.</summary>
+[Alias("Orders.DocumentRequestId.V1"), GenerateSerializer, Immutable]
+public sealed record DocumentRequestId : TenantKeyValueObject<DocumentRequestId>
+{
+    public static Result<DocumentRequestId> Create(string? value, string? tenantId, string propertyName = nameof(DocumentRequestId))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantGuidKey(tenantId, propertyName)
+            .Map(validatedValue => new DocumentRequestId(validatedValue));
+    }
+    public static Result<DocumentRequestId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantGuidKey(tenantId, propertyPath, member)
+            .Map(validatedValue => new DocumentRequestId(validatedValue));
+    }
+
+    private DocumentRequestId(string value) : base(value) { }
+}
+
+/// <summary>What the AMC tells the client about the document it requests, such as which period a rent roll covers.</summary>
+[Alias("Orders.DocumentRequestMessage.V1"), GenerateSerializer, Immutable]
+public sealed record DocumentRequestMessage : StringValueObject<DocumentRequestMessage>
+{
+    public const int MaxLength = 1000;
+
+    public static Result<DocumentRequestMessage> Create(string? value, string propertyName = nameof(DocumentRequestMessage))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new DocumentRequestMessage(validatedValue));
+    }
+    public static Result<DocumentRequestMessage> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new DocumentRequestMessage(validatedValue));
+    }
+
+    private DocumentRequestMessage(string value) : base(value) { }
+}

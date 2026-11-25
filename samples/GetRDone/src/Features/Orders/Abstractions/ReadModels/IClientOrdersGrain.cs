@@ -20,7 +20,13 @@ public interface IClientOrdersGrain : IGrainWithStringKey
 public enum ClientOrderStatus
 {
     /// <summary>The order is submitted to the AMC.</summary>
-    Submitted
+    Submitted,
+
+    /// <summary>The AMC assigned the order to a staff member.</summary>
+    Assigned,
+
+    /// <summary>The staff member the order is assigned to is working on it.</summary>
+    Acknowledged
 }
 
 /// <summary>A submitted order on the client user's My orders list.</summary>
