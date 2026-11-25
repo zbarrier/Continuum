@@ -19,6 +19,8 @@ namespace GetRDone.Orders.Grains.Tests.OrderAggregate.Slices;
 /// <summary>
 ///     Given/When/Then tests for starting an order draft. Each test uses a new order in the test tenant, whose read
 ///     models are seeded with <see cref="TestData"/>; the drafts come from <see cref="StartOrderDraftTestData"/>.
+///     The first test checks what applying the slice's event does to the order state and the second checks every value of
+///     the event the slice records; the behavior tests follow.
 /// </summary>
 public sealed class StartOrderDraftTests
     : EventDrivenStateMachineGrainTestHarness<IOrderGrain, OrderGrain, OrderState, OrderEvent, OrderStatus, OrderCommand>,
@@ -28,6 +30,26 @@ public sealed class StartOrderDraftTests
         : base(fixture.Cluster, TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString())) { }
 
     private IOrderGrain Order => Cluster.GrainFactory.GetGrain<IOrderGrain>(GrainId);
+
+    [Fact]
+    public void ApplyingOrderDraftStarted_MovesTheOrderToDraftForItsUserAndClient()
+    {
+        var state = new OrderState();
+        var started = DraftStarted1(GrainId);
+
+        state.When(started);
+
+        Assert.Equivalent(new
+        {
+            state.StateMachine,
+            Status = OrderStatus.Draft,
+            StartedBy = started.InitiatedBy,
+            started.ClientId,
+            HasBorrower = false,
+            SupportingDocumentBlobPaths = new Dictionary<string, string>(),
+            OrderNumber = (long?)null
+        }, state, strict: true);
+    }
 
     [Theory]
     [InlineData(1)]
@@ -268,19 +290,6 @@ public sealed class StartOrderDraftTests
         await When(() => Order.StartOrderDraftAsync(command));
 
         ThenError<RequestError>(error => Assert.Equal(ErrorCodes.InvalidArgument, error.Code));
-    }
-
-    [Fact]
-    public void ReplayingOrderDraftStarted_MovesTheOrderToDraft()
-    {
-        var state = new OrderState();
-        Assert.Equal(OrderStatus.None, state.Status);
-
-        state.When(DraftStarted1(GrainId));
-
-        Assert.Equal(OrderStatus.Draft, state.Status);
-        Assert.Equal(RequestedByUsers.ClientUser1.GetTenantUserId(), state.StartedBy);
-        Assert.False(state.StateMachine.CanFire(OrderCommand.StartDraft));
     }
 
     /// <summary>Signs in <paramref name="user"/> for the rest of the test; Orleans Identity reads the user from the request context.</summary>

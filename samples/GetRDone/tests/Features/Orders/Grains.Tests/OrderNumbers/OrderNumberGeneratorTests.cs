@@ -17,7 +17,8 @@ namespace GetRDone.Orders.Grains.Tests.OrderNumbers;
 
 /// <summary>
 ///     Given/When/Then tests for issuing order numbers. A tenant has one generator, so each test uses a new tenant to
-///     start from a generator that has issued nothing.
+///     start from a generator that has issued nothing. The first test checks what applying the generator's event does to
+///     its state and the second checks every value of the event it records; the behavior tests follow.
 /// </summary>
 public sealed class OrderNumberGeneratorTests
     : EventDrivenGrainTestHarness<IOrderNumberGeneratorGrain, OrderNumberGeneratorGrain, OrderNumberGeneratorState, OrderNumberGeneratorEvent>,
@@ -32,6 +33,22 @@ public sealed class OrderNumberGeneratorTests
         => _tenantId = tenantId;
 
     private IOrderNumberGeneratorGrain Generator => Cluster.GrainFactory.GetOrderNumberGeneratorGrain(_tenantId);
+
+    [Fact]
+    public void ApplyingOrderNumbersIssued_RecordsEachOrdersNumberAndTheLastNumber()
+    {
+        var (order1, order2, order3) = (NewOrderId(), NewOrderId(), NewOrderId());
+        var state = new OrderNumberGeneratorState();
+        state.When(Issued(TestData.At, (order1, 610_696)));
+
+        state.When(Issued(TestData.At, (order2, 610_697), (order3, 610_698)));
+
+        Assert.Equivalent(new
+        {
+            LastOrderNumber = 610_698L,
+            OrderNumbers = new Dictionary<string, long> { [order1] = 610_696, [order2] = 610_697, [order3] = 610_698 }
+        }, state, strict: true);
+    }
 
     [Fact]
     public async Task Issue_IssuesTheTenantsFirstNumbersInTheOrderAskedFor()

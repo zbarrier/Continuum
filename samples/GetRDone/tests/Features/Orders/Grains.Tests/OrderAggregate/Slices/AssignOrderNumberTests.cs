@@ -17,7 +17,11 @@ using static GetRDone.Orders.Grains.Tests.Data.AssignOrderNumberTestData;
 
 namespace GetRDone.Orders.Grains.Tests.OrderAggregate.Slices;
 
-/// <summary>Given/When/Then tests for giving a submitted order its number. Each test uses a new order in the test tenant.</summary>
+/// <summary>
+///     Given/When/Then tests for giving a submitted order its number. Each test uses a new order in the test tenant. The
+///     first test checks what applying the slice's event does to the order state and the second checks every value of the
+///     event the slice records; the behavior tests follow.
+/// </summary>
 public sealed class AssignOrderNumberTests
     : EventDrivenStateMachineGrainTestHarness<IOrderGrain, OrderGrain, OrderState, OrderEvent, OrderStatus, OrderCommand>,
       IClassFixture<OrdersCluster>
@@ -28,6 +32,29 @@ public sealed class AssignOrderNumberTests
     private IOrderGrain Order => Cluster.GrainFactory.GetGrain<IOrderGrain>(GrainId);
 
     private static ClaimsPrincipal Automation => AutomationUser.OrderNumberAssigner.CreatePrincipal(TestData.TenantId);
+
+    [Fact]
+    public void ApplyingOrderNumberAssigned_RecordsTheOrderNumber()
+    {
+        var state = new OrderState();
+        var started = StartOrderDraftTestData.DraftStarted1(GrainId);
+        state.When(started);
+        state.When(SaveBorrowerAndAccessContactTestData.Saved1(GrainId));
+        state.When(SubmitOrderTestData.Submitted1(GrainId));
+
+        state.When(Assigned1(GrainId));
+
+        Assert.Equivalent(new
+        {
+            state.StateMachine,
+            Status = OrderStatus.Submitted,
+            StartedBy = started.InitiatedBy,
+            started.ClientId,
+            HasBorrower = true,
+            SupportingDocumentBlobPaths = new Dictionary<string, string>(),
+            OrderNumber = (long?)FirstOrderNumber
+        }, state, strict: true);
+    }
 
     [Fact]
     public async Task Assign_GivesTheSubmittedOrderItsNumberForItsClient()

@@ -18,7 +18,9 @@ namespace GetRDone.Orders.Grains.Tests.OrderAggregate.Slices;
 
 /// <summary>
 ///     Given/When/Then tests for removing a supporting document from a draft. Each test uses a new order in the test tenant;
-///     the documents come from <see cref="AttachSupportingDocumentTestData"/>.
+///     the documents come from <see cref="AttachSupportingDocumentTestData"/>. The first test checks what applying the
+///     slice's event does to the order state and the second checks every value of the event the slice records; the behavior
+///     tests follow.
 /// </summary>
 public sealed class RemoveSupportingDocumentTests
     : EventDrivenStateMachineGrainTestHarness<IOrderGrain, OrderGrain, OrderState, OrderEvent, OrderStatus, OrderCommand>,
@@ -28,6 +30,30 @@ public sealed class RemoveSupportingDocumentTests
         : base(fixture.Cluster, TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString())) { }
 
     private IOrderGrain Order => Cluster.GrainFactory.GetGrain<IOrderGrain>(GrainId);
+
+    [Fact]
+    public void ApplyingSupportingDocumentRemoved_RemovesOnlyThatDocument()
+    {
+        var state = new OrderState();
+        var started = StartOrderDraftTestData.DraftStarted1(GrainId);
+        var kept = AttachSupportingDocumentTestData.Attached(AttachSupportingDocumentTestData.Command3, GrainId, RequestedByUsers.ClientUser1);
+        state.When(started);
+        state.When(AttachSupportingDocumentTestData.Attached1(GrainId));
+        state.When(kept);
+
+        state.When(Removed1(GrainId));
+
+        Assert.Equivalent(new
+        {
+            state.StateMachine,
+            Status = OrderStatus.Draft,
+            StartedBy = started.InitiatedBy,
+            started.ClientId,
+            HasBorrower = false,
+            SupportingDocumentBlobPaths = new Dictionary<string, string> { [kept.DocumentId] = kept.BlobPath },
+            OrderNumber = (long?)null
+        }, state, strict: true);
+    }
 
     [Theory]
     [InlineData(1)]

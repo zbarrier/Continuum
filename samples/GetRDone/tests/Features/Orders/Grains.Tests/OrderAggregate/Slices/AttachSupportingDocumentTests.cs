@@ -19,7 +19,9 @@ namespace GetRDone.Orders.Grains.Tests.OrderAggregate.Slices;
 
 /// <summary>
 ///     Given/When/Then tests for attaching a supporting document to a draft. Each test uses a new order in the test tenant;
-///     the documents come from <see cref="AttachSupportingDocumentTestData"/>.
+///     the documents come from <see cref="AttachSupportingDocumentTestData"/>. The first test checks what applying the
+///     slice's event does to the order state and the second checks every value of the event the slice records; the behavior
+///     tests follow.
 /// </summary>
 public sealed class AttachSupportingDocumentTests
     : EventDrivenStateMachineGrainTestHarness<IOrderGrain, OrderGrain, OrderState, OrderEvent, OrderStatus, OrderCommand>,
@@ -29,6 +31,34 @@ public sealed class AttachSupportingDocumentTests
         : base(fixture.Cluster, TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString())) { }
 
     private IOrderGrain Order => Cluster.GrainFactory.GetGrain<IOrderGrain>(GrainId);
+
+    [Fact]
+    public void ApplyingSupportingDocumentAttached_AddsTheDocumentsFilePath()
+    {
+        var state = new OrderState();
+        var started = StartOrderDraftTestData.DraftStarted1(GrainId);
+        var first = Attached1(GrainId);
+        var second = Attached(Command3, GrainId, RequestedByUsers.ClientUser1);
+        state.When(started);
+        state.When(first);
+
+        state.When(second);
+
+        Assert.Equivalent(new
+        {
+            state.StateMachine,
+            Status = OrderStatus.Draft,
+            StartedBy = started.InitiatedBy,
+            started.ClientId,
+            HasBorrower = false,
+            SupportingDocumentBlobPaths = new Dictionary<string, string>
+            {
+                [first.DocumentId] = first.BlobPath,
+                [second.DocumentId] = second.BlobPath
+            },
+            OrderNumber = (long?)null
+        }, state, strict: true);
+    }
 
     [Theory]
     [InlineData(1)]

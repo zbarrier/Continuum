@@ -18,7 +18,9 @@ namespace GetRDone.Orders.Grains.Tests.OrderAggregate.Slices;
 
 /// <summary>
 ///     Given/When/Then tests for saving the Request &amp; Property tab of a draft that was already started. Each test uses a
-///     new order in the test tenant; the tabs come from <see cref="SaveRequestAndPropertyTestData"/>.
+///     new order in the test tenant; the tabs come from <see cref="SaveRequestAndPropertyTestData"/>. The first test checks
+///     what applying the slice's event does to the order state and the second checks every value of the event the slice
+///     records; the behavior tests follow.
 /// </summary>
 public sealed class SaveRequestAndPropertyTests
     : EventDrivenStateMachineGrainTestHarness<IOrderGrain, OrderGrain, OrderState, OrderEvent, OrderStatus, OrderCommand>,
@@ -28,6 +30,30 @@ public sealed class SaveRequestAndPropertyTests
         : base(fixture.Cluster, TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString())) { }
 
     private IOrderGrain Order => Cluster.GrainFactory.GetGrain<IOrderGrain>(GrainId);
+
+    [Fact]
+    public void ApplyingRequestAndPropertySaved_ChangesNothing()
+    {
+        var state = new OrderState();
+        var started = StartOrderDraftTestData.DraftStarted1(GrainId);
+        var attached = AttachSupportingDocumentTestData.Attached1(GrainId);
+        state.When(started);
+        state.When(SaveBorrowerAndAccessContactTestData.Saved1(GrainId));
+        state.When(attached);
+
+        state.When(Saved1(GrainId));
+
+        Assert.Equivalent(new
+        {
+            state.StateMachine,
+            Status = OrderStatus.Draft,
+            StartedBy = started.InitiatedBy,
+            started.ClientId,
+            HasBorrower = true,
+            SupportingDocumentBlobPaths = new Dictionary<string, string> { [attached.DocumentId] = attached.BlobPath },
+            OrderNumber = (long?)null
+        }, state, strict: true);
+    }
 
     [Theory]
     [InlineData(1)]

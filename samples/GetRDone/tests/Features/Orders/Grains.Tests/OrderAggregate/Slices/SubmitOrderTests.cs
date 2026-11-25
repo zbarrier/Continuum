@@ -16,7 +16,11 @@ using static GetRDone.Orders.Grains.Tests.Data.SubmitOrderTestData;
 
 namespace GetRDone.Orders.Grains.Tests.OrderAggregate.Slices;
 
-/// <summary>Given/When/Then tests for submitting a draft. Each test uses a new order in the test tenant.</summary>
+/// <summary>
+///     Given/When/Then tests for submitting a draft. Each test uses a new order in the test tenant. The first test checks what
+///     applying the slice's event does to the order state and the second checks every value of the event the slice records;
+///     the behavior tests follow.
+/// </summary>
 public sealed class SubmitOrderTests
     : EventDrivenStateMachineGrainTestHarness<IOrderGrain, OrderGrain, OrderState, OrderEvent, OrderStatus, OrderCommand>,
       IClassFixture<OrdersCluster>
@@ -25,6 +29,30 @@ public sealed class SubmitOrderTests
         : base(fixture.Cluster, TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString())) { }
 
     private IOrderGrain Order => Cluster.GrainFactory.GetGrain<IOrderGrain>(GrainId);
+
+    [Fact]
+    public void ApplyingOrderSubmitted_MovesTheOrderToSubmitted()
+    {
+        var state = new OrderState();
+        var started = StartOrderDraftTestData.DraftStarted1(GrainId);
+        var attached = AttachSupportingDocumentTestData.Attached1(GrainId);
+        state.When(started);
+        state.When(SaveBorrowerAndAccessContactTestData.Saved1(GrainId));
+        state.When(attached);
+
+        state.When(Submitted1(GrainId));
+
+        Assert.Equivalent(new
+        {
+            state.StateMachine,
+            Status = OrderStatus.Submitted,
+            StartedBy = started.InitiatedBy,
+            started.ClientId,
+            HasBorrower = true,
+            SupportingDocumentBlobPaths = new Dictionary<string, string> { [attached.DocumentId] = attached.BlobPath },
+            OrderNumber = (long?)null
+        }, state, strict: true);
+    }
 
     [Theory]
     [InlineData(1)]

@@ -19,7 +19,9 @@ namespace GetRDone.Orders.Grains.Tests.OrderAggregate.Slices;
 
 /// <summary>
 ///     Given/When/Then tests for saving the Borrower &amp; Access contact tab of a draft. Each test uses a new order in the
-///     test tenant; the tabs come from <see cref="SaveBorrowerAndAccessContactTestData"/>.
+///     test tenant; the tabs come from <see cref="SaveBorrowerAndAccessContactTestData"/>. The first test checks what
+///     applying the slice's event does to the order state and the second checks every value of the event the slice records;
+///     the behavior tests follow.
 /// </summary>
 public sealed class SaveBorrowerAndAccessContactTests
     : EventDrivenStateMachineGrainTestHarness<IOrderGrain, OrderGrain, OrderState, OrderEvent, OrderStatus, OrderCommand>,
@@ -29,6 +31,27 @@ public sealed class SaveBorrowerAndAccessContactTests
         : base(fixture.Cluster, TenantKey.Create(TestData.TenantId, Guid.NewGuid().ToString())) { }
 
     private IOrderGrain Order => Cluster.GrainFactory.GetGrain<IOrderGrain>(GrainId);
+
+    [Fact]
+    public void ApplyingBorrowerAndAccessContactSaved_RecordsThatTheOrderHasABorrower()
+    {
+        var state = new OrderState();
+        var started = StartOrderDraftTestData.DraftStarted1(GrainId);
+        state.When(started);
+
+        state.When(Saved1(GrainId));
+
+        Assert.Equivalent(new
+        {
+            state.StateMachine,
+            Status = OrderStatus.Draft,
+            StartedBy = started.InitiatedBy,
+            started.ClientId,
+            HasBorrower = true,
+            SupportingDocumentBlobPaths = new Dictionary<string, string>(),
+            OrderNumber = (long?)null
+        }, state, strict: true);
+    }
 
     [Theory]
     [InlineData(1)]
