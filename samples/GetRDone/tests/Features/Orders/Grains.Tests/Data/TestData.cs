@@ -45,8 +45,9 @@ public static class TestData
     public static UserDirectoryEntry ClientUser2 { get; } = DirectoryEntry(
         RequestedByUsers.ClientUser2, "Loan Processor", "Harbor National Bank", HarborNationalBankClientId);
 
+    /// <summary>Tommy Jones, the test tenant's Client Services Director, who is told about new orders.</summary>
     public static UserDirectoryEntry Coordinator1 { get; } = DirectoryEntry(
-        RequestedByUsers.Coordinator1, "Coordinator", "Summit Valuation", clientId: null);
+        RequestedByUsers.Coordinator1, UserDirectoryEntry.ClientServicesDirectorTitle, "Summit Valuation", clientId: null);
 
     public static IntendedUse[] IntendedUses { get; } = [Refinance, Purchase];
 

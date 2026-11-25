@@ -5,6 +5,7 @@ using Continuum.Streaming.Orleans;
 using Continuum.TypeMapping;
 
 using GetRDone;
+using GetRDone.Email;
 using GetRDone.Orders.Grains;
 using GetRDone.Orders.Grains.OrderAggregate;
 using GetRDone.Orders.Grains.ReadModels;
@@ -41,6 +42,9 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<IOrderPermissions, OrderPermissions>();
 builder.Services.AddSingleton<IReadModelSeedData, SampleSeedData>();
+
+// The notifications email over SMTP, which is Mailpit locally (the "mailpit" connection string).
+builder.Services.AddSmtpEmailSender();
 
 // Where the order projections' stream provider keeps its $all position. It is grain-backed and held in memory, like
 // the projections themselves, so a silo restart loses both and the projections are rebuilt from the start of $all.
@@ -103,6 +107,28 @@ builder.UseOrleans(silo =>
             options.CheckpointConnectionName = GetRDoneStorage.DefaultConnectionName;
         }));
         // The orders only subscribe implicitly, so no pub/sub store is needed.
+        configurator.ConfigureStreamPubSub(StreamPubSubType.ImplicitOnly);
+    });
+
+    // Reads the order streams from $all and delivers each order's events to its notifiers' implicit subscriptions, such
+    // as the New Order Notifier's. Like the order reactions, it has its own provider and a durable checkpoint, so a
+    // notification is never sent again when the projections are rebuilt. See NotificationReactors.
+    silo.AddKurrentDBStreams(NotificationReactors.ProviderName, configurator =>
+    {
+        configurator.ConfigureKurrentDB(ob => ob.Configure(options =>
+        {
+            options.ConnectionName = GetRDoneStorage.DefaultConnectionName;
+            options.Name = NotificationReactors.ProviderName;
+        }));
+        configurator.UseAllStreamCatchupSubscription(ob => ob.Configure(options =>
+        {
+            // "order-" doesn't match the order number generator's streams, "orderNumberGenerator-".
+            options.Filter = StreamFilter.Prefix("order-");
+            // The first run starts from now; after that the checkpoint resumes where the notifications left off.
+            options.StartFromNow = true;
+            options.CheckpointConnectionName = GetRDoneStorage.DefaultConnectionName;
+        }));
+        // The notifiers only subscribe implicitly, so no pub/sub store is needed.
         configurator.ConfigureStreamPubSub(StreamPubSubType.ImplicitOnly);
     });
 });

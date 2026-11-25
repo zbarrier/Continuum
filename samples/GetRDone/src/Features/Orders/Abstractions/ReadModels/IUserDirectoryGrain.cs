@@ -25,4 +25,11 @@ public sealed record UserDirectoryEntry(
     string Title,
     string OrganizationName,
     string Email,
-    string? ClientId);
+    string? ClientId)
+{
+    /// <summary>
+    ///     The title of the AMC staff member who assigns new orders, and so is told about them. A full application would
+    ///     find them by their permissions instead of their title.
+    /// </summary>
+    public const string ClientServicesDirectorTitle = "Client Services Director";
+}

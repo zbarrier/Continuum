@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/GetRDone.AppHost/GetRDone.AppHost.csproj" />
+    <Project Path="src/GetRDone.Email/GetRDone.Email.csproj" />
     <Project Path="src/GetRDone.Identity/GetRDone.Identity.csproj" />
     <Project Path="src/GetRDone.ServiceDefaults/GetRDone.ServiceDefaults.csproj" />
     <Project Path="src/GetRDone.Silo/GetRDone.Silo.csproj" />

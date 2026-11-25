@@ -1,3 +1,4 @@
+using GetRDone.Email;
 using GetRDone.Identity;
 using GetRDone.Identity.Data;
 using GetRDone.Identity.Email;
@@ -23,7 +24,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     .AddClaimsPrincipalFactory<GetRDoneUserClaimsPrincipalFactory>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddTransient<IEmailSender<ApplicationUser>, SmtpEmailSender>();
+builder.Services.AddSmtpEmailSender();
+builder.Services.AddTransient<IEmailSender<ApplicationUser>, AccountEmailSender>();
 
 builder.Services.AddIdentityServer(options =>
     {

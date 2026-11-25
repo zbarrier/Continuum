@@ -47,7 +47,8 @@ public sealed class StartOrderDraftTests
             started.ClientId,
             HasBorrower = false,
             SupportingDocumentBlobPaths = new Dictionary<string, string>(),
-            OrderNumber = (long?)null
+            OrderNumber = (long?)null,
+            NewOrderNoticeSent = false
         }, state, strict: true);
     }
 

@@ -590,6 +590,48 @@ public sealed record UserId : TenantKeyValueObject<UserId>
     private UserId(string value) : base(value) { }
 }
 
+/// <summary>A user's email address, such as the address a notice is sent to.</summary>
+[Alias("Orders.EmailAddress.V1"), GenerateSerializer, Immutable]
+public sealed record EmailAddress : StringValueObject<EmailAddress>
+{
+    public static Result<EmailAddress> Create(string? value, string propertyName = nameof(EmailAddress))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsEmail(propertyName)
+            .Map(validatedValue => new EmailAddress(validatedValue));
+    }
+    public static Result<EmailAddress> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsEmail(propertyPath, member)
+            .Map(validatedValue => new EmailAddress(validatedValue));
+    }
+
+    private EmailAddress(string value) : base(value) { }
+}
+
+/// <summary>The subject of an email the app sends, such as a notice.</summary>
+[Alias("Orders.EmailSubject.V1"), GenerateSerializer, Immutable]
+public sealed record EmailSubject : StringValueObject<EmailSubject>
+{
+    public const int MaxLength = 200;
+
+    public static Result<EmailSubject> Create(string? value, string propertyName = nameof(EmailSubject))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new EmailSubject(validatedValue));
+    }
+    public static Result<EmailSubject> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new EmailSubject(validatedValue));
+    }
+
+    private EmailSubject(string value) : base(value) { }
+}
+
 /// <summary>A supporting document attached to an order; the client generates it before uploading the file.</summary>
 [Alias("Orders.DocumentId.V1"), GenerateSerializer, Immutable]
 public sealed record DocumentId : TenantKeyValueObject<DocumentId>

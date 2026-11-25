@@ -49,7 +49,8 @@ public sealed class SaveBorrowerAndAccessContactTests
             started.ClientId,
             HasBorrower = true,
             SupportingDocumentBlobPaths = new Dictionary<string, string>(),
-            OrderNumber = (long?)null
+            OrderNumber = (long?)null,
+            NewOrderNoticeSent = false
         }, state, strict: true);
     }
 

@@ -51,7 +51,8 @@ public sealed class RemoveSupportingDocumentTests
             started.ClientId,
             HasBorrower = false,
             SupportingDocumentBlobPaths = new Dictionary<string, string> { [kept.DocumentId] = kept.BlobPath },
-            OrderNumber = (long?)null
+            OrderNumber = (long?)null,
+            NewOrderNoticeSent = false
         }, state, strict: true);
     }
 

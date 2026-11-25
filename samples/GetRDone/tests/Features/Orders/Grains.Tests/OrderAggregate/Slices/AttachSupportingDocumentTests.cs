@@ -56,7 +56,8 @@ public sealed class AttachSupportingDocumentTests
                 [first.DocumentId] = first.BlobPath,
                 [second.DocumentId] = second.BlobPath
             },
-            OrderNumber = (long?)null
+            OrderNumber = (long?)null,
+            NewOrderNoticeSent = false
         }, state, strict: true);
     }
 

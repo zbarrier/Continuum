@@ -55,7 +55,7 @@ public sealed class SampleSeedData : IReadModelSeedData
         [
             new(AnaRuizUserId, "Ana Ruiz", "Commercial Loan Officer", "Carter Bank & Trust", "ana.ruiz@carterbank.example",
                 CarterBankAndTrustClientId),
-            new(ScottRiggsbeeUserId, "Scott Riggsbee", "Client Services Director", ElliottAndCompany,
+            new(ScottRiggsbeeUserId, "Scott Riggsbee", UserDirectoryEntry.ClientServicesDirectorTitle, ElliottAndCompany,
                 "scott.riggsbee@elliott.example", null),
             Automation(AutomationUser.OrderNumberAssigner, "order-number-assigner@elliott.example"),
             Automation(AutomationUser.NewOrderNotifier, "new-order-notifier@elliott.example")

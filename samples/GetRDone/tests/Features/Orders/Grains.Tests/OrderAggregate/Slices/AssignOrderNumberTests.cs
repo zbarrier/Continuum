@@ -60,7 +60,8 @@ public sealed class AssignOrderNumberTests
             started.ClientId,
             HasBorrower = true,
             SupportingDocumentBlobPaths = new Dictionary<string, string>(),
-            OrderNumber = (long?)FirstOrderNumber
+            OrderNumber = (long?)FirstOrderNumber,
+            NewOrderNoticeSent = false
         }, state, strict: true);
     }
 

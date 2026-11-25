@@ -25,6 +25,9 @@ public interface IOrderPermissions
 
     /// <summary>Only the Order Number Assigner automation gives orders their numbers.</summary>
     Result CanAssignOrderNumber(UserId userId);
+
+    /// <summary>Only the New Order Notifier automation sends the new order notice and asks whether it was sent.</summary>
+    Result CanSendNewOrderNotice(UserId userId);
 }
 
 public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermissions
@@ -58,6 +61,12 @@ public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermiss
             ? Result.Success()
             : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
                 "Only the Order Number Assigner can assign order numbers."));
+
+    public Result CanSendNewOrderNotice(UserId userId)
+        => userId.TenantId is { } tenantId && (string)userId == AutomationUser.NewOrderNotifier.GetTenantUserId(tenantId)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the New Order Notifier can send new order notices."));
 
     private static bool IsOrderNumberAssigner(UserId userId)
         => userId.TenantId is { } tenantId && (string)userId == AutomationUser.OrderNumberAssigner.GetTenantUserId(tenantId);

@@ -111,6 +111,9 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>The order's number, or null until the order is given the number the generator issued it.</summary>
     [Id(4)] public long? OrderNumber { get; private set; }
 
+    /// <summary>Whether the New Order Notifier emailed the new order notice, so it is sent only once.</summary>
+    [Id(5)] public bool NewOrderNoticeSent { get; private set; }
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
@@ -119,6 +122,7 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         On<SupportingDocumentRemoved>(Handle);
         On<OrderSubmitted>(Handle);
         On<OrderNumberAssigned>(Handle);
+        On<NewOrderNoticeSent>(Handle);
     }
 
     protected override void ConfigureStateMachine()
