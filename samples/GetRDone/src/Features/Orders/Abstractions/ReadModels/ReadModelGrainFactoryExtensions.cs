@@ -30,4 +30,16 @@ public static class ReadModelGrainFactoryExtensions
     /// <summary>Gets the submitted orders of one client user, keyed by their tenant user ID <c>{TenantId}|{UserGuid}</c>.</summary>
     public static IClientOrdersGrain GetClientOrdersGrain(this IGrainFactory grainFactory, string tenantUserId)
         => grainFactory.GetGrain<IClientOrdersGrain>(tenantUserId);
+
+    /// <summary>Gets the staff dashboard's Unassigned list of the tenant.</summary>
+    public static IUnassignedOrdersGrain GetUnassignedOrdersGrain(this IGrainFactory grainFactory, string? tenantId)
+        => grainFactory.GetGrain<IUnassignedOrdersGrain>(TenantKey.Create(tenantId, DefaultKey));
+
+    /// <summary>Gets the staff dashboard's In progress list of the tenant.</summary>
+    public static IInProgressOrdersGrain GetInProgressOrdersGrain(this IGrainFactory grainFactory, string? tenantId)
+        => grainFactory.GetGrain<IInProgressOrdersGrain>(TenantKey.Create(tenantId, DefaultKey));
+
+    /// <summary>Gets the staff order page of one order, keyed by the order ID <c>{TenantId}|{OrderGuid}</c>.</summary>
+    public static IOrderDetailsGrain GetOrderDetailsGrain(this IGrainFactory grainFactory, string orderId)
+        => grainFactory.GetGrain<IOrderDetailsGrain>(orderId);
 }

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Claims;
 
 using Continuum.CSharpFunctionalExtensions;
 
@@ -28,6 +29,15 @@ public interface IOrderPermissions
 
     /// <summary>Only the New Order Notifier automation sends the new order notice and asks whether it was sent.</summary>
     Result CanSendNewOrderNotice(UserId userId);
+
+    /// <summary>Only the Client Services Director or the tenant admin assigns orders.</summary>
+    Result CanAssignOrder(ClaimsPrincipal user);
+
+    /// <summary>Orders are assigned only to the AMC's staff in the tenant's user directory.</summary>
+    Task<Result> CanBeAssignedOrderAsync(UserId assigneeId);
+
+    /// <summary>Only the staff member the order is assigned to acknowledges it.</summary>
+    Result CanAcknowledgeOrder(UserId userId, OrderState order);
 }
 
 public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermissions
@@ -67,6 +77,23 @@ public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermiss
             ? Result.Success()
             : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
                 "Only the New Order Notifier can send new order notices."));
+
+    public Result CanAssignOrder(ClaimsPrincipal user)
+        => user.IsInAnyRole(StaffRoles.OrderAssigners)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the Client Services Director or the tenant admin can assign orders."));
+
+    public Task<Result> CanBeAssignedOrderAsync(UserId assigneeId)
+        => grainFactory.GetUserDirectoryGrain(assigneeId.TenantId)
+            .IsStaffUserAsync(assigneeId)
+            .MapError(_ => (Error)RequestErrors.NewInvalidArg("Orders can only be assigned to the AMC's staff."));
+
+    public Result CanAcknowledgeOrder(UserId userId, OrderState order)
+        => order.AssignedTo is null || order.AssignedTo == (string)userId
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the staff member the order is assigned to can acknowledge it."));
 
     private static bool IsOrderNumberAssigner(UserId userId)
         => userId.TenantId is { } tenantId && (string)userId == AutomationUser.OrderNumberAssigner.GetTenantUserId(tenantId);

@@ -1,0 +1,85 @@
+@* The tenant's assigned orders (InProgressOrders) with who they are assigned to and their status, due soonest first. *@
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
+
+<MudTable T="InProgressOrder" ServerData="LoadAsync" RowsPerPage="5" Hover="true" Elevation="1" Class="@Class">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">In progress (@_total)</MudText>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Order #</MudTh>
+        <MudTh>Client</MudTh>
+        <MudTh>Property</MudTh>
+        <MudTh>Assigned to</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Due</MudTh>
+        <MudTh />
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Order #">
+            @if (context.OrderNumber is { } orderNumber)
+            {
+                @orderNumber
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Pending</MudText>
+            }
+        </MudTd>
+        <MudTd DataLabel="Client">@context.ClientName</MudTd>
+        <MudTd DataLabel="Property">@context.PropertyAddress</MudTd>
+        <MudTd DataLabel="Assigned to">@context.AssignedToName</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Color="StaffOrderPage.StatusColor(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Due">@context.DueDate.ToString("MMM d")</MudTd>
+        <MudTd Style="text-align:right">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@StaffOrderPage.Url(context.OrderId)">View</MudButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2">@(_error ?? "No orders in progress")</MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="PageSizes" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private static readonly int[] PageSizes = [5, 10, 25];
+
+    private int _total;
+    private string? _error;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private async Task<TableData<InProgressOrder>> LoadAsync(TableState state, CancellationToken cancellationToken)
+    {
+        var tenantId = (await AuthenticationState).User.FindFirst("tenant_id")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            return Show([], 0, "Your account has no tenant.");
+        }
+
+        var result = await ClusterClient.GetInProgressOrdersGrain(tenantId)
+            .GetOrdersAsync(state.Page * state.PageSize, state.PageSize);
+        return result.IsSuccess
+            ? Show(result.Value.Orders, result.Value.TotalCount, null)
+            : Show([], 0, "The orders in progress could not be loaded.");
+    }
+
+    private TableData<InProgressOrder> Show(InProgressOrder[] orders, int total, string? error)
+    {
+        _error = error;
+        if (_total != total)
+        {
+            _total = total;
+            StateHasChanged();
+        }
+        return new TableData<InProgressOrder> { Items = orders, TotalItems = total };
+    }
+}

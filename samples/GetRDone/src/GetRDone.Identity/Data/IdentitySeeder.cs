@@ -17,6 +17,18 @@ public static class IdentitySeeder
     /// <remarks>The Orders read models seed the same user (GetRDone.Orders.Grains.ReadModels.SampleSeedData); keep them in sync.</remarks>
     public const string ScottRiggsbeeUserId = "3005c2d8-6e1f-4a7b-9c3d-5e8f1a2b4c6d";
 
+    /// <summary>Morgan Coordinator, an AMC coordinator, who can work on orders but not assign them.</summary>
+    /// <remarks>The Orders read models seed the same user (GetRDone.Orders.Grains.ReadModels.SampleSeedData); keep them in sync.</remarks>
+    public const string MorganCoordinatorUserId = "5b2e7c41-8d3f-4a6b-9c1e-2f4a6b8d0c13";
+
+    /// <summary>Riley Reviewer, an AMC reviewer.</summary>
+    /// <remarks>The Orders read models seed the same user (GetRDone.Orders.Grains.ReadModels.SampleSeedData); keep them in sync.</remarks>
+    public const string RileyReviewerUserId = "6c3f8d52-9e4a-4b7c-8d2f-3a5b7c9e1d24";
+
+    /// <summary>Avery Admin, the tenant admin, who can do anything the Client Services Director can.</summary>
+    /// <remarks>The Orders read models seed the same user (GetRDone.Orders.Grains.ReadModels.SampleSeedData); keep them in sync.</remarks>
+    public const string AveryAdminUserId = "7d4a9e63-0f5b-4c8d-9e3a-4b6c8d0f2e35";
+
     /// <summary>The service account the Order Number Assigner automation runs as.</summary>
     /// <remarks>The worker signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
     public const string OrderNumberAssignerUserId = "0a1b2c01-5d3e-4f7a-8b9c-1d2e3f4a5b6c";
@@ -47,9 +59,10 @@ public static class IdentitySeeder
 
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         await EnsureUserAsync(userManager, "ana.ruiz@carterbank.example", "Ana Ruiz", GetRDoneRoles.Client, DemoTenant, AnaRuizUserId);
-        await EnsureUserAsync(userManager, "scott.riggsbee@elliott.example", "Scott Riggsbee", GetRDoneRoles.Coordinator, DemoTenant, ScottRiggsbeeUserId);
-        await EnsureUserAsync(userManager, "coordinator@getrdone.local", "Morgan Coordinator", GetRDoneRoles.Coordinator, DemoTenant);
-        await EnsureUserAsync(userManager, "reviewer@getrdone.local", "Riley Reviewer", GetRDoneRoles.Reviewer, DemoTenant);
+        await EnsureUserAsync(userManager, "scott.riggsbee@elliott.example", "Scott Riggsbee", GetRDoneRoles.ClientServicesDirector, DemoTenant, ScottRiggsbeeUserId);
+        await EnsureUserAsync(userManager, "coordinator@getrdone.local", "Morgan Coordinator", GetRDoneRoles.Coordinator, DemoTenant, MorganCoordinatorUserId);
+        await EnsureUserAsync(userManager, "reviewer@getrdone.local", "Riley Reviewer", GetRDoneRoles.Reviewer, DemoTenant, RileyReviewerUserId);
+        await EnsureUserAsync(userManager, "admin@getrdone.local", "Avery Admin", GetRDoneRoles.TenantAdmin, DemoTenant, AveryAdminUserId);
         // Vendors are in the global vendor pool, not a tenant.
         await EnsureUserAsync(userManager, "vendor@getrdone.local", "Val Vendor", GetRDoneRoles.Vendor, tenantId: null);
 
@@ -60,11 +73,25 @@ public static class IdentitySeeder
             DemoTenant, NewOrderNotifierUserId, password: null);
     }
 
+    /// <summary>
+    ///     Creates the user with exactly <paramref name="role"/>, or gives an existing user that role in place of their others,
+    ///     so a demo user whose role changed gets the new one without the database being reset.
+    /// </summary>
     private static async Task EnsureUserAsync(UserManager<ApplicationUser> userManager, string email, string displayName, string role,
         string? tenantId, string? userId = null, string? password = DemoPassword)
     {
-        if (await userManager.FindByEmailAsync(email) is not null)
+        if (await userManager.FindByEmailAsync(email) is { } existing)
         {
+            var roles = await userManager.GetRolesAsync(existing);
+            var otherRoles = roles.Where(item => item != role).ToArray();
+            if (otherRoles.Length > 0)
+            {
+                EnsureSucceeded(await userManager.RemoveFromRolesAsync(existing, otherRoles));
+            }
+            if (!roles.Contains(role))
+            {
+                EnsureSucceeded(await userManager.AddToRoleAsync(existing, role));
+            }
             return;
         }
 

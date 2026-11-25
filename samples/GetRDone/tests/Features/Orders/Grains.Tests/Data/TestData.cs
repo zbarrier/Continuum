@@ -2,6 +2,7 @@ using System.Security.Claims;
 
 using Duende.IdentityModel;
 
+using GetRDone.Orders.Abstractions;
 using GetRDone.Orders.Abstractions.ReadModels;
 
 namespace GetRDone.Orders.Grains.Tests.Data;
@@ -46,8 +47,19 @@ public static class TestData
         RequestedByUsers.ClientUser2, "Loan Processor", "Harbor National Bank", HarborNationalBankClientId);
 
     /// <summary>Tommy Jones, the test tenant's Client Services Director, who is told about new orders.</summary>
+    public static UserDirectoryEntry Director1 { get; } = DirectoryEntry(
+        RequestedByUsers.Director1, UserDirectoryEntry.ClientServicesDirectorTitle, "Summit Valuation", clientId: null);
+
     public static UserDirectoryEntry Coordinator1 { get; } = DirectoryEntry(
-        RequestedByUsers.Coordinator1, UserDirectoryEntry.ClientServicesDirectorTitle, "Summit Valuation", clientId: null);
+        RequestedByUsers.Coordinator1, "Coordinator", "Summit Valuation", clientId: null);
+
+    public static UserDirectoryEntry TenantAdmin1 { get; } = DirectoryEntry(
+        RequestedByUsers.TenantAdmin1, "Tenant Admin", "Summit Valuation", clientId: null);
+
+    /// <summary>The Order Number Assigner's account, which acts for the AMC but is not one of its staff.</summary>
+    public static UserDirectoryEntry OrderNumberAssigner { get; } = new(
+        AutomationUser.OrderNumberAssigner.GetTenantUserId(TenantId), AutomationUser.OrderNumberAssigner.DisplayName,
+        UserDirectoryEntry.AutomationTitle, "Summit Valuation", "order-number-assigner@summitvaluation.example", null);
 
     public static IntendedUse[] IntendedUses { get; } = [Refinance, Purchase];
 
@@ -55,7 +67,7 @@ public static class TestData
 
     public static OrderableService[] OrderableServices { get; } = [ResidentialAppraisal, CommercialAppraisal];
 
-    public static UserDirectoryEntry[] Users { get; } = [ClientUser1, ClientUser2, Coordinator1];
+    public static UserDirectoryEntry[] Users { get; } = [ClientUser1, ClientUser2, Director1, Coordinator1, TenantAdmin1, OrderNumberAssigner];
 
     private static UserDirectoryEntry DirectoryEntry(ClaimsPrincipal user, string title, string organizationName, string? clientId)
         => new(user.GetTenantUserId(), user.Identity!.Name!, title, organizationName, user.FindFirstValue(JwtClaimTypes.Email)!, clientId);

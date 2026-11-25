@@ -51,7 +51,8 @@ public sealed class SubmitOrderTests
             HasBorrower = true,
             SupportingDocumentBlobPaths = new Dictionary<string, string> { [attached.DocumentId] = attached.BlobPath },
             OrderNumber = (long?)null,
-            NewOrderNoticeSent = false
+            NewOrderNoticeSent = false,
+            AssignedTo = (string?)null
         }, state, strict: true);
     }
 

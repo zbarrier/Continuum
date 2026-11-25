@@ -9,7 +9,14 @@
         <ClientHome />
     </Authorized>
     <NotAuthorized>
-        <MudText Typo="Typo.h4" GutterBottom="true">Home</MudText>
-        <MudText Typo="Typo.body1">The home page for your role is not built yet.</MudText>
+        <AuthorizeView Roles="@StaffRoles.AnyStaff" Context="staff">
+            <Authorized>
+                <StaffHome />
+            </Authorized>
+            <NotAuthorized>
+                <MudText Typo="Typo.h4" GutterBottom="true">Home</MudText>
+                <MudText Typo="Typo.body1">The home page for your role is not built yet.</MudText>
+            </NotAuthorized>
+        </AuthorizeView>
     </NotAuthorized>
 </AuthorizeView>

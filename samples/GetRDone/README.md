@@ -10,7 +10,7 @@ Requires Docker. From this folder:
 dotnet run --project src/GetRDone.AppHost
 ```
 
-Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only, password `Pass123$`): `ana.ruiz@carterbank.example` (client user of Carter Bank & Trust), `scott.riggsbee@elliott.example` (Elliott & Company's Client Services Director, a coordinator), `coordinator@getrdone.local`, `reviewer@getrdone.local` (tenant `elliott`), and `vendor@getrdone.local` (no tenant). The automations' service accounts (`order-number-assigner@` and `new-order-notifier@elliott.example`) are seeded with no password, so nobody can sign in as them. If your local Identity database was seeded before the tenant became `elliott`, delete the SQL Server data volume so the users are re-seeded. Vendors can also self-register from the sign-in page; confirmation and password-reset emails appear in Mailpit.
+Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only, password `Pass123$`): `ana.ruiz@carterbank.example` (client user of Carter Bank & Trust), `scott.riggsbee@elliott.example` (Elliott & Company's Client Services Director, who assigns orders), `coordinator@getrdone.local`, `reviewer@getrdone.local`, `admin@getrdone.local` (Avery Admin, the tenant admin; all in tenant `elliott`), and `vendor@getrdone.local` (no tenant). The AMC staff users have fixed IDs matching the user directory; if your local Identity database seeded the coordinator and reviewer before their IDs were fixed, delete the SQL Server data volume so they are re-seeded. The automations' service accounts (`order-number-assigner@` and `new-order-notifier@elliott.example`) are seeded with no password, so nobody can sign in as them. If your local Identity database was seeded before the tenant became `elliott`, delete the SQL Server data volume so the users are re-seeded. Vendors can also self-register from the sign-in page; confirmation and password-reset emails appear in Mailpit.
 
 ## Projects
 
@@ -19,7 +19,7 @@ Open the Aspire dashboard, then the `web` endpoint. Demo users (Development only
 - `GetRDone.Identity` - Duende IdentityServer with ASP.NET Core Identity on SQL Server and the Duende Razor Pages UI (`role`, `tenant_id` claims).
 - `GetRDone.Email` - the app's `IEmailSender`, which sends over SMTP to Mailpit locally (the `mailpit` connection string); Identity's account emails and the Silo's notifications use it.
 - `GetRDone.Silo` - Orleans silo; multi-tenant KurrentDB event log; KurrentDB stream providers for projections, order reactions and notifications; ManagedCode.Orleans.Identity authorization.
-- `GetRDone.Web` - Blazor Server; OIDC sign-in; forwards the circuit user to grains via an outgoing grain-call filter. A client user's Home has My drafts and My orders sections (paged lists). My drafts loads from the ClientOrderDrafts projection, and My orders from the ClientOrders projection. Other roles' home pages are not built yet.
+- `GetRDone.Web` - Blazor Server; OIDC sign-in; forwards the circuit user to grains via an outgoing grain-call filter. A client user's Home has My drafts and My orders sections (paged lists). My drafts loads from the ClientOrderDrafts projection, and My orders from the ClientOrders projection. The AMC staff's Home has the staff dashboard (Unassigned and In progress lists), and each order opens the staff order page (`/staff/orders/{orderGuid}`). Vendors' home pages are not built yet.
 - `GetRDone.Subscriptions.Worker` - hosts the self-hosted KurrentDB catch-up subscriptions of automations that work in batches (one folder per feature) and calls the silo's grains as an Orleans cluster client. It runs as exactly one instance (`WithReplicas(1)`), since a catch-up subscription doesn't share its work with other instances. Its health check reports the subscriptions' state. `appsettings.json` lists every subscription under `Continuum:KurrentDB:Subscriptions:{Name}`; set `Enabled` to `false` to stop one without a code change (it keeps its checkpoint and catches up when turned back on).
 - `Features/<Domain>/GetRDone.<Domain>.Abstractions` / `.Grains` / `.Automations` - feature slices. `.Automations` holds the logic of the domain's automations, which the worker runs; like any client it references only `.Abstractions`. `Hello` is temporary and proves the round trip (the Hello page, `/hello`).
 
@@ -34,7 +34,7 @@ The lookups come from pre-populated read models, seeded on activation when their
 - `IIntendedUsesGrain` (grain type `intendedUses`): Refinance, Purchase, Construction, Other. `IsCurrentIntendedUseAsync` checks the selected ID, version, and name.
 - `IDocumentTypesGrain` (grain type `documentTypes`): the types a supporting document can have: Lease agreements, Rent roll, Operating statements, Other. `IsCurrentDocumentTypeAsync` checks the selected ID, version, and name.
 - `IOrderableServicesGrain` (grain type `orderableServices`): the service request types, each with the form types that can be ordered with it (the user picks a service request type, then one of its form types). Appraisal Commercial has Market Value Interior Inspection and Market Value Exterior Inspection; Appraisal Residential has Uniform Residential Appraisal Report (1004) and Exterior-Only Inspection (2055). `IsCurrentOrderableServiceAsync` checks the selected service and form IDs, versions, and names, and that the form belongs to the service.
-- `IUserDirectoryGrain` (grain type `userDirectory`): Ana Ruiz of Carter Bank & Trust, Scott Riggsbee of Elliott & Company, and the automations' service accounts. `IsClientUserAsync` checks that a user belongs to a client.
+- `IUserDirectoryGrain` (grain type `userDirectory`): Ana Ruiz of Carter Bank & Trust; Scott Riggsbee, the coordinator, the reviewer and Avery Admin of Elliott & Company; and the automations' service accounts (titled `UserDirectoryEntry.AutomationTitle`). `IsClientUserAsync` checks that a user belongs to a client, and `IsStaffUserAsync` that a user is one of the AMC's staff (no client, not an automation).
 
 `IOrderPermissions` decides who may act on an order. Starting a draft requires the current user to be a user of the selected client; later commands will allow the user who started the order. Real tenant and permission checks belong to a full application. There is no order-entry UI yet.
 
@@ -67,12 +67,30 @@ An event delivered again (for example, after a silo restart before the checkpoin
 
 Like `OrderReactors`, the provider has a durable KurrentDB checkpoint and starts from now on its first run, so notices are never sent again when the projections are rebuilt. It is a provider of its own because it reads the order streams themselves, while `OrderReactors` reads only the generator streams.
 
+## Assigning and acknowledging orders
+
+The AMC's staff roles are in `StaffRoles` (Abstractions; they match `GetRDoneRoles`): `amc-coordinator`, `amc-reviewer`, `amc-client-services-director` and `tenant-admin`. A submitted order goes through these statuses:
+
+- **Submitted.** Only the Client Services Director or the tenant admin can assign an order (`AssignOrderAsync` with the assignee's tenant user ID; `OrderAssigned`), and only to one of the AMC's staff in the user directory (otherwise `InvalidArgument`). An order that is a draft or already assigned is rejected (`FailedPrecondition`). The staff order page offers **Assign to me**.
+- **Assigned.** Only the assignee can acknowledge the order (`AcknowledgeOrderAsync`; `OrderAcknowledged`), which says they are working on it. The staff order page offers **Acknowledge**.
+- **Acknowledged.**
+
+An order can take its number in any status after Submitted, since the number may arrive after the order is assigned.
+
 ## Client order projections
 
 Every order event also targets the per-user stream `clientUserOrders-{tenantId}|{userGuid}` of the user who started the order (`OrderGrain.GetStreamTargets`, transaction-scoped so the stream gets every event of the order's transaction), so one projection can group all of a user's orders. The Silo's `OrderProjections` KurrentDB stream provider runs a catch-up subscription on `$all` filtered to the `order-` stream prefix and delivers each event to its order stream and its target streams. Projection grains implicitly subscribe to the `OrderProjections:clientUserOrders` namespace, so Orleans activates one grain per user, keyed by the user's tenant user ID.
 
 - `IClientOrderDraftsGrain` (grain type `clientOrderDrafts`; `GetClientOrderDraftsGrain(tenantUserId)`): the user's drafts that are not submitted yet, most recently saved first (`OrderSubmitted` removes a draft). `GetDraftsAsync(skip, take)` returns one page and the total count. Only the user can read their own drafts.
 - `IClientOrdersGrain` (grain type `clientOrders`; `GetClientOrdersGrain(tenantUserId)`): the user's submitted orders, most recently submitted first, each with its property address, form type, order number (null until one is assigned) and status (`ClientOrderStatus`, only `Submitted` so far). It keeps the address and form type of the user's drafts from `OrderDraftStarted` and `RequestAndPropertySaved`, since `OrderSubmitted` carries neither, and `OrderSubmitted` turns the draft into an order. `GetOrdersAsync(skip, take)` returns one page and the total count. Only the user can read their own orders.
+
+## Staff order projections
+
+Every order event also targets the per-tenant stream `tenantOrders-{tenantId}|default` (`OrderProjections.TenantOrdersStreamTarget`, transaction-scoped), and the provider delivers each order's own stream on the `OrderProjections:order` namespace keyed by the order ID. Only the AMC's staff (any `StaffRoles` role) can read these projections. They store user and client IDs and turn them into names from the tenant's user directory when they are read, so names are always current.
+
+- `IUnassignedOrdersGrain` (grain type `unassignedOrders`; `GetUnassignedOrdersGrain(tenantId)`): the dashboard's Unassigned list, the orders that have their number and are not assigned, due first first, then by order number. `OrderNumberAssigned` puts an order on the list and `OrderAssigned` takes it off; an order assigned before it has its number never appears. It keeps what the list shows of each order from `OrderDraftStarted` and `RequestAndPropertySaved`.
+- `IInProgressOrdersGrain` (grain type `inProgressOrders`; `GetInProgressOrdersGrain(tenantId)`): the dashboard's In progress list, the assigned orders with their assignee and status (`StaffOrderStatus`), due first first. `OrderAssigned` puts an order on the list; nothing takes it off yet, since shipping isn't built.
+- `IOrderDetailsGrain` (grain type `orderDetails`; `GetOrderDetailsGrain(orderId)`): the staff order page of one submitted order (drafts are `NotFound`), with a timeline of what happened to it, most recent first, and the actions the current user may take (`OrderActions`).
 
 The checkpoint and the projections are stored in memory, so after a silo restart the subscription replays from the start and rebuilds them.
 

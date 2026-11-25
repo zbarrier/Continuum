@@ -48,7 +48,8 @@ public sealed class StartOrderDraftTests
             HasBorrower = false,
             SupportingDocumentBlobPaths = new Dictionary<string, string>(),
             OrderNumber = (long?)null,
-            NewOrderNoticeSent = false
+            NewOrderNoticeSent = false,
+            AssignedTo = (string?)null
         }, state, strict: true);
     }
 
@@ -201,7 +202,7 @@ public sealed class StartOrderDraftTests
     [Fact]
     public async Task StartDraft_RejectsAUserWhoIsNotAClientUser()
     {
-        GivenSignedIn(RequestedByUsers.Coordinator1);
+        GivenSignedIn(RequestedByUsers.Director1);
         await Given();
 
         await When(() => Order.StartOrderDraftAsync(Command1));

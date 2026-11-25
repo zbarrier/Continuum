@@ -2,6 +2,7 @@ using Continuum.CSharpFunctionalExtensions;
 using Continuum.CSharpFunctionalExtensions.Orleans;
 using Continuum.Domain.Orleans;
 using Continuum.Orleans.Events;
+using Continuum.Orleans.Tenancy;
 using Continuum.Streaming;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
@@ -44,15 +45,27 @@ public sealed partial class OrderGrain
     }
 
     /// <summary>
-    ///     Sends every order event to the stream of the user who started the order as well, so the client user's read
-    ///     models (such as <see cref="ClientOrderDraftsGrain"/> and <see cref="ClientOrdersGrain"/>) see all of that user's
-    ///     orders on one stream.
+    ///     Sends every order event to the stream of the user who started the order and to its tenant's orders stream as well,
+    ///     so the client user's read models (such as <see cref="ClientOrderDraftsGrain"/> and <see cref="ClientOrdersGrain"/>)
+    ///     see all of that user's orders on one stream, and the staff dashboard (<see cref="UnassignedOrdersGrain"/> and
+    ///     <see cref="InProgressOrdersGrain"/>) all of the tenant's orders.
     /// </summary>
     protected override IReadOnlyList<StreamTarget> GetStreamTargets(object @event)
     {
+        TenantKey.Split(this.GetPrimaryKeyString(), out var tenantId, out _);
         // The draft started event is what records the starter, so it is not in the state yet while it is appended.
         var startedBy = @event is OrderDraftStarted started ? started.InitiatedBy : State.StartedBy;
-        return startedBy is null ? [] : [StreamTarget.Transaction(OrderProjections.ClientUserOrdersStreamTarget(startedBy))];
+
+        List<StreamTarget> targets = [];
+        if (startedBy is not null)
+        {
+            targets.Add(StreamTarget.Transaction(OrderProjections.ClientUserOrdersStreamTarget(startedBy)));
+        }
+        if (tenantId is not null)
+        {
+            targets.Add(StreamTarget.Transaction(OrderProjections.TenantOrdersStreamTarget(tenantId)));
+        }
+        return targets;
     }
 
     /// <summary>Attaches to the subscription the runtime created for the order's reactions.</summary>
@@ -74,7 +87,9 @@ public enum OrderStatus
 {
     None,
     Draft,
-    Submitted
+    Submitted,
+    Assigned,
+    Acknowledged
 }
 
 public enum OrderCommand
@@ -85,7 +100,9 @@ public enum OrderCommand
     AttachSupportingDocument,
     RemoveSupportingDocument,
     SubmitOrder,
-    AssignOrderNumber
+    AssignOrderNumber,
+    AssignOrder,
+    AcknowledgeOrder
 }
 
 [GenerateSerializer]
@@ -114,6 +131,9 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>Whether the New Order Notifier emailed the new order notice, so it is sent only once.</summary>
     [Id(5)] public bool NewOrderNoticeSent { get; private set; }
 
+    /// <summary>The staff member the order is assigned to, as a tenant-qualified user ID, or null until it is assigned.</summary>
+    [Id(6)] public string? AssignedTo { get; private set; }
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
@@ -123,8 +143,14 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         On<OrderSubmitted>(Handle);
         On<OrderNumberAssigned>(Handle);
         On<NewOrderNoticeSent>(Handle);
+        On<OrderAssigned>(Handle);
+        On<OrderAcknowledged>(Handle);
     }
 
+    /// <remarks>
+    ///     The Order Number Assigner can give an order its number after staff have already assigned or acknowledged it, so
+    ///     every status after Submitted permits <see cref="OrderCommand.AssignOrderNumber"/>.
+    /// </remarks>
     protected override void ConfigureStateMachine()
     {
         StateMachine.Configure(OrderStatus.None).Permit(OrderCommand.StartDraft, OrderStatus.Draft);
@@ -135,6 +161,12 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
             .PermitReentry(OrderCommand.RemoveSupportingDocument)
             .Permit(OrderCommand.SubmitOrder, OrderStatus.Submitted);
         StateMachine.Configure(OrderStatus.Submitted)
+            .PermitReentry(OrderCommand.AssignOrderNumber)
+            .Permit(OrderCommand.AssignOrder, OrderStatus.Assigned);
+        StateMachine.Configure(OrderStatus.Assigned)
+            .PermitReentry(OrderCommand.AssignOrderNumber)
+            .Permit(OrderCommand.AcknowledgeOrder, OrderStatus.Acknowledged);
+        StateMachine.Configure(OrderStatus.Acknowledged)
             .PermitReentry(OrderCommand.AssignOrderNumber);
     }
 }

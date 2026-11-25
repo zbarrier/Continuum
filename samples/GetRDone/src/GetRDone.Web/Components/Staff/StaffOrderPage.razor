@@ -1,0 +1,200 @@
+@* The staff order page (event model chapter 2, Order screens): the OrderDetails read model, with the actions the signed-in
+   user can take. OrderDetails is a projection, so after an action the page waits for it to show the new status. *@
+@page "/staff/orders/{OrderGuid:guid}"
+@attribute [Authorize(Roles = StaffRoles.AnyStaff)]
+@using Continuum.CSharpFunctionalExtensions
+@using Continuum.Orleans.Tenancy
+@using GetRDone.Orders.Abstractions
+@using GetRDone.Orders.Abstractions.OrderAggregate
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
+@inject ILogger<StaffOrderPage> Logger
+
+<PageTitle>@Title · Get-R-Done</PageTitle>
+
+<MudPaper Elevation="1" Class="pa-6">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4">
+        <MudText Typo="Typo.h5">@Title</MudText>
+        @if (_details is not null)
+        {
+            <MudChip T="string" Size="Size.Small" Color="StatusColor(_details.Status)">@_details.Status</MudChip>
+        }
+        <MudSpacer />
+        <MudButton Variant="Variant.Text" Href="/">Home</MudButton>
+    </MudStack>
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+    }
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_details is { } details)
+    {
+        <MudGrid>
+            <MudItem xs="12" md="7">
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <tbody>
+                        <tr><th>Client</th><td>@details.ClientName</td></tr>
+                        <tr><th>Entered by</th><td>@details.EnteredByName</td></tr>
+                        <tr><th>Form type</th><td>@details.FormTypeName</td></tr>
+                        <tr><th>Property</th><td>@details.PropertyAddress</td></tr>
+                        <tr><th>Due</th><td>@details.DueDate.ToString("MMM d, yyyy")</td></tr>
+                        <tr>
+                            <th>Access contact</th>
+                            <td>@details.AccessContactName @DisplayFormat.Phone(details.AccessContactPhone)</td>
+                        </tr>
+                        <tr><th>Assigned to</th><td>@(details.AssignedToName ?? "Nobody yet")</td></tr>
+                    </tbody>
+                </MudSimpleTable>
+
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    @if (details.AllowedActions.HasFlag(OrderActions.AssignToMe))
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="AssignToMeAsync">Assign to me</MudButton>
+                    }
+                    @if (details.AllowedActions.HasFlag(OrderActions.Acknowledge))
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="AcknowledgeAsync">Acknowledge</MudButton>
+                    }
+                </MudStack>
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <MudText Typo="Typo.h6" Class="mb-2">Timeline</MudText>
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <tbody>
+                        @foreach (var entry in details.Timeline)
+                        {
+                            <tr>
+                                <td style="white-space:nowrap">@entry.OccurredAt.ToLocalTime().ToString("MMM d, h:mm tt")</td>
+                                <td>@entry.Entry</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudItem>
+        </MudGrid>
+    }
+</MudPaper>
+
+@code {
+    private const int WaitAttempts = 20;
+    private static readonly TimeSpan WaitDelay = TimeSpan.FromMilliseconds(250);
+
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+    private string _orderId = "";
+    private string _tenantUserId = "";
+    private OrderDetails? _details;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    /// <summary>The order to show. The URL carries only the GUID part of the order ID.</summary>
+    [Parameter]
+    public Guid OrderGuid { get; set; }
+
+    /// <summary>The URL of the staff order page of <paramref name="orderId"/>, <c>{TenantId}|{OrderGuid}</c>.</summary>
+    public static string Url(string orderId)
+    {
+        TenantKey.Split(orderId, out _, out var orderGuid);
+        return $"staff/orders/{orderGuid}";
+    }
+
+    public static Color StatusColor(StaffOrderStatus status) => status switch
+    {
+        StaffOrderStatus.Submitted => Color.Info,
+        StaffOrderStatus.Assigned => Color.Warning,
+        StaffOrderStatus.Acknowledged => Color.Success,
+        _ => Color.Default
+    };
+
+    private string Title => _details?.OrderNumber is { } orderNumber ? $"Order {orderNumber}" : "Order";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+        _details = null;
+
+        var user = (await AuthenticationState).User;
+        var tenantId = user.FindFirst("tenant_id")?.Value;
+        var userId = user.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(userId))
+        {
+            _error = "Your account has no tenant.";
+            _loading = false;
+            return;
+        }
+        _orderId = TenantKey.Create(tenantId, OrderGuid.ToString());
+        _tenantUserId = TenantKey.Create(tenantId, userId);
+
+        try
+        {
+            var result = await ClusterClient.GetOrderDetailsGrain(_orderId).GetOrderDetailsAsync();
+            if (result.IsFailure)
+            {
+                _error = result.Error.GetFormattedMessage();
+                return;
+            }
+            _details = result.Value;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The staff order page could not load order {OrderId}.", _orderId);
+            _error = "The order could not be loaded. Try again in a moment.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Task AssignToMeAsync()
+        => RunAsync(async order => (await order.AssignOrderAsync(new AssignOrderCommand(_tenantUserId))).Map(_ => true),
+            StaffOrderStatus.Assigned);
+
+    private Task AcknowledgeAsync()
+        => RunAsync(async order => (await order.AcknowledgeOrderAsync()).Map(_ => true), StaffOrderStatus.Acknowledged);
+
+    /// <summary>Runs the command, then reloads the order until the projection shows <paramref name="expectedStatus"/>.</summary>
+    private async Task RunAsync(Func<IOrderGrain, Task<Result<bool>>> command, StaffOrderStatus expectedStatus)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var result = await command(ClusterClient.GetGrain<IOrderGrain>(_orderId));
+            if (result.IsFailure)
+            {
+                _error = result.Error.GetFormattedMessage();
+                return;
+            }
+
+            for (var attempt = 0; attempt < WaitAttempts; attempt++)
+            {
+                var details = await ClusterClient.GetOrderDetailsGrain(_orderId).GetOrderDetailsAsync();
+                if (details.IsSuccess && details.Value.Status == expectedStatus)
+                {
+                    _details = details.Value;
+                    return;
+                }
+                await Task.Delay(WaitDelay);
+            }
+            _error = "The change was saved, but the page is not showing it yet. Reload the page in a moment.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "An action on order {OrderId} failed.", _orderId);
+            _error = "The action could not be completed. Try again in a moment.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

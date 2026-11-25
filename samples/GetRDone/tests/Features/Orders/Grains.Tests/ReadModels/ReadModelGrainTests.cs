@@ -105,14 +105,14 @@ public sealed class ReadModelGrainTests(OrdersCluster fixture) : IClassFixture<O
     [InlineData(nameof(RequestedByUsers.ClientUser1), TestData.LakeviewCreditUnionClientId, true)]
     [InlineData(nameof(RequestedByUsers.ClientUser2), TestData.HarborNationalBankClientId, true)]
     [InlineData(nameof(RequestedByUsers.ClientUser1), TestData.HarborNationalBankClientId, false)]
-    [InlineData(nameof(RequestedByUsers.Coordinator1), TestData.LakeviewCreditUnionClientId, false)]
+    [InlineData(nameof(RequestedByUsers.Director1), TestData.LakeviewCreditUnionClientId, false)]
     public async Task IsClientUser_MatchesUserAndClient(string user, string clientId, bool expected)
     {
         var principal = user switch
         {
             nameof(RequestedByUsers.ClientUser1) => RequestedByUsers.ClientUser1,
             nameof(RequestedByUsers.ClientUser2) => RequestedByUsers.ClientUser2,
-            nameof(RequestedByUsers.Coordinator1) => RequestedByUsers.Coordinator1,
+            nameof(RequestedByUsers.Director1) => RequestedByUsers.Director1,
             _ => throw new ArgumentOutOfRangeException(nameof(user))
         };
         GivenSignedIn(principal);

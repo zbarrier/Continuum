@@ -65,7 +65,8 @@ public sealed class SendNewOrderNoticeTests
             HasBorrower = true,
             SupportingDocumentBlobPaths = new Dictionary<string, string>(),
             OrderNumber = (long?)AssignOrderNumberTestData.FirstOrderNumber,
-            NewOrderNoticeSent = true
+            NewOrderNoticeSent = true,
+            AssignedTo = (string?)null
         }, state, strict: true);
     }
 
@@ -181,7 +182,7 @@ public sealed class SendNewOrderNoticeTests
     [Fact]
     public async Task IsSent_RejectsAUserWhoIsNotTheAutomation()
     {
-        GivenSignedIn(RequestedByUsers.Coordinator1);
+        GivenSignedIn(RequestedByUsers.Director1);
         await GivenNumbered();
 
         var sent = await Order.IsNewOrderNoticeSentAsync();
@@ -211,7 +212,7 @@ public sealed class SendNewOrderNoticeTests
         Assert.InRange(notice.OccurredAt, before, DateTimeOffset.UtcNow);
         Assert.Equivalent(Sent1(GrainId, orderNumber, notice.OccurredAt), notice, strict: true);
         var email = Assert.Single(EmailsAbout(orderNumber));
-        Assert.Equal(TestData.Coordinator1.Email, email.To);
+        Assert.Equal(TestData.Director1.Email, email.To);
         Assert.Equal(Subject(orderNumber), email.Subject);
         Assert.Contains("Hi Tommy Jones,", email.HtmlBody);
         Assert.Contains($"Lakeview Credit Union submitted order <strong>{orderNumber}</strong>", email.HtmlBody);

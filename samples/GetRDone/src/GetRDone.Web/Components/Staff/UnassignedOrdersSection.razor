@@ -1,0 +1,72 @@
+@* The tenant's submitted orders that have their number and nobody assigned yet (UnassignedOrders), due soonest first. *@
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
+
+<MudTable T="UnassignedOrder" ServerData="LoadAsync" RowsPerPage="5" Hover="true" Elevation="1" Class="@Class">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Unassigned (@_total)</MudText>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Order #</MudTh>
+        <MudTh>Client</MudTh>
+        <MudTh>Property</MudTh>
+        <MudTh>Form type</MudTh>
+        <MudTh>Due</MudTh>
+        <MudTh />
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Order #">@context.OrderNumber</MudTd>
+        <MudTd DataLabel="Client">@context.ClientName</MudTd>
+        <MudTd DataLabel="Property">@context.PropertyAddress</MudTd>
+        <MudTd DataLabel="Form type">@context.FormTypeName</MudTd>
+        <MudTd DataLabel="Due">@context.DueDate.ToString("MMM d")</MudTd>
+        <MudTd Style="text-align:right">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@StaffOrderPage.Url(context.OrderId)">View</MudButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2">@(_error ?? "No unassigned orders")</MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="PageSizes" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private static readonly int[] PageSizes = [5, 10, 25];
+
+    private int _total;
+    private string? _error;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private async Task<TableData<UnassignedOrder>> LoadAsync(TableState state, CancellationToken cancellationToken)
+    {
+        var tenantId = (await AuthenticationState).User.FindFirst("tenant_id")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            return Show([], 0, "Your account has no tenant.");
+        }
+
+        var result = await ClusterClient.GetUnassignedOrdersGrain(tenantId)
+            .GetOrdersAsync(state.Page * state.PageSize, state.PageSize);
+        return result.IsSuccess
+            ? Show(result.Value.Orders, result.Value.TotalCount, null)
+            : Show([], 0, "The unassigned orders could not be loaded.");
+    }
+
+    private TableData<UnassignedOrder> Show(UnassignedOrder[] orders, int total, string? error)
+    {
+        _error = error;
+        if (_total != total)
+        {
+            _total = total;
+            StateHasChanged();
+        }
+        return new TableData<UnassignedOrder> { Items = orders, TotalItems = total };
+    }
+}

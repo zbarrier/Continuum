@@ -16,6 +16,10 @@ public interface IUserDirectoryGrain : IGrainWithStringKey
     /// <summary>Succeeds when the user is a client user of the client.</summary>
     [ReadOnly]
     Task<Result> IsClientUserAsync(UserId userId, ClientId clientId);
+
+    /// <summary>Succeeds when the user is one of the AMC's staff: not a client user and not an automation account.</summary>
+    [ReadOnly]
+    Task<Result> IsStaffUserAsync(UserId userId);
 }
 
 [GenerateSerializer, Immutable]
@@ -32,4 +36,7 @@ public sealed record UserDirectoryEntry(
     ///     find them by their permissions instead of their title.
     /// </summary>
     public const string ClientServicesDirectorTitle = "Client Services Director";
+
+    /// <summary>The title of the automation accounts, which act for the AMC but are not its staff.</summary>
+    public const string AutomationTitle = "Automation";
 }

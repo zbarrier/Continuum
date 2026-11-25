@@ -18,6 +18,8 @@ public sealed class OrderEventTypeMapTests
     [InlineData(typeof(OrderSubmitted), "Orders.OrderSubmitted.V1")]
     [InlineData(typeof(OrderNumberAssigned), "Orders.OrderNumberAssigned.V1")]
     [InlineData(typeof(OrderNumberIssued), "Orders.OrderNumberIssued.V1")]
+    [InlineData(typeof(OrderAssigned), "Orders.OrderAssigned.V1")]
+    [InlineData(typeof(OrderAcknowledged), "Orders.OrderAcknowledged.V1")]
     public void OrderEvent_IsRegisteredAsADomainEvent(Type eventType, string typeIdentifier)
     {
         RuntimeHelpers.RunModuleConstructor(eventType.Module.ModuleHandle);

@@ -22,4 +22,12 @@ internal static class GrainUserExtensions
         }
         return tenantId is null ? userGuid : $"{tenantId}{TenantKey.Separator}{userGuid}";
     }
+
+    /// <summary>
+    ///     Whether the user has any of the roles, from the <c>role</c> claims GetRDone.Identity issues or the
+    ///     <see cref="ClaimTypes.Role"/> claims of a principal mapped to the .NET claim types.
+    /// </summary>
+    public static bool IsInAnyRole(this ClaimsPrincipal user, IReadOnlyList<string> roles)
+        => user.Claims.Any(claim =>
+            claim.Type is "role" or ClaimTypes.Role && roles.Contains(claim.Value, StringComparer.Ordinal));
 }

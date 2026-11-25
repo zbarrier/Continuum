@@ -21,6 +21,18 @@ public sealed class SampleSeedData : IReadModelSeedData
     /// <remarks>GetRDone.Identity seeds the same user ID (IdentitySeeder.ScottRiggsbeeUserId); keep them in sync.</remarks>
     public const string ScottRiggsbeeUserId = "elliott|3005c2d8-6e1f-4a7b-9c3d-5e8f1a2b4c6d";
 
+    /// <summary>Morgan Coordinator, an AMC coordinator, who can work on orders but not assign them.</summary>
+    /// <remarks>GetRDone.Identity seeds the same user ID (IdentitySeeder.MorganCoordinatorUserId); keep them in sync.</remarks>
+    public const string MorganCoordinatorUserId = "elliott|5b2e7c41-8d3f-4a6b-9c1e-2f4a6b8d0c13";
+
+    /// <summary>Riley Reviewer, an AMC reviewer.</summary>
+    /// <remarks>GetRDone.Identity seeds the same user ID (IdentitySeeder.RileyReviewerUserId); keep them in sync.</remarks>
+    public const string RileyReviewerUserId = "elliott|6c3f8d52-9e4a-4b7c-8d2f-3a5b7c9e1d24";
+
+    /// <summary>Avery Admin, Elliott &amp; Company's tenant admin.</summary>
+    /// <remarks>GetRDone.Identity seeds the same user ID (IdentitySeeder.AveryAdminUserId); keep them in sync.</remarks>
+    public const string AveryAdminUserId = "elliott|7d4a9e63-0f5b-4c8d-9e3a-4b6c8d0f2e35";
+
     private const string ElliottAndCompany = "Elliott & Company";
 
     private static readonly ReadModelSeed Seed = new(
@@ -57,6 +69,9 @@ public sealed class SampleSeedData : IReadModelSeedData
                 CarterBankAndTrustClientId),
             new(ScottRiggsbeeUserId, "Scott Riggsbee", UserDirectoryEntry.ClientServicesDirectorTitle, ElliottAndCompany,
                 "scott.riggsbee@elliott.example", null),
+            new(MorganCoordinatorUserId, "Morgan Coordinator", "Coordinator", ElliottAndCompany, "coordinator@getrdone.local", null),
+            new(RileyReviewerUserId, "Riley Reviewer", "Reviewer", ElliottAndCompany, "reviewer@getrdone.local", null),
+            new(AveryAdminUserId, "Avery Admin", "Tenant Admin", ElliottAndCompany, "admin@getrdone.local", null),
             Automation(AutomationUser.OrderNumberAssigner, "order-number-assigner@elliott.example"),
             Automation(AutomationUser.NewOrderNotifier, "new-order-notifier@elliott.example")
         ]);
@@ -64,5 +79,5 @@ public sealed class SampleSeedData : IReadModelSeedData
     public ReadModelSeed? GetSeed(string? tenantId) => tenantId == TenantId ? Seed : null;
 
     private static UserDirectoryEntry Automation(AutomationUser account, string email)
-        => new(account.GetTenantUserId(TenantId), account.DisplayName, "Automation", ElliottAndCompany, email, null);
+        => new(account.GetTenantUserId(TenantId), account.DisplayName, UserDirectoryEntry.AutomationTitle, ElliottAndCompany, email, null);
 }

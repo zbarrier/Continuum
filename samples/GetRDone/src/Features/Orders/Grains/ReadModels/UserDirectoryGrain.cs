@@ -38,6 +38,18 @@ public sealed class UserDirectoryGrain(
             ? Result.Success()
             : Result.Failure(RequestErrors.NewNotFound("The user is not a user of the client.")));
     }
+
+    public Task<Result> IsStaffUserAsync(UserId userId)
+    {
+        var isStaffUser = state.State.Users.Any(item =>
+            item.UserId == (string)userId
+            && item.ClientId is null
+            && item.Title != UserDirectoryEntry.AutomationTitle);
+
+        return Task.FromResult(isStaffUser
+            ? Result.Success()
+            : Result.Failure(RequestErrors.NewNotFound("The user is not one of the AMC's staff.")));
+    }
 }
 
 [GenerateSerializer]
