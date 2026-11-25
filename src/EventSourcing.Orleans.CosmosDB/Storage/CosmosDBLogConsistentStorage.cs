@@ -249,6 +249,17 @@ public class CosmosDBLogConsistentStorage : ILogConsistentStorage, ILifecyclePar
     }
 
     /// <inheritdoc />
+    public async Task<(int Version, IReadOnlyList<TLogEntry> Entries)> ReadMostRecentAsync<TLogEntry>(string grainTypeName, GrainId grainId, int maxCount)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxCount, 1);
+        var version = await GetLastVersionAsync(grainTypeName, grainId).ConfigureAwait(false);
+        var fromVersion = Math.Max(0, version - maxCount);
+        // Reading only up to the version just read keeps the entries matching it, even if more are appended meanwhile.
+        var entries = await ReadAsync<TLogEntry>(grainTypeName, grainId, fromVersion, version - fromVersion).ConfigureAwait(false);
+        return (version, entries);
+    }
+
+    /// <inheritdoc />
     public async Task<int> GetLastVersionAsync(string grainTypeName, GrainId grainId)
     {
         EnsureInitialized();

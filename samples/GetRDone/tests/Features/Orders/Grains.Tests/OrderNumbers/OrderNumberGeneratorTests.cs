@@ -46,8 +46,24 @@ public sealed class OrderNumberGeneratorTests
         Assert.Equivalent(new
         {
             LastOrderNumber = 610_698L,
-            OrderNumbers = new Dictionary<string, long> { [order1] = 610_696, [order2] = 610_697, [order3] = 610_698 }
+            OrderNumbers = new Dictionary<string, long> { [order1] = 610_696, [order2] = 610_697, [order3] = 610_698 },
+            RecentOrderIds = new[] { new[] { order1 }, [order2, order3] }
         }, state, strict: true);
+    }
+
+    [Fact]
+    public void ApplyingOrderNumbersIssued_KeepsOnlyTheOrdersOfTheMostRecentEvents()
+    {
+        var orderIds = Enumerable.Range(0, OrderNumberGeneratorGrain.RecentEventCount + 1).Select(_ => NewOrderId()).ToArray();
+        var state = new OrderNumberGeneratorState();
+        foreach (var (orderId, i) in orderIds.Select((orderId, i) => (orderId, i)))
+        {
+            state.When(Issued(TestData.At, (orderId, 610_696 + i)));
+        }
+
+        Assert.Equal(610_696 + OrderNumberGeneratorGrain.RecentEventCount, state.LastOrderNumber);
+        Assert.Equal(orderIds.Skip(1).Select((orderId, i) => (orderId, Number: 610_697L + i)).ToDictionary(), state.OrderNumbers);
+        Assert.Equal(orderIds.Skip(1).Select(orderId => new[] { orderId }), state.RecentOrderIds);
     }
 
     [Fact]

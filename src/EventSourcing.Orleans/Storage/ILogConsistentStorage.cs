@@ -34,6 +34,23 @@ public interface ILogConsistentStorage
     Task<IReadOnlyList<TLogEntry>> ReadAsync<TLogEntry>(string grainTypeName, GrainId grainId, int fromVersion, int maxCount);
 
     /// <summary>
+    ///     Reads the most recent log entries and the log's version, for grains that load only their most recent events.
+    /// </summary>
+    /// <remarks>
+    ///     The entries are the last ones in the log, oldest first, so the first entry produces version
+    ///     <c>Version - Entries.Count + 1</c> and the last produces <c>Version</c>.
+    /// </remarks>
+    /// <param name="grainTypeName">The grain type name.</param>
+    /// <param name="grainId">The grain ID.</param>
+    /// <param name="maxCount">The maximum number of entries to read; at least 1.</param>
+    /// <typeparam name="TLogEntry">The log entry type.</typeparam>
+    /// <returns>
+    ///     The log's version and its most recent entries, which is version 0 and no entries if the log does not exist.
+    ///     Implementations throw rather than return a null entry.
+    /// </returns>
+    Task<(int Version, IReadOnlyList<TLogEntry> Entries)> ReadMostRecentAsync<TLogEntry>(string grainTypeName, GrainId grainId, int maxCount);
+
+    /// <summary>
     ///     Gets the number of events in the log.
     /// </summary>
     /// <param name="grainTypeName">The grain type name.</param>

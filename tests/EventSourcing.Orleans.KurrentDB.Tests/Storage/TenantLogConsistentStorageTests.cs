@@ -77,6 +77,12 @@ public class TenantLogConsistentStorageTests
             return Task.FromResult<IReadOnlyList<TLogEntry>>([]);
         }
 
+        public Task<(int Version, IReadOnlyList<TLogEntry> Entries)> ReadMostRecentAsync<TLogEntry>(string grainTypeName, GrainId grainId, int maxCount)
+        {
+            Calls++;
+            return Task.FromResult<(int, IReadOnlyList<TLogEntry>)>((0, []));
+        }
+
         public Task<int> GetLastVersionAsync(string grainTypeName, GrainId grainId)
         {
             Calls++;

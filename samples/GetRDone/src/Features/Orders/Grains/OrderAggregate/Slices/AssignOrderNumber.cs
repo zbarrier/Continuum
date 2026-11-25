@@ -26,8 +26,9 @@ public sealed partial class OrderGrain
                     () => RequestErrors.NewFailedPrecondition("The order has not been submitted."))
                 .BindWithStreamTransaction(this, transaction =>
                 {
-                    // The generator issues an order only one number, so an order that has one was assigned it by an
-                    // earlier attempt of the automation.
+                    // The order keeps the first number it was assigned. The generator issues an order only one number
+                    // within its recent events, so another attempt is an earlier attempt of the automation or, rarely,
+                    // a number issued again after the generator no longer kept the order's first one.
                     if (State.OrderNumber is not null)
                     {
                         return;

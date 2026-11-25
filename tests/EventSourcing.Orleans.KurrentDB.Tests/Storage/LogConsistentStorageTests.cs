@@ -61,6 +61,9 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
 
         Assert.Equal(0, await Storage.GetLastVersionAsync(GrainTypeName, grainId));
         Assert.Empty(await Storage.ReadAsync<SnackEvent>(GrainTypeName, grainId, 0, 10));
+        var (version, entries) = await Storage.ReadMostRecentAsync<SnackEvent>(GrainTypeName, grainId, 10);
+        Assert.Equal(0, version);
+        Assert.Empty(entries);
     }
 
     [Fact]
@@ -100,11 +103,29 @@ public class LogConsistentStorageTests(ClusterFixture fixture)
     }
 
     [Fact]
+    public async Task Should_Read_The_Most_Recent_Events_Oldest_First_With_The_Version()
+    {
+        var grainId = NewGrainId();
+        var events = CreateEvents(5);
+        await Storage.AppendAsync(GrainTypeName, grainId, events, 0, Guid.NewGuid());
+
+        var (version, entries) = await Storage.ReadMostRecentAsync<SnackEvent>(GrainTypeName, grainId, 3);
+        Assert.Equal(5, version);
+        Assert.Equal(events[2..], entries);
+
+        // Asking for more events than the log has returns the whole log.
+        (version, entries) = await Storage.ReadMostRecentAsync<SnackEvent>(GrainTypeName, grainId, 10);
+        Assert.Equal(5, version);
+        Assert.Equal(events, entries);
+    }
+
+    [Fact]
     public async Task Should_Reject_Negative_Arguments()
     {
         var grainId = NewGrainId();
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Storage.ReadAsync<SnackEvent>(GrainTypeName, grainId, -1, 1));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Storage.ReadMostRecentAsync<SnackEvent>(GrainTypeName, grainId, 0));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Storage.AppendAsync(GrainTypeName, grainId, CreateEvents(1), -1, Guid.NewGuid()));
     }
 

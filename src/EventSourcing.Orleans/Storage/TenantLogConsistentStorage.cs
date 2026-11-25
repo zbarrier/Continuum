@@ -53,6 +53,13 @@ public sealed class TenantLogConsistentStorage : IMultiStreamLogConsistentStorag
     }
 
     /// <inheritdoc />
+    public async Task<(int Version, IReadOnlyList<TLogEntry> Entries)> ReadMostRecentAsync<TLogEntry>(string grainTypeName, GrainId grainId, int maxCount)
+    {
+        var storage = await GetStorageAsync(grainId).ConfigureAwait(false);
+        return await storage.ReadMostRecentAsync<TLogEntry>(grainTypeName, grainId, maxCount).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<int> GetLastVersionAsync(string grainTypeName, GrainId grainId)
     {
         var storage = await GetStorageAsync(grainId).ConfigureAwait(false);

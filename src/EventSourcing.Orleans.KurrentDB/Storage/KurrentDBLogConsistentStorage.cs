@@ -141,6 +141,46 @@ public class KurrentDBLogConsistentStorage : IMultiStreamLogConsistentStorage, I
     }
 
     /// <inheritdoc />
+    public async Task<(int Version, IReadOnlyList<TLogEntry> Entries)> ReadMostRecentAsync<TLogEntry>(string grainTypeName, GrainId grainId, int maxCount)
+    {
+        EnsureInitialized();
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxCount, 1);
+        var streamName = GetStreamName(grainId);
+        using var operation = _instrumentation.Start(LogConsistentStorageInstrumentation.ReadOperation, grainTypeName, grainId, streamName);
+        try
+        {
+            // One backwards read returns the most recent events, newest first, and the newest one's revision gives the
+            // version, so the version and the events always match.
+            var readResult = _client.ReadStreamAsync(Direction.Backwards, streamName, StreamPosition.End, maxCount, false, null, _userCredentials);
+            var readState = await readResult.ReadState;
+            if (readState == ReadState.StreamNotFound)
+            {
+                return (0, []);
+            }
+            var version = 0;
+            var entries = new List<TLogEntry>();
+            await foreach (var resolvedEvent in readResult)
+            {
+                if (entries.Count == 0)
+                {
+                    // The last revision is zero based, so the event count is one more.
+                    version = checked((int)(resolvedEvent.OriginalEventNumber.ToUInt64() + 1));
+                }
+                entries.Add(DeserializeEvent<TLogEntry>(resolvedEvent));
+            }
+            entries.Reverse();
+            operation.SetEventCount(entries.Count);
+            return (version, entries);
+        }
+        catch (Exception ex)
+        {
+            operation.Fail(ex);
+            _logger.ReadLogEntriesFailed(ex, grainTypeName, grainId, streamName);
+            throw new KurrentDBStorageException(FormattableString.Invariant($"Failed to read the most recent log entries for {grainTypeName} with ID {grainId} and stream {streamName}. {ex.GetType()}: {ex.Message}"), ex);
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<int> GetLastVersionAsync(string grainTypeName, GrainId grainId)
     {
         EnsureInitialized();

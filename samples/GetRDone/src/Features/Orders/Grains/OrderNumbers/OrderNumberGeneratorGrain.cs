@@ -1,6 +1,7 @@
 using Continuum.CSharpFunctionalExtensions;
 using Continuum.CSharpFunctionalExtensions.Orleans;
 using Continuum.Domain.Orleans;
+using Continuum.Orleans.Events;
 using Continuum.Orleans.Tenancy;
 
 using GetRDone.Orders.Abstractions;
@@ -17,11 +18,19 @@ namespace GetRDone.Orders.Grains.OrderNumbers;
 [Authorize]
 [GrainType("orderNumberGenerator")]
 [LogConsistencyProvider(ProviderName = "EventLog")]
+[LoadMostRecentEventsOnly(RecentEventCount)]
 public sealed class OrderNumberGeneratorGrain
     : EventDrivenGrain<OrderNumberGeneratorState, OrderNumberGeneratorEvent>, IOrderNumberGeneratorGrain
 {
     /// <summary>The number a tenant's first order gets; the sample starts where the demo's numbers start.</summary>
     public const long FirstOrderNumber = 610_696;
+
+    /// <summary>
+    ///     How many of its most recent events the generator loads and keeps the orders of. A tenant's stream grows with
+    ///     every batch issued, so activation reads only these events; an order asked for again after this many later
+    ///     batches would be issued a new number, which the order ignores because it keeps the number it was assigned.
+    /// </summary>
+    public const int RecentEventCount = 100;
 
     private readonly IOrderPermissions _permissions;
     private readonly Func<Exception, Error> _grainCallErrorHandler;
@@ -80,8 +89,18 @@ public sealed class OrderNumberGeneratorState : EventDrivenState<OrderNumberGene
     /// <summary>The highest number issued, or 0 before the first.</summary>
     [Id(0)] public long LastOrderNumber { get; private set; }
 
-    /// <summary>The number issued to each order, by order ID, so an order is never issued a second number.</summary>
+    /// <summary>
+    ///     The number issued to each order of the generator's most recent events, by order ID, so an order asked for again
+    ///     is given the number it already has.
+    /// </summary>
     [Id(1)] public Dictionary<string, long> OrderNumbers { get; private set; } = [];
+
+    /// <summary>
+    ///     The order IDs of each of the generator's most recent events, oldest first. Only the last
+    ///     <see cref="OrderNumberGeneratorGrain.RecentEventCount" /> are kept, matching the events an activation loads, so a
+    ///     long-lived activation keeps the same orders as a new one.
+    /// </summary>
+    [Id(2)] public Queue<string[]> RecentOrderIds { get; private set; } = new();
 
     private void Handle(OrderNumbersIssued evt)
     {
@@ -89,6 +108,14 @@ public sealed class OrderNumberGeneratorState : EventDrivenState<OrderNumberGene
         {
             OrderNumbers[issued.OrderId] = issued.OrderNumber;
             LastOrderNumber = Math.Max(LastOrderNumber, issued.OrderNumber);
+        }
+        RecentOrderIds.Enqueue([.. evt.Numbers.Select(issued => issued.OrderId)]);
+        while (RecentOrderIds.Count > OrderNumberGeneratorGrain.RecentEventCount)
+        {
+            foreach (var orderId in RecentOrderIds.Dequeue())
+            {
+                OrderNumbers.Remove(orderId);
+            }
         }
     }
 }

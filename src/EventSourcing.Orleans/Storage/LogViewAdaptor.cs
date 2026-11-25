@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Reflection;
 
 using Continuum.Orleans.Events;
 using Continuum.Orleans.Transactions;
@@ -20,6 +21,10 @@ namespace Continuum.EventSourcing.Orleans;
 ///         The event log is the source of truth. The snapshot, with its version and e-tag, is only a cache that
 ///         speeds up activation; when it is missing or stale, the view is rebuilt from the log.
 ///     </para>
+///     <para>
+///         A grain with <see cref="LoadMostRecentEventsOnlyAttribute" /> rebuilds its view only from its most recent
+///         events: when the snapshot is missing or further behind than that, the view starts again from a new state.
+///     </para>
 /// </summary>
 /// <typeparam name="TLogView">Type of log view</typeparam>
 /// <typeparam name="TLogEntry">Type of log entry</typeparam>
@@ -32,6 +37,7 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
     private readonly ILogConsistentStorage _logStorage;
     private readonly DeepCopier _deepCopier;
     private readonly ITransactionIdGenerator _transactionIdGenerator;
+    private readonly int? _mostRecentEventCount;
 
     private SnapshotWithMetaDataAndETag<TLogView> _globalSnapshot = new();
     private TLogView _confirmedView = new();
@@ -60,6 +66,7 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
         _logStorage = logStorage;
         _deepCopier = deepCopier;
         _transactionIdGenerator = transactionIdGenerator;
+        _mostRecentEventCount = host.GetType().GetCustomAttribute<LoadMostRecentEventsOnlyAttribute>(inherit: true)?.Count;
     }
 
     /// <inheritdoc />
@@ -159,13 +166,7 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
                 }
                 try
                 {
-                    _globalVersion = await _logStorage.GetLastVersionAsync(_grainTypeName, Services.GrainId);
-                    if (_confirmedVersion < _globalVersion)
-                    {
-                        var logEntries = await RetrieveLogSegment(_confirmedVersion, _globalVersion);
-                        Services.Log(LogLevel.Debug, "read success {0}", logEntries);
-                        UpdateConfirmedView(logEntries);
-                    }
+                    await CatchUpWithLogAsync();
                     LastPrimaryIssue.Resolve(Host, Services);
                     break; // successful
                 }
@@ -261,13 +262,7 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
                     }
                     try
                     {
-                        _globalVersion = await _logStorage.GetLastVersionAsync(_grainTypeName, Services.GrainId);
-                        if (_confirmedVersion < _globalVersion)
-                        {
-                            var logEntries = await RetrieveLogSegment(_confirmedVersion, _globalVersion);
-                            Services.Log(LogLevel.Debug, "read success {0}", logEntries);
-                            UpdateConfirmedView(logEntries);
-                        }
+                        await CatchUpWithLogAsync();
                         // The append may have been committed even though it threw (for example, a timeout). If the
                         // entry after the expected version carries this attempt's transaction ID, the whole batch is in
                         // the log; it was just read into the confirmed view, so it must not be submitted again.
@@ -299,6 +294,43 @@ internal class LogViewAdaptor<TLogView, TLogEntry> : PrimaryBasedLogViewAdaptor<
     }
 
     #endregion
+
+    /// <summary>
+    ///     Brings the confirmed view, already loaded from the snapshot, up to the log's latest version.
+    /// </summary>
+    /// <remarks>
+    ///     A grain with <see cref="LoadMostRecentEventsOnlyAttribute" /> reads only its most recent events. When the view
+    ///     is further behind than those, the events in between are never read, so the view starts again from a new state.
+    /// </remarks>
+    private async Task CatchUpWithLogAsync()
+    {
+        if (_mostRecentEventCount is not { } count)
+        {
+            _globalVersion = await _logStorage.GetLastVersionAsync(_grainTypeName, Services.GrainId);
+            if (_confirmedVersion < _globalVersion)
+            {
+                var logEntries = await RetrieveLogSegment(_confirmedVersion, _globalVersion);
+                Services.Log(LogLevel.Debug, "read success {0}", logEntries);
+                UpdateConfirmedView(logEntries);
+            }
+            return;
+        }
+
+        var (version, entries) = await _logStorage.ReadMostRecentAsync<TLogEntry>(_grainTypeName, Services.GrainId, count);
+        Services.Log(LogLevel.Debug, "read success {0}", entries);
+        _globalVersion = version;
+        var firstVersion = version - entries.Count;
+        if (_confirmedVersion < firstVersion)
+        {
+            _confirmedView = new TLogView();
+            _confirmedVersion = firstVersion;
+            UpdateConfirmedView(entries);
+        }
+        else if (_confirmedVersion < version)
+        {
+            UpdateConfirmedView([.. entries.Skip(_confirmedVersion - firstVersion)]);
+        }
+    }
 
     /// <summary>
     ///     Appends the grain's entries and the participants' entries in one atomic write, in the order the business
