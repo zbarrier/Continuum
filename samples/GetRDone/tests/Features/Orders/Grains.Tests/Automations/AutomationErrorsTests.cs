@@ -2,17 +2,17 @@ using System.Net;
 
 using Continuum.CSharpFunctionalExtensions;
 
-using GetRDone.Orders.Automations;
+using GetRDone.Orders.Abstractions;
 
 using Grpc.Core;
 
 namespace GetRDone.Orders.Grains.Tests.Automations;
 
 /// <summary>
-///     Order numbers are required, so the automations skip an order only when its event can never be handled and retry
-///     every other failure, including unexpected and permission errors.
+///     The automations' work is required, so they skip an event only when it can never be handled and retry every other
+///     failure, including unexpected and permission errors.
 /// </summary>
-public sealed class OrderNumbersPendingExceptionTests
+public sealed class AutomationErrorsTests
 {
     [Theory]
     [InlineData(StatusCode.InvalidArgument, false)]
@@ -29,5 +29,5 @@ public sealed class OrderNumbersPendingExceptionTests
     [InlineData(StatusCode.Aborted, true)]
     [InlineData(StatusCode.ResourceExhausted, true)]
     public void IsRetryable_IsFalseOnlyWhenTheEventCanNeverBeHandled(StatusCode statusCode, bool isRetryable)
-        => Assert.Equal(isRetryable, OrderNumbersPendingException.IsRetryable(RequestErrors.New(HttpStatusCode.BadRequest, statusCode)));
+        => Assert.Equal(isRetryable, AutomationErrors.IsRetryable(RequestErrors.New(HttpStatusCode.BadRequest, statusCode)));
 }

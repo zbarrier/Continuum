@@ -11,9 +11,10 @@ namespace GetRDone.Orders.Abstractions;
 /// <remarks>
 ///     GetRDone.Identity seeds the same accounts (<c>IdentitySeeder</c>) with no password, so nobody can sign in as them,
 ///     and <c>SampleSeedData</c> lists them in the user directory; keep the IDs in sync. The worker is a trusted cluster
-///     client, so an automation signs in by building its own principal, with the claims GetRDone.Identity issues, rather
-///     than requesting a token (see <c>SignIn</c> in GetRDone.Orders.Automations). The grains use the accounts to
-///     authorize the automations' commands.
+///     client and a grain's reaction runs in the silo, so an automation signs in by building its own principal, with the
+///     claims GetRDone.Identity issues, rather than requesting a token (see <c>SignIn</c> in GetRDone.Orders.Automations
+///     and the order's reaction to an issued order number). The grains use the accounts to authorize the automations'
+///     commands.
 /// </remarks>
 public sealed class AutomationUser
 {

@@ -11,13 +11,13 @@ namespace GetRDone.Orders.Automations;
 
 /// <summary>
 ///     The first step of giving submitted orders their numbers: asks each tenant's order number generator to issue
-///     numbers to the orders submitted in a batch. The <see cref="OrderNumberAssigner"/> then gives each order the
-///     number it was issued.
+///     numbers to the orders submitted in a batch. Each order then reacts to the number it was issued, which the
+///     generator sends to the order's stream, by assigning it to itself.
 /// </summary>
 /// <remarks>
 ///     Runs as <see cref="AutomationUser.OrderNumberAssigner"/>. The generator issues an order only one number, so
 ///     retrying a batch that was partly issued issues nothing twice. Only an order that can never be issued a number is
-///     skipped (see <see cref="OrderNumbersPendingException.IsRetryable"/>); every other failure is retried.
+///     skipped (see <see cref="AutomationErrors.IsRetryable"/>); every other failure is retried.
 /// </remarks>
 public sealed partial class OrderNumberIssuer(IGrainFactory grainFactory, ILogger<OrderNumberIssuer> logger)
 {
@@ -58,7 +58,7 @@ public sealed partial class OrderNumberIssuer(IGrainFactory grainFactory, ILogge
             LogIssueThrewRetrying(exception, tenantId, orderIds.Length);
             return false;
         }
-        if (OrderNumbersPendingException.IsRetryable(error))
+        if (AutomationErrors.IsRetryable(error))
         {
             LogIssueFailedRetrying(tenantId, orderIds.Length, error);
             return false;

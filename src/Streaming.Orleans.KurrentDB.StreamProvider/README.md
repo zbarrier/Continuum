@@ -86,7 +86,7 @@ A resolved link carries the same event as the original, at a later `$all` positi
 
 ### Checkpoints
 
-The provider stores the `$all` commit position in an `ICheckpointStore<ulong>`.
+The provider stores the `$all` commit position in an `ICheckpointStore<ulong>`, resolved as a keyed service by `CheckpointConnectionName`. `builder.AddKurrentDBCheckpointStore(connectionName)` (namespace `Continuum.Orleans.Hosting`, shared with the self-hosted subscriptions) registers one that keeps the checkpoints in that KurrentDB database.
 
 The checkpoint only moves past an event once every active subscriber has read it and it has been purged from the cache, so a restart never skips an event a subscriber has not seen. Delivery is at least once, so after a restart some events may be delivered again.
 

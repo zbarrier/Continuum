@@ -31,11 +31,9 @@ builder.AddKurrentDBCheckpointStore(KurrentDBConnectionName);
 builder.Services.AddHealthChecks().AddKurrentDBCatchupSubscriptions();
 builder.Services.AddOpenTelemetry().WithMetrics(metrics => metrics.AddMeter(KurrentDBCatchupSubscriptionMetrics.MeterName));
 
-// The order number automations.
+// The order number automations. Each order assigns itself the number it was issued, reacting in the silo.
 builder.Services.AddSingleton<OrderNumberIssuer>();
-builder.Services.AddSingleton<OrderNumberAssigner>();
 AddSubscription(OrderNumberIssuerSubscription.Info);
-AddSubscription(OrderNumberAssignerSubscription.Info);
 
 var app = builder.Build();
 

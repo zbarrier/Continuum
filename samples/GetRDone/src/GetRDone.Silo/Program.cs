@@ -1,9 +1,11 @@
 using Continuum.Hosting;
 using Continuum.Hosting.Orleans;
+using Continuum.Orleans.Hosting;
 using Continuum.Streaming.Orleans;
 using Continuum.TypeMapping;
 
 using GetRDone;
+using GetRDone.Orders.Grains;
 using GetRDone.Orders.Grains.OrderAggregate;
 using GetRDone.Orders.Grains.ReadModels;
 
@@ -45,6 +47,10 @@ builder.Services.AddSingleton<IReadModelSeedData, SampleSeedData>();
 // A durable checkpoint with in-memory projections would skip every event before the restart.
 builder.AddSubscriptionCheckpointStore<ulong>(CheckpointConnectionName);
 
+// Where the order reactions' stream provider keeps its $all position. A reaction runs a command, so it must never run
+// again for an event it already handled: its checkpoint is durable, kept in KurrentDB with what the reactions produce.
+builder.AddKurrentDBCheckpointStore(GetRDoneStorage.DefaultConnectionName);
+
 builder.UseOrleans(silo =>
 {
     // Default grain storage for read-model grains. Orleans also resolves a grain storage provider when activating
@@ -76,6 +82,27 @@ builder.UseOrleans(silo =>
             options.CheckpointConnectionName = CheckpointConnectionName;
         }));
         // The projections only subscribe implicitly, so no pub/sub store is needed.
+        configurator.ConfigureStreamPubSub(StreamPubSubType.ImplicitOnly);
+    });
+
+    // Reads the order number generator streams from $all and delivers the issued numbers, which name the order's stream
+    // as a stream target, to the orders' implicit subscriptions. Its own provider and checkpoint keep the reactions from
+    // ever being replayed with the projections. See OrderReactors.
+    silo.AddKurrentDBStreams(OrderReactors.ProviderName, configurator =>
+    {
+        configurator.ConfigureKurrentDB(ob => ob.Configure(options =>
+        {
+            options.ConnectionName = GetRDoneStorage.DefaultConnectionName;
+            options.Name = OrderReactors.ProviderName;
+        }));
+        configurator.UseAllStreamCatchupSubscription(ob => ob.Configure(options =>
+        {
+            options.Filter = StreamFilter.Prefix("orderNumberGenerator-");
+            // The first run starts from now; after that the checkpoint resumes where the reactions left off.
+            options.StartFromNow = true;
+            options.CheckpointConnectionName = GetRDoneStorage.DefaultConnectionName;
+        }));
+        // The orders only subscribe implicitly, so no pub/sub store is needed.
         configurator.ConfigureStreamPubSub(StreamPubSubType.ImplicitOnly);
     });
 });

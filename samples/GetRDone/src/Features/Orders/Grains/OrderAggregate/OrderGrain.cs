@@ -2,8 +2,10 @@ using Continuum.CSharpFunctionalExtensions;
 using Continuum.CSharpFunctionalExtensions.Orleans;
 using Continuum.Domain.Orleans;
 using Continuum.Orleans.Events;
+using Continuum.Streaming;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
+using GetRDone.Orders.Abstractions.OrderNumbers;
 using GetRDone.Orders.Abstractions.ReadModels;
 using GetRDone.Orders.Grains.ReadModels;
 
@@ -11,14 +13,23 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 
 using Orleans.Providers;
+using Orleans.Streams;
+using Orleans.Streams.Core;
 
 namespace GetRDone.Orders.Grains.OrderAggregate;
 
+/// <remarks>
+///     The order reacts to the events that other grains send to it as a stream target, which the
+///     <see cref="OrderReactors"/> stream provider delivers on <see cref="OrderReactors.OrderNamespace"/>. Stream
+///     deliveries arrive through Orleans' stream consumer extension, which <see cref="AuthorizeAttribute"/> does not
+///     cover, so each reaction signs in as its automation account before it runs a command.
+/// </remarks>
 [Authorize]
-[GrainType("order")]
+[GrainType(OrderReactors.OrderCategory)]
+[ImplicitStreamSubscription(OrderReactors.OrderNamespace)]
 [LogConsistencyProvider(ProviderName = "EventLog")]
 public sealed partial class OrderGrain
-    : EventDrivenStateMachineGrain<OrderState, OrderEvent, OrderStatus, OrderCommand>, IOrderGrain
+    : EventDrivenStateMachineGrain<OrderState, OrderEvent, OrderStatus, OrderCommand>, IOrderGrain, IStreamSubscriptionObserver
 {
     private readonly IOrderPermissions _permissions;
     private readonly ILogger<OrderGrain> _logger;
@@ -43,6 +54,20 @@ public sealed partial class OrderGrain
         var startedBy = @event is OrderDraftStarted started ? started.InitiatedBy : State.StartedBy;
         return startedBy is null ? [] : [StreamTarget.Transaction(OrderProjections.ClientUserOrdersStreamTarget(startedBy))];
     }
+
+    /// <summary>Attaches to the subscription the runtime created for the order's reactions.</summary>
+    public async Task OnSubscribed(IStreamSubscriptionHandleFactory handleFactory)
+        => await handleFactory.Create<IStreamedEvent<object>>().ResumeAsync((streamedEvent, _) => ReactAsync(streamedEvent.Event));
+
+    /// <summary>
+    ///     Runs the reaction to an event delivered to the order. A reaction that throws has the event delivered again until
+    ///     it succeeds, so it throws only for failures that may pass.
+    /// </summary>
+    private Task ReactAsync(object @event) => @event switch
+    {
+        OrderNumberIssued issued => ReactToOrderNumberIssuedAsync(issued),
+        _ => Task.CompletedTask
+    };
 }
 
 public enum OrderStatus
@@ -83,7 +108,7 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>Whether the Borrower &amp; Access contact tab was saved, which the order needs to be submitted.</summary>
     [Id(3)] public bool HasBorrower { get; private set; }
 
-    /// <summary>The order's number, or null until the Order Number Assigner gives the submitted order its number.</summary>
+    /// <summary>The order's number, or null until the order is given the number the generator issued it.</summary>
     [Id(4)] public long? OrderNumber { get; private set; }
 
     protected override void ConfigureEventHandlers()

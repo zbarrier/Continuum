@@ -31,8 +31,9 @@ public sealed class OrdersSiloConfigurator : ISiloConfigurator
         siloBuilder.Services.AddSingleton<IOrderPermissions, OrderPermissions>();
         siloBuilder.Services.AddSingleton<IReadModelSeedData, TestReadModelSeedData>();
 
-        // Memory streams stand in for the KurrentDB stream provider, so the tests produce the events it would deliver.
+        // Memory streams stand in for the KurrentDB stream providers, so the tests produce the events they would deliver.
         siloBuilder.AddMemoryStreams(OrderProjections.ProviderName, b => b.ConfigureStreamPubSub(StreamPubSubType.ImplicitOnly));
+        siloBuilder.AddMemoryStreams(OrderReactors.ProviderName, b => b.ConfigureStreamPubSub(StreamPubSubType.ImplicitOnly));
         siloBuilder.AddMemoryGrainStorage(OrderProjections.StorageName);
         siloBuilder.Services.AddOptions<MemoryGrainStorageOptions>(OrderProjections.StorageName)
             .PostConfigure<Serializer>((options, serializer) => options.GrainStorageSerializer = new OrleansGrainStorageSerializer(serializer));
@@ -42,7 +43,9 @@ public sealed class OrdersSiloConfigurator : ISiloConfigurator
 public sealed class OrdersClientConfigurator : IClientBuilderConfigurator
 {
     public void Configure(IConfiguration configuration, IClientBuilder clientBuilder)
-        => clientBuilder.AddMemoryStreams(OrderProjections.ProviderName);
+        => clientBuilder
+            .AddMemoryStreams(OrderProjections.ProviderName)
+            .AddMemoryStreams(OrderReactors.ProviderName);
 }
 
 public sealed class OrdersCluster : IAsyncLifetime
