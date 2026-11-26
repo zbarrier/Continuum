@@ -53,6 +53,7 @@ public sealed class SubmitOrderTests
             OrderNumber = (long?)null,
             NewOrderNoticeSent = false,
             AssignedTo = (string?)null,
+            VendorAssignment = (OrderVendorAssignment?)null,
             DocumentRequests = new Dictionary<string, OrderDocumentRequest>(),
             DescriptionOfWork = (OrderDescriptionOfWork?)null
         }, state, strict: true);

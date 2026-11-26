@@ -25,6 +25,15 @@ public static class TestData
     public const string LakeviewCreditUnionClientId = "summit|9b3e7d21";
     public const string HarborNationalBankClientId = "summit|2f6a8c14";
 
+    public const string RidgeAppraisalGroupVendorId = "summit|5e1c9a37";
+    public const string CedarPointAppraisalsVendorId = "summit|b8d24f60";
+
+    /// <summary>A vendor ID the test tenant's assignable vendors don't list.</summary>
+    public const string UnknownVendorId = "summit|0f7e3a91";
+
+    public static AssignableVendor RidgeAppraisalGroup { get; } = new(RidgeAppraisalGroupVendorId, "Ridge Appraisal Group", ["NC", "SC"]);
+    public static AssignableVendor CedarPointAppraisals { get; } = new(CedarPointAppraisalsVendorId, "Cedar Point Appraisals", ["NC"]);
+
     public static IntendedUse Refinance { get; } = new("summit|7a1d0c42", 2, "Refinance");
     public static IntendedUse Purchase { get; } = new("summit|3e8b5f19", 1, "Purchase");
 
@@ -59,6 +68,17 @@ public static class TestData
     public static UserDirectoryEntry TenantAdmin1 { get; } = DirectoryEntry(
         RequestedByUsers.TenantAdmin1, "Tenant Admin", "Summit Valuation", clientId: null);
 
+    public static UserDirectoryEntry VendorUser1 { get; } = DirectoryEntry(
+        RequestedByUsers.VendorUser1, "Certified Residential Appraiser", "Ridge Appraisal Group", clientId: null,
+        RidgeAppraisalGroupVendorId);
+
+    public static UserDirectoryEntry VendorUser2 { get; } = DirectoryEntry(
+        RequestedByUsers.VendorUser2, "Office Manager", "Ridge Appraisal Group", clientId: null, RidgeAppraisalGroupVendorId);
+
+    public static UserDirectoryEntry OtherVendorUser1 { get; } = DirectoryEntry(
+        RequestedByUsers.OtherVendorUser1, "Certified General Appraiser", "Cedar Point Appraisals", clientId: null,
+        CedarPointAppraisalsVendorId);
+
     /// <summary>The Order Number Assigner's account, which acts for the AMC but is not one of its staff.</summary>
     public static UserDirectoryEntry OrderNumberAssigner { get; } = new(
         AutomationUser.OrderNumberAssigner.GetTenantUserId(TenantId), AutomationUser.OrderNumberAssigner.DisplayName,
@@ -70,8 +90,16 @@ public static class TestData
 
     public static OrderableService[] OrderableServices { get; } = [ResidentialAppraisal, CommercialAppraisal];
 
-    public static UserDirectoryEntry[] Users { get; } = [ClientUser1, ClientUser2, Director1, Coordinator1, TenantAdmin1, OrderNumberAssigner];
+    public static UserDirectoryEntry[] Users { get; } =
+    [
+        ClientUser1, ClientUser2, Director1, Coordinator1, TenantAdmin1, OrderNumberAssigner, VendorUser1, VendorUser2,
+        OtherVendorUser1
+    ];
 
-    private static UserDirectoryEntry DirectoryEntry(ClaimsPrincipal user, string title, string organizationName, string? clientId)
-        => new(user.GetTenantUserId(), user.Identity!.Name!, title, organizationName, user.FindFirstValue(JwtClaimTypes.Email)!, clientId);
+    public static AssignableVendor[] Vendors { get; } = [RidgeAppraisalGroup, CedarPointAppraisals];
+
+    private static UserDirectoryEntry DirectoryEntry(
+        ClaimsPrincipal user, string title, string organizationName, string? clientId, string? vendorId = null)
+        => new(user.GetTenantUserId(), user.Identity!.Name!, title, organizationName, user.FindFirstValue(JwtClaimTypes.Email)!,
+            clientId, vendorId);
 }

@@ -17,11 +17,12 @@ public interface IUserDirectoryGrain : IGrainWithStringKey
     [ReadOnly]
     Task<Result> IsClientUserAsync(UserId userId, ClientId clientId);
 
-    /// <summary>Succeeds when the user is one of the AMC's staff: not a client user and not an automation account.</summary>
+    /// <summary>Succeeds when the user is one of the AMC's staff: not a client user, a vendor user or an automation account.</summary>
     [ReadOnly]
     Task<Result> IsStaffUserAsync(UserId userId);
 }
 
+/// <summary>A user of the tenant: a client user has a <see cref="ClientId"/>, a vendor user a <see cref="VendorId"/>, and the AMC's staff neither.</summary>
 [GenerateSerializer, Immutable]
 public sealed record UserDirectoryEntry(
     string UserId,
@@ -29,7 +30,8 @@ public sealed record UserDirectoryEntry(
     string Title,
     string OrganizationName,
     string Email,
-    string? ClientId)
+    string? ClientId,
+    string? VendorId = null)
 {
     /// <summary>
     ///     The title of the AMC staff member who assigns new orders, and so is told about them. A full application would

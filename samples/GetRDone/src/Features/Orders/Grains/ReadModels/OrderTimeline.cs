@@ -12,6 +12,7 @@ namespace GetRDone.Orders.Grains.ReadModels;
 /// <param name="OrderNumber">The number the order was given.</param>
 /// <param name="DocumentTypeName">The type of document requested or provided.</param>
 /// <param name="DescriptionOfWorkVersion">The version of the description of work submitted or approved.</param>
+/// <param name="VendorId">The vendor the order was assigned to, as a tenant-qualified vendor ID.</param>
 [GenerateSerializer, Immutable]
 public sealed record OrderTimelineItem(
     DateTimeOffset OccurredAt,
@@ -19,7 +20,8 @@ public sealed record OrderTimelineItem(
     string? UserId,
     long? OrderNumber,
     string? DocumentTypeName = null,
-    int? DescriptionOfWorkVersion = null);
+    int? DescriptionOfWorkVersion = null,
+    string? VendorId = null);
 
 public enum OrderTimelineKind
 {
@@ -30,22 +32,32 @@ public enum OrderTimelineKind
     DocumentRequested,
     DocumentProvided,
     DescriptionOfWorkSubmitted,
-    DescriptionOfWorkApproved
+    DescriptionOfWorkApproved,
+    VendorAssigned
 }
 
-/// <summary>Turns the timeline the projections store into what the staff and client order pages show.</summary>
+/// <summary>Who reads a timeline; each sees the vendor assignment in their own words.</summary>
+public enum OrderTimelineAudience
+{
+    Staff,
+    Client,
+    Vendor
+}
+
+/// <summary>Turns the timeline the projections store into what the staff, client and vendor order pages show.</summary>
 internal static class OrderTimeline
 {
     /// <summary>The order's timeline, newest first; entries at the same time keep the order they happened in, reversed.</summary>
-    public static OrderTimelineEntry[] Describe(IReadOnlyList<OrderTimelineItem> items, UserDirectoryNames names)
+    public static OrderTimelineEntry[] Describe(
+        IReadOnlyList<OrderTimelineItem> items, UserDirectoryNames names, OrderTimelineAudience audience)
         => items
             .Select((item, index) => (Item: item, Index: index))
             .OrderByDescending(entry => entry.Item.OccurredAt)
             .ThenByDescending(entry => entry.Index)
-            .Select(entry => new OrderTimelineEntry(entry.Item.OccurredAt, Describe(entry.Item, names)))
+            .Select(entry => new OrderTimelineEntry(entry.Item.OccurredAt, Describe(entry.Item, names, audience)))
             .ToArray();
 
-    private static string Describe(OrderTimelineItem item, UserDirectoryNames names)
+    private static string Describe(OrderTimelineItem item, UserDirectoryNames names, OrderTimelineAudience audience)
     {
         var userName = names.UserName(item.UserId) ?? "an unknown user";
         return item.Kind switch
@@ -61,6 +73,13 @@ internal static class OrderTimeline
             OrderTimelineKind.DescriptionOfWorkSubmitted => $"Description of work submitted by {userName}",
             OrderTimelineKind.DescriptionOfWorkApproved
                 => $"Description of work version {item.DescriptionOfWorkVersion} approved by {userName}",
+            OrderTimelineKind.VendorAssigned => audience switch
+            {
+                OrderTimelineAudience.Staff
+                    => $"Assigned to vendor {names.VendorName(item.VendorId) ?? "an unknown vendor"} by {userName}",
+                OrderTimelineAudience.Vendor => $"Assigned to you by {names.OrganizationName(item.UserId) ?? "the AMC"}",
+                _ => "Appraiser assigned"
+            },
             _ => item.Kind.ToString()
         };
     }

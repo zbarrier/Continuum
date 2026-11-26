@@ -44,6 +44,7 @@ public sealed class UserDirectoryGrain(
         var isStaffUser = state.State.Users.Any(item =>
             item.UserId == (string)userId
             && item.ClientId is null
+            && item.VendorId is null
             && item.Title != UserDirectoryEntry.AutomationTitle);
 
         return Task.FromResult(isStaffUser

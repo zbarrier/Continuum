@@ -71,6 +71,21 @@ public interface IOrderPermissions
     ///     asks whether it was sent.
     /// </summary>
     Result CanSendDescriptionOfWorkApprovedNotice(UserId userId);
+
+    /// <summary>
+    ///     The staff member the order is assigned to, the Client Services Director or the tenant admin assigns the order to a
+    ///     vendor.
+    /// </summary>
+    Result CanAssignVendor(ClaimsPrincipal user, UserId userId, OrderState order);
+
+    /// <summary>Orders are assigned only to the vendors on the tenant's list of assignable vendors.</summary>
+    Task<Result> CanBeAssignedVendorAsync(VendorId vendorId);
+
+    /// <summary>The notice of an assigned order goes only to users of the vendor the order is assigned to.</summary>
+    Task<Result> AreVendorUsersAsync(VendorId vendorId, IReadOnlyCollection<string> userIds);
+
+    /// <summary>Only the Vendor Assignment Notifier automation sends the notice of an assigned order and asks whether it was sent.</summary>
+    Result CanSendVendorAssignedNotice(UserId userId);
 }
 
 public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermissions
@@ -169,6 +184,34 @@ public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermiss
             ? Result.Success()
             : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
                 "Only the Description of Work Approved Notifier can send the notices of approved descriptions of work."));
+
+    public Result CanAssignVendor(ClaimsPrincipal user, UserId userId, OrderState order)
+        => order.AssignedTo == (string)userId || user.IsInAnyRole(StaffRoles.OrderAssigners)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the staff member the order is assigned to, the Client Services Director or the tenant admin can assign the order to a vendor."));
+
+    public Task<Result> CanBeAssignedVendorAsync(VendorId vendorId)
+        => grainFactory.GetAssignableVendorsGrain(vendorId.TenantId)
+            .IsAssignableVendorAsync(vendorId)
+            .MapError(_ => (Error)RequestErrors.NewInvalidArg("Orders can only be assigned to the tenant's assignable vendors."));
+
+    public async Task<Result> AreVendorUsersAsync(VendorId vendorId, IReadOnlyCollection<string> userIds)
+    {
+        var vendorUsers = (await grainFactory.GetUserDirectoryGrain(vendorId.TenantId).GetUsersAsync())
+            .Where(user => user.VendorId == (string)vendorId)
+            .Select(user => user.UserId)
+            .ToHashSet(StringComparer.Ordinal);
+        return userIds.All(vendorUsers.Contains)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.NewInvalidArg("The notice must go only to users of the vendor the order is assigned to."));
+    }
+
+    public Result CanSendVendorAssignedNotice(UserId userId)
+        => IsAutomation(AutomationUser.VendorAssignmentNotifier, userId)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the Vendor Assignment Notifier can send the notices of orders assigned to vendors."));
 
     private static bool IsAutomation(AutomationUser account, UserId userId)
         => userId.TenantId is { } tenantId && (string)userId == account.GetTenantUserId(tenantId);

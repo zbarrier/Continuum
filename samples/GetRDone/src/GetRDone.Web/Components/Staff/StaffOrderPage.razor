@@ -1,8 +1,8 @@
-@* The staff order page (event model chapter 2, Order screens): the OrderDetails read model, with the actions the signed-in
-   user can take, such as requesting documents from the client and writing the description of work for the client to
-   approve. Each document links to its download (OrderDocumentDownloads). The description of work is HTML from the rich
-   text editor; it is sanitized again before it is shown. OrderDetails is a projection, so after an action the page waits
-   for it to show the change. *@
+@* The staff order page (event model chapters 2 and 3, Order screens): the OrderDetails read model, with the actions the
+   signed-in user can take, such as requesting documents from the client, writing the description of work for the client to
+   approve and assigning the approved order to a vendor. Each document links to its download (OrderDocumentDownloads). The
+   description of work is HTML from the rich text editor; it is sanitized again before it is shown. OrderDetails is a
+   projection, so after an action the page waits for it to show the change. *@
 @page "/staff/orders/{OrderGuid:guid}"
 @attribute [Authorize(Roles = StaffRoles.AnyStaff)]
 @using Continuum.CSharpFunctionalExtensions
@@ -51,6 +51,16 @@
                             <td>@details.AccessContactName @DisplayFormat.Phone(details.AccessContactPhone)</td>
                         </tr>
                         <tr><th>Assigned to</th><td>@(details.AssignedToName ?? "Nobody yet")</td></tr>
+                        @if (details.Vendor is { } vendor)
+                        {
+                            <tr>
+                                <th>Vendor</th>
+                                <td>
+                                    @(vendor.VendorName ?? "An unknown vendor"), @vendor.VendorFee.ToString("C", UnitedStates),
+                                    due @vendor.VendorDueDate.ToString("MMM d, yyyy")
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </MudSimpleTable>
 
@@ -67,7 +77,31 @@
                     {
                         <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_busy" OnClick="StartRequestAsync">Request a document</MudButton>
                     }
+                    @if (details.AllowedActions.HasFlag(OrderActions.AssignVendor) && !_assigningVendor)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="StartVendorAssignmentAsync">Assign a vendor</MudButton>
+                    }
                 </MudStack>
+
+                @if (_assigningVendor)
+                {
+                    <MudPaper Outlined="true" Class="pa-4 mt-4">
+                        <MudText Typo="Typo.h6" Class="mb-2">Assign a vendor</MudText>
+                        <MudSelect T="AssignableVendor" Label="Vendor" @bind-Value="_vendor" ToStringFunc="@(vendor => vendor?.Name)">
+                            @foreach (var vendor in _vendors)
+                            {
+                                <MudSelectItem Value="vendor">@vendor.Name (licensed in @string.Join(", ", vendor.LicensedStates))</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudNumericField T="decimal?" @bind-Value="_vendorFee" Label="Vendor fee" Adornment="Adornment.Start" AdornmentText="$"
+                                         Min="VendorFee.MinValue" Max="VendorFee.MaxValue" Format="0.00" HideSpinButtons="true" Class="mt-2" />
+                        <MudDatePicker @bind-Date="_vendorDueDate" Label="Vendor due date" MinDate="DateTime.Today" Class="mt-2" />
+                        <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="mt-4">
+                            <MudButton Variant="Variant.Text" Disabled="_busy" OnClick="CancelVendorAssignment">Cancel</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="AssignVendorAsync">Assign</MudButton>
+                        </MudStack>
+                    </MudPaper>
+                }
 
                 @if (_requesting)
                 {
@@ -202,6 +236,14 @@
     private string _requestMessage = "";
     private bool _writingDescriptionOfWork;
     private string _descriptionOfWorkHtml = "";
+    private bool _assigningVendor;
+    private AssignableVendor[] _vendors = [];
+    private AssignableVendor? _vendor;
+    private decimal? _vendorFee;
+    private DateTime? _vendorDueDate;
+
+    /// <summary>The sample's AMCs are in the United States, so fees are shown in dollars whatever the server's culture.</summary>
+    private static readonly System.Globalization.CultureInfo UnitedStates = System.Globalization.CultureInfo.GetCultureInfo("en-US");
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
@@ -224,6 +266,7 @@
         StaffOrderStatus.Acknowledged => Color.Success,
         StaffOrderStatus.DescriptionOfWorkAwaitingApproval => Color.Secondary,
         StaffOrderStatus.DescriptionOfWorkApproved => Color.Success,
+        StaffOrderStatus.VendorAssigned => Color.Primary,
         _ => Color.Default
     };
 
@@ -231,6 +274,7 @@
     {
         StaffOrderStatus.DescriptionOfWorkAwaitingApproval => "Awaiting DoW approval",
         StaffOrderStatus.DescriptionOfWorkApproved => "DoW approved",
+        StaffOrderStatus.VendorAssigned => "Vendor assigned",
         _ => status.ToString()
     };
 
@@ -312,6 +356,42 @@
     }
 
     private void CancelDescriptionOfWork() => _writingDescriptionOfWork = false;
+
+    private async Task StartVendorAssignmentAsync()
+    {
+        _error = null;
+        try
+        {
+            TenantKey.Split(_orderId, out var tenantId, out _);
+            _vendors = await ClusterClient.GetAssignableVendorsGrain(tenantId).GetVendorsAsync();
+            _vendor = null;
+            _vendorFee = null;
+            _vendorDueDate = null;
+            _assigningVendor = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The vendors could not be loaded for order {OrderId}.", _orderId);
+            _error = "The vendors could not be loaded. Try again in a moment.";
+        }
+    }
+
+    private void CancelVendorAssignment() => _assigningVendor = false;
+
+    /// <summary>Sends what was entered as is; the order grain reports a missing or invalid value.</summary>
+    private async Task AssignVendorAsync()
+    {
+        var command = new AssignVendorCommand(
+            _vendor?.VendorId ?? "",
+            _vendorFee ?? 0,
+            _vendorDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate) : default);
+        var saved = await RunAsync(async order => (await order.AssignVendorAsync(command)).Map(_ => true),
+            details => details.Vendor is not null);
+        if (saved)
+        {
+            _assigningVendor = false;
+        }
+    }
 
     /// <summary>
     ///     Submits the first version with a new ID, or a revision of the version shown, so a revision based on a version

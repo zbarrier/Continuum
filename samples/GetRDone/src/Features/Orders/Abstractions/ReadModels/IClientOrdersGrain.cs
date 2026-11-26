@@ -32,7 +32,10 @@ public enum ClientOrderStatus
     DescriptionOfWorkAwaitingApproval,
 
     /// <summary>The client approved the order's description of work.</summary>
-    DescriptionOfWorkApproved
+    DescriptionOfWorkApproved,
+
+    /// <summary>The AMC assigned the order to an appraiser.</summary>
+    VendorAssigned
 }
 
 /// <summary>A submitted order on the client user's My orders list.</summary>

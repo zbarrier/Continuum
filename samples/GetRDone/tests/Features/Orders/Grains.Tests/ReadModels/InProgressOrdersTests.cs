@@ -132,6 +132,25 @@ public sealed class InProgressOrdersTests
     }
 
     [Fact]
+    public async Task VendorAssigned_ShowsTheOrderIsAssignedToAVendor()
+    {
+        var orderId = NewOrderId();
+        GivenSignedIn(RequestedByUsers.Director1);
+
+        await Given(
+        [
+            .. Submitted(Command1, orderId),
+            AssignOrderTestData.OrderAssigned1(orderId, TestData.At.AddMinutes(2)),
+            AcknowledgeOrderTestData.Acknowledged1(orderId, TestData.At.AddMinutes(3)),
+            DescriptionOfWorkTestData.Submitted1(orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(orderId, occurredAt: TestData.At.AddMinutes(5)),
+            VendorAssignmentTestData.Assigned1(orderId, occurredAt: TestData.At.AddMinutes(6))
+        ]);
+
+        Then(state => Assert.Equal(StaffOrderStatus.VendorAssigned, state.Orders[orderId].Status));
+    }
+
+    [Fact]
     public async Task Orders_ListTheOrdersDueFirstFirstWithTheirClientsAndAssigneesNames()
     {
         var (order1, order2) = (NewOrderId(), NewOrderId());

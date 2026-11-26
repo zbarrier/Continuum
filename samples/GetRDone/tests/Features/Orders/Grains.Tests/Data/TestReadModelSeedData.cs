@@ -6,7 +6,7 @@ namespace GetRDone.Orders.Grains.Tests.Data;
 public sealed class TestReadModelSeedData : IReadModelSeedData
 {
     private static readonly ReadModelSeed Seed = new(
-        TestData.IntendedUses, TestData.DocumentTypes, TestData.OrderableServices, TestData.Users);
+        TestData.IntendedUses, TestData.DocumentTypes, TestData.OrderableServices, TestData.Users, TestData.Vendors);
 
     public ReadModelSeed? GetSeed(string? tenantId) => tenantId == TestData.TenantId ? Seed : null;
 }

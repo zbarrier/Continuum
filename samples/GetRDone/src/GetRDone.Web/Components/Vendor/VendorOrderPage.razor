@@ -1,0 +1,148 @@
+@* The vendor order page (event model chapter 3, Vendor screens): the VendorOrderDetails read model, with what the vendor
+   needs to do the work: the property, the access contact, the fee and due date and the approved description of work. The
+   description of work is sanitized again before it is shown. *@
+@page "/vendor/orders/{OrderGuid:guid}"
+@attribute [Authorize(Roles = "vendor")]
+@using Continuum.Orleans.Tenancy
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
+@inject ILogger<VendorOrderPage> Logger
+
+<PageTitle>@Title · Get-R-Done</PageTitle>
+
+<MudPaper Elevation="1" Class="pa-6">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4">
+        <MudText Typo="Typo.h5">@Title</MudText>
+        @if (_details is not null)
+        {
+            <MudChip T="string" Size="Size.Small" Color="StatusColor(_details.Status)">@StatusText(_details.Status)</MudChip>
+        }
+        <MudSpacer />
+        <MudButton Variant="Variant.Text" Href="/">Home</MudButton>
+    </MudStack>
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+    }
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_details is { } details)
+    {
+        <MudGrid>
+            <MudItem xs="12" md="7">
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <tbody>
+                        <tr><th>Client</th><td>@(details.ClientName ?? "An unknown client")</td></tr>
+                        <tr><th>Form type</th><td>@details.FormTypeName</td></tr>
+                        <tr><th>Property</th><td>@details.PropertyAddress</td></tr>
+                        <tr>
+                            <th>Access contact</th>
+                            <td>@(details.AccessContactName ?? "None") @DisplayFormat.Phone(details.AccessContactPhone)</td>
+                        </tr>
+                        <tr><th>Fee</th><td>@details.VendorFee.ToString("C", UnitedStates)</td></tr>
+                        <tr><th>Due</th><td>@details.VendorDueDate.ToString("MMM d, yyyy")</td></tr>
+                    </tbody>
+                </MudSimpleTable>
+
+                <MudText Typo="Typo.h6" Class="mt-6 mb-2">Description of work</MudText>
+                @* MudHtmlViewer is height: 100%, which in a grid item is the whole row's height; a div of its own keeps it to its content. *@
+                <div>
+                    <MudHtmlViewer Html="@DescriptionOfWorkHtml.Sanitize(details.DescriptionOfWork.Html)" />
+                </div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Version @details.DescriptionOfWork.Version, approved by the client</MudText>
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <MudText Typo="Typo.h6" Class="mb-2">Timeline</MudText>
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <tbody>
+                        @foreach (var entry in details.Timeline)
+                        {
+                            <tr>
+                                <td style="white-space:nowrap">@entry.OccurredAt.ToLocalTime().ToString("MMM d, h:mm tt")</td>
+                                <td>@entry.Entry</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudItem>
+        </MudGrid>
+    }
+</MudPaper>
+
+@code {
+    /// <summary>The sample's AMCs are in the United States, so fees are shown in dollars whatever the server's culture.</summary>
+    private static readonly System.Globalization.CultureInfo UnitedStates = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+
+    private bool _loading = true;
+    private string? _error;
+    private string _orderId = "";
+    private VendorOrderDetails? _details;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    /// <summary>The order to show. The URL carries only the GUID part of the order ID.</summary>
+    [Parameter]
+    public Guid OrderGuid { get; set; }
+
+    /// <summary>The URL of the vendor order page of <paramref name="orderId"/>, <c>{TenantId}|{OrderGuid}</c>.</summary>
+    public static string Url(string orderId)
+    {
+        TenantKey.Split(orderId, out _, out var orderGuid);
+        return $"vendor/orders/{orderGuid}";
+    }
+
+    public static Color StatusColor(VendorOrderStatus status) => status switch
+    {
+        VendorOrderStatus.Assigned => Color.Primary,
+        _ => Color.Default
+    };
+
+    public static string StatusText(VendorOrderStatus status) => status switch
+    {
+        VendorOrderStatus.Assigned => "Assigned",
+        _ => status.ToString()
+    };
+
+    private string Title => _details?.OrderNumber is { } orderNumber ? $"Order {orderNumber}" : "Order";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+        _details = null;
+
+        var tenantId = (await AuthenticationState).User.FindFirst("tenant_id")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            _error = "Your account has no tenant.";
+            _loading = false;
+            return;
+        }
+        _orderId = TenantKey.Create(tenantId, OrderGuid.ToString());
+
+        try
+        {
+            var result = await ClusterClient.GetVendorOrderDetailsGrain(_orderId).GetVendorOrderDetailsAsync();
+            if (result.IsFailure)
+            {
+                _error = result.Error.GetFormattedMessage();
+                return;
+            }
+            _details = result.Value;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The vendor order page could not load order {OrderId}.", _orderId);
+            _error = "The order could not be loaded. Try again in a moment.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

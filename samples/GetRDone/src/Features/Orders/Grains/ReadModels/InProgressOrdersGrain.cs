@@ -65,6 +65,7 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
         On<OrderAcknowledged>(Apply);
         On<DescriptionOfWorkSubmitted>(Apply);
         On<DescriptionOfWorkApproved>(Apply);
+        On<VendorAssigned>(Apply);
     }
 
     /// <summary>
@@ -136,6 +137,9 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
 
     private bool Apply(DescriptionOfWorkApproved evt, IStreamedEvent<object> streamedEvent)
         => SetStatus(evt.OrderId, StaffOrderStatus.DescriptionOfWorkApproved);
+
+    private bool Apply(VendorAssigned evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, StaffOrderStatus.VendorAssigned);
 
     private bool SetStatus(string orderId, StaffOrderStatus status)
     {

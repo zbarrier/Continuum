@@ -31,27 +31,43 @@ internal static class StaffReadModels
             : Result.Failure(RequestErrors.NewInvalidArg("Skip must not be negative and take must be at least one."));
 }
 
-/// <summary>The names of a tenant's users and clients, from its user directory.</summary>
+/// <summary>The names of a tenant's users, clients and vendors, from its user directory and its assignable vendors.</summary>
 internal sealed class UserDirectoryNames
 {
-    private readonly Dictionary<string, string> _userNames;
+    private readonly Dictionary<string, UserDirectoryEntry> _users;
     private readonly Dictionary<string, string> _clientNames;
+    private readonly Dictionary<string, string> _vendorNames;
 
-    private UserDirectoryNames(UserDirectoryEntry[] users)
+    private UserDirectoryNames(UserDirectoryEntry[] users, AssignableVendor[] vendors)
     {
-        _userNames = users.ToDictionary(user => user.UserId, user => user.DisplayName, StringComparer.Ordinal);
+        _users = users.ToDictionary(user => user.UserId, StringComparer.Ordinal);
         _clientNames = users
             .Where(user => user.ClientId is not null)
             .DistinctBy(user => user.ClientId)
             .ToDictionary(user => user.ClientId!, user => user.OrganizationName, StringComparer.Ordinal);
+        _vendorNames = vendors.ToDictionary(vendor => vendor.VendorId, vendor => vendor.Name, StringComparer.Ordinal);
     }
 
     public static async Task<UserDirectoryNames> LoadAsync(IGrainFactory grainFactory, string? tenantId)
-        => new(await grainFactory.GetUserDirectoryGrain(tenantId).GetUsersAsync());
+    {
+        var users = grainFactory.GetUserDirectoryGrain(tenantId).GetUsersAsync();
+        var vendors = grainFactory.GetAssignableVendorsGrain(tenantId).GetVendorsAsync();
+        return new(await users, await vendors);
+    }
 
     /// <summary>The user's display name, or null when the directory doesn't know them.</summary>
-    public string? UserName(string? userId) => userId is not null && _userNames.TryGetValue(userId, out var name) ? name : null;
+    public string? UserName(string? userId) => userId is not null && _users.TryGetValue(userId, out var user) ? user.DisplayName : null;
+
+    /// <summary>The name of the organization the user works for, or null when the directory doesn't know them.</summary>
+    public string? OrganizationName(string? userId)
+        => userId is not null && _users.TryGetValue(userId, out var user) ? user.OrganizationName : null;
+
+    /// <summary>The vendor the user works for, as a tenant-qualified vendor ID, or null when they are not a vendor user.</summary>
+    public string? VendorIdOf(string? userId) => userId is not null && _users.TryGetValue(userId, out var user) ? user.VendorId : null;
 
     /// <summary>The client's organization name, from any of its users, or null when the directory doesn't know the client.</summary>
     public string? ClientName(string clientId) => _clientNames.GetValueOrDefault(clientId);
+
+    /// <summary>The vendor's name, or null when the tenant's assignable vendors don't list it.</summary>
+    public string? VendorName(string? vendorId) => vendorId is not null ? _vendorNames.GetValueOrDefault(vendorId) : null;
 }

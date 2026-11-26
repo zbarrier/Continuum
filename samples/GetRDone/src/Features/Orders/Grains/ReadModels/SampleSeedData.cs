@@ -33,7 +33,15 @@ public sealed class SampleSeedData : IReadModelSeedData
     /// <remarks>GetRDone.Identity seeds the same user ID (IdentitySeeder.AveryAdminUserId); keep them in sync.</remarks>
     public const string AveryAdminUserId = "elliott|7d4a9e63-0f5b-4c8d-9e3a-4b6c8d0f2e35";
 
+    /// <summary>Miller Valuation Group, the vendor Elliott &amp; Company assigns orders to in the event model.</summary>
+    public const string MillerValuationGroupVendorId = "elliott|61a7d2c9";
+
+    /// <summary>Mike Miller, the owner of Miller Valuation Group.</summary>
+    /// <remarks>GetRDone.Identity seeds the same user ID (IdentitySeeder.MikeMillerUserId); keep them in sync.</remarks>
+    public const string MikeMillerUserId = "elliott|5701c3e9-2a4b-4c6d-8e0f-1a2b3c4d5e6f";
+
     private const string ElliottAndCompany = "Elliott & Company";
+    private const string MillerValuationGroup = "Miller Valuation Group";
 
     private static readonly ReadModelSeed Seed = new(
         IntendedUses:
@@ -72,11 +80,18 @@ public sealed class SampleSeedData : IReadModelSeedData
             new(MorganCoordinatorUserId, "Morgan Coordinator", "Coordinator", ElliottAndCompany, "coordinator@getrdone.local", null),
             new(RileyReviewerUserId, "Riley Reviewer", "Reviewer", ElliottAndCompany, "reviewer@getrdone.local", null),
             new(AveryAdminUserId, "Avery Admin", "Tenant Admin", ElliottAndCompany, "admin@getrdone.local", null),
+            new(MikeMillerUserId, "Mike Miller", "Owner, Certified General Appraiser", MillerValuationGroup,
+                "mike@millervaluation.example", null, MillerValuationGroupVendorId),
             Automation(AutomationUser.OrderNumberAssigner, "order-number-assigner@elliott.example"),
             Automation(AutomationUser.NewOrderNotifier, "new-order-notifier@elliott.example"),
             Automation(AutomationUser.DocumentRequestNotifier, "document-request-notifier@elliott.example"),
             Automation(AutomationUser.DescriptionOfWorkApprovalNotifier, "dow-approval-notifier@elliott.example"),
-            Automation(AutomationUser.DescriptionOfWorkApprovedNotifier, "dow-approved-notifier@elliott.example")
+            Automation(AutomationUser.DescriptionOfWorkApprovedNotifier, "dow-approved-notifier@elliott.example"),
+            Automation(AutomationUser.VendorAssignmentNotifier, "vendor-assignment-notifier@elliott.example")
+        ],
+        Vendors:
+        [
+            new(MillerValuationGroupVendorId, MillerValuationGroup, ["VA"])
         ]);
 
     public ReadModelSeed? GetSeed(string? tenantId) => tenantId == TenantId ? Seed : null;

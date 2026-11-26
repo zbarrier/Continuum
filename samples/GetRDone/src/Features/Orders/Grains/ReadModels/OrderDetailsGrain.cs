@@ -62,7 +62,10 @@ public sealed class OrderDetailsGrain(
                             names.UserName(document.AddedBy), document.AddedAt))
                         .ToArray(),
                     State.DescriptionOfWork,
-                    OrderTimeline.Describe(State.Timeline, names),
+                    State.Vendor is { } vendor
+                        ? new OrderVendorSummary(vendor.VendorId, names.VendorName(vendor.VendorId), vendor.VendorFee, vendor.VendorDueDate)
+                        : null,
+                    OrderTimeline.Describe(State.Timeline, names, OrderTimelineAudience.Staff),
                     GetAllowedActions(tenantId)));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
     }
@@ -73,7 +76,9 @@ public sealed class OrderDetailsGrain(
         StaffOrderStatus.Assigned when State.AssignedTo == this.GetCurrentTenantUserId(tenantId) => OrderActions.Acknowledge,
         StaffOrderStatus.Acknowledged or StaffOrderStatus.DescriptionOfWorkAwaitingApproval when IsAssigneeOrAssigner(tenantId)
             => OrderActions.RequestDocument | OrderActions.SubmitDescriptionOfWork,
-        StaffOrderStatus.DescriptionOfWorkApproved when IsAssigneeOrAssigner(tenantId) => OrderActions.RequestDocument,
+        StaffOrderStatus.DescriptionOfWorkApproved when IsAssigneeOrAssigner(tenantId)
+            => OrderActions.RequestDocument | OrderActions.AssignVendor,
+        StaffOrderStatus.VendorAssigned when IsAssigneeOrAssigner(tenantId) => OrderActions.RequestDocument,
         _ => OrderActions.None
     };
 
@@ -99,6 +104,7 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         On<RequestedDocumentProvided>(Apply);
         On<DescriptionOfWorkSubmitted>(Apply);
         On<DescriptionOfWorkApproved>(Apply);
+        On<VendorAssigned>(Apply);
     }
 
     /// <summary>Whether the client submitted the order; staff don't see drafts.</summary>
@@ -139,6 +145,9 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
 
     /// <summary>The latest version of the order's description of work, or null until one is submitted.</summary>
     [Id(14)] public DescriptionOfWorkSummary? DescriptionOfWork { get; set; }
+
+    /// <summary>The vendor the order is assigned to, or null until it is assigned to one.</summary>
+    [Id(15)] public OrderVendorItem? Vendor { get; set; }
 
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
@@ -239,7 +248,26 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
             DescriptionOfWorkVersion: evt.DescriptionOfWorkVersion));
         return true;
     }
+
+    private bool Apply(VendorAssigned evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = StaffOrderStatus.VendorAssigned;
+        Vendor = new OrderVendorItem(evt.VendorId, evt.VendorFee, evt.VendorDueDate);
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.VendorAssigned, evt.InitiatedBy, null,
+            VendorId: evt.VendorId));
+        return true;
+    }
 }
+
+/// <summary>The vendor an order is assigned to as the staff order page's projection stores it.</summary>
+/// <param name="VendorId">The vendor, as a tenant-qualified vendor ID, which the query turns into its name.</param>
+/// <param name="VendorFee">What the AMC pays the vendor for the report.</param>
+/// <param name="VendorDueDate">When the AMC needs the vendor's report.</param>
+[GenerateSerializer, Immutable]
+public sealed record OrderVendorItem(
+    string VendorId,
+    decimal VendorFee,
+    DateOnly VendorDueDate);
 
 /// <summary>A supporting document of the order as the staff order page's projection stores it.</summary>
 /// <param name="DocumentId">The document.</param>

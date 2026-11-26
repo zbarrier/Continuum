@@ -28,11 +28,52 @@ public sealed class ReadModelGrainTests(OrdersCluster fixture) : IClassFixture<O
         Assert.Equal(TestData.DocumentTypes, await grainFactory.GetDocumentTypesGrain(TenantId).GetDocumentTypesAsync());
         Assert.Equivalent(TestData.OrderableServices, await grainFactory.GetOrderableServicesGrain(TenantId).GetOrderableServicesAsync(), strict: true);
         Assert.Equal(TestData.Users, await grainFactory.GetUserDirectoryGrain(TenantId).GetUsersAsync());
+        Assert.Equivalent(TestData.Vendors, await grainFactory.GetAssignableVendorsGrain(TenantId).GetVendorsAsync(), strict: true);
 
         Assert.Empty(await grainFactory.GetIntendedUsesGrain(TestData.OtherTenantId).GetIntendedUsesAsync());
         Assert.Empty(await grainFactory.GetDocumentTypesGrain(TestData.OtherTenantId).GetDocumentTypesAsync());
         Assert.Empty(await grainFactory.GetOrderableServicesGrain(TestData.OtherTenantId).GetOrderableServicesAsync());
         Assert.Empty(await grainFactory.GetUserDirectoryGrain(TestData.OtherTenantId).GetUsersAsync());
+        Assert.Empty(await grainFactory.GetAssignableVendorsGrain(TestData.OtherTenantId).GetVendorsAsync());
+    }
+
+    [Theory]
+    [InlineData(TestData.RidgeAppraisalGroupVendorId, true)]
+    [InlineData(TestData.CedarPointAppraisalsVendorId, true)]
+    [InlineData(TestData.UnknownVendorId, false)]
+    public async Task IsAssignableVendor_MatchesTheTenantsVendors(string vendorId, bool expected)
+    {
+        GivenSignedIn(RequestedByUsers.Director1);
+
+        var result = await fixture.Cluster.GrainFactory.GetAssignableVendorsGrain(TenantId).IsAssignableVendorAsync(
+            VendorId.Create(vendorId, TenantId).Value);
+
+        Assert.Equal(expected, result.IsSuccess);
+    }
+
+    [Theory]
+    [InlineData(nameof(RequestedByUsers.Director1), true)]
+    [InlineData(nameof(RequestedByUsers.Coordinator1), true)]
+    [InlineData(nameof(RequestedByUsers.TenantAdmin1), true)]
+    [InlineData(nameof(RequestedByUsers.ClientUser1), false)]
+    [InlineData(nameof(RequestedByUsers.VendorUser1), false)]
+    public async Task IsStaffUser_MatchesOnlyTheTenantsStaff(string user, bool expected)
+    {
+        var principal = user switch
+        {
+            nameof(RequestedByUsers.Director1) => RequestedByUsers.Director1,
+            nameof(RequestedByUsers.Coordinator1) => RequestedByUsers.Coordinator1,
+            nameof(RequestedByUsers.TenantAdmin1) => RequestedByUsers.TenantAdmin1,
+            nameof(RequestedByUsers.ClientUser1) => RequestedByUsers.ClientUser1,
+            nameof(RequestedByUsers.VendorUser1) => RequestedByUsers.VendorUser1,
+            _ => throw new ArgumentOutOfRangeException(nameof(user))
+        };
+        GivenSignedIn(principal);
+
+        var result = await fixture.Cluster.GrainFactory.GetUserDirectoryGrain(TenantId).IsStaffUserAsync(
+            UserId.Create(principal.GetTenantUserId(), TenantId).Value);
+
+        Assert.Equal(expected, result.IsSuccess);
     }
 
     [Theory]

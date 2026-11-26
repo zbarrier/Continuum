@@ -14,6 +14,7 @@ public static class RequestedByUsers
 
     // Role names match GetRDone.Identity's GetRDoneRoles.
     private const string ClientRole = "client";
+    private const string VendorRole = "vendor";
 
     /// <summary>John Doe, a client user of Lakeview Credit Union.</summary>
     public static ClaimsPrincipal ClientUser1 { get; } = CreateUser(
@@ -37,6 +38,18 @@ public static class RequestedByUsers
     public static ClaimsPrincipal TenantAdmin1 { get; } = CreateUser(
         "e2f4a6c8-1b3d-4f5a-8c7e-9d0b2a4c6e81", "samPatel", "Sam", "Patel", "sam.patel@summitvaluation.example",
         StaffRoles.TenantAdmin);
+
+    /// <summary>Ryan Brooks, a user of Ridge Appraisal Group, a vendor of the AMC.</summary>
+    public static ClaimsPrincipal VendorUser1 { get; } = CreateUser(
+        "c4e8a2f6-3b5d-4a7c-9e1f-2d6b8a0c4e93", "ryanBrooks", "Ryan", "Brooks", "ryan.brooks@ridgeappraisal.example", VendorRole);
+
+    /// <summary>Lena Brooks, another user of Ridge Appraisal Group.</summary>
+    public static ClaimsPrincipal VendorUser2 { get; } = CreateUser(
+        "7f1b3d5a-9c2e-4b6d-8a0f-1e3c5a7b9d24", "lenaBrooks", "Lena", "Brooks", "lena.brooks@ridgeappraisal.example", VendorRole);
+
+    /// <summary>Owen Hart, a user of Cedar Point Appraisals, another vendor of the AMC.</summary>
+    public static ClaimsPrincipal OtherVendorUser1 { get; } = CreateUser(
+        "2a6c8e0b-4d1f-4c3a-b5e7-9f0a2c4e6b18", "owenHart", "Owen", "Hart", "owen.hart@cedarpoint.example", VendorRole);
 
     /// <summary>
     ///     A client user with a new ID, for tests of per-user read models that must start empty even though the test cluster

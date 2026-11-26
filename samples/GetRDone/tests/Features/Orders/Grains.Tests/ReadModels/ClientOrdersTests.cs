@@ -126,6 +126,25 @@ public sealed class ClientOrdersTests
     }
 
     [Fact]
+    public async Task VendorAssigned_ShowsTheAppraiserIsAssigned()
+    {
+        var orderId = NewOrderId();
+        GivenSignedIn(_user);
+
+        await Given(
+        [
+            .. StartedAndSubmitted(Command1, orderId, TestData.At.AddMinutes(3)),
+            AssignOrderTestData.OrderAssigned1(orderId, TestData.At.AddMinutes(4)),
+            AcknowledgeOrderTestData.Acknowledged1(orderId, TestData.At.AddMinutes(5)),
+            DescriptionOfWorkTestData.Submitted1(orderId, occurredAt: TestData.At.AddMinutes(6)),
+            DescriptionOfWorkTestData.Approved(orderId, occurredAt: TestData.At.AddMinutes(7)),
+            VendorAssignmentTestData.Assigned1(orderId, occurredAt: TestData.At.AddMinutes(8))
+        ]);
+
+        Then(state => Assert.Equal(ClientOrderStatus.VendorAssigned, state.Orders[orderId].Status));
+    }
+
+    [Fact]
     public async Task DraftStarted_IsNotAnOrderUntilItIsSubmitted()
     {
         var (submittedOrder, draftOrder) = (NewOrderId(), NewOrderId());

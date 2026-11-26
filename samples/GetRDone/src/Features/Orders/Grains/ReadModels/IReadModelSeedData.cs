@@ -15,4 +15,5 @@ public sealed record ReadModelSeed(
     IntendedUse[] IntendedUses,
     DocumentType[] DocumentTypes,
     OrderableService[] OrderableServices,
-    UserDirectoryEntry[] Users);
+    UserDirectoryEntry[] Users,
+    AssignableVendor[] Vendors);

@@ -57,6 +57,7 @@ public sealed class RequestClientDocumentTests
             OrderNumber = (long?)null,
             NewOrderNoticeSent = false,
             AssignedTo = (string?)RequestedByUsers.Director1.GetTenantUserId(),
+            VendorAssignment = (OrderVendorAssignment?)null,
             DocumentRequests = new Dictionary<string, OrderDocumentRequest>
             {
                 [Command1.RequestId] = new(

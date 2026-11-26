@@ -91,7 +91,8 @@ public enum OrderStatus
     Assigned,
     Acknowledged,
     DescriptionOfWorkAwaitingApproval,
-    DescriptionOfWorkApproved
+    DescriptionOfWorkApproved,
+    VendorAssigned
 }
 
 public enum OrderCommand
@@ -108,7 +109,8 @@ public enum OrderCommand
     RequestClientDocument,
     ProvideRequestedDocument,
     SubmitDescriptionOfWork,
-    ApproveDescriptionOfWork
+    ApproveDescriptionOfWork,
+    AssignVendor
 }
 
 [GenerateSerializer]
@@ -146,6 +148,9 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>The order's description of work and how far it is, or null until it is first submitted.</summary>
     [Id(8)] public OrderDescriptionOfWork? DescriptionOfWork { get; private set; }
 
+    /// <summary>The vendor the order is assigned to and whether its users were told, or null until it is assigned to one.</summary>
+    [Id(9)] public OrderVendorAssignment? VendorAssignment { get; private set; }
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
@@ -164,13 +169,15 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         On<DescriptionOfWorkSubmittedNoticeSent>(Handle);
         On<DescriptionOfWorkApproved>(Handle);
         On<DescriptionOfWorkApprovedNoticeSent>(Handle);
+        On<VendorAssigned>(Handle);
+        On<VendorAssignedNoticeSent>(Handle);
     }
 
     /// <remarks>
     ///     The Order Number Assigner can give an order its number after staff have already assigned or acknowledged it, so
     ///     every status after Submitted permits <see cref="OrderCommand.AssignOrderNumber"/>. Documents can be requested and
     ///     provided once the order is acknowledged, whatever the state of its description of work, and the description of
-    ///     work can be revised until the client approves it.
+    ///     work can be revised until the client approves it. The order is assigned to a vendor once, after the approval.
     /// </remarks>
     protected override void ConfigureStateMachine()
     {
@@ -201,6 +208,11 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         StateMachine.Configure(OrderStatus.DescriptionOfWorkApproved)
             .PermitReentry(OrderCommand.AssignOrderNumber)
             .PermitReentry(OrderCommand.RequestClientDocument)
+            .PermitReentry(OrderCommand.ProvideRequestedDocument)
+            .Permit(OrderCommand.AssignVendor, OrderStatus.VendorAssigned);
+        StateMachine.Configure(OrderStatus.VendorAssigned)
+            .PermitReentry(OrderCommand.AssignOrderNumber)
+            .PermitReentry(OrderCommand.RequestClientDocument)
             .PermitReentry(OrderCommand.ProvideRequestedDocument);
     }
 }
@@ -225,3 +237,9 @@ public sealed record OrderDescriptionOfWork(
     bool Approved,
     int? NoticeSentVersion,
     bool ApprovedNoticeSent);
+
+/// <summary>The vendor the order is assigned to, as a tenant-qualified vendor ID, and whether its users were told.</summary>
+[GenerateSerializer, Immutable]
+public sealed record OrderVendorAssignment(
+    string VendorId,
+    bool NoticeSent);

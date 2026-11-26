@@ -23,6 +23,9 @@ public static class ReadModelGrainFactoryExtensions
     public static IUserDirectoryGrain GetUserDirectoryGrain(this IGrainFactory grainFactory, string? tenantId)
         => grainFactory.GetGrain<IUserDirectoryGrain>(TenantKey.Create(tenantId, DefaultKey));
 
+    public static IAssignableVendorsGrain GetAssignableVendorsGrain(this IGrainFactory grainFactory, string? tenantId)
+        => grainFactory.GetGrain<IAssignableVendorsGrain>(TenantKey.Create(tenantId, DefaultKey));
+
     /// <summary>Gets the drafts of one client user, keyed by their tenant user ID <c>{TenantId}|{UserGuid}</c>.</summary>
     public static IClientOrderDraftsGrain GetClientOrderDraftsGrain(this IGrainFactory grainFactory, string tenantUserId)
         => grainFactory.GetGrain<IClientOrderDraftsGrain>(tenantUserId);
@@ -46,4 +49,12 @@ public static class ReadModelGrainFactoryExtensions
     /// <summary>Gets the client order page of one order, keyed by the order ID <c>{TenantId}|{OrderGuid}</c>.</summary>
     public static IClientOrderDetailsGrain GetClientOrderDetailsGrain(this IGrainFactory grainFactory, string orderId)
         => grainFactory.GetGrain<IClientOrderDetailsGrain>(orderId);
+
+    /// <summary>Gets the orders the tenant assigned to vendors; each vendor user sees only their own vendor's.</summary>
+    public static IVendorOrdersGrain GetVendorOrdersGrain(this IGrainFactory grainFactory, string? tenantId)
+        => grainFactory.GetGrain<IVendorOrdersGrain>(TenantKey.Create(tenantId, DefaultKey));
+
+    /// <summary>Gets the vendor order page of one order, keyed by the order ID <c>{TenantId}|{OrderGuid}</c>.</summary>
+    public static IVendorOrderDetailsGrain GetVendorOrderDetailsGrain(this IGrainFactory grainFactory, string orderId)
+        => grainFactory.GetGrain<IVendorOrderDetailsGrain>(orderId);
 }

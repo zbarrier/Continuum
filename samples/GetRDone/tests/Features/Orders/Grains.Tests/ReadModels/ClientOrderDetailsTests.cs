@@ -135,6 +135,25 @@ public sealed class ClientOrderDetailsTests
     }
 
     [Fact]
+    public async Task ClientOrderDetails_ShowThatAnAppraiserIsAssignedWithoutNamingTheVendor()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(_orderId, occurredAt: TestData.At.AddMinutes(5)),
+            VendorAssignmentTestData.Assigned1(_orderId, occurredAt: TestData.At.AddMinutes(6)));
+
+        await When(() => Grain.GetClientOrderDetailsAsync());
+
+        Then<ClientOrderDetails>(details =>
+        {
+            Assert.Equal(ClientOrderStatus.VendorAssigned, details.Status);
+            Assert.Equal(new OrderTimelineEntry(TestData.At.AddMinutes(6), "Appraiser assigned"), details.Timeline[0]);
+            Assert.Equal(ClientOrderActions.None, details.AllowedActions);
+        });
+    }
+
+    [Fact]
     public async Task SupportingDocumentRemoved_RemovesTheDocument()
     {
         GivenSignedIn(RequestedByUsers.ClientUser1);

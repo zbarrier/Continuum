@@ -1,0 +1,83 @@
+@* The orders the AMC assigned to the signed-in user's vendor (VendorOrders), due soonest first. *@
+@using GetRDone.Orders.Abstractions.ReadModels
+@inject IClusterClient ClusterClient
+
+<MudTable T="VendorOrder" ServerData="LoadAsync" RowsPerPage="10" Hover="true" Elevation="1" Class="@Class">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Orders (@_total)</MudText>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Order #</MudTh>
+        <MudTh>Property</MudTh>
+        <MudTh>Form type</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Due</MudTh>
+        <MudTh />
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Order #">
+            @if (context.OrderNumber is { } orderNumber)
+            {
+                @orderNumber
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Pending</MudText>
+            }
+        </MudTd>
+        <MudTd DataLabel="Property">@context.PropertyAddress</MudTd>
+        <MudTd DataLabel="Form type">@context.FormTypeName</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Color="VendorOrderPage.StatusColor(context.Status)">@VendorOrderPage.StatusText(context.Status)</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Due">@context.VendorDueDate.ToString("MMM d")</MudTd>
+        <MudTd Style="text-align:right">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@VendorOrderPage.Url(context.OrderId)">View</MudButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2">@(_error ?? "No orders assigned to you")</MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="PageSizes" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private static readonly int[] PageSizes = [10, 25, 50];
+
+    private int _total;
+    private string? _error;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private async Task<TableData<VendorOrder>> LoadAsync(TableState state, CancellationToken cancellationToken)
+    {
+        var tenantId = (await AuthenticationState).User.FindFirst("tenant_id")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            return Show([], 0, "Your account has no tenant.");
+        }
+
+        var result = await ClusterClient.GetVendorOrdersGrain(tenantId)
+            .GetOrdersAsync(state.Page * state.PageSize, state.PageSize);
+        return result.IsSuccess
+            ? Show(result.Value.Orders, result.Value.TotalCount, null)
+            : Show([], 0, "Your orders could not be loaded.");
+    }
+
+    private TableData<VendorOrder> Show(VendorOrder[] orders, int total, string? error)
+    {
+        _error = error;
+        if (_total != total)
+        {
+            _total = total;
+            StateHasChanged();
+        }
+        return new TableData<VendorOrder> { Items = orders, TotalItems = total };
+    }
+}

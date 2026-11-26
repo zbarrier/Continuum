@@ -54,7 +54,7 @@ public sealed class ClientOrderDetailsGrain(
                     State.OpenRequests.ToArray(),
                     State.Documents.ToArray(),
                     State.DescriptionOfWork,
-                    OrderTimeline.Describe(State.Timeline, names),
+                    OrderTimeline.Describe(State.Timeline, names, OrderTimelineAudience.Client),
                     GetAllowedActions()));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
     }
@@ -83,6 +83,7 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
         On<RequestedDocumentProvided>(Apply);
         On<DescriptionOfWorkSubmitted>(Apply);
         On<DescriptionOfWorkApproved>(Apply);
+        On<VendorAssigned>(Apply);
     }
 
     /// <summary>Whether the client submitted the order; drafts have their own page.</summary>
@@ -206,6 +207,14 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
         DescriptionOfWork = DescriptionOfWork is null ? null : DescriptionOfWork with { Approved = true };
         Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.DescriptionOfWorkApproved, evt.InitiatedBy, null,
             DescriptionOfWorkVersion: evt.DescriptionOfWorkVersion));
+        return true;
+    }
+
+    private bool Apply(VendorAssigned evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = ClientOrderStatus.VendorAssigned;
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.VendorAssigned, evt.InitiatedBy, null,
+            VendorId: evt.VendorId));
         return true;
     }
 }

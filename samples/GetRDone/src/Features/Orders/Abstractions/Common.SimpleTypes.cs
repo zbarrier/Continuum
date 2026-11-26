@@ -1050,3 +1050,118 @@ public sealed record DescriptionOfWorkHtml : StringValueObject<DescriptionOfWork
 
     private DescriptionOfWorkHtml(string value) : base(value) { }
 }
+
+/// <summary>A vendor, such as an appraisal firm, that the AMC assigns orders to; it belongs to the AMC's tenant.</summary>
+[Alias("Orders.VendorId.V1"), GenerateSerializer, Immutable]
+public sealed record VendorId : TenantKeyValueObject<VendorId>
+{
+    public static Result<VendorId> Create(string? value, string? tenantId, string propertyName = nameof(VendorId))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantKey(tenantId, propertyName)
+            .Map(validatedValue => new VendorId(validatedValue));
+    }
+    public static Result<VendorId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantKey(tenantId, propertyPath, member)
+            .Map(validatedValue => new VendorId(validatedValue));
+    }
+
+    private VendorId(string value) : base(value) { }
+}
+
+/// <summary>The fee the AMC pays the vendor for an order, in dollars and cents.</summary>
+[Alias("Orders.VendorFee.V1"), GenerateSerializer, Immutable]
+public sealed record VendorFee : DecimalValueObject<VendorFee>
+{
+    public const decimal MinValue = 0.01m;
+    public const decimal MaxValue = 999_999.99m;
+    public const int Scale = 2;
+    public const int Precision = 8;
+
+    public static Result<VendorFee> Create(string? value, string propertyName = nameof(VendorFee))
+    {
+        return Result.IsDecimal(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .ScalePrecision(Scale, Precision, true, propertyName)
+            .Map(validatedValue => new VendorFee(validatedValue));
+    }
+    public static Result<VendorFee> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.IsDecimal(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .ScalePrecision(Scale, Precision, true, propertyPath, member)
+            .Map(validatedValue => new VendorFee(validatedValue));
+    }
+    public static Result<VendorFee> Create(decimal? value, string propertyName = nameof(VendorFee))
+    {
+        return Result.NotNull(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .ScalePrecision(Scale, Precision, true, propertyName)
+            .Map(validatedValue => new VendorFee(validatedValue));
+    }
+    public static Result<VendorFee> Create(decimal? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNull(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .ScalePrecision(Scale, Precision, true, propertyPath, member)
+            .Map(validatedValue => new VendorFee(validatedValue));
+    }
+    public static Result<VendorFee> Create(decimal value, string propertyName = nameof(VendorFee))
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyName)
+            .ScalePrecision(Scale, Precision, true, propertyName)
+            .Map(validatedValue => new VendorFee(validatedValue));
+    }
+    public static Result<VendorFee> Create(decimal value, PropertyPath propertyPath, string member)
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyPath, member)
+            .ScalePrecision(Scale, Precision, true, propertyPath, member)
+            .Map(validatedValue => new VendorFee(validatedValue));
+    }
+
+    private VendorFee(decimal value) : base(value) { }
+}
+
+/// <summary>The date the vendor must deliver the completed report by; the AMC sets it before the client's due date.</summary>
+[Alias("Orders.VendorDueDate.V1"), GenerateSerializer, Immutable]
+public sealed record VendorDueDate : DateOnlyValueObject<VendorDueDate>
+{
+    public static Result<VendorDueDate> Create(string? value, string propertyName = nameof(VendorDueDate))
+    {
+        return Result.IsDateOnly(value, propertyName)
+            .NotEmpty(propertyName)
+            .Map(validatedValue => new VendorDueDate(validatedValue));
+    }
+    public static Result<VendorDueDate> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.IsDateOnly(value, propertyPath, member)
+            .NotEmpty(propertyPath, member)
+            .Map(validatedValue => new VendorDueDate(validatedValue));
+    }
+    public static Result<VendorDueDate> Create(DateOnly? value, string propertyName = nameof(VendorDueDate))
+    {
+        return Result.NotNull(value, propertyName)
+            .NotEmpty(propertyName)
+            .Map(validatedValue => new VendorDueDate(validatedValue));
+    }
+    public static Result<VendorDueDate> Create(DateOnly? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNull(value, propertyPath, member)
+            .NotEmpty(propertyPath, member)
+            .Map(validatedValue => new VendorDueDate(validatedValue));
+    }
+    public static Result<VendorDueDate> Create(DateOnly value, string propertyName = nameof(VendorDueDate))
+    {
+        return Result.NotEmpty(value, propertyName)
+            .Map(validatedValue => new VendorDueDate(validatedValue));
+    }
+    public static Result<VendorDueDate> Create(DateOnly value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotEmpty(value, propertyPath, member)
+            .Map(validatedValue => new VendorDueDate(validatedValue));
+    }
+
+    private VendorDueDate(DateOnly value) : base(value) { }
+}

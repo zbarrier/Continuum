@@ -49,6 +49,14 @@ public static class IdentitySeeder
     /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
     public const string DescriptionOfWorkApprovedNotifierUserId = "0a1b2c05-9b7c-4d1e-8f3a-5b6c7d8e9f0a";
 
+    /// <summary>The service account the Vendor Assignment Notifier automation runs as.</summary>
+    /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
+    public const string VendorAssignmentNotifierUserId = "0a1b2c06-ac8d-4e2f-9a4b-6c7d8e9f0a1b";
+
+    /// <summary>Mike Miller of Miller Valuation Group, the vendor Elliott &amp; Company assigns orders to in the event model.</summary>
+    /// <remarks>The Orders read models seed the same user (GetRDone.Orders.Grains.ReadModels.SampleSeedData); keep them in sync.</remarks>
+    public const string MikeMillerUserId = "5701c3e9-2a4b-4c6d-8e0f-1a2b3c4d5e6f";
+
     public static async Task MigrateAndSeedAsync(IServiceProvider services, bool seedDemoUsers)
     {
         await using var scope = services.CreateAsyncScope();
@@ -75,7 +83,9 @@ public static class IdentitySeeder
         await EnsureUserAsync(userManager, "coordinator@getrdone.local", "Morgan Coordinator", GetRDoneRoles.Coordinator, DemoTenant, MorganCoordinatorUserId);
         await EnsureUserAsync(userManager, "reviewer@getrdone.local", "Riley Reviewer", GetRDoneRoles.Reviewer, DemoTenant, RileyReviewerUserId);
         await EnsureUserAsync(userManager, "admin@getrdone.local", "Avery Admin", GetRDoneRoles.TenantAdmin, DemoTenant, AveryAdminUserId);
-        // Vendors are in the global vendor pool, not a tenant.
+        // Mike works for a vendor on Elliott & Company's own list, so he belongs to the tenant.
+        await EnsureUserAsync(userManager, "mike@millervaluation.example", "Mike Miller", GetRDoneRoles.Vendor, DemoTenant, MikeMillerUserId);
+        // Self-registered vendors are in the global vendor pool, not a tenant.
         await EnsureUserAsync(userManager, "vendor@getrdone.local", "Val Vendor", GetRDoneRoles.Vendor, tenantId: null);
 
         // The automations' service accounts have no password, so nobody can sign in as them; the silo signs them in itself.
@@ -89,6 +99,8 @@ public static class IdentitySeeder
             GetRDoneRoles.Automation, DemoTenant, DescriptionOfWorkApprovalNotifierUserId, password: null);
         await EnsureUserAsync(userManager, "dow-approved-notifier@elliott.example", "Description of Work Approved Notifier",
             GetRDoneRoles.Automation, DemoTenant, DescriptionOfWorkApprovedNotifierUserId, password: null);
+        await EnsureUserAsync(userManager, "vendor-assignment-notifier@elliott.example", "Vendor Assignment Notifier",
+            GetRDoneRoles.Automation, DemoTenant, VendorAssignmentNotifierUserId, password: null);
     }
 
     /// <summary>

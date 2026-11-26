@@ -14,8 +14,15 @@
                 <StaffHome />
             </Authorized>
             <NotAuthorized>
-                <MudText Typo="Typo.h4" GutterBottom="true">Home</MudText>
-                <MudText Typo="Typo.body1">The home page for your role is not built yet.</MudText>
+                <AuthorizeView Roles="vendor" Context="vendor">
+                    <Authorized>
+                        <VendorHome />
+                    </Authorized>
+                    <NotAuthorized>
+                        <MudText Typo="Typo.h4" GutterBottom="true">Home</MudText>
+                        <MudText Typo="Typo.body1">The home page for your role is not built yet.</MudText>
+                    </NotAuthorized>
+                </AuthorizeView>
             </NotAuthorized>
         </AuthorizeView>
     </NotAuthorized>

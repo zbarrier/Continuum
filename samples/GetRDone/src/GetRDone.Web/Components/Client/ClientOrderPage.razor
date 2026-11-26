@@ -167,6 +167,7 @@
         ClientOrderStatus.Acknowledged => Color.Success,
         ClientOrderStatus.DescriptionOfWorkAwaitingApproval => Color.Secondary,
         ClientOrderStatus.DescriptionOfWorkApproved => Color.Success,
+        ClientOrderStatus.VendorAssigned => Color.Primary,
         _ => Color.Default
     };
 
@@ -174,6 +175,7 @@
     {
         ClientOrderStatus.DescriptionOfWorkAwaitingApproval => "Awaiting your approval",
         ClientOrderStatus.DescriptionOfWorkApproved => "Description of work approved",
+        ClientOrderStatus.VendorAssigned => "Appraiser assigned",
         _ => status.ToString()
     };
 

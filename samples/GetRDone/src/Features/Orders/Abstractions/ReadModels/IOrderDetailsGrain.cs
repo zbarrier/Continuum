@@ -34,6 +34,7 @@ public interface IOrderDetailsGrain : IGrainWithStringKey
 /// <param name="OpenRequests">The documents requested from the client that it has not provided yet, oldest first.</param>
 /// <param name="Documents">The order's supporting documents, in the order they were added.</param>
 /// <param name="DescriptionOfWork">The latest version of the order's description of work, or null until one is submitted.</param>
+/// <param name="Vendor">The vendor the order is assigned to, or null until it is assigned to one.</param>
 /// <param name="Timeline">What happened to the order, newest first.</param>
 /// <param name="AllowedActions">What the signed-in user can do next.</param>
 [GenerateSerializer, Immutable]
@@ -54,8 +55,21 @@ public sealed record OrderDetails(
     OrderDocumentRequestSummary[] OpenRequests,
     OrderDocumentSummary[] Documents,
     DescriptionOfWorkSummary? DescriptionOfWork,
+    OrderVendorSummary? Vendor,
     OrderTimelineEntry[] Timeline,
     OrderActions AllowedActions);
+
+/// <summary>The vendor an order is assigned to, as the staff order page shows it.</summary>
+/// <param name="VendorId">The vendor, as a tenant-qualified vendor ID.</param>
+/// <param name="VendorName">Its name, or null when the tenant's assignable vendors don't list it.</param>
+/// <param name="VendorFee">What the AMC pays the vendor for the report.</param>
+/// <param name="VendorDueDate">When the AMC needs the vendor's report.</param>
+[GenerateSerializer, Immutable]
+public sealed record OrderVendorSummary(
+    string VendorId,
+    string? VendorName,
+    decimal VendorFee,
+    DateOnly VendorDueDate);
 
 /// <summary>The latest version of an order's description of work, as the staff and client order pages show it.</summary>
 /// <param name="DescriptionOfWorkId">The description of work.</param>
@@ -125,5 +139,11 @@ public enum OrderActions
     ///     Submit the description of work for the client's approval once the order is acknowledged, or revise it until the
     ///     client approves it; for the staff member it is assigned to, the Client Services Director or the tenant admin.
     /// </summary>
-    SubmitDescriptionOfWork = 8
+    SubmitDescriptionOfWork = 8,
+
+    /// <summary>
+    ///     Assign the order to one of the tenant's vendors once the client approves the description of work; for the staff
+    ///     member it is assigned to, the Client Services Director or the tenant admin.
+    /// </summary>
+    AssignVendor = 16
 }

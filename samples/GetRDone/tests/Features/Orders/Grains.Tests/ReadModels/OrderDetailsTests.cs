@@ -64,6 +64,7 @@ public sealed class OrderDetailsTests
             [],
             [],
             null,
+            null,
             [
                 new OrderTimelineEntry(TestData.At.AddMinutes(4), "Acknowledged by Tommy Jones"),
                 new OrderTimelineEntry(TestData.At.AddMinutes(3), "Assigned to Tommy Jones"),
@@ -291,7 +292,7 @@ public sealed class OrderDetailsTests
     }
 
     [Fact]
-    public async Task OrderDetails_ShowTheApprovedDescriptionOfWorkAndOnlyLetTheAssigneeRequestDocuments()
+    public async Task OrderDetails_ShowTheApprovedDescriptionOfWorkAndLetTheAssigneeRequestDocumentsAndAssignAVendor()
     {
         GivenSignedIn(RequestedByUsers.Director1);
         await GivenAcknowledged(
@@ -305,6 +306,42 @@ public sealed class OrderDetailsTests
             Assert.Equal(StaffOrderStatus.DescriptionOfWorkApproved, details.Status);
             Assert.True(details.DescriptionOfWork!.Approved);
             Assert.Equal("Description of work version 1 approved by John Doe", details.Timeline[0].Entry);
+            Assert.Equal(OrderActions.RequestDocument | OrderActions.AssignVendor, details.AllowedActions);
+        });
+    }
+
+    [Fact]
+    public async Task OrderDetails_DoNotLetACoordinatorAssignAVendorToAnOrderAssignedToSomeoneElse()
+    {
+        GivenSignedIn(RequestedByUsers.Coordinator1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(_orderId, occurredAt: TestData.At.AddMinutes(5)));
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details => Assert.Equal(OrderActions.None, details.AllowedActions));
+    }
+
+    [Fact]
+    public async Task OrderDetails_ShowTheVendorTheOrderIsAssignedTo()
+    {
+        GivenSignedIn(RequestedByUsers.Director1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(_orderId, occurredAt: TestData.At.AddMinutes(5)),
+            VendorAssignmentTestData.Assigned1(_orderId, occurredAt: TestData.At.AddMinutes(6)));
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details =>
+        {
+            Assert.Equal(StaffOrderStatus.VendorAssigned, details.Status);
+            Assert.Equal(
+                new OrderVendorSummary(
+                    TestData.RidgeAppraisalGroupVendorId, "Ridge Appraisal Group", 425.00m, VendorAssignmentTestData.VendorDueDate),
+                details.Vendor);
+            Assert.Equal("Assigned to vendor Ridge Appraisal Group by Tommy Jones", details.Timeline[0].Entry);
             Assert.Equal(OrderActions.RequestDocument, details.AllowedActions);
         });
     }

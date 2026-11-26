@@ -16,5 +16,8 @@ public enum StaffOrderStatus
     DescriptionOfWorkAwaitingApproval,
 
     /// <summary>The client approved the order's description of work.</summary>
-    DescriptionOfWorkApproved
+    DescriptionOfWorkApproved,
+
+    /// <summary>The order is assigned to a vendor.</summary>
+    VendorAssigned
 }

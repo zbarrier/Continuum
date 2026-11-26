@@ -52,6 +52,7 @@ public sealed class SaveBorrowerAndAccessContactTests
             OrderNumber = (long?)null,
             NewOrderNoticeSent = false,
             AssignedTo = (string?)null,
+            VendorAssignment = (OrderVendorAssignment?)null,
             DocumentRequests = new Dictionary<string, OrderDocumentRequest>(),
             DescriptionOfWork = (OrderDescriptionOfWork?)null
         }, state, strict: true);

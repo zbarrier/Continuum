@@ -44,6 +44,10 @@ public sealed class AutomationUser
     public static AutomationUser DescriptionOfWorkApprovedNotifier { get; } = new(
         "0a1b2c05-9b7c-4d1e-8f3a-5b6c7d8e9f0a", "Description of Work Approved Notifier");
 
+    /// <summary>Tells a vendor's users about the orders the AMC assigns to the vendor.</summary>
+    public static AutomationUser VendorAssignmentNotifier { get; } = new(
+        "0a1b2c06-ac8d-4e2f-9a4b-6c7d8e9f0a1b", "Vendor Assignment Notifier");
+
     /// <summary>The account's user ID in the identity provider.</summary>
     public string UserGuid { get; }
 
