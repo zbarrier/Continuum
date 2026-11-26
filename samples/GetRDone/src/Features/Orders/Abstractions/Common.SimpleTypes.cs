@@ -1222,3 +1222,109 @@ public sealed record VendorDueDate : DateOnlyValueObject<VendorDueDate>
 
     private VendorDueDate(DateOnly value) : base(value) { }
 }
+
+/// <summary>When the vendor's appraiser inspects the property; the vendor schedules it with the person who gives access.</summary>
+[Alias("Orders.InspectionAt.V1"), GenerateSerializer, Immutable]
+public sealed record InspectionAt : DateTimeOffsetValueObject<InspectionAt>
+{
+    public static Result<InspectionAt> Create(string? value, string propertyName = nameof(InspectionAt))
+    {
+        return Result.IsDateTimeOffset(value, propertyName)
+            .NotEmpty(propertyName)
+            .Map(validatedValue => new InspectionAt(validatedValue));
+    }
+    public static Result<InspectionAt> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.IsDateTimeOffset(value, propertyPath, member)
+            .NotEmpty(propertyPath, member)
+            .Map(validatedValue => new InspectionAt(validatedValue));
+    }
+    public static Result<InspectionAt> Create(DateTimeOffset? value, string propertyName = nameof(InspectionAt))
+    {
+        return Result.NotNull(value, propertyName)
+            .NotEmpty(propertyName)
+            .Map(validatedValue => new InspectionAt(validatedValue));
+    }
+    public static Result<InspectionAt> Create(DateTimeOffset? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNull(value, propertyPath, member)
+            .NotEmpty(propertyPath, member)
+            .Map(validatedValue => new InspectionAt(validatedValue));
+    }
+    public static Result<InspectionAt> Create(DateTimeOffset value, string propertyName = nameof(InspectionAt))
+    {
+        return Result.NotEmpty(value, propertyName)
+            .Map(validatedValue => new InspectionAt(validatedValue));
+    }
+    public static Result<InspectionAt> Create(DateTimeOffset value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotEmpty(value, propertyPath, member)
+            .Map(validatedValue => new InspectionAt(validatedValue));
+    }
+
+    private InspectionAt(DateTimeOffset value) : base(value) { }
+}
+
+/// <summary>The person who meets the appraiser at the inspection, usually the access contact the client named.</summary>
+[Alias("Orders.InspectionContactName.V1"), GenerateSerializer, Immutable]
+public sealed record InspectionContactName : StringValueObject<InspectionContactName>
+{
+    public const int MaxLength = 100;
+
+    public static Result<InspectionContactName> Create(string? value, string propertyName = nameof(InspectionContactName))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new InspectionContactName(validatedValue));
+    }
+    public static Result<InspectionContactName> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new InspectionContactName(validatedValue));
+    }
+
+    private InspectionContactName(string value) : base(value) { }
+}
+
+/// <summary>The date the vendor's appraiser inspected the property.</summary>
+[Alias("Orders.InspectionCompletedOn.V1"), GenerateSerializer, Immutable]
+public sealed record InspectionCompletedOn : DateOnlyValueObject<InspectionCompletedOn>
+{
+    public static Result<InspectionCompletedOn> Create(string? value, string propertyName = nameof(InspectionCompletedOn))
+    {
+        return Result.IsDateOnly(value, propertyName)
+            .NotEmpty(propertyName)
+            .Map(validatedValue => new InspectionCompletedOn(validatedValue));
+    }
+    public static Result<InspectionCompletedOn> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.IsDateOnly(value, propertyPath, member)
+            .NotEmpty(propertyPath, member)
+            .Map(validatedValue => new InspectionCompletedOn(validatedValue));
+    }
+    public static Result<InspectionCompletedOn> Create(DateOnly? value, string propertyName = nameof(InspectionCompletedOn))
+    {
+        return Result.NotNull(value, propertyName)
+            .NotEmpty(propertyName)
+            .Map(validatedValue => new InspectionCompletedOn(validatedValue));
+    }
+    public static Result<InspectionCompletedOn> Create(DateOnly? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNull(value, propertyPath, member)
+            .NotEmpty(propertyPath, member)
+            .Map(validatedValue => new InspectionCompletedOn(validatedValue));
+    }
+    public static Result<InspectionCompletedOn> Create(DateOnly value, string propertyName = nameof(InspectionCompletedOn))
+    {
+        return Result.NotEmpty(value, propertyName)
+            .Map(validatedValue => new InspectionCompletedOn(validatedValue));
+    }
+    public static Result<InspectionCompletedOn> Create(DateOnly value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotEmpty(value, propertyPath, member)
+            .Map(validatedValue => new InspectionCompletedOn(validatedValue));
+    }
+
+    private InspectionCompletedOn(DateOnly value) : base(value) { }
+}

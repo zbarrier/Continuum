@@ -86,6 +86,14 @@ public interface IOrderPermissions
 
     /// <summary>Only the Vendor Assignment Notifier automation sends the notice of an assigned order and asks whether it was sent.</summary>
     Result CanSendVendorAssignedNotice(UserId userId);
+
+    /// <summary>
+    ///     Only users of the vendor the order is assigned to schedule and complete its inspection and deliver its report.
+    /// </summary>
+    Task<Result> CanDoVendorWorkAsync(UserId userId, OrderState order);
+
+    /// <summary>Only the Report Delivered Notifier automation sends the notice of a delivered report and asks whether it was sent.</summary>
+    Result CanSendReportDeliveredNotice(UserId userId);
 }
 
 public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermissions
@@ -212,6 +220,22 @@ public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermiss
             ? Result.Success()
             : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
                 "Only the Vendor Assignment Notifier can send the notices of orders assigned to vendors."));
+
+    public async Task<Result> CanDoVendorWorkAsync(UserId userId, OrderState order)
+    {
+        var user = (await grainFactory.GetUserDirectoryGrain(userId.TenantId).GetUsersAsync())
+            .FirstOrDefault(entry => entry.UserId == (string)userId);
+        return order.VendorAssignment is { } assignment && user?.VendorId == assignment.VendorId
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only users of the vendor the order is assigned to can work on it."));
+    }
+
+    public Result CanSendReportDeliveredNotice(UserId userId)
+        => IsAutomation(AutomationUser.ReportDeliveredNotifier, userId)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the Report Delivered Notifier can send the notices of delivered reports."));
 
     private static bool IsAutomation(AutomationUser account, UserId userId)
         => userId.TenantId is { } tenantId && (string)userId == account.GetTenantUserId(tenantId);

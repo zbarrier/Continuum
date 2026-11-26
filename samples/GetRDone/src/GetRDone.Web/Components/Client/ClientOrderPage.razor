@@ -175,6 +175,8 @@
         ClientOrderStatus.DescriptionOfWorkAwaitingApproval => Color.Secondary,
         ClientOrderStatus.DescriptionOfWorkApproved => Color.Success,
         ClientOrderStatus.VendorAssigned => Color.Primary,
+        ClientOrderStatus.InspectionScheduled => Color.Primary,
+        ClientOrderStatus.InspectionCompleted => Color.Primary,
         _ => Color.Default
     };
 
@@ -183,6 +185,8 @@
         ClientOrderStatus.DescriptionOfWorkAwaitingApproval => "Awaiting your approval",
         ClientOrderStatus.DescriptionOfWorkApproved => "Description of work approved",
         ClientOrderStatus.VendorAssigned => "Appraiser assigned",
+        ClientOrderStatus.InspectionScheduled => "Inspection scheduled",
+        ClientOrderStatus.InspectionCompleted => "Inspection completed",
         _ => status.ToString()
     };
 

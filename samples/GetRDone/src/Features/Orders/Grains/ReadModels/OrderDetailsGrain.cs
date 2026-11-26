@@ -66,6 +66,8 @@ public sealed class OrderDetailsGrain(
                     State.Vendor is { } vendor
                         ? new OrderVendorSummary(vendor.VendorId, names.VendorName(vendor.VendorId), vendor.VendorFee, vendor.VendorDueDate)
                         : null,
+                    State.Inspection,
+                    State.Report,
                     OrderTimeline.Describe(State.Timeline, names, OrderTimelineAudience.Staff),
                     GetAllowedActions(tenantId)));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
@@ -79,7 +81,8 @@ public sealed class OrderDetailsGrain(
             => OrderActions.RequestDocument | OrderActions.SubmitDescriptionOfWork,
         StaffOrderStatus.DescriptionOfWorkApproved when IsAssigneeOrAssigner(tenantId)
             => OrderActions.RequestDocument | OrderActions.AssignVendor,
-        StaffOrderStatus.VendorAssigned when IsAssigneeOrAssigner(tenantId) => OrderActions.RequestDocument,
+        StaffOrderStatus.VendorAssigned or StaffOrderStatus.InspectionScheduled or StaffOrderStatus.InspectionCompleted
+            or StaffOrderStatus.ReportDelivered when IsAssigneeOrAssigner(tenantId) => OrderActions.RequestDocument,
         _ => OrderActions.None
     };
 
@@ -106,6 +109,9 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         On<DescriptionOfWorkSubmitted>(Apply);
         On<DescriptionOfWorkApproved>(Apply);
         On<VendorAssigned>(Apply);
+        On<InspectionScheduled>(Apply);
+        On<InspectionCompleted>(Apply);
+        On<ReportDelivered>(Apply);
     }
 
     /// <summary>Whether the client submitted the order; staff don't see drafts.</summary>
@@ -153,6 +159,12 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
 
     /// <summary>What the client pays the AMC, or null until the order is assigned to a vendor.</summary>
     [Id(16)] public decimal? ServiceFee { get; set; }
+
+    /// <summary>The property's inspection, or null until the vendor schedules it.</summary>
+    [Id(17)] public OrderInspectionSummary? Inspection { get; set; }
+
+    /// <summary>The vendor's completed report, or null until the vendor delivers it.</summary>
+    [Id(18)] public OrderReportSummary? Report { get; set; }
 
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
@@ -260,6 +272,30 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         DueDate = evt.DueDate;
         Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.VendorAssigned, evt.InitiatedBy, null,
             VendorId: evt.VendorId));
+        return true;
+    }
+
+    private bool Apply(InspectionScheduled evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = StaffOrderStatus.InspectionScheduled;
+        Inspection = new OrderInspectionSummary(evt.InspectionAt, evt.ContactName, CompletedOn: null);
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.InspectionScheduled, evt.InitiatedBy, null));
+        return true;
+    }
+
+    private bool Apply(InspectionCompleted evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = StaffOrderStatus.InspectionCompleted;
+        Inspection = Inspection is null ? null : Inspection with { CompletedOn = evt.CompletedOn };
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.InspectionCompleted, evt.InitiatedBy, null));
+        return true;
+    }
+
+    private bool Apply(ReportDelivered evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = StaffOrderStatus.ReportDelivered;
+        Report = new OrderReportSummary(evt.DocumentId, evt.FileName, evt.OccurredAt);
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.ReportDelivered, evt.InitiatedBy, null));
         return true;
     }
 }

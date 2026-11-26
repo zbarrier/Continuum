@@ -48,6 +48,10 @@ public sealed class AutomationUser
     public static AutomationUser VendorAssignmentNotifier { get; } = new(
         "0a1b2c06-ac8d-4e2f-9a4b-6c7d8e9f0a1b", "Vendor Assignment Notifier");
 
+    /// <summary>Tells the staff member an order is assigned to that the vendor delivered its report.</summary>
+    public static AutomationUser ReportDeliveredNotifier { get; } = new(
+        "0a1b2c07-bd9e-4f3a-8b5c-7d8e9f0a1b2c", "Report Delivered Notifier");
+
     /// <summary>The account's user ID in the identity provider.</summary>
     public string UserGuid { get; }
 

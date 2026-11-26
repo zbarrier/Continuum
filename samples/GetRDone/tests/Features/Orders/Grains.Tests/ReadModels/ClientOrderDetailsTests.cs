@@ -157,6 +157,34 @@ public sealed class ClientOrderDetailsTests
     }
 
     [Fact]
+    public async Task ClientOrderDetails_ShowTheInspectionsProgressWithoutTheVendorsNameOrTheReport()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(_orderId, occurredAt: TestData.At.AddMinutes(5)),
+            VendorAssignmentTestData.Assigned1(_orderId, occurredAt: TestData.At.AddMinutes(6)),
+            InspectionTestData.Scheduled1(_orderId, TestData.At.AddMinutes(7)),
+            InspectionTestData.Completed1(_orderId, TestData.At.AddMinutes(8)),
+            InspectionTestData.Delivered1(_orderId, occurredAt: TestData.At.AddMinutes(9)));
+
+        await When(() => Grain.GetClientOrderDetailsAsync());
+
+        Then<ClientOrderDetails>(details =>
+        {
+            Assert.Equal(ClientOrderStatus.InspectionCompleted, details.Status);
+            Assert.Equal(
+                [
+                    new OrderTimelineEntry(TestData.At.AddMinutes(8), "Inspection completed"),
+                    new OrderTimelineEntry(TestData.At.AddMinutes(7), "Inspection scheduled"),
+                    new OrderTimelineEntry(TestData.At.AddMinutes(6), "Appraiser assigned")
+                ],
+                details.Timeline.Take(3));
+            Assert.DoesNotContain(details.Documents, document => document.DocumentId == InspectionTestData.DeliverCommand1.DocumentId);
+        });
+    }
+
+    [Fact]
     public async Task SupportingDocumentRemoved_RemovesTheDocument()
     {
         GivenSignedIn(RequestedByUsers.ClientUser1);

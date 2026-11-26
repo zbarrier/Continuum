@@ -92,7 +92,10 @@ public enum OrderStatus
     Acknowledged,
     DescriptionOfWorkAwaitingApproval,
     DescriptionOfWorkApproved,
-    VendorAssigned
+    VendorAssigned,
+    InspectionScheduled,
+    InspectionCompleted,
+    ReportDelivered
 }
 
 public enum OrderCommand
@@ -110,7 +113,10 @@ public enum OrderCommand
     ProvideRequestedDocument,
     SubmitDescriptionOfWork,
     ApproveDescriptionOfWork,
-    AssignVendor
+    AssignVendor,
+    ScheduleInspection,
+    CompleteInspection,
+    DeliverReport
 }
 
 [GenerateSerializer]
@@ -151,6 +157,15 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>The vendor the order is assigned to and whether its users were told, or null until it is assigned to one.</summary>
     [Id(9)] public OrderVendorAssignment? VendorAssignment { get; private set; }
 
+    /// <summary>When the vendor's appraiser inspects the property, or null until the vendor schedules it.</summary>
+    [Id(10)] public DateTimeOffset? InspectionAt { get; private set; }
+
+    /// <summary>The date the vendor's appraiser inspected the property, or null until the vendor records it.</summary>
+    [Id(11)] public DateOnly? InspectionCompletedOn { get; private set; }
+
+    /// <summary>The vendor's completed report and whether the assigned staff member was told, or null until it is delivered.</summary>
+    [Id(12)] public OrderReport? Report { get; private set; }
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
@@ -171,13 +186,19 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         On<DescriptionOfWorkApprovedNoticeSent>(Handle);
         On<VendorAssigned>(Handle);
         On<VendorAssignedNoticeSent>(Handle);
+        On<InspectionScheduled>(Handle);
+        On<InspectionCompleted>(Handle);
+        On<ReportDelivered>(Handle);
+        On<ReportDeliveredNoticeSent>(Handle);
     }
 
     /// <remarks>
     ///     The Order Number Assigner can give an order its number after staff have already assigned or acknowledged it, so
     ///     every status after Submitted permits <see cref="OrderCommand.AssignOrderNumber"/>. Documents can be requested and
     ///     provided once the order is acknowledged, whatever the state of its description of work, and the description of
-    ///     work can be revised until the client approves it. The order is assigned to a vendor once, after the approval.
+    ///     work can be revised until the client approves it. The order is assigned to a vendor once, after the approval. The
+    ///     vendor then schedules the inspection, completes it and delivers its report, each once and in that order; documents
+    ///     can still be requested and provided throughout.
     /// </remarks>
     protected override void ConfigureStateMachine()
     {
@@ -213,6 +234,21 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         StateMachine.Configure(OrderStatus.VendorAssigned)
             .PermitReentry(OrderCommand.AssignOrderNumber)
             .PermitReentry(OrderCommand.RequestClientDocument)
+            .PermitReentry(OrderCommand.ProvideRequestedDocument)
+            .Permit(OrderCommand.ScheduleInspection, OrderStatus.InspectionScheduled);
+        StateMachine.Configure(OrderStatus.InspectionScheduled)
+            .PermitReentry(OrderCommand.AssignOrderNumber)
+            .PermitReentry(OrderCommand.RequestClientDocument)
+            .PermitReentry(OrderCommand.ProvideRequestedDocument)
+            .Permit(OrderCommand.CompleteInspection, OrderStatus.InspectionCompleted);
+        StateMachine.Configure(OrderStatus.InspectionCompleted)
+            .PermitReentry(OrderCommand.AssignOrderNumber)
+            .PermitReentry(OrderCommand.RequestClientDocument)
+            .PermitReentry(OrderCommand.ProvideRequestedDocument)
+            .Permit(OrderCommand.DeliverReport, OrderStatus.ReportDelivered);
+        StateMachine.Configure(OrderStatus.ReportDelivered)
+            .PermitReentry(OrderCommand.AssignOrderNumber)
+            .PermitReentry(OrderCommand.RequestClientDocument)
             .PermitReentry(OrderCommand.ProvideRequestedDocument);
     }
 }
@@ -242,4 +278,10 @@ public sealed record OrderDescriptionOfWork(
 [GenerateSerializer, Immutable]
 public sealed record OrderVendorAssignment(
     string VendorId,
+    bool NoticeSent);
+
+/// <summary>The vendor's completed report and whether the staff member the order is assigned to was told about it.</summary>
+[GenerateSerializer, Immutable]
+public sealed record OrderReport(
+    string DocumentId,
     bool NoticeSent);

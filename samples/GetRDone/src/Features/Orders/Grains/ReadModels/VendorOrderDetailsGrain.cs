@@ -47,7 +47,7 @@ public sealed class VendorOrderDetailsGrain(
                     .Map(_ => new VendorOrderDetails(
                         this.GetPrimaryKeyString(),
                         State.OrderNumber,
-                        VendorOrderStatus.Assigned,
+                        State.Status,
                         State.ClientId is null ? null : names.ClientName(State.ClientId),
                         State.FormTypeName!,
                         State.PropertyAddress!,
@@ -56,9 +56,20 @@ public sealed class VendorOrderDetailsGrain(
                         State.Vendor!.VendorFee,
                         State.Vendor.VendorDueDate,
                         State.DescriptionOfWork!,
-                        OrderTimeline.Describe(State.Timeline, names, OrderTimelineAudience.Vendor)));
+                        State.Inspection,
+                        State.Report,
+                        OrderTimeline.Describe(State.Timeline, names, OrderTimelineAudience.Vendor),
+                        GetAllowedActions()));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
     }
+
+    private VendorOrderActions GetAllowedActions() => State.Status switch
+    {
+        VendorOrderStatus.Assigned => VendorOrderActions.ScheduleInspection,
+        VendorOrderStatus.InspectionScheduled => VendorOrderActions.CompleteInspection,
+        VendorOrderStatus.InspectionCompleted => VendorOrderActions.DeliverReport,
+        _ => VendorOrderActions.None
+    };
 }
 
 [GenerateSerializer]
@@ -73,6 +84,9 @@ public sealed class VendorOrderDetailsState : HandlerProjectionState<VendorOrder
         On<DescriptionOfWorkSubmitted>(Apply);
         On<DescriptionOfWorkApproved>(Apply);
         On<VendorAssigned>(Apply);
+        On<InspectionScheduled>(Apply);
+        On<InspectionCompleted>(Apply);
+        On<ReportDelivered>(Apply);
     }
 
     /// <summary>The client the order is for, as a tenant-qualified client ID.</summary>
@@ -97,6 +111,14 @@ public sealed class VendorOrderDetailsState : HandlerProjectionState<VendorOrder
 
     /// <summary>What happened to the order since it was assigned to the vendor, oldest first.</summary>
     [Id(8)] public List<OrderTimelineItem> Timeline { get; init; } = [];
+
+    [Id(9)] public VendorOrderStatus Status { get; set; }
+
+    /// <summary>The property's inspection, or null until the vendor schedules it.</summary>
+    [Id(10)] public OrderInspectionSummary? Inspection { get; set; }
+
+    /// <summary>The vendor's completed report, or null until the vendor delivers it.</summary>
+    [Id(11)] public OrderReportSummary? Report { get; set; }
 
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
@@ -145,9 +167,34 @@ public sealed class VendorOrderDetailsState : HandlerProjectionState<VendorOrder
 
     private bool Apply(VendorAssigned evt, IStreamedEvent<object> streamedEvent)
     {
+        Status = VendorOrderStatus.Assigned;
         Vendor = new OrderVendorItem(evt.VendorId, evt.VendorFee, evt.VendorDueDate);
         Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.VendorAssigned, evt.InitiatedBy, null,
             VendorId: evt.VendorId));
+        return true;
+    }
+
+    private bool Apply(InspectionScheduled evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = VendorOrderStatus.InspectionScheduled;
+        Inspection = new OrderInspectionSummary(evt.InspectionAt, evt.ContactName, CompletedOn: null);
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.InspectionScheduled, evt.InitiatedBy, null));
+        return true;
+    }
+
+    private bool Apply(InspectionCompleted evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = VendorOrderStatus.InspectionCompleted;
+        Inspection = Inspection is null ? null : Inspection with { CompletedOn = evt.CompletedOn };
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.InspectionCompleted, evt.InitiatedBy, null));
+        return true;
+    }
+
+    private bool Apply(ReportDelivered evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = VendorOrderStatus.ReportDelivered;
+        Report = new OrderReportSummary(evt.DocumentId, evt.FileName, evt.OccurredAt);
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.ReportDelivered, evt.InitiatedBy, null));
         return true;
     }
 }

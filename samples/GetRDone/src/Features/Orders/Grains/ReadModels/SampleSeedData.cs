@@ -87,7 +87,8 @@ public sealed class SampleSeedData : IReadModelSeedData
             Automation(AutomationUser.DocumentRequestNotifier, "document-request-notifier@elliott.example"),
             Automation(AutomationUser.DescriptionOfWorkApprovalNotifier, "dow-approval-notifier@elliott.example"),
             Automation(AutomationUser.DescriptionOfWorkApprovedNotifier, "dow-approved-notifier@elliott.example"),
-            Automation(AutomationUser.VendorAssignmentNotifier, "vendor-assignment-notifier@elliott.example")
+            Automation(AutomationUser.VendorAssignmentNotifier, "vendor-assignment-notifier@elliott.example"),
+            Automation(AutomationUser.ReportDeliveredNotifier, "report-delivered-notifier@elliott.example")
         ],
         Vendors:
         [

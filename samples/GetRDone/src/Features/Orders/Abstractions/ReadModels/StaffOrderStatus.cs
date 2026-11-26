@@ -19,5 +19,14 @@ public enum StaffOrderStatus
     DescriptionOfWorkApproved,
 
     /// <summary>The order is assigned to a vendor.</summary>
-    VendorAssigned
+    VendorAssigned,
+
+    /// <summary>The vendor scheduled the property's inspection.</summary>
+    InspectionScheduled,
+
+    /// <summary>The vendor's appraiser inspected the property.</summary>
+    InspectionCompleted,
+
+    /// <summary>The vendor delivered its completed report for the AMC to review.</summary>
+    ReportDelivered
 }

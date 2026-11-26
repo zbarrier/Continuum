@@ -59,6 +59,9 @@ public sealed class SubmitDescriptionOfWorkTests
             NewOrderNoticeSent = false,
             AssignedTo = (string?)RequestedByUsers.Director1.GetTenantUserId(),
             VendorAssignment = (OrderVendorAssignment?)null,
+            InspectionAt = (DateTimeOffset?)null,
+            InspectionCompletedOn = (DateOnly?)null,
+            Report = (OrderReport?)null,
             DocumentRequests = new Dictionary<string, OrderDocumentRequest>(),
             DescriptionOfWork = (OrderDescriptionOfWork?)new OrderDescriptionOfWork(
                 DescriptionOfWorkTestData.DescriptionOfWorkId, 1, RequestedByUsers.ClientUser1.GetTenantUserId(),

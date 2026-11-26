@@ -6,8 +6,9 @@ namespace GetRDone.Orders.Abstractions.ReadModels;
 
 /// <summary>
 ///     The vendor order page of one order assigned to a vendor (the VendorOrderDetails read model): the engagement, the
-///     property, its access contact, the approved description of work and the timeline. Each order has one instance, keyed
-///     by the order ID, and only users of the vendor the order is assigned to can read it.
+///     property, its access contact, the approved description of work, the inspection, the report, the timeline and what
+///     the vendor's users can do next. Each order has one instance, keyed by the order ID, and only users of the vendor the
+///     order is assigned to can read it.
 /// </summary>
 public interface IVendorOrderDetailsGrain : IGrainWithStringKey
 {
@@ -28,7 +29,10 @@ public interface IVendorOrderDetailsGrain : IGrainWithStringKey
 /// <param name="VendorFee">What the AMC pays the vendor for the report.</param>
 /// <param name="VendorDueDate">When the AMC needs the vendor's report.</param>
 /// <param name="DescriptionOfWork">The description of work the client approved.</param>
+/// <param name="Inspection">The property's inspection, or null until the vendor schedules it.</param>
+/// <param name="Report">The vendor's completed report, or null until the vendor delivers it.</param>
 /// <param name="Timeline">What happened to the order since it was assigned to the vendor, newest first.</param>
+/// <param name="AllowedActions">What the vendor's users can do next.</param>
 [GenerateSerializer, Immutable]
 public sealed record VendorOrderDetails(
     string OrderId,
@@ -42,4 +46,23 @@ public sealed record VendorOrderDetails(
     decimal VendorFee,
     DateOnly VendorDueDate,
     DescriptionOfWorkSummary DescriptionOfWork,
-    OrderTimelineEntry[] Timeline);
+    OrderInspectionSummary? Inspection,
+    OrderReportSummary? Report,
+    OrderTimelineEntry[] Timeline,
+    VendorOrderActions AllowedActions);
+
+/// <summary>What the vendor's users can do next on the vendor order page; each step is done once, in this order.</summary>
+[Flags]
+public enum VendorOrderActions
+{
+    None = 0,
+
+    /// <summary>Schedule the property's inspection once the order is assigned to the vendor.</summary>
+    ScheduleInspection = 1,
+
+    /// <summary>Record that the appraiser inspected the property once the inspection is scheduled.</summary>
+    CompleteInspection = 2,
+
+    /// <summary>Upload the completed report once the inspection is completed.</summary>
+    DeliverReport = 4
+}

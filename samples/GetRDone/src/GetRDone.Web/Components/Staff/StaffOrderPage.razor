@@ -1,6 +1,7 @@
 @* The staff order page (event model chapters 2 and 3, Order screens): the OrderDetails read model, with the actions the
    signed-in user can take, such as requesting documents from the client, writing the description of work for the client to
-   approve and assigning the approved order to a vendor. Each document links to its download (OrderDocumentDownloads). The
+   approve and assigning the approved order to a vendor. It shows the vendor's inspection and delivered report. Each document
+   and the report link to their download (OrderDocumentDownloads). The
    description of work is HTML from the rich text editor; it is sanitized again before it is shown. OrderDetails is a
    projection, so after an action the page waits for it to show the change. *@
 @page "/staff/orders/{OrderGuid:guid}"
@@ -62,6 +63,29 @@
                                 <td>
                                     @(vendor.VendorName ?? "An unknown vendor"), @vendor.VendorFee.ToString("C", UnitedStates),
                                     due @vendor.VendorDueDate.ToString("MMM d, yyyy")
+                                </td>
+                            </tr>
+                        }
+                        @if (details.Inspection is { } inspection)
+                        {
+                            <tr>
+                                <th>Inspection</th>
+                                <td>
+                                    @inspection.InspectionAt.ToLocalTime().ToString("MMM d, yyyy h:mm tt") with @inspection.ContactName
+                                    @if (inspection.CompletedOn is { } completedOn)
+                                    {
+                                        <span>, completed @completedOn.ToString("MMM d, yyyy")</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (details.Report is { } report)
+                        {
+                            <tr>
+                                <th>Report</th>
+                                <td>
+                                    <MudLink Href="@OrderDocumentDownloads.Url(details.OrderId, report.DocumentId)" download="@report.FileName">@report.FileName</MudLink>,
+                                    delivered @report.DeliveredAt.ToLocalTime().ToString("MMM d, h:mm tt")
                                 </td>
                             </tr>
                         }
@@ -284,6 +308,9 @@
         StaffOrderStatus.DescriptionOfWorkAwaitingApproval => Color.Secondary,
         StaffOrderStatus.DescriptionOfWorkApproved => Color.Success,
         StaffOrderStatus.VendorAssigned => Color.Primary,
+        StaffOrderStatus.InspectionScheduled => Color.Primary,
+        StaffOrderStatus.InspectionCompleted => Color.Primary,
+        StaffOrderStatus.ReportDelivered => Color.Secondary,
         _ => Color.Default
     };
 
@@ -292,6 +319,9 @@
         StaffOrderStatus.DescriptionOfWorkAwaitingApproval => "Awaiting DoW approval",
         StaffOrderStatus.DescriptionOfWorkApproved => "DoW approved",
         StaffOrderStatus.VendorAssigned => "Vendor assigned",
+        StaffOrderStatus.InspectionScheduled => "Inspection scheduled",
+        StaffOrderStatus.InspectionCompleted => "Inspection completed",
+        StaffOrderStatus.ReportDelivered => "Report delivered",
         _ => status.ToString()
     };
 

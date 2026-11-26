@@ -6,8 +6,8 @@ namespace GetRDone.Orders.Grains.ReadModels;
 /// <param name="OccurredAt">When it happened.</param>
 /// <param name="Kind">What happened.</param>
 /// <param name="UserId">
-///     Who submitted, was assigned, acknowledged the order, provided a document, or submitted or approved the description
-///     of work, as a tenant user ID.
+///     Who submitted, was assigned, acknowledged the order, provided a document, submitted or approved the description of
+///     work, assigned the vendor, scheduled or completed the inspection, or delivered the report, as a tenant user ID.
 /// </param>
 /// <param name="OrderNumber">The number the order was given.</param>
 /// <param name="DocumentTypeName">The type of document requested or provided.</param>
@@ -33,10 +33,13 @@ public enum OrderTimelineKind
     DocumentProvided,
     DescriptionOfWorkSubmitted,
     DescriptionOfWorkApproved,
-    VendorAssigned
+    VendorAssigned,
+    InspectionScheduled,
+    InspectionCompleted,
+    ReportDelivered
 }
 
-/// <summary>Who reads a timeline; each sees the vendor assignment in their own words.</summary>
+/// <summary>Who reads a timeline; each sees the vendor's work in their own words.</summary>
 public enum OrderTimelineAudience
 {
     Staff,
@@ -80,6 +83,13 @@ internal static class OrderTimeline
                 OrderTimelineAudience.Vendor => $"Assigned to you by {names.OrganizationName(item.UserId) ?? "the AMC"}",
                 _ => "Appraiser assigned"
             },
+            OrderTimelineKind.InspectionScheduled => audience == OrderTimelineAudience.Client
+                ? "Inspection scheduled"
+                : $"Inspection scheduled by {userName}",
+            OrderTimelineKind.InspectionCompleted => audience == OrderTimelineAudience.Client
+                ? "Inspection completed"
+                : $"Inspection completed by {userName}",
+            OrderTimelineKind.ReportDelivered => $"Report delivered by {userName}",
             _ => item.Kind.ToString()
         };
     }

@@ -56,10 +56,75 @@ public sealed class VendorOrderDetailsTests
             new DescriptionOfWorkSummary(
                 DescriptionOfWorkTestData.DescriptionOfWorkId, 1, DescriptionOfWorkTestData.Command1.DescriptionOfWorkHtml,
                 Approved: true, TestData.At.AddMinutes(4)),
+            null,
+            null,
             [
                 new OrderTimelineEntry(TestData.At.AddMinutes(7), "Order number 610950"),
                 new OrderTimelineEntry(TestData.At.AddMinutes(6), "Assigned to you by Summit Valuation")
-            ]), details, strict: true));
+            ],
+            VendorOrderActions.ScheduleInspection), details, strict: true));
+    }
+
+    [Fact]
+    public async Task VendorOrderDetails_ShowTheScheduledInspectionAndLetTheVendorCompleteIt()
+    {
+        GivenSignedIn(RequestedByUsers.VendorUser1);
+        await GivenAssigned(InspectionTestData.Scheduled1(_orderId, TestData.At.AddMinutes(7)));
+
+        await When(() => Grain.GetVendorOrderDetailsAsync());
+
+        Then<VendorOrderDetails>(details =>
+        {
+            Assert.Equal(VendorOrderStatus.InspectionScheduled, details.Status);
+            Assert.Equal(new OrderInspectionSummary(InspectionTestData.InspectionTime, "Marcus Doyle", CompletedOn: null), details.Inspection);
+            Assert.Null(details.Report);
+            Assert.Equal(VendorOrderActions.CompleteInspection, details.AllowedActions);
+            Assert.Equal(
+                new OrderTimelineEntry(TestData.At.AddMinutes(7), "Inspection scheduled by Ryan Brooks"), details.Timeline[0]);
+        });
+    }
+
+    [Fact]
+    public async Task VendorOrderDetails_ShowTheCompletedInspectionAndLetTheVendorDeliverTheReport()
+    {
+        GivenSignedIn(RequestedByUsers.VendorUser1);
+        await GivenAssigned(
+            InspectionTestData.Scheduled1(_orderId, TestData.At.AddMinutes(7)),
+            InspectionTestData.Completed1(_orderId, TestData.At.AddMinutes(8)));
+
+        await When(() => Grain.GetVendorOrderDetailsAsync());
+
+        Then<VendorOrderDetails>(details =>
+        {
+            Assert.Equal(VendorOrderStatus.InspectionCompleted, details.Status);
+            Assert.Equal(InspectionTestData.CompleteCommand1.CompletedOn, details.Inspection!.CompletedOn);
+            Assert.Equal(VendorOrderActions.DeliverReport, details.AllowedActions);
+            Assert.Equal(
+                new OrderTimelineEntry(TestData.At.AddMinutes(8), "Inspection completed by Ryan Brooks"), details.Timeline[0]);
+        });
+    }
+
+    [Fact]
+    public async Task VendorOrderDetails_ShowTheDeliveredReportAndAllowNothingMore()
+    {
+        GivenSignedIn(RequestedByUsers.VendorUser1);
+        await GivenAssigned(
+            InspectionTestData.Scheduled1(_orderId, TestData.At.AddMinutes(7)),
+            InspectionTestData.Completed1(_orderId, TestData.At.AddMinutes(8)),
+            InspectionTestData.Delivered1(_orderId, occurredAt: TestData.At.AddMinutes(9)));
+
+        await When(() => Grain.GetVendorOrderDetailsAsync());
+
+        Then<VendorOrderDetails>(details =>
+        {
+            Assert.Equal(VendorOrderStatus.ReportDelivered, details.Status);
+            Assert.Equal(
+                new OrderReportSummary(
+                    InspectionTestData.DeliverCommand1.DocumentId, InspectionTestData.DeliverCommand1.FileName, TestData.At.AddMinutes(9)),
+                details.Report);
+            Assert.Equal(VendorOrderActions.None, details.AllowedActions);
+            Assert.Equal(new OrderTimelineEntry(TestData.At.AddMinutes(9), "Report delivered by Ryan Brooks"), details.Timeline[0]);
+        });
     }
 
     [Fact]

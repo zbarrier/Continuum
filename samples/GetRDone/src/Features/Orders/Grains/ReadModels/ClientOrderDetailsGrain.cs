@@ -85,6 +85,8 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
         On<DescriptionOfWorkSubmitted>(Apply);
         On<DescriptionOfWorkApproved>(Apply);
         On<VendorAssigned>(Apply);
+        On<InspectionScheduled>(Apply);
+        On<InspectionCompleted>(Apply);
     }
 
     /// <summary>Whether the client submitted the order; drafts have their own page.</summary>
@@ -220,6 +222,20 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
         DueDate = evt.DueDate;
         Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.VendorAssigned, evt.InitiatedBy, null,
             VendorId: evt.VendorId));
+        return true;
+    }
+
+    private bool Apply(InspectionScheduled evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = ClientOrderStatus.InspectionScheduled;
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.InspectionScheduled, evt.InitiatedBy, null));
+        return true;
+    }
+
+    private bool Apply(InspectionCompleted evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = ClientOrderStatus.InspectionCompleted;
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.InspectionCompleted, evt.InitiatedBy, null));
         return true;
     }
 }

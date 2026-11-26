@@ -65,6 +65,9 @@ public sealed class VendorOrdersState : HandlerProjectionState<VendorOrdersState
         On<RequestAndPropertySaved>(Apply);
         On<OrderNumberAssigned>(Apply);
         On<VendorAssigned>(Apply);
+        On<InspectionScheduled>(Apply);
+        On<InspectionCompleted>(Apply);
+        On<ReportDelivered>(Apply);
     }
 
     /// <summary>
@@ -124,6 +127,26 @@ public sealed class VendorOrdersState : HandlerProjectionState<VendorOrdersState
 
         Orders[evt.OrderId] = new VendorOrderEntry(evt.OrderId, draft.OrderNumber ?? evt.OrderNumber, evt.VendorId,
             draft.PropertyAddress, draft.FormTypeName, VendorOrderStatus.Assigned, evt.VendorDueDate);
+        return true;
+    }
+
+    private bool Apply(InspectionScheduled evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, VendorOrderStatus.InspectionScheduled);
+
+    private bool Apply(InspectionCompleted evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, VendorOrderStatus.InspectionCompleted);
+
+    private bool Apply(ReportDelivered evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, VendorOrderStatus.ReportDelivered);
+
+    private bool SetStatus(string orderId, VendorOrderStatus status)
+    {
+        if (!Orders.TryGetValue(orderId, out var order))
+        {
+            return false;
+        }
+
+        Orders[orderId] = order with { Status = status };
         return true;
     }
 }

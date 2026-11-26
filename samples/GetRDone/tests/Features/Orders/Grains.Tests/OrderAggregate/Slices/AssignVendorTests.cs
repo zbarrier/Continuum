@@ -63,7 +63,10 @@ public sealed class AssignVendorTests
             DescriptionOfWork = (OrderDescriptionOfWork?)new OrderDescriptionOfWork(
                 DescriptionOfWorkTestData.DescriptionOfWorkId, 1, RequestedByUsers.ClientUser1.GetTenantUserId(),
                 Approved: true, NoticeSentVersion: null, ApprovedNoticeSent: false),
-            VendorAssignment = (OrderVendorAssignment?)new OrderVendorAssignment(TestData.RidgeAppraisalGroupVendorId, NoticeSent: false)
+            VendorAssignment = (OrderVendorAssignment?)new OrderVendorAssignment(TestData.RidgeAppraisalGroupVendorId, NoticeSent: false),
+            InspectionAt = (DateTimeOffset?)null,
+            InspectionCompletedOn = (DateOnly?)null,
+            Report = (OrderReport?)null
         }, state, strict: true);
     }
 

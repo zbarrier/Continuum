@@ -22,7 +22,16 @@ public interface IVendorOrdersGrain : IGrainWithStringKey
 public enum VendorOrderStatus
 {
     /// <summary>The AMC assigned the order to the vendor.</summary>
-    Assigned
+    Assigned,
+
+    /// <summary>The vendor scheduled the property's inspection.</summary>
+    InspectionScheduled,
+
+    /// <summary>The vendor's appraiser inspected the property.</summary>
+    InspectionCompleted,
+
+    /// <summary>The vendor delivered its completed report.</summary>
+    ReportDelivered
 }
 
 /// <summary>An order on the vendor's Orders list.</summary>

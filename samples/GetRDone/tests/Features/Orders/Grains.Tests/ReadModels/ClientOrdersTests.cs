@@ -145,6 +145,39 @@ public sealed class ClientOrdersTests
     }
 
     [Fact]
+    public async Task Inspection_ShowsItsProgressButNotTheReportUntilTheOrderShips()
+    {
+        var (scheduledOrder, deliveredOrder) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(_user);
+
+        await Given(
+        [
+            .. VendorAssigned(scheduledOrder),
+            InspectionTestData.Scheduled1(scheduledOrder, TestData.At.AddMinutes(9)),
+            .. VendorAssigned(deliveredOrder),
+            InspectionTestData.Scheduled1(deliveredOrder, TestData.At.AddMinutes(9)),
+            InspectionTestData.Completed1(deliveredOrder, TestData.At.AddMinutes(10)),
+            InspectionTestData.Delivered1(deliveredOrder, occurredAt: TestData.At.AddMinutes(11))
+        ]);
+
+        Then(state =>
+        {
+            Assert.Equal(ClientOrderStatus.InspectionScheduled, state.Orders[scheduledOrder].Status);
+            Assert.Equal(ClientOrderStatus.InspectionCompleted, state.Orders[deliveredOrder].Status);
+        });
+    }
+
+    private object[] VendorAssigned(string orderId) =>
+    [
+        .. StartedAndSubmitted(Command1, orderId, TestData.At.AddMinutes(3)),
+        AssignOrderTestData.OrderAssigned1(orderId, TestData.At.AddMinutes(4)),
+        AcknowledgeOrderTestData.Acknowledged1(orderId, TestData.At.AddMinutes(5)),
+        DescriptionOfWorkTestData.Submitted1(orderId, occurredAt: TestData.At.AddMinutes(6)),
+        DescriptionOfWorkTestData.Approved(orderId, occurredAt: TestData.At.AddMinutes(7)),
+        VendorAssignmentTestData.Assigned1(orderId, occurredAt: TestData.At.AddMinutes(8))
+    ];
+
+    [Fact]
     public async Task DraftStarted_IsNotAnOrderUntilItIsSubmitted()
     {
         var (submittedOrder, draftOrder) = (NewOrderId(), NewOrderId());

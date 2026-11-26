@@ -67,6 +67,9 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
         On<DescriptionOfWorkSubmitted>(Apply);
         On<DescriptionOfWorkApproved>(Apply);
         On<VendorAssigned>(Apply);
+        On<InspectionScheduled>(Apply);
+        On<InspectionCompleted>(Apply);
+        On<ReportDelivered>(Apply);
     }
 
     /// <summary>
@@ -148,6 +151,15 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
         Orders[evt.OrderId] = order with { Status = StaffOrderStatus.VendorAssigned, DueDate = evt.DueDate };
         return true;
     }
+
+    private bool Apply(InspectionScheduled evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, StaffOrderStatus.InspectionScheduled);
+
+    private bool Apply(InspectionCompleted evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, StaffOrderStatus.InspectionCompleted);
+
+    private bool Apply(ReportDelivered evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, StaffOrderStatus.ReportDelivered);
 
     private bool SetStatus(string orderId, StaffOrderStatus status)
     {

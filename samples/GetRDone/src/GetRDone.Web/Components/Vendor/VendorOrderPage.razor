@@ -1,11 +1,20 @@
 @* The vendor order page (event model chapter 3, Vendor screens): the VendorOrderDetails read model, with what the vendor
    needs to do the work: the property, the access contact, the fee and due date and the approved description of work. The
-   description of work is sanitized again before it is shown. *@
+   vendor schedules the inspection, records when it was completed and delivers the report here. Like the client's uploads,
+   the report is uploaded to blob storage first and then delivered; when the order rejects it, the upload is deleted again.
+   The description of work is sanitized again before it is shown. VendorOrderDetails is a projection, so after an action
+   the page waits for it to show the change. *@
 @page "/vendor/orders/{OrderGuid:guid}"
 @attribute [Authorize(Roles = "vendor")]
+@using Continuum.CSharpFunctionalExtensions
 @using Continuum.Orleans.Tenancy
+@using GetRDone.Orders.Abstractions
+@using GetRDone.Orders.Abstractions.OrderAggregate
 @using GetRDone.Orders.Abstractions.ReadModels
+@using GetRDone.Web.Components.Client.OrderEntryTabs
 @inject IClusterClient ClusterClient
+@inject SupportingDocumentStore DocumentStore
+@inject ISnackbar Snackbar
 @inject ILogger<VendorOrderPage> Logger
 
 <PageTitle>@Title · Get-R-Done</PageTitle>
@@ -45,8 +54,78 @@
                         </tr>
                         <tr><th>Fee</th><td>@details.VendorFee.ToString("C", UnitedStates)</td></tr>
                         <tr><th>Due</th><td>@details.VendorDueDate.ToString("MMM d, yyyy")</td></tr>
+                        @if (details.Inspection is { } inspection)
+                        {
+                            <tr>
+                                <th>Inspection</th>
+                                <td>
+                                    @inspection.InspectionAt.ToLocalTime().ToString("MMM d, yyyy h:mm tt") with @inspection.ContactName
+                                    @if (inspection.CompletedOn is { } completedOn)
+                                    {
+                                        <span>, completed @completedOn.ToString("MMM d, yyyy")</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (details.Report is { } report)
+                        {
+                            <tr>
+                                <th>Report</th>
+                                <td>
+                                    <MudLink Href="@OrderDocumentDownloads.Url(details.OrderId, report.DocumentId)" download="@report.FileName">@report.FileName</MudLink>,
+                                    delivered @report.DeliveredAt.ToLocalTime().ToString("MMM d, h:mm tt")
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </MudSimpleTable>
+
+                @if (details.AllowedActions.HasFlag(VendorOrderActions.ScheduleInspection))
+                {
+                    <MudPaper Outlined="true" Class="pa-4 mt-4">
+                        <MudText Typo="Typo.h6" Class="mb-2">Schedule the inspection</MudText>
+                        <MudStack Row="true" Spacing="2">
+                            <MudDatePicker @bind-Date="_inspectionDate" Label="Date" MinDate="DateTime.Today" />
+                            <MudTimePicker @bind-Time="_inspectionTime" Label="Time" AmPm="true" />
+                        </MudStack>
+                        <MudTextField @bind-Value="_contactName" Label="Meeting" MaxLength="InspectionContactName.MaxLength" Class="mt-2"
+                                      HelperText="Who lets you in, such as the access contact." />
+                        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="ScheduleAsync">Schedule</MudButton>
+                        </MudStack>
+                    </MudPaper>
+                }
+
+                @if (details.AllowedActions.HasFlag(VendorOrderActions.CompleteInspection))
+                {
+                    <MudPaper Outlined="true" Class="pa-4 mt-4">
+                        <MudText Typo="Typo.h6" Class="mb-2">Complete the inspection</MudText>
+                        <MudDatePicker @bind-Date="_completedOn" Label="Completed on" MaxDate="DateTime.Today" />
+                        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="CompleteAsync">Complete</MudButton>
+                        </MudStack>
+                    </MudPaper>
+                }
+
+                @if (details.AllowedActions.HasFlag(VendorOrderActions.DeliverReport))
+                {
+                    <MudPaper Outlined="true" Class="pa-4 mt-4">
+                        <MudText Typo="Typo.h6" Class="mb-2">Deliver the report</MudText>
+                        <MudText Typo="Typo.body2">Upload the completed report; the AMC is told it is ready for review.</MudText>
+                        <MudFileUpload T="IBrowserFile" FilesChanged="DeliverAsync" Disabled="_busy">
+                            <CustomContent>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Upload" Class="mt-3"
+                                           Disabled="_busy" OnClick="@context.OpenFilePickerAsync">Upload the report</MudButton>
+                            </CustomContent>
+                            <SelectedTemplate />
+                        </MudFileUpload>
+                    </MudPaper>
+                }
+
+                @if (_busy)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-2" />
+                }
 
                 <MudText Typo="Typo.h6" Class="mt-6 mb-2">Description of work</MudText>
                 @* MudHtmlViewer is height: 100%, which in a grid item is the whole row's height; a div of its own keeps it to its content. *@
@@ -74,13 +153,21 @@
 </MudPaper>
 
 @code {
+    private const int WaitAttempts = 20;
+    private static readonly TimeSpan WaitDelay = TimeSpan.FromMilliseconds(250);
+
     /// <summary>The sample's AMCs are in the United States, so fees are shown in dollars whatever the server's culture.</summary>
     private static readonly System.Globalization.CultureInfo UnitedStates = System.Globalization.CultureInfo.GetCultureInfo("en-US");
 
     private bool _loading = true;
+    private bool _busy;
     private string? _error;
     private string _orderId = "";
     private VendorOrderDetails? _details;
+    private DateTime? _inspectionDate;
+    private TimeSpan? _inspectionTime;
+    private string _contactName = "";
+    private DateTime? _completedOn;
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
@@ -99,12 +186,18 @@
     public static Color StatusColor(VendorOrderStatus status) => status switch
     {
         VendorOrderStatus.Assigned => Color.Primary,
+        VendorOrderStatus.InspectionScheduled => Color.Info,
+        VendorOrderStatus.InspectionCompleted => Color.Warning,
+        VendorOrderStatus.ReportDelivered => Color.Success,
         _ => Color.Default
     };
 
     public static string StatusText(VendorOrderStatus status) => status switch
     {
         VendorOrderStatus.Assigned => "Assigned",
+        VendorOrderStatus.InspectionScheduled => "Inspection scheduled",
+        VendorOrderStatus.InspectionCompleted => "Inspection completed",
+        VendorOrderStatus.ReportDelivered => "Report delivered",
         _ => status.ToString()
     };
 
@@ -134,6 +227,8 @@
                 return;
             }
             _details = result.Value;
+            _contactName = result.Value.AccessContactName ?? "";
+            _completedOn = DateTime.Today;
         }
         catch (Exception ex)
         {
@@ -144,5 +239,140 @@
         {
             _loading = false;
         }
+    }
+
+    /// <summary>
+    ///     Schedules the inspection at the date and time picked, in the server's time zone, which is the one the page shows
+    ///     times in.
+    /// </summary>
+    private Task ScheduleAsync()
+    {
+        if (_inspectionDate is not { } date || _inspectionTime is not { } time)
+        {
+            _error = "Pick the inspection's date and time.";
+            return Task.CompletedTask;
+        }
+        var local = date.Date + time;
+        var inspectionAt = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
+        return RunAsync(
+            "schedule the inspection",
+            async order => (await order.ScheduleInspectionAsync(new ScheduleInspectionCommand(inspectionAt, _contactName))).Map(_ => true),
+            "Inspection scheduled.",
+            details => details.Status == VendorOrderStatus.InspectionScheduled);
+    }
+
+    private Task CompleteAsync()
+    {
+        if (_completedOn is not { } completedOn)
+        {
+            _error = "Pick the date the inspection was completed.";
+            return Task.CompletedTask;
+        }
+        return RunAsync(
+            "complete the inspection",
+            async order => (await order.CompleteInspectionAsync(new CompleteInspectionCommand(DateOnly.FromDateTime(completedOn)))).Map(_ => true),
+            "Inspection completed.",
+            details => details.Status == VendorOrderStatus.InspectionCompleted);
+    }
+
+    private async Task DeliverAsync(IBrowserFile? file)
+    {
+        if (file is null)
+        {
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+        try
+        {
+            TenantKey.Split(_orderId, out var tenantId, out _);
+            var documentId = TenantKey.Create(tenantId, Guid.NewGuid().ToString());
+            var command = new DeliverReportCommand(
+                documentId,
+                file.Name,
+                string.IsNullOrEmpty(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                file.Size);
+
+            // Checks what the order checks of the file before uploading, so an invalid file never uploads.
+            var valid = Result.CombineForValidation(
+                FileName.Create(command.FileName),
+                ContentType.Create(command.ContentType),
+                FileSize.Create(command.FileSize));
+            if (valid.IsFailure)
+            {
+                _error = valid.Error.GetFormattedMessage();
+                return;
+            }
+
+            var blobPath = SupportingDocumentStorage.BlobPath(_orderId, documentId);
+            await using (var content = file.OpenReadStream(FileSize.MaxValue))
+            {
+                await DocumentStore.UploadAsync(blobPath, content, command.ContentType);
+            }
+
+            // Only a rejected report deletes its file. When the call throws, the order may still have recorded it.
+            var result = await ClusterClient.GetGrain<IOrderGrain>(_orderId).DeliverReportAsync(command);
+            if (result.IsFailure)
+            {
+                await DocumentStore.TryDeleteAsync(blobPath);
+                _error = result.Error.GetFormattedMessage();
+                return;
+            }
+            Snackbar.Add("Report delivered.", Severity.Success);
+            await WaitForAsync(details => details.Report is not null, "The report was delivered");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The report could not be delivered for order {OrderId}.", _orderId);
+            _error = "The report could not be delivered. Try again in a moment.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>Sends a command to the order, then waits for the page's projection to show it.</summary>
+    private async Task RunAsync(
+        string action, Func<IOrderGrain, Task<Result<bool>>> send, string done, Func<VendorOrderDetails, bool> shown)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var result = await send(ClusterClient.GetGrain<IOrderGrain>(_orderId));
+            if (result.IsFailure)
+            {
+                _error = result.Error.GetFormattedMessage();
+                return;
+            }
+            Snackbar.Add(done, Severity.Success);
+            await WaitForAsync(shown, done.TrimEnd('.'));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The vendor could not {Action} for order {OrderId}.", action, _orderId);
+            _error = $"Could not {action}. Try again in a moment.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task WaitForAsync(Func<VendorOrderDetails, bool> shown, string saved)
+    {
+        for (var attempt = 0; attempt < WaitAttempts; attempt++)
+        {
+            var details = await ClusterClient.GetVendorOrderDetailsGrain(_orderId).GetVendorOrderDetailsAsync();
+            if (details.IsSuccess && shown(details.Value))
+            {
+                _details = details.Value;
+                return;
+            }
+            await Task.Delay(WaitDelay);
+        }
+        _error = $"{saved}, but the page is not showing it yet. Reload the page in a moment.";
     }
 }

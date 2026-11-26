@@ -36,6 +36,8 @@ public interface IOrderDetailsGrain : IGrainWithStringKey
 /// <param name="Documents">The order's supporting documents, in the order they were added.</param>
 /// <param name="DescriptionOfWork">The latest version of the order's description of work, or null until one is submitted.</param>
 /// <param name="Vendor">The vendor the order is assigned to, or null until it is assigned to one.</param>
+/// <param name="Inspection">The property's inspection, or null until the vendor schedules it.</param>
+/// <param name="Report">The vendor's completed report, or null until the vendor delivers it.</param>
 /// <param name="Timeline">What happened to the order, newest first.</param>
 /// <param name="AllowedActions">What the signed-in user can do next.</param>
 [GenerateSerializer, Immutable]
@@ -58,6 +60,8 @@ public sealed record OrderDetails(
     OrderDocumentSummary[] Documents,
     DescriptionOfWorkSummary? DescriptionOfWork,
     OrderVendorSummary? Vendor,
+    OrderInspectionSummary? Inspection,
+    OrderReportSummary? Report,
     OrderTimelineEntry[] Timeline,
     OrderActions AllowedActions);
 
@@ -72,6 +76,26 @@ public sealed record OrderVendorSummary(
     string? VendorName,
     decimal VendorFee,
     DateOnly VendorDueDate);
+
+/// <summary>The property's inspection, as the staff and vendor order pages show it.</summary>
+/// <param name="InspectionAt">When the vendor's appraiser inspects the property; pages show it in the viewer's time zone.</param>
+/// <param name="ContactName">Who meets the appraiser there.</param>
+/// <param name="CompletedOn">The date the appraiser inspected the property, or null until the vendor records it.</param>
+[GenerateSerializer, Immutable]
+public sealed record OrderInspectionSummary(
+    DateTimeOffset InspectionAt,
+    string ContactName,
+    DateOnly? CompletedOn);
+
+/// <summary>The vendor's completed report, which staff and the vendor can download.</summary>
+/// <param name="DocumentId">The report's document.</param>
+/// <param name="FileName">The name of its file.</param>
+/// <param name="DeliveredAt">When the vendor delivered it.</param>
+[GenerateSerializer, Immutable]
+public sealed record OrderReportSummary(
+    string DocumentId,
+    string FileName,
+    DateTimeOffset DeliveredAt);
 
 /// <summary>The latest version of an order's description of work, as the staff and client order pages show it.</summary>
 /// <param name="DescriptionOfWorkId">The description of work.</param>

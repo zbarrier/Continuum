@@ -73,6 +73,36 @@ public sealed class VendorOrdersTests
     }
 
     [Fact]
+    public async Task VendorsWork_MovesTheOrderThroughItsStatuses()
+    {
+        var (scheduledOrder, completedOrder, deliveredOrder) = (NewOrderId(), NewOrderId(), NewOrderId());
+        GivenSignedIn(RequestedByUsers.VendorUser1);
+
+        await Given(
+        [
+            .. Submitted(scheduledOrder),
+            VendorAssignmentTestData.Assigned1(scheduledOrder, occurredAt: TestData.At.AddMinutes(2)),
+            InspectionTestData.Scheduled1(scheduledOrder, TestData.At.AddMinutes(3)),
+            .. Submitted(completedOrder),
+            VendorAssignmentTestData.Assigned1(completedOrder, occurredAt: TestData.At.AddMinutes(2)),
+            InspectionTestData.Scheduled1(completedOrder, TestData.At.AddMinutes(3)),
+            InspectionTestData.Completed1(completedOrder, TestData.At.AddMinutes(4)),
+            .. Submitted(deliveredOrder),
+            VendorAssignmentTestData.Assigned1(deliveredOrder, occurredAt: TestData.At.AddMinutes(2)),
+            InspectionTestData.Scheduled1(deliveredOrder, TestData.At.AddMinutes(3)),
+            InspectionTestData.Completed1(deliveredOrder, TestData.At.AddMinutes(4)),
+            InspectionTestData.Delivered1(deliveredOrder, occurredAt: TestData.At.AddMinutes(5))
+        ]);
+
+        Then(state =>
+        {
+            Assert.Equal(VendorOrderStatus.InspectionScheduled, state.Orders[scheduledOrder].Status);
+            Assert.Equal(VendorOrderStatus.InspectionCompleted, state.Orders[completedOrder].Status);
+            Assert.Equal(VendorOrderStatus.ReportDelivered, state.Orders[deliveredOrder].Status);
+        });
+    }
+
+    [Fact]
     public async Task Orders_ListOnlyTheSignedInUsersVendorsOrdersDueFirstFirst()
     {
         var (laterOrder, soonerOrder, otherVendorOrder) = (NewOrderId(), NewOrderId(), NewOrderId());

@@ -35,7 +35,16 @@ public enum ClientOrderStatus
     DescriptionOfWorkApproved,
 
     /// <summary>The AMC assigned the order to an appraiser.</summary>
-    VendorAssigned
+    VendorAssigned,
+
+    /// <summary>The appraiser scheduled the property's inspection.</summary>
+    InspectionScheduled,
+
+    /// <summary>
+    ///     The appraiser inspected the property. The order stays here while the AMC reviews the appraiser's report, until it
+    ///     ships the report to the client.
+    /// </summary>
+    InspectionCompleted
 }
 
 /// <summary>A submitted order on the client user's My orders list.</summary>

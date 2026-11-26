@@ -15,9 +15,10 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace GetRDone.Web;
 
 /// <summary>
-///     Downloads the file of a submitted order's supporting document. Staff can download the documents of their tenant's
-///     orders, and a client the documents of the orders they started. The order's read model for the user's role
-///     (OrderDetails or ClientOrderDetails) decides, so the endpoint only serves a file the user can see listed.
+///     Downloads the file of a submitted order's supporting document or report. Staff can download the documents and report of
+///     their tenant's orders, a client the documents of the orders they started, and a vendor's users the report they
+///     delivered. The order's read model for the user's role (OrderDetails, ClientOrderDetails or VendorOrderDetails)
+///     decides, so the endpoint only serves a file the user can see listed.
 /// </summary>
 /// <remarks>
 ///     Orleans Identity copies the signed-in user into the Orleans request context only for MVC actions and SignalR hubs
@@ -27,6 +28,14 @@ namespace GetRDone.Web;
 internal static class OrderDocumentDownloads
 {
     private const string ClientRole = "client";
+    private const string VendorRole = "vendor";
+
+    private enum Reader
+    {
+        Staff,
+        Client,
+        Vendor
+    }
 
     /// <summary>The download URL of a document, <c>{TenantId}|{DocumentGuid}</c>, of an order, <c>{TenantId}|{OrderGuid}</c>.</summary>
     public static string Url(string orderId, string documentId)
@@ -50,8 +59,11 @@ internal static class OrderDocumentDownloads
     {
         var user = httpContext.User;
         var tenantId = user.FindFirst("tenant_id")?.Value;
-        var isStaff = StaffRoles.Staff.Any(user.IsInRole);
-        if (string.IsNullOrEmpty(tenantId) || (!isStaff && !user.IsInRole(ClientRole)))
+        Reader? reader = StaffRoles.Staff.Any(user.IsInRole) ? Reader.Staff
+            : user.IsInRole(ClientRole) ? Reader.Client
+            : user.IsInRole(VendorRole) ? Reader.Vendor
+            : null;
+        if (string.IsNullOrEmpty(tenantId) || reader is null)
         {
             return TypedResults.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -63,7 +75,7 @@ internal static class OrderDocumentDownloads
         RequestContext.Set(OrleansIdentityConstants.USER_CLAIMS, user);
         try
         {
-            fileName = await FindFileNameAsync(clusterClient, isStaff, orderId, documentId);
+            fileName = await FindFileNameAsync(clusterClient, reader.Value, orderId, documentId);
         }
         finally
         {
@@ -91,17 +103,23 @@ internal static class OrderDocumentDownloads
         return TypedResults.Stream(file.Content, file.ContentType, fileName.Value);
     }
 
-    /// <summary>The document's file name, or null when the order has no such document.</summary>
+    /// <summary>The document's file name, or null when the order has no such document the reader can see.</summary>
     private static async Task<Result<string?>> FindFileNameAsync(
-        IClusterClient clusterClient, bool isStaff, string orderId, string documentId)
+        IClusterClient clusterClient, Reader reader, string orderId, string documentId)
     {
-        if (isStaff)
+        switch (reader)
         {
-            var details = await clusterClient.GetOrderDetailsGrain(orderId).GetOrderDetailsAsync();
-            return details.Map(value => value.Documents.FirstOrDefault(document => document.DocumentId == documentId)?.FileName);
+            case Reader.Staff:
+                var details = await clusterClient.GetOrderDetailsGrain(orderId).GetOrderDetailsAsync();
+                return details.Map(value => value.Report?.DocumentId == documentId
+                    ? value.Report.FileName
+                    : value.Documents.FirstOrDefault(document => document.DocumentId == documentId)?.FileName);
+            case Reader.Vendor:
+                var vendorDetails = await clusterClient.GetVendorOrderDetailsGrain(orderId).GetVendorOrderDetailsAsync();
+                return vendorDetails.Map(value => value.Report?.DocumentId == documentId ? value.Report.FileName : null);
+            default:
+                var clientDetails = await clusterClient.GetClientOrderDetailsGrain(orderId).GetClientOrderDetailsAsync();
+                return clientDetails.Map(value => value.Documents.FirstOrDefault(document => document.DocumentId == documentId)?.FileName);
         }
-
-        var clientDetails = await clusterClient.GetClientOrderDetailsGrain(orderId).GetClientOrderDetailsAsync();
-        return clientDetails.Map(value => value.Documents.FirstOrDefault(document => document.DocumentId == documentId)?.FileName);
     }
 }
