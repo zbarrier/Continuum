@@ -70,6 +70,7 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
         On<InspectionScheduled>(Apply);
         On<InspectionCompleted>(Apply);
         On<ReportDelivered>(Apply);
+        On<OrderShipped>(Apply);
     }
 
     /// <summary>
@@ -160,6 +161,10 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
 
     private bool Apply(ReportDelivered evt, IStreamedEvent<object> streamedEvent)
         => SetStatus(evt.OrderId, StaffOrderStatus.ReportDelivered);
+
+    /// <summary>Takes the shipped order off the list; the Shipped list shows it from now on.</summary>
+    private bool Apply(OrderShipped evt, IStreamedEvent<object> streamedEvent)
+        => Orders.Remove(evt.OrderId);
 
     private bool SetStatus(string orderId, StaffOrderStatus status)
     {

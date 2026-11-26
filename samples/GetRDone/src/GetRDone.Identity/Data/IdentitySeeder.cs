@@ -57,6 +57,10 @@ public static class IdentitySeeder
     /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
     public const string ReportDeliveredNotifierUserId = "0a1b2c07-bd9e-4f3a-8b5c-7d8e9f0a1b2c";
 
+    /// <summary>The service account the Order Shipped Notifier automation runs as.</summary>
+    /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
+    public const string OrderShippedNotifierUserId = "0a1b2c08-ce0f-4a4b-9c6d-8e9f0a1b2c3d";
+
     /// <summary>Mike Miller of Miller Valuation Group, the vendor Elliott &amp; Company assigns orders to in the event model.</summary>
     /// <remarks>The Orders read models seed the same user (GetRDone.Orders.Grains.ReadModels.SampleSeedData); keep them in sync.</remarks>
     public const string MikeMillerUserId = "5701c3e9-2a4b-4c6d-8e0f-1a2b3c4d5e6f";
@@ -107,6 +111,8 @@ public static class IdentitySeeder
             GetRDoneRoles.Automation, DemoTenant, VendorAssignmentNotifierUserId, password: null);
         await EnsureUserAsync(userManager, "report-delivered-notifier@elliott.example", "Report Delivered Notifier",
             GetRDoneRoles.Automation, DemoTenant, ReportDeliveredNotifierUserId, password: null);
+        await EnsureUserAsync(userManager, "order-shipped-notifier@elliott.example", "Order Shipped Notifier",
+            GetRDoneRoles.Automation, DemoTenant, OrderShippedNotifierUserId, password: null);
     }
 
     /// <summary>

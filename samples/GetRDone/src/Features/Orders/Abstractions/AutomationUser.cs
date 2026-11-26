@@ -52,6 +52,10 @@ public sealed class AutomationUser
     public static AutomationUser ReportDeliveredNotifier { get; } = new(
         "0a1b2c07-bd9e-4f3a-8b5c-7d8e9f0a1b2c", "Report Delivered Notifier");
 
+    /// <summary>Tells the client user who entered an order that its report is ready.</summary>
+    public static AutomationUser OrderShippedNotifier { get; } = new(
+        "0a1b2c08-ce0f-4a4b-9c6d-8e9f0a1b2c3d", "Order Shipped Notifier");
+
     /// <summary>The account's user ID in the identity provider.</summary>
     public string UserGuid { get; }
 

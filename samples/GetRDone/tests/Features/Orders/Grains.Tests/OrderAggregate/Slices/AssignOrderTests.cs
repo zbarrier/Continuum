@@ -59,6 +59,7 @@ public sealed class AssignOrderTests
             InspectionAt = (DateTimeOffset?)null,
             InspectionCompletedOn = (DateOnly?)null,
             Report = (OrderReport?)null,
+            OrderShippedNoticeSent = false,
             DocumentRequests = new Dictionary<string, OrderDocumentRequest>(),
             DescriptionOfWork = (OrderDescriptionOfWork?)null
         }, state, strict: true);

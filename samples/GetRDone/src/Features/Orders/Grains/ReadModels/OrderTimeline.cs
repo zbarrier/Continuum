@@ -7,7 +7,8 @@ namespace GetRDone.Orders.Grains.ReadModels;
 /// <param name="Kind">What happened.</param>
 /// <param name="UserId">
 ///     Who submitted, was assigned, acknowledged the order, provided a document, submitted or approved the description of
-///     work, assigned the vendor, scheduled or completed the inspection, or delivered the report, as a tenant user ID.
+///     work, assigned the vendor, scheduled or completed the inspection, delivered the report or shipped the order, as a
+///     tenant user ID.
 /// </param>
 /// <param name="OrderNumber">The number the order was given.</param>
 /// <param name="DocumentTypeName">The type of document requested or provided.</param>
@@ -36,7 +37,8 @@ public enum OrderTimelineKind
     VendorAssigned,
     InspectionScheduled,
     InspectionCompleted,
-    ReportDelivered
+    ReportDelivered,
+    Shipped
 }
 
 /// <summary>Who reads a timeline; each sees the vendor's work in their own words.</summary>
@@ -90,6 +92,9 @@ internal static class OrderTimeline
                 ? "Inspection completed"
                 : $"Inspection completed by {userName}",
             OrderTimelineKind.ReportDelivered => $"Report delivered by {userName}",
+            OrderTimelineKind.Shipped => audience == OrderTimelineAudience.Client
+                ? "Report shipped"
+                : $"Shipped to the client by {userName}",
             _ => item.Kind.ToString()
         };
     }

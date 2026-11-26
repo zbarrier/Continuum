@@ -28,5 +28,8 @@ public enum StaffOrderStatus
     InspectionCompleted,
 
     /// <summary>The vendor delivered its completed report for the AMC to review.</summary>
-    ReportDelivered
+    ReportDelivered,
+
+    /// <summary>The AMC shipped the report to the client, which completes the order.</summary>
+    Shipped
 }

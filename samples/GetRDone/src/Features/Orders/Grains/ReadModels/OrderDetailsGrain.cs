@@ -82,7 +82,8 @@ public sealed class OrderDetailsGrain(
         StaffOrderStatus.DescriptionOfWorkApproved when IsAssigneeOrAssigner(tenantId)
             => OrderActions.RequestDocument | OrderActions.AssignVendor,
         StaffOrderStatus.VendorAssigned or StaffOrderStatus.InspectionScheduled or StaffOrderStatus.InspectionCompleted
-            or StaffOrderStatus.ReportDelivered when IsAssigneeOrAssigner(tenantId) => OrderActions.RequestDocument,
+            when IsAssigneeOrAssigner(tenantId) => OrderActions.RequestDocument,
+        StaffOrderStatus.ReportDelivered when IsAssigneeOrAssigner(tenantId) => OrderActions.RequestDocument | OrderActions.ShipOrder,
         _ => OrderActions.None
     };
 
@@ -112,6 +113,7 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         On<InspectionScheduled>(Apply);
         On<InspectionCompleted>(Apply);
         On<ReportDelivered>(Apply);
+        On<OrderShipped>(Apply);
     }
 
     /// <summary>Whether the client submitted the order; staff don't see drafts.</summary>
@@ -296,6 +298,13 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         Status = StaffOrderStatus.ReportDelivered;
         Report = new OrderReportSummary(evt.DocumentId, evt.FileName, evt.OccurredAt);
         Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.ReportDelivered, evt.InitiatedBy, null));
+        return true;
+    }
+
+    private bool Apply(OrderShipped evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = StaffOrderStatus.Shipped;
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.Shipped, evt.InitiatedBy, null));
         return true;
     }
 }

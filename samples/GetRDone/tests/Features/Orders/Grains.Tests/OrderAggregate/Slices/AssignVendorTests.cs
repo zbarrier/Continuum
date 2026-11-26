@@ -66,7 +66,8 @@ public sealed class AssignVendorTests
             VendorAssignment = (OrderVendorAssignment?)new OrderVendorAssignment(TestData.RidgeAppraisalGroupVendorId, NoticeSent: false),
             InspectionAt = (DateTimeOffset?)null,
             InspectionCompletedOn = (DateOnly?)null,
-            Report = (OrderReport?)null
+            Report = (OrderReport?)null,
+            OrderShippedNoticeSent = false
         }, state, strict: true);
     }
 

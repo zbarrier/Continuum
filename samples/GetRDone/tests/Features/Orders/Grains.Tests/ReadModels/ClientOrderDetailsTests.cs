@@ -67,6 +67,7 @@ public sealed class ClientOrderDetailsTests
                 new ClientOrderDocument(ProvideCommand1.DocumentId, "Survey_48BirchHollow.pdf", "Survey")
             ],
             null,
+            Report: null,
             [
                 new OrderTimelineEntry(TestData.At.AddMinutes(7), "Document requested: Purchase contract"),
                 new OrderTimelineEntry(TestData.At.AddMinutes(6), "Survey provided by John Doe"),
@@ -181,6 +182,35 @@ public sealed class ClientOrderDetailsTests
                 ],
                 details.Timeline.Take(3));
             Assert.DoesNotContain(details.Documents, document => document.DocumentId == InspectionTestData.DeliverCommand1.DocumentId);
+            Assert.Null(details.Report);
+        });
+    }
+
+    [Fact]
+    public async Task ClientOrderDetails_LetTheClientDownloadTheReportOnceTheOrderShips()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(_orderId, occurredAt: TestData.At.AddMinutes(5)),
+            VendorAssignmentTestData.Assigned1(_orderId, occurredAt: TestData.At.AddMinutes(6)),
+            InspectionTestData.Scheduled1(_orderId, TestData.At.AddMinutes(7)),
+            InspectionTestData.Completed1(_orderId, TestData.At.AddMinutes(8)),
+            InspectionTestData.Delivered1(_orderId, occurredAt: TestData.At.AddMinutes(9)),
+            ShippingTestData.Shipped1(_orderId, occurredAt: TestData.At.AddMinutes(10)));
+
+        await When(() => Grain.GetClientOrderDetailsAsync());
+
+        Then<ClientOrderDetails>(details =>
+        {
+            Assert.Equal(ClientOrderStatus.Shipped, details.Status);
+            Assert.Equal(
+                new ClientOrderReport(InspectionTestData.DeliverCommand1.DocumentId, InspectionTestData.DeliverCommand1.FileName,
+                    TestData.At.AddMinutes(10)),
+                details.Report);
+            Assert.Equal(new OrderTimelineEntry(TestData.At.AddMinutes(10), "Report shipped"), details.Timeline[0]);
+            Assert.DoesNotContain(details.Documents, document => document.DocumentId == InspectionTestData.DeliverCommand1.DocumentId);
+            Assert.Equal(ClientOrderActions.None, details.AllowedActions);
         });
     }
 

@@ -1,7 +1,7 @@
-@* The staff order page (event model chapters 2 and 3, Order screens): the OrderDetails read model, with the actions the
+@* The staff order page (event model chapters 2 to 4, Order screens): the OrderDetails read model, with the actions the
    signed-in user can take, such as requesting documents from the client, writing the description of work for the client to
-   approve and assigning the approved order to a vendor. It shows the vendor's inspection and delivered report. Each document
-   and the report link to their download (OrderDocumentDownloads). The
+   approve, assigning the approved order to a vendor and shipping the delivered report to the client. It shows the vendor's
+   inspection and delivered report. Each document and the report link to their download (OrderDocumentDownloads). The
    description of work is HTML from the rich text editor; it is sanitized again before it is shown. OrderDetails is a
    projection, so after an action the page waits for it to show the change. *@
 @page "/staff/orders/{OrderGuid:guid}"
@@ -12,6 +12,7 @@
 @using GetRDone.Orders.Abstractions.OrderAggregate
 @using GetRDone.Orders.Abstractions.ReadModels
 @inject IClusterClient ClusterClient
+@inject IDialogService DialogService
 @inject ILogger<StaffOrderPage> Logger
 
 <PageTitle>@Title · Get-R-Done</PageTitle>
@@ -108,6 +109,10 @@
                     @if (details.AllowedActions.HasFlag(OrderActions.AssignVendor) && !_assigningVendor)
                     {
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="StartVendorAssignmentAsync">Assign a vendor</MudButton>
+                    }
+                    @if (details.AllowedActions.HasFlag(OrderActions.ShipOrder) && details.Report is { } deliveredReport)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="@(() => ShipAsync(deliveredReport))">Mark shipped</MudButton>
                     }
                 </MudStack>
 
@@ -311,6 +316,7 @@
         StaffOrderStatus.InspectionScheduled => Color.Primary,
         StaffOrderStatus.InspectionCompleted => Color.Primary,
         StaffOrderStatus.ReportDelivered => Color.Secondary,
+        StaffOrderStatus.Shipped => Color.Success,
         _ => Color.Default
     };
 
@@ -373,6 +379,22 @@
     private Task AcknowledgeAsync()
         => RunAsync(async order => (await order.AcknowledgeOrderAsync()).Map(_ => true),
             details => details.Status == StaffOrderStatus.Acknowledged);
+
+    /// <summary>Ships the report shown, after the user confirms the order, report and client, since shipping can't be undone.</summary>
+    private async Task ShipAsync(OrderReportSummary report)
+    {
+        var order = _details?.OrderNumber is { } orderNumber ? $"order {orderNumber}" : "this order";
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Ship the report", $"Ship {report.FileName} of {order} to {_details?.ClientName ?? "the client"}? The client can download it right away.",
+            yesText: "Mark shipped", cancelText: "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        await RunAsync(async grain => (await grain.ShipOrderAsync(new ShipOrderCommand(report.DocumentId))).Map(_ => true),
+            details => details.Status == StaffOrderStatus.Shipped);
+    }
 
     private async Task StartRequestAsync()
     {

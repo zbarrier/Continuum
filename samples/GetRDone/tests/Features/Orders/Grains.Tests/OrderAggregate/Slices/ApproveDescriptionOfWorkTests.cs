@@ -62,6 +62,7 @@ public sealed class ApproveDescriptionOfWorkTests
             InspectionAt = (DateTimeOffset?)null,
             InspectionCompletedOn = (DateOnly?)null,
             Report = (OrderReport?)null,
+            OrderShippedNoticeSent = false,
             DocumentRequests = new Dictionary<string, OrderDocumentRequest>(),
             DescriptionOfWork = (OrderDescriptionOfWork?)new OrderDescriptionOfWork(
                 DescriptionOfWorkTestData.DescriptionOfWorkId, 1, RequestedByUsers.ClientUser1.GetTenantUserId(),

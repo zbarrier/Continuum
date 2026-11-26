@@ -94,6 +94,14 @@ public interface IOrderPermissions
 
     /// <summary>Only the Report Delivered Notifier automation sends the notice of a delivered report and asks whether it was sent.</summary>
     Result CanSendReportDeliveredNotice(UserId userId);
+
+    /// <summary>
+    ///     The staff member the order is assigned to, the Client Services Director or the tenant admin ships the order.
+    /// </summary>
+    Result CanShipOrder(ClaimsPrincipal user, UserId userId, OrderState order);
+
+    /// <summary>Only the Order Shipped Notifier automation sends the notice of a shipped order and asks whether it was sent.</summary>
+    Result CanSendOrderShippedNotice(UserId userId);
 }
 
 public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermissions
@@ -236,6 +244,18 @@ public sealed class OrderPermissions(IGrainFactory grainFactory) : IOrderPermiss
             ? Result.Success()
             : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
                 "Only the Report Delivered Notifier can send the notices of delivered reports."));
+
+    public Result CanShipOrder(ClaimsPrincipal user, UserId userId, OrderState order)
+        => order.AssignedTo == (string)userId || user.IsInAnyRole(StaffRoles.OrderAssigners)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the staff member the order is assigned to, the Client Services Director or the tenant admin can ship the order."));
+
+    public Result CanSendOrderShippedNotice(UserId userId)
+        => IsAutomation(AutomationUser.OrderShippedNotifier, userId)
+            ? Result.Success()
+            : Result.Failure(RequestErrors.New(HttpStatusCode.Forbidden, Grpc.Core.StatusCode.PermissionDenied,
+                "Only the Order Shipped Notifier can send the notices of shipped orders."));
 
     private static bool IsAutomation(AutomationUser account, UserId userId)
         => userId.TenantId is { } tenantId && (string)userId == account.GetTenantUserId(tenantId);

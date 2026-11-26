@@ -71,6 +71,7 @@ public sealed class ClientOrdersState : HandlerProjectionState<ClientOrdersState
         On<VendorAssigned>(Apply);
         On<InspectionScheduled>(Apply);
         On<InspectionCompleted>(Apply);
+        On<OrderShipped>(Apply);
     }
 
     /// <summary>
@@ -146,6 +147,9 @@ public sealed class ClientOrdersState : HandlerProjectionState<ClientOrdersState
 
     private bool Apply(InspectionCompleted evt, IStreamedEvent<object> streamedEvent)
         => SetStatus(evt.OrderId, ClientOrderStatus.InspectionCompleted);
+
+    private bool Apply(OrderShipped evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, ClientOrderStatus.Shipped);
 
     private bool SetStatus(string orderId, ClientOrderStatus status)
     {

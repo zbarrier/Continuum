@@ -61,6 +61,7 @@ public sealed class RequestClientDocumentTests
             InspectionAt = (DateTimeOffset?)null,
             InspectionCompletedOn = (DateOnly?)null,
             Report = (OrderReport?)null,
+            OrderShippedNoticeSent = false,
             DocumentRequests = new Dictionary<string, OrderDocumentRequest>
             {
                 [Command1.RequestId] = new(

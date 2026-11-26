@@ -167,6 +167,24 @@ public sealed class ClientOrdersTests
         });
     }
 
+    [Fact]
+    public async Task OrderShipped_ShowsTheOrderIsShipped()
+    {
+        var orderId = NewOrderId();
+        GivenSignedIn(_user);
+
+        await Given(
+        [
+            .. VendorAssigned(orderId),
+            InspectionTestData.Scheduled1(orderId, TestData.At.AddMinutes(9)),
+            InspectionTestData.Completed1(orderId, TestData.At.AddMinutes(10)),
+            InspectionTestData.Delivered1(orderId, occurredAt: TestData.At.AddMinutes(11)),
+            ShippingTestData.Shipped1(orderId, occurredAt: TestData.At.AddMinutes(12))
+        ]);
+
+        Then(state => Assert.Equal(ClientOrderStatus.Shipped, state.Orders[orderId].Status));
+    }
+
     private object[] VendorAssigned(string orderId) =>
     [
         .. StartedAndSubmitted(Command1, orderId, TestData.At.AddMinutes(3)),

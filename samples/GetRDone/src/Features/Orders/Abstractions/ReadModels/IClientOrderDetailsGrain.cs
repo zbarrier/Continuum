@@ -6,8 +6,8 @@ namespace GetRDone.Orders.Abstractions.ReadModels;
 
 /// <summary>
 ///     The client order page of one submitted order (the ClientOrderDetails read model): its summary, the documents the AMC
-///     requested, its documents, its description of work and its timeline. Each order has one instance, keyed by the order
-///     ID, and only the client user who started the order can read it.
+///     requested, its documents, its description of work, its report once it is shipped and its timeline. Each order has one
+///     instance, keyed by the order ID, and only the client user who started the order can read it.
 /// </summary>
 public interface IClientOrderDetailsGrain : IGrainWithStringKey
 {
@@ -28,6 +28,7 @@ public interface IClientOrderDetailsGrain : IGrainWithStringKey
 /// <param name="OpenRequests">The documents the AMC requested that the client has not provided yet, oldest first.</param>
 /// <param name="Documents">The order's supporting documents, in the order they were added.</param>
 /// <param name="DescriptionOfWork">The latest version of the order's description of work, or null until one is submitted.</param>
+/// <param name="Report">The report the AMC shipped, which the client can download, or null until the order is shipped.</param>
 /// <param name="Timeline">What happened to the order, newest first.</param>
 /// <param name="AllowedActions">What the client can do next.</param>
 [GenerateSerializer, Immutable]
@@ -43,8 +44,19 @@ public sealed record ClientOrderDetails(
     ClientDocumentRequest[] OpenRequests,
     ClientOrderDocument[] Documents,
     DescriptionOfWorkSummary? DescriptionOfWork,
+    ClientOrderReport? Report,
     OrderTimelineEntry[] Timeline,
     ClientOrderActions AllowedActions);
+
+/// <summary>The report the AMC shipped to the client.</summary>
+/// <param name="DocumentId">The report's document.</param>
+/// <param name="FileName">The name of its file.</param>
+/// <param name="ShippedAt">When the AMC shipped it.</param>
+[GenerateSerializer, Immutable]
+public sealed record ClientOrderReport(
+    string DocumentId,
+    string FileName,
+    DateTimeOffset ShippedAt);
 
 /// <summary>Documents the AMC requested from the client.</summary>
 /// <param name="RequestId">The request, which the client names when it provides the document.</param>

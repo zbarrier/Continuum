@@ -171,5 +171,11 @@ public enum OrderActions
     ///     Assign the order to one of the tenant's vendors once the client approves the description of work; for the staff
     ///     member it is assigned to, the Client Services Director or the tenant admin.
     /// </summary>
-    AssignVendor = 16
+    AssignVendor = 16,
+
+    /// <summary>
+    ///     Ship the vendor's delivered report to the client, which completes the order; for the staff member it is assigned
+    ///     to, the Client Services Director or the tenant admin.
+    /// </summary>
+    ShipOrder = 32
 }

@@ -16,8 +16,8 @@ namespace GetRDone.Web;
 
 /// <summary>
 ///     Downloads the file of a submitted order's supporting document or report. Staff can download the documents and report of
-///     their tenant's orders, a client the documents of the orders they started, and a vendor's users the report they
-///     delivered. The order's read model for the user's role (OrderDetails, ClientOrderDetails or VendorOrderDetails)
+///     their tenant's orders, a client the documents and shipped report of the orders they started, and a vendor's users the
+///     report they delivered. The order's read model for the user's role (OrderDetails, ClientOrderDetails or VendorOrderDetails)
 ///     decides, so the endpoint only serves a file the user can see listed.
 /// </summary>
 /// <remarks>
@@ -119,7 +119,9 @@ internal static class OrderDocumentDownloads
                 return vendorDetails.Map(value => value.Report?.DocumentId == documentId ? value.Report.FileName : null);
             default:
                 var clientDetails = await clusterClient.GetClientOrderDetailsGrain(orderId).GetClientOrderDetailsAsync();
-                return clientDetails.Map(value => value.Documents.FirstOrDefault(document => document.DocumentId == documentId)?.FileName);
+                return clientDetails.Map(value => value.Report?.DocumentId == documentId
+                    ? value.Report.FileName
+                    : value.Documents.FirstOrDefault(document => document.DocumentId == documentId)?.FileName);
         }
     }
 }

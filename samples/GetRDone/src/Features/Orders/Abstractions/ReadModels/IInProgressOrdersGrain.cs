@@ -5,7 +5,8 @@ using Orleans.Concurrency;
 namespace GetRDone.Orders.Abstractions.ReadModels;
 
 /// <summary>
-///     The In progress list on the staff dashboard (the InProgressOrders read model): every assigned order of the tenant, with
+///     The In progress list on the staff dashboard (the InProgressOrders read model): every assigned order of the tenant that
+///     is not shipped yet, with
 ///     who it is assigned to and its status, due soonest first, then the orders without a due date yet by order number.
 ///     Each tenant has one instance, keyed <c>{tenantId}|default</c>,
 ///     and only AMC staff (<see cref="StaffRoles.Staff"/>) can read it.

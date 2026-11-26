@@ -47,8 +47,8 @@ public sealed partial class OrderGrain
     /// <summary>
     ///     Sends every order event to the stream of the user who started the order and to its tenant's orders stream as well,
     ///     so the client user's read models (such as <see cref="ClientOrderDraftsGrain"/> and <see cref="ClientOrdersGrain"/>)
-    ///     see all of that user's orders on one stream, and the staff dashboard (<see cref="UnassignedOrdersGrain"/> and
-    ///     <see cref="InProgressOrdersGrain"/>) all of the tenant's orders.
+    ///     see all of that user's orders on one stream, and the staff dashboard (<see cref="UnassignedOrdersGrain"/>,
+    ///     <see cref="InProgressOrdersGrain"/> and <see cref="ShippedOrdersGrain"/>) all of the tenant's orders.
     /// </summary>
     protected override IReadOnlyList<StreamTarget> GetStreamTargets(object @event)
     {
@@ -95,7 +95,8 @@ public enum OrderStatus
     VendorAssigned,
     InspectionScheduled,
     InspectionCompleted,
-    ReportDelivered
+    ReportDelivered,
+    Shipped
 }
 
 public enum OrderCommand
@@ -116,7 +117,8 @@ public enum OrderCommand
     AssignVendor,
     ScheduleInspection,
     CompleteInspection,
-    DeliverReport
+    DeliverReport,
+    ShipOrder
 }
 
 [GenerateSerializer]
@@ -166,6 +168,9 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>The vendor's completed report and whether the assigned staff member was told, or null until it is delivered.</summary>
     [Id(12)] public OrderReport? Report { get; private set; }
 
+    /// <summary>Whether the Order Shipped Notifier told the client user who entered the order that its report is ready.</summary>
+    [Id(13)] public bool OrderShippedNoticeSent { get; private set; }
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
@@ -190,6 +195,8 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         On<InspectionCompleted>(Handle);
         On<ReportDelivered>(Handle);
         On<ReportDeliveredNoticeSent>(Handle);
+        On<OrderShipped>(Handle);
+        On<OrderShippedNoticeSent>(Handle);
     }
 
     /// <remarks>
@@ -198,7 +205,8 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     ///     provided once the order is acknowledged, whatever the state of its description of work, and the description of
     ///     work can be revised until the client approves it. The order is assigned to a vendor once, after the approval. The
     ///     vendor then schedules the inspection, completes it and delivers its report, each once and in that order; documents
-    ///     can still be requested and provided throughout.
+    ///     can still be requested and provided throughout. Shipping the delivered report completes the order: nothing but its
+    ///     number can be given to it after that.
     /// </remarks>
     protected override void ConfigureStateMachine()
     {
@@ -249,7 +257,10 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         StateMachine.Configure(OrderStatus.ReportDelivered)
             .PermitReentry(OrderCommand.AssignOrderNumber)
             .PermitReentry(OrderCommand.RequestClientDocument)
-            .PermitReentry(OrderCommand.ProvideRequestedDocument);
+            .PermitReentry(OrderCommand.ProvideRequestedDocument)
+            .Permit(OrderCommand.ShipOrder, OrderStatus.Shipped);
+        StateMachine.Configure(OrderStatus.Shipped)
+            .PermitReentry(OrderCommand.AssignOrderNumber);
     }
 }
 

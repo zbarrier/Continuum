@@ -175,6 +175,24 @@ public sealed class InProgressOrdersTests
     }
 
     [Fact]
+    public async Task OrderShipped_TakesTheOrderOffTheList()
+    {
+        var orderId = NewOrderId();
+        GivenSignedIn(RequestedByUsers.Director1);
+
+        await Given(
+        [
+            .. VendorAssignedOrder(Command1, orderId, VendorAssignmentTestData.DueDate),
+            InspectionTestData.Scheduled1(orderId, TestData.At.AddMinutes(8)),
+            InspectionTestData.Completed1(orderId, TestData.At.AddMinutes(9)),
+            InspectionTestData.Delivered1(orderId, occurredAt: TestData.At.AddMinutes(10)),
+            ShippingTestData.Shipped1(orderId, occurredAt: TestData.At.AddMinutes(11))
+        ]);
+
+        Then(state => Assert.False(state.Orders.ContainsKey(orderId)));
+    }
+
+    [Fact]
     public async Task Orders_ListTheirClientsAndAssigneesNames()
     {
         var (order1, order2) = (NewOrderId(), NewOrderId());

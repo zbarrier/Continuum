@@ -381,7 +381,47 @@ public sealed class OrderDetailsTests
                     "Inspection scheduled by Ryan Brooks"
                 ],
                 details.Timeline.Take(3).Select(entry => entry.Entry));
-            Assert.Equal(OrderActions.RequestDocument, details.AllowedActions);
+            Assert.Equal(OrderActions.RequestDocument | OrderActions.ShipOrder, details.AllowedActions);
+        });
+    }
+
+    [Fact]
+    public async Task OrderDetails_DoNotLetACoordinatorShipAnOrderAssignedToSomeoneElse()
+    {
+        GivenSignedIn(RequestedByUsers.Coordinator1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(_orderId, occurredAt: TestData.At.AddMinutes(5)),
+            VendorAssignmentTestData.Assigned1(_orderId, occurredAt: TestData.At.AddMinutes(6)),
+            InspectionTestData.Scheduled1(_orderId, TestData.At.AddMinutes(7)),
+            InspectionTestData.Completed1(_orderId, TestData.At.AddMinutes(8)),
+            InspectionTestData.Delivered1(_orderId, occurredAt: TestData.At.AddMinutes(9)));
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details => Assert.Equal(OrderActions.None, details.AllowedActions));
+    }
+
+    [Fact]
+    public async Task OrderDetails_ShowTheShippedOrderWithNothingLeftToDo()
+    {
+        GivenSignedIn(RequestedByUsers.Director1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(_orderId, occurredAt: TestData.At.AddMinutes(5)),
+            VendorAssignmentTestData.Assigned1(_orderId, occurredAt: TestData.At.AddMinutes(6)),
+            InspectionTestData.Scheduled1(_orderId, TestData.At.AddMinutes(7)),
+            InspectionTestData.Completed1(_orderId, TestData.At.AddMinutes(8)),
+            InspectionTestData.Delivered1(_orderId, occurredAt: TestData.At.AddMinutes(9)),
+            ShippingTestData.Shipped1(_orderId, occurredAt: TestData.At.AddMinutes(10)));
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details =>
+        {
+            Assert.Equal(StaffOrderStatus.Shipped, details.Status);
+            Assert.Equal(new OrderTimelineEntry(TestData.At.AddMinutes(10), "Shipped to the client by Tommy Jones"), details.Timeline[0]);
+            Assert.Equal(OrderActions.None, details.AllowedActions);
         });
     }
 

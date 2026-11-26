@@ -55,6 +55,7 @@ public sealed class ClientOrderDetailsGrain(
                     State.OpenRequests.ToArray(),
                     State.Documents.ToArray(),
                     State.DescriptionOfWork,
+                    State.ShippedReport,
                     OrderTimeline.Describe(State.Timeline, names, OrderTimelineAudience.Client),
                     GetAllowedActions()));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
@@ -87,6 +88,8 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
         On<VendorAssigned>(Apply);
         On<InspectionScheduled>(Apply);
         On<InspectionCompleted>(Apply);
+        On<ReportDelivered>(Apply);
+        On<OrderShipped>(Apply);
     }
 
     /// <summary>Whether the client submitted the order; drafts have their own page.</summary>
@@ -124,6 +127,14 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
 
     /// <summary>What the client pays the AMC, or null until the order is assigned to an appraiser.</summary>
     [Id(12)] public decimal? ServiceFee { get; set; }
+
+    /// <summary>
+    ///     The vendor's delivered report, which the client doesn't see until the AMC ships it, or null until it is delivered.
+    /// </summary>
+    [Id(13)] public DeliveredReportItem? DeliveredReport { get; set; }
+
+    /// <summary>The report the AMC shipped, or null until the order is shipped.</summary>
+    [Id(14)] public ClientOrderReport? ShippedReport { get; set; }
 
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
@@ -238,4 +249,25 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
         Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.InspectionCompleted, evt.InitiatedBy, null));
         return true;
     }
+
+    /// <summary>Keeps the report out of sight while the AMC reviews it; the status and timeline don't change.</summary>
+    private bool Apply(ReportDelivered evt, IStreamedEvent<object> streamedEvent)
+    {
+        DeliveredReport = new DeliveredReportItem(evt.DocumentId, evt.FileName);
+        return true;
+    }
+
+    private bool Apply(OrderShipped evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = ClientOrderStatus.Shipped;
+        ShippedReport = DeliveredReport?.DocumentId == evt.DocumentId
+            ? new ClientOrderReport(evt.DocumentId, DeliveredReport.FileName, evt.OccurredAt)
+            : null;
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.Shipped, evt.InitiatedBy, null));
+        return true;
+    }
 }
+
+/// <summary>The vendor's delivered report as the client order page's projection keeps it until the order is shipped.</summary>
+[GenerateSerializer, Immutable]
+public sealed record DeliveredReportItem(string DocumentId, string FileName);

@@ -44,7 +44,10 @@ public enum ClientOrderStatus
     ///     The appraiser inspected the property. The order stays here while the AMC reviews the appraiser's report, until it
     ///     ships the report to the client.
     /// </summary>
-    InspectionCompleted
+    InspectionCompleted,
+
+    /// <summary>The AMC shipped the report, which the client can download; the order is complete.</summary>
+    Shipped
 }
 
 /// <summary>A submitted order on the client user's My orders list.</summary>

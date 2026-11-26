@@ -42,6 +42,10 @@ public static class ReadModelGrainFactoryExtensions
     public static IInProgressOrdersGrain GetInProgressOrdersGrain(this IGrainFactory grainFactory, string? tenantId)
         => grainFactory.GetGrain<IInProgressOrdersGrain>(TenantKey.Create(tenantId, DefaultKey));
 
+    /// <summary>Gets the staff dashboard's Shipped list of the tenant.</summary>
+    public static IShippedOrdersGrain GetShippedOrdersGrain(this IGrainFactory grainFactory, string? tenantId)
+        => grainFactory.GetGrain<IShippedOrdersGrain>(TenantKey.Create(tenantId, DefaultKey));
+
     /// <summary>Gets the staff order page of one order, keyed by the order ID <c>{TenantId}|{OrderGuid}</c>.</summary>
     public static IOrderDetailsGrain GetOrderDetailsGrain(this IGrainFactory grainFactory, string orderId)
         => grainFactory.GetGrain<IOrderDetailsGrain>(orderId);

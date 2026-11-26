@@ -1,5 +1,6 @@
-@* The client order page (event model chapter 2, Order screens): the ClientOrderDetails read model, where the client uploads
-   the documents the AMC requested and approves the description of work. Like tab 3 of order entry, the file is uploaded to
+@* The client order page (event model chapters 2 and 4, Order screens): the ClientOrderDetails read model, where the client
+   uploads the documents the AMC requested, approves the description of work and, once the AMC ships the order, downloads
+   the report. Like tab 3 of order entry, the file is uploaded to
    blob storage first and then provided; when the order rejects it, the upload is deleted again. The description of work is
    sanitized again before it is shown. ClientOrderDetails is a projection, so after an action the page waits for it to show
    the change. *@
@@ -53,6 +54,16 @@
                             <tr><th>Service fee</th><td>@serviceFee.ToString("C", UnitedStates)</td></tr>
                         }
                         <tr><th>Assigned to</th><td>@(details.AssignedToName ?? "Nobody yet")</td></tr>
+                        @if (details.Report is { } report)
+                        {
+                            <tr>
+                                <th>Report</th>
+                                <td>
+                                    <MudLink Href="@OrderDocumentDownloads.Url(details.OrderId, report.DocumentId)" download="@report.FileName">@report.FileName</MudLink>,
+                                    shipped @report.ShippedAt.ToLocalTime().ToString("MMM d, h:mm tt")
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </MudSimpleTable>
 
@@ -177,6 +188,7 @@
         ClientOrderStatus.VendorAssigned => Color.Primary,
         ClientOrderStatus.InspectionScheduled => Color.Primary,
         ClientOrderStatus.InspectionCompleted => Color.Primary,
+        ClientOrderStatus.Shipped => Color.Success,
         _ => Color.Default
     };
 
