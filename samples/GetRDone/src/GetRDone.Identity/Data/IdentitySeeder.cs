@@ -41,6 +41,14 @@ public static class IdentitySeeder
     /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
     public const string DocumentRequestNotifierUserId = "0a1b2c03-7f5a-4b9c-8d1e-3f4a5b6c7d8e";
 
+    /// <summary>The service account the Description of Work Approval Notifier automation runs as.</summary>
+    /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
+    public const string DescriptionOfWorkApprovalNotifierUserId = "0a1b2c04-8a6b-4c0d-9e2f-4a5b6c7d8e9f";
+
+    /// <summary>The service account the Description of Work Approved Notifier automation runs as.</summary>
+    /// <remarks>The silo signs the automation in with the same ID (GetRDone.Orders.Abstractions.AutomationUser); keep them in sync.</remarks>
+    public const string DescriptionOfWorkApprovedNotifierUserId = "0a1b2c05-9b7c-4d1e-8f3a-5b6c7d8e9f0a";
+
     public static async Task MigrateAndSeedAsync(IServiceProvider services, bool seedDemoUsers)
     {
         await using var scope = services.CreateAsyncScope();
@@ -77,6 +85,10 @@ public static class IdentitySeeder
             DemoTenant, NewOrderNotifierUserId, password: null);
         await EnsureUserAsync(userManager, "document-request-notifier@elliott.example", "Document Request Notifier", GetRDoneRoles.Automation,
             DemoTenant, DocumentRequestNotifierUserId, password: null);
+        await EnsureUserAsync(userManager, "dow-approval-notifier@elliott.example", "Description of Work Approval Notifier",
+            GetRDoneRoles.Automation, DemoTenant, DescriptionOfWorkApprovalNotifierUserId, password: null);
+        await EnsureUserAsync(userManager, "dow-approved-notifier@elliott.example", "Description of Work Approved Notifier",
+            GetRDoneRoles.Automation, DemoTenant, DescriptionOfWorkApprovedNotifierUserId, password: null);
     }
 
     /// <summary>

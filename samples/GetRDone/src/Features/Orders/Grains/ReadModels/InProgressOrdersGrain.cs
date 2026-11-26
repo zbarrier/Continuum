@@ -63,6 +63,8 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
         On<OrderNumberAssigned>(Apply);
         On<OrderAssigned>(Apply);
         On<OrderAcknowledged>(Apply);
+        On<DescriptionOfWorkSubmitted>(Apply);
+        On<DescriptionOfWorkApproved>(Apply);
     }
 
     /// <summary>
@@ -127,13 +129,22 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
     }
 
     private bool Apply(OrderAcknowledged evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, StaffOrderStatus.Acknowledged);
+
+    private bool Apply(DescriptionOfWorkSubmitted evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, StaffOrderStatus.DescriptionOfWorkAwaitingApproval);
+
+    private bool Apply(DescriptionOfWorkApproved evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, StaffOrderStatus.DescriptionOfWorkApproved);
+
+    private bool SetStatus(string orderId, StaffOrderStatus status)
     {
-        if (!Orders.TryGetValue(evt.OrderId, out var order))
+        if (!Orders.TryGetValue(orderId, out var order) || order.Status == status)
         {
             return false;
         }
 
-        Orders[evt.OrderId] = order with { Status = StaffOrderStatus.Acknowledged };
+        Orders[orderId] = order with { Status = status };
         return true;
     }
 }

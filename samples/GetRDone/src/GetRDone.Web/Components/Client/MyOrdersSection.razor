@@ -85,13 +85,7 @@
         return new TableData<ClientOrder> { Items = orders, TotalItems = total };
     }
 
-    private static string StatusText(ClientOrderStatus status) => status switch
-    {
-        ClientOrderStatus.Submitted => "Submitted",
-        ClientOrderStatus.Assigned => "Assigned",
-        ClientOrderStatus.Acknowledged => "Acknowledged",
-        _ => status.ToString()
-    };
+    private static string StatusText(ClientOrderStatus status) => ClientOrderPage.StatusText(status);
 
     private static Color StatusColor(ClientOrderStatus status) => ClientOrderPage.StatusColor(status);
 }

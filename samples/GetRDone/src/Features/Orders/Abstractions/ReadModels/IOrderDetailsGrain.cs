@@ -6,8 +6,9 @@ namespace GetRDone.Orders.Abstractions.ReadModels;
 
 /// <summary>
 ///     The staff order page of one submitted order (the OrderDetails read model): its summary, who it is assigned to, its
-///     open document requests, its documents, its timeline and what the signed-in user can do next. Each order has one
-///     instance, keyed by the order ID, and only AMC staff (<see cref="StaffRoles.Staff"/>) can read it.
+///     open document requests, its documents, its description of work, its timeline and what the signed-in user can do
+///     next. Each order has one instance, keyed by the order ID, and only AMC staff (<see cref="StaffRoles.Staff"/>) can
+///     read it.
 /// </summary>
 public interface IOrderDetailsGrain : IGrainWithStringKey
 {
@@ -32,6 +33,7 @@ public interface IOrderDetailsGrain : IGrainWithStringKey
 /// <param name="AssignedToName">Their name, or null when unassigned or the user directory doesn't know them.</param>
 /// <param name="OpenRequests">The documents requested from the client that it has not provided yet, oldest first.</param>
 /// <param name="Documents">The order's supporting documents, in the order they were added.</param>
+/// <param name="DescriptionOfWork">The latest version of the order's description of work, or null until one is submitted.</param>
 /// <param name="Timeline">What happened to the order, newest first.</param>
 /// <param name="AllowedActions">What the signed-in user can do next.</param>
 [GenerateSerializer, Immutable]
@@ -51,8 +53,23 @@ public sealed record OrderDetails(
     string? AssignedToName,
     OrderDocumentRequestSummary[] OpenRequests,
     OrderDocumentSummary[] Documents,
+    DescriptionOfWorkSummary? DescriptionOfWork,
     OrderTimelineEntry[] Timeline,
     OrderActions AllowedActions);
+
+/// <summary>The latest version of an order's description of work, as the staff and client order pages show it.</summary>
+/// <param name="DescriptionOfWorkId">The description of work.</param>
+/// <param name="Version">Its version; a revision is one more than the version it revises.</param>
+/// <param name="Html">Its sanitized HTML; pages sanitize it again before they show it.</param>
+/// <param name="Approved">Whether the client approved this version.</param>
+/// <param name="SubmittedAt">When this version was submitted.</param>
+[GenerateSerializer, Immutable]
+public sealed record DescriptionOfWorkSummary(
+    string DescriptionOfWorkId,
+    int Version,
+    string Html,
+    bool Approved,
+    DateTimeOffset SubmittedAt);
 
 /// <summary>A supporting document of the order, which staff can download.</summary>
 /// <param name="DocumentId">The document.</param>
@@ -102,5 +119,11 @@ public enum OrderActions
     ///     Ask the client for a document once the order is acknowledged; for the staff member it is assigned to, the Client
     ///     Services Director or the tenant admin.
     /// </summary>
-    RequestDocument = 4
+    RequestDocument = 4,
+
+    /// <summary>
+    ///     Submit the description of work for the client's approval once the order is acknowledged, or revise it until the
+    ///     client approves it; for the staff member it is assigned to, the Client Services Director or the tenant admin.
+    /// </summary>
+    SubmitDescriptionOfWork = 8
 }

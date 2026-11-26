@@ -1,6 +1,8 @@
 ﻿using Continuum.CSharpFunctionalExtensions;
 using Continuum.Domain.Orleans;
 
+using Ganss.Xss;
+
 namespace GetRDone.Orders.Abstractions;
 
 [Alias("Orders.OrderId.V1"), GenerateSerializer, Immutable]
@@ -904,4 +906,147 @@ public sealed record DocumentRequestMessage : StringValueObject<DocumentRequestM
     }
 
     private DocumentRequestMessage(string value) : base(value) { }
+}
+
+/// <summary>
+///     An order's description of work; the staff member's client generates it with its first version and keeps it for the
+///     revisions.
+/// </summary>
+[Alias("Orders.DescriptionOfWorkId.V1"), GenerateSerializer, Immutable]
+public sealed record DescriptionOfWorkId : TenantKeyValueObject<DescriptionOfWorkId>
+{
+    public static Result<DescriptionOfWorkId> Create(string? value, string? tenantId, string propertyName = nameof(DescriptionOfWorkId))
+    {
+        return Result.NotNullOrWhitespace(value, propertyName)
+            .IsTenantGuidKey(tenantId, propertyName)
+            .Map(validatedValue => new DescriptionOfWorkId(validatedValue));
+    }
+    public static Result<DescriptionOfWorkId> Create(string? value, string? tenantId, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNullOrWhitespace(value, propertyPath, member)
+            .IsTenantGuidKey(tenantId, propertyPath, member)
+            .Map(validatedValue => new DescriptionOfWorkId(validatedValue));
+    }
+
+    private DescriptionOfWorkId(string value) : base(value) { }
+}
+
+/// <summary>The version of a description of work: 1 when it is first submitted, and one more for each revision.</summary>
+[Alias("Orders.DescriptionOfWorkVersion.V1"), GenerateSerializer, Immutable]
+public sealed record DescriptionOfWorkVersion : Int32ValueObject<DescriptionOfWorkVersion>
+{
+    public const int MinValue = 1;
+    public const int MaxValue = int.MaxValue;
+
+    public static Result<DescriptionOfWorkVersion> Create(string? value, string propertyName = nameof(DescriptionOfWorkVersion))
+    {
+        return Result.IsInt32(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .Map(validatedValue => new DescriptionOfWorkVersion(validatedValue));
+    }
+    public static Result<DescriptionOfWorkVersion> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.IsInt32(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .Map(validatedValue => new DescriptionOfWorkVersion(validatedValue));
+    }
+    public static Result<DescriptionOfWorkVersion> Create(int? value, string propertyName = nameof(DescriptionOfWorkVersion))
+    {
+        return Result.NotNull(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .Map(validatedValue => new DescriptionOfWorkVersion(validatedValue));
+    }
+    public static Result<DescriptionOfWorkVersion> Create(int? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNull(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .Map(validatedValue => new DescriptionOfWorkVersion(validatedValue));
+    }
+    public static Result<DescriptionOfWorkVersion> Create(int value, string propertyName = nameof(DescriptionOfWorkVersion))
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyName)
+            .Map(validatedValue => new DescriptionOfWorkVersion(validatedValue));
+    }
+    public static Result<DescriptionOfWorkVersion> Create(int value, PropertyPath propertyPath, string member)
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyPath, member)
+            .Map(validatedValue => new DescriptionOfWorkVersion(validatedValue));
+    }
+
+    private DescriptionOfWorkVersion(int value) : base(value) { }
+}
+
+/// <summary>
+///     The rich text of a description of work, as HTML from the staff member's editor. Creating it sanitizes the HTML, so
+///     the event holds only safe markup; it must have some text, since an empty editor still produces markup such as
+///     <c>&lt;p&gt;&lt;br&gt;&lt;/p&gt;</c>.
+/// </summary>
+/// <remarks>
+///     Pages show the HTML as markup, so they pass it through <see cref="Sanitize"/> again rather than trust what was
+///     stored. The sanitizer keeps what the Quill editor produces: the <c>data-list</c> attribute of its list items and its
+///     own <c>ql-*</c> classes (<see cref="QuillClasses"/>), since Quill's CSS draws list bullets and numbers on the
+///     <c>ql-ui</c> span of each item and indents and aligns with classes. Any other class is removed, as are images, which
+///     the editor doesn't offer.
+/// </remarks>
+[Alias("Orders.DescriptionOfWorkHtml.V1"), GenerateSerializer, Immutable]
+public sealed record DescriptionOfWorkHtml : StringValueObject<DescriptionOfWorkHtml>
+{
+    public const int MaxLength = 100_000;
+
+    // HtmlSanitizer is thread-safe as long as its settings aren't changed while it sanitizes.
+    private static readonly HtmlSanitizer Sanitizer = CreateSanitizer();
+
+    public static Result<DescriptionOfWorkHtml> Create(string? value, string propertyName = nameof(DescriptionOfWorkHtml))
+    {
+        var (html, text) = SanitizeWithText(value);
+        return Result.NotNullOrWhitespace(text, propertyName)
+            .Map(_ => html)
+            .MaxLength(MaxLength, propertyName)
+            .Map(validatedValue => new DescriptionOfWorkHtml(validatedValue));
+    }
+    public static Result<DescriptionOfWorkHtml> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        var (html, text) = SanitizeWithText(value);
+        return Result.NotNullOrWhitespace(text, propertyPath, member)
+            .Map(_ => html)
+            .MaxLength(MaxLength, propertyPath, member)
+            .Map(validatedValue => new DescriptionOfWorkHtml(validatedValue));
+    }
+
+    /// <summary>Removes anything unsafe from <paramref name="html"/>, such as scripts and event handler attributes.</summary>
+    public static string Sanitize(string? html) => string.IsNullOrEmpty(html) ? "" : Sanitizer.Sanitize(html);
+
+    private static (string Html, string? Text) SanitizeWithText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return ("", null);
+        }
+        var body = Sanitizer.SanitizeDom(value).Body!;
+        return (body.InnerHtml, body.TextContent);
+    }
+
+    private static HtmlSanitizer CreateSanitizer()
+    {
+        var sanitizer = new HtmlSanitizer();
+        sanitizer.AllowedTags.Remove("img");
+        sanitizer.AllowedAttributes.Add("data-list");
+        sanitizer.AllowedAttributes.Add("class");
+        sanitizer.AllowedClasses.UnionWith(QuillClasses);
+        return sanitizer;
+    }
+
+    /// <summary>The classes Quill 2 puts in its HTML that the sanitizer keeps. An empty AllowedClasses would allow any class.</summary>
+    private static IEnumerable<string> QuillClasses =>
+    [
+        "ql-ui",
+        .. Enumerable.Range(1, 8).Select(indent => $"ql-indent-{indent}"),
+        "ql-align-center", "ql-align-right", "ql-align-justify",
+        "ql-direction-rtl",
+        "ql-size-small", "ql-size-large", "ql-size-huge",
+        "ql-font-serif", "ql-font-monospace",
+        "ql-code-block-container", "ql-code-block"
+    ];
+
+    private DescriptionOfWorkHtml(string value) : base(value) { }
 }

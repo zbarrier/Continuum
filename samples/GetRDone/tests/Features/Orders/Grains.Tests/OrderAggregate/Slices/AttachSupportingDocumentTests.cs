@@ -59,7 +59,8 @@ public sealed class AttachSupportingDocumentTests
             OrderNumber = (long?)null,
             NewOrderNoticeSent = false,
             AssignedTo = (string?)null,
-            DocumentRequests = new Dictionary<string, OrderDocumentRequest>()
+            DocumentRequests = new Dictionary<string, OrderDocumentRequest>(),
+            DescriptionOfWork = (OrderDescriptionOfWork?)null
         }, state, strict: true);
     }
 

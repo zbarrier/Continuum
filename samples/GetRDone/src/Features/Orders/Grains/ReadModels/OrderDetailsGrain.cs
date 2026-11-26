@@ -61,6 +61,7 @@ public sealed class OrderDetailsGrain(
                             document.DocumentId, document.FileName, document.DocumentTypeName,
                             names.UserName(document.AddedBy), document.AddedAt))
                         .ToArray(),
+                    State.DescriptionOfWork,
                     OrderTimeline.Describe(State.Timeline, names),
                     GetAllowedActions(tenantId)));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
@@ -70,10 +71,14 @@ public sealed class OrderDetailsGrain(
     {
         StaffOrderStatus.Submitted when this.GetCurrentUser().IsInAnyRole(StaffRoles.OrderAssigners) => OrderActions.AssignToMe,
         StaffOrderStatus.Assigned when State.AssignedTo == this.GetCurrentTenantUserId(tenantId) => OrderActions.Acknowledge,
-        StaffOrderStatus.Acknowledged when State.AssignedTo == this.GetCurrentTenantUserId(tenantId)
-            || this.GetCurrentUser().IsInAnyRole(StaffRoles.OrderAssigners) => OrderActions.RequestDocument,
+        StaffOrderStatus.Acknowledged or StaffOrderStatus.DescriptionOfWorkAwaitingApproval when IsAssigneeOrAssigner(tenantId)
+            => OrderActions.RequestDocument | OrderActions.SubmitDescriptionOfWork,
+        StaffOrderStatus.DescriptionOfWorkApproved when IsAssigneeOrAssigner(tenantId) => OrderActions.RequestDocument,
         _ => OrderActions.None
     };
+
+    private bool IsAssigneeOrAssigner(string? tenantId)
+        => State.AssignedTo == this.GetCurrentTenantUserId(tenantId) || this.GetCurrentUser().IsInAnyRole(StaffRoles.OrderAssigners);
 }
 
 [GenerateSerializer]
@@ -92,6 +97,8 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         On<OrderAcknowledged>(Apply);
         On<ClientDocumentRequested>(Apply);
         On<RequestedDocumentProvided>(Apply);
+        On<DescriptionOfWorkSubmitted>(Apply);
+        On<DescriptionOfWorkApproved>(Apply);
     }
 
     /// <summary>Whether the client submitted the order; staff don't see drafts.</summary>
@@ -129,6 +136,9 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
 
     /// <summary>The order's supporting documents, in the order they were added, with the IDs the query turns into names.</summary>
     [Id(13)] public List<OrderDocumentItem> Documents { get; init; } = [];
+
+    /// <summary>The latest version of the order's description of work, or null until one is submitted.</summary>
+    [Id(14)] public DescriptionOfWorkSummary? DescriptionOfWork { get; set; }
 
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
@@ -208,6 +218,25 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
         Documents.Add(new OrderDocumentItem(evt.DocumentId, evt.FileName, evt.DocumentTypeName, evt.InitiatedBy, evt.OccurredAt));
         Timeline.Add(new OrderTimelineItem(
             evt.OccurredAt, OrderTimelineKind.DocumentProvided, evt.InitiatedBy, null, evt.DocumentTypeName));
+        return true;
+    }
+
+    private bool Apply(DescriptionOfWorkSubmitted evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = StaffOrderStatus.DescriptionOfWorkAwaitingApproval;
+        DescriptionOfWork = new DescriptionOfWorkSummary(
+            evt.DescriptionOfWorkId, evt.DescriptionOfWorkVersion, evt.DescriptionOfWorkHtml, Approved: false, evt.OccurredAt);
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.DescriptionOfWorkSubmitted, evt.InitiatedBy, null,
+            DescriptionOfWorkVersion: evt.DescriptionOfWorkVersion));
+        return true;
+    }
+
+    private bool Apply(DescriptionOfWorkApproved evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = StaffOrderStatus.DescriptionOfWorkApproved;
+        DescriptionOfWork = DescriptionOfWork is null ? null : DescriptionOfWork with { Approved = true };
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.DescriptionOfWorkApproved, evt.InitiatedBy, null,
+            DescriptionOfWorkVersion: evt.DescriptionOfWorkVersion));
         return true;
     }
 }

@@ -10,5 +10,11 @@ public enum StaffOrderStatus
     Assigned,
 
     /// <summary>The staff member the order is assigned to is working on it.</summary>
-    Acknowledged
+    Acknowledged,
+
+    /// <summary>The order's description of work waits for the client's approval.</summary>
+    DescriptionOfWorkAwaitingApproval,
+
+    /// <summary>The client approved the order's description of work.</summary>
+    DescriptionOfWorkApproved
 }

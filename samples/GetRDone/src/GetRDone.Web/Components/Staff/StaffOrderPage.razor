@@ -1,6 +1,8 @@
 @* The staff order page (event model chapter 2, Order screens): the OrderDetails read model, with the actions the signed-in
-   user can take, such as requesting documents from the client. Each document links to its download (OrderDocumentDownloads).
-   OrderDetails is a projection, so after an action the page waits for it to show the change. *@
+   user can take, such as requesting documents from the client and writing the description of work for the client to
+   approve. Each document links to its download (OrderDocumentDownloads). The description of work is HTML from the rich
+   text editor; it is sanitized again before it is shown. OrderDetails is a projection, so after an action the page waits
+   for it to show the change. *@
 @page "/staff/orders/{OrderGuid:guid}"
 @attribute [Authorize(Roles = StaffRoles.AnyStaff)]
 @using Continuum.CSharpFunctionalExtensions
@@ -18,7 +20,7 @@
         <MudText Typo="Typo.h5">@Title</MudText>
         @if (_details is not null)
         {
-            <MudChip T="string" Size="Size.Small" Color="StatusColor(_details.Status)">@_details.Status</MudChip>
+            <MudChip T="string" Size="Size.Small" Color="StatusColor(_details.Status)">@StatusText(_details.Status)</MudChip>
         }
         <MudSpacer />
         <MudButton Variant="Variant.Text" Href="/">Home</MudButton>
@@ -122,6 +124,49 @@
                         }
                     </tbody>
                 </MudSimpleTable>
+
+                @if (details.DescriptionOfWork is not null || details.AllowedActions.HasFlag(OrderActions.SubmitDescriptionOfWork))
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-6 mb-2">
+                        <MudText Typo="Typo.h6">Description of work</MudText>
+                        @if (details.DescriptionOfWork is { } shown)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="@(shown.Approved ? Color.Success : Color.Secondary)">
+                                Version @shown.Version @(shown.Approved ? "approved" : "awaiting approval")
+                            </MudChip>
+                        }
+                        <MudSpacer />
+                        @if (details.AllowedActions.HasFlag(OrderActions.SubmitDescriptionOfWork) && !_writingDescriptionOfWork)
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_busy" OnClick="StartDescriptionOfWork">
+                                @(details.DescriptionOfWork is null ? "Write the description of work" : "Revise")
+                            </MudButton>
+                        }
+                    </MudStack>
+
+                    @if (_writingDescriptionOfWork)
+                    {
+                        <MudPaper Outlined="true" Class="pa-4">
+                            <MudHtmlEditor @bind-Html="_descriptionOfWorkHtml" Placeholder="Describe the work for the client to approve">
+                                <MudHtmlToolbarOptions InsertImage="false" />
+                            </MudHtmlEditor>
+                            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="mt-4">
+                                <MudButton Variant="Variant.Text" Disabled="_busy" OnClick="CancelDescriptionOfWork">Cancel</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="SubmitDescriptionOfWorkAsync">Submit for approval</MudButton>
+                            </MudStack>
+                        </MudPaper>
+                    }
+                    else if (details.DescriptionOfWork is { } descriptionOfWork)
+                    {
+                        @* MudHtmlViewer is height: 100%, which in a grid item is the whole row's height; a div of its own keeps it to its content. *@
+                        <div>
+                            <MudHtmlViewer Html="@DescriptionOfWorkHtml.Sanitize(descriptionOfWork.Html)" />
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Submitted @descriptionOfWork.SubmittedAt.ToLocalTime().ToString("MMM d, h:mm tt")
+                        </MudText>
+                    }
+                }
             </MudItem>
             <MudItem xs="12" md="5">
                 <MudText Typo="Typo.h6" Class="mb-2">Timeline</MudText>
@@ -155,6 +200,8 @@
     private DocumentType[] _documentTypes = [];
     private DocumentType? _requestDocumentType;
     private string _requestMessage = "";
+    private bool _writingDescriptionOfWork;
+    private string _descriptionOfWorkHtml = "";
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
@@ -175,7 +222,16 @@
         StaffOrderStatus.Submitted => Color.Info,
         StaffOrderStatus.Assigned => Color.Warning,
         StaffOrderStatus.Acknowledged => Color.Success,
+        StaffOrderStatus.DescriptionOfWorkAwaitingApproval => Color.Secondary,
+        StaffOrderStatus.DescriptionOfWorkApproved => Color.Success,
         _ => Color.Default
+    };
+
+    public static string StatusText(StaffOrderStatus status) => status switch
+    {
+        StaffOrderStatus.DescriptionOfWorkAwaitingApproval => "Awaiting DoW approval",
+        StaffOrderStatus.DescriptionOfWorkApproved => "DoW approved",
+        _ => status.ToString()
     };
 
     private string Title => _details?.OrderNumber is { } orderNumber ? $"Order {orderNumber}" : "Order";
@@ -246,6 +302,34 @@
     }
 
     private void CancelRequest() => _requesting = false;
+
+    /// <summary>Opens the editor, with the current version when revising it.</summary>
+    private void StartDescriptionOfWork()
+    {
+        _error = null;
+        _descriptionOfWorkHtml = _details?.DescriptionOfWork is { } current ? DescriptionOfWorkHtml.Sanitize(current.Html) : "";
+        _writingDescriptionOfWork = true;
+    }
+
+    private void CancelDescriptionOfWork() => _writingDescriptionOfWork = false;
+
+    /// <summary>
+    ///     Submits the first version with a new ID, or a revision of the version shown, so a revision based on a version
+    ///     someone else revised in the meantime is rejected.
+    /// </summary>
+    private async Task SubmitDescriptionOfWorkAsync()
+    {
+        TenantKey.Split(_orderId, out var tenantId, out _);
+        var command = _details?.DescriptionOfWork is { } current
+            ? new SubmitDescriptionOfWorkCommand(current.DescriptionOfWorkId, current.Version + 1, _descriptionOfWorkHtml)
+            : new SubmitDescriptionOfWorkCommand(TenantKey.Create(tenantId, Guid.NewGuid().ToString()), 1, _descriptionOfWorkHtml);
+        var saved = await RunAsync(async order => (await order.SubmitDescriptionOfWorkAsync(command)).Map(_ => true),
+            details => details.DescriptionOfWork?.Version == command.DescriptionOfWorkVersion);
+        if (saved)
+        {
+            _writingDescriptionOfWork = false;
+        }
+    }
 
     private async Task RequestDocumentAsync()
     {

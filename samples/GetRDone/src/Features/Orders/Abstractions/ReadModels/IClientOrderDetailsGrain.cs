@@ -6,8 +6,8 @@ namespace GetRDone.Orders.Abstractions.ReadModels;
 
 /// <summary>
 ///     The client order page of one submitted order (the ClientOrderDetails read model): its summary, the documents the AMC
-///     requested, its documents and its timeline. Each order has one instance, keyed by the order ID, and only the client
-///     user who started the order can read it.
+///     requested, its documents, its description of work and its timeline. Each order has one instance, keyed by the order
+///     ID, and only the client user who started the order can read it.
 /// </summary>
 public interface IClientOrderDetailsGrain : IGrainWithStringKey
 {
@@ -26,6 +26,7 @@ public interface IClientOrderDetailsGrain : IGrainWithStringKey
 /// <param name="AssignedToName">The AMC staff member working on the order, or null until it is assigned.</param>
 /// <param name="OpenRequests">The documents the AMC requested that the client has not provided yet, oldest first.</param>
 /// <param name="Documents">The order's supporting documents, in the order they were added.</param>
+/// <param name="DescriptionOfWork">The latest version of the order's description of work, or null until one is submitted.</param>
 /// <param name="Timeline">What happened to the order, newest first.</param>
 /// <param name="AllowedActions">What the client can do next.</param>
 [GenerateSerializer, Immutable]
@@ -39,6 +40,7 @@ public sealed record ClientOrderDetails(
     string? AssignedToName,
     ClientDocumentRequest[] OpenRequests,
     ClientOrderDocument[] Documents,
+    DescriptionOfWorkSummary? DescriptionOfWork,
     OrderTimelineEntry[] Timeline,
     ClientOrderActions AllowedActions);
 
@@ -71,5 +73,8 @@ public enum ClientOrderActions
     None = 0,
 
     /// <summary>Upload a document the AMC requested.</summary>
-    UploadRequestedDocument = 1
+    UploadRequestedDocument = 1,
+
+    /// <summary>Approve the description of work that waits for their approval.</summary>
+    ApproveDescriptionOfWork = 2
 }

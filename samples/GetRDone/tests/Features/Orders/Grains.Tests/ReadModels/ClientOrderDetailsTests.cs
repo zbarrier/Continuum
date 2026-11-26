@@ -65,6 +65,7 @@ public sealed class ClientOrderDetailsTests
                 new ClientOrderDocument(AttachSupportingDocumentTestData.Command1.DocumentId, "Purchase_Contract_48BirchHollow.pdf", "Purchase contract"),
                 new ClientOrderDocument(ProvideCommand1.DocumentId, "Survey_48BirchHollow.pdf", "Survey")
             ],
+            null,
             [
                 new OrderTimelineEntry(TestData.At.AddMinutes(7), "Document requested: Purchase contract"),
                 new OrderTimelineEntry(TestData.At.AddMinutes(6), "Survey provided by John Doe"),
@@ -90,6 +91,45 @@ public sealed class ClientOrderDetailsTests
             Assert.Equal(ClientOrderStatus.Submitted, details.Status);
             Assert.Null(details.AssignedToName);
             Assert.Empty(details.OpenRequests);
+            Assert.Equal(ClientOrderActions.None, details.AllowedActions);
+        });
+    }
+
+    [Fact]
+    public async Task ClientOrderDetails_LetTheClientApproveTheDescriptionOfWorkWaitingForApproval()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await GivenAcknowledged(DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)));
+
+        await When(() => Grain.GetClientOrderDetailsAsync());
+
+        Then<ClientOrderDetails>(details =>
+        {
+            Assert.Equal(ClientOrderStatus.DescriptionOfWorkAwaitingApproval, details.Status);
+            Assert.Equal(
+                new DescriptionOfWorkSummary(
+                    DescriptionOfWorkTestData.DescriptionOfWorkId, 1, DescriptionOfWorkTestData.Command1.DescriptionOfWorkHtml,
+                    Approved: false, TestData.At.AddMinutes(4)),
+                details.DescriptionOfWork);
+            Assert.Equal("Description of work submitted by Tommy Jones", details.Timeline[0].Entry);
+            Assert.Equal(ClientOrderActions.ApproveDescriptionOfWork, details.AllowedActions);
+        });
+    }
+
+    [Fact]
+    public async Task ClientOrderDetails_HaveNothingToApproveOnceTheDescriptionOfWorkIsApproved()
+    {
+        GivenSignedIn(RequestedByUsers.ClientUser1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(_orderId, occurredAt: TestData.At.AddMinutes(5)));
+
+        await When(() => Grain.GetClientOrderDetailsAsync());
+
+        Then<ClientOrderDetails>(details =>
+        {
+            Assert.Equal(ClientOrderStatus.DescriptionOfWorkApproved, details.Status);
+            Assert.True(details.DescriptionOfWork!.Approved);
             Assert.Equal(ClientOrderActions.None, details.AllowedActions);
         });
     }
@@ -171,6 +211,16 @@ public sealed class ClientOrderDetailsTests
     private Task GivenSubmitted() => Given(
         StartOrderDraftTestData.DraftStarted1(_orderId, TestData.At),
         SubmitOrderTestData.Submitted1(_orderId, TestData.At.AddMinutes(1)));
+
+    /// <summary>Sets up the order <c>Submitted1</c> submits, assigned to Director1 who acknowledged it, followed by <paramref name="more"/> events.</summary>
+    private Task GivenAcknowledged(params object[] more) => Given(
+    [
+        StartOrderDraftTestData.DraftStarted1(_orderId, TestData.At),
+        SubmitOrderTestData.Submitted1(_orderId, TestData.At.AddMinutes(1)),
+        AssignOrderTestData.OrderAssigned1(_orderId, TestData.At.AddMinutes(2)),
+        AcknowledgeOrderTestData.Acknowledged1(_orderId, TestData.At.AddMinutes(3)),
+        .. more
+    ]);
 
     /// <summary>An event of the order as the stream provider delivers it, read from the order's stream at <paramref name="revision"/>.</summary>
     private StreamedEvent<object> OnOrderStream(string eventType, ulong revision, object evt, DateTimeOffset occurredAt)

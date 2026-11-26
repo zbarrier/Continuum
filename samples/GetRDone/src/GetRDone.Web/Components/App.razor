@@ -8,11 +8,14 @@
     <title>Get-R-Done</title>
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" rel="stylesheet" />
+    <link href="@Assets["_content/Tizzani.MudBlazor.HtmlEditor/MudHtmlEditor.css"]" rel="stylesheet" />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
     <Routes @rendermode="InteractiveServer" />
+    @* Quill, for the description of work editor (Tizzani.MudBlazor.HtmlEditor). *@
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js" integrity="sha384-utBUCeG4SYaCm4m7GQZYr8Hy8Fpy3V4KGjBZaf4WTKOcwhCYpt/0PfeEe3HNlwx8" crossorigin="anonymous"></script>
     <script src="_framework/blazor.web.js"></script>
     <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
 </body>

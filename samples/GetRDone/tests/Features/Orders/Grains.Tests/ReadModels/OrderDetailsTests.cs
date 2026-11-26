@@ -63,6 +63,7 @@ public sealed class OrderDetailsTests
             "Tommy Jones",
             [],
             [],
+            null,
             [
                 new OrderTimelineEntry(TestData.At.AddMinutes(4), "Acknowledged by Tommy Jones"),
                 new OrderTimelineEntry(TestData.At.AddMinutes(3), "Assigned to Tommy Jones"),
@@ -230,25 +231,82 @@ public sealed class OrderDetailsTests
     }
 
     [Fact]
-    public async Task OrderDetails_LetTheAssigneeRequestDocumentOnceTheyAcknowledgeTheOrder()
+    public async Task OrderDetails_LetTheAssigneeRequestDocumentsAndSubmitTheDescriptionOfWorkOnceTheyAcknowledgeTheOrder()
     {
         GivenSignedIn(RequestedByUsers.Director1);
         await GivenAcknowledged();
 
         await When(() => Grain.GetOrderDetailsAsync());
 
-        Then<OrderDetails>(details => Assert.Equal(OrderActions.RequestDocument, details.AllowedActions));
+        Then<OrderDetails>(details => Assert.Equal(
+            OrderActions.RequestDocument | OrderActions.SubmitDescriptionOfWork, details.AllowedActions));
     }
 
     [Fact]
-    public async Task OrderDetails_LetTheTenantAdminRequestDocumentForAnOrderAssignedToSomeoneElse()
+    public async Task OrderDetails_LetTheTenantAdminRequestDocumentsAndSubmitTheDescriptionOfWorkForAnOrderAssignedToSomeoneElse()
     {
         GivenSignedIn(RequestedByUsers.TenantAdmin1);
         await GivenAcknowledged();
 
         await When(() => Grain.GetOrderDetailsAsync());
 
-        Then<OrderDetails>(details => Assert.Equal(OrderActions.RequestDocument, details.AllowedActions));
+        Then<OrderDetails>(details => Assert.Equal(
+            OrderActions.RequestDocument | OrderActions.SubmitDescriptionOfWork, details.AllowedActions));
+    }
+
+    [Fact]
+    public async Task OrderDetails_DoNotLetACoordinatorWorkOnAnOrderAssignedToSomeoneElse()
+    {
+        GivenSignedIn(RequestedByUsers.Coordinator1);
+        await GivenAcknowledged(DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)));
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details => Assert.Equal(OrderActions.None, details.AllowedActions));
+    }
+
+    [Fact]
+    public async Task OrderDetails_ShowTheLatestDescriptionOfWorkWaitingForApproval()
+    {
+        GivenSignedIn(RequestedByUsers.Director1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Submitted(DescriptionOfWorkTestData.Command2, _orderId, occurredAt: TestData.At.AddMinutes(5)));
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details =>
+        {
+            Assert.Equal(StaffOrderStatus.DescriptionOfWorkAwaitingApproval, details.Status);
+            Assert.Equal(
+                new DescriptionOfWorkSummary(
+                    DescriptionOfWorkTestData.DescriptionOfWorkId, 2, DescriptionOfWorkTestData.Command2.DescriptionOfWorkHtml,
+                    Approved: false, TestData.At.AddMinutes(5)),
+                details.DescriptionOfWork);
+            Assert.Equal(
+                ["Description of work revised (version 2) by Tommy Jones", "Description of work submitted by Tommy Jones"],
+                details.Timeline.Take(2).Select(entry => entry.Entry));
+            Assert.Equal(OrderActions.RequestDocument | OrderActions.SubmitDescriptionOfWork, details.AllowedActions);
+        });
+    }
+
+    [Fact]
+    public async Task OrderDetails_ShowTheApprovedDescriptionOfWorkAndOnlyLetTheAssigneeRequestDocuments()
+    {
+        GivenSignedIn(RequestedByUsers.Director1);
+        await GivenAcknowledged(
+            DescriptionOfWorkTestData.Submitted1(_orderId, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(_orderId, occurredAt: TestData.At.AddMinutes(5)));
+
+        await When(() => Grain.GetOrderDetailsAsync());
+
+        Then<OrderDetails>(details =>
+        {
+            Assert.Equal(StaffOrderStatus.DescriptionOfWorkApproved, details.Status);
+            Assert.True(details.DescriptionOfWork!.Approved);
+            Assert.Equal("Description of work version 1 approved by John Doe", details.Timeline[0].Entry);
+            Assert.Equal(OrderActions.RequestDocument, details.AllowedActions);
+        });
     }
 
     [Fact]

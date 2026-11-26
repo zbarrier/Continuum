@@ -10,6 +10,7 @@
 	<PackageReference Include="Microsoft.Orleans.Streaming" Version="$(OrleansVersion)" />
 	<PackageReference Include="MudBlazor" Version="9.12.0" />
 	<PackageReference Include="Orleans.Multitenant" Version="5.0.1" />
+	<PackageReference Include="Tizzani.MudBlazor.HtmlEditor" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>

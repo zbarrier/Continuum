@@ -100,6 +100,32 @@ public sealed class ClientOrdersTests
     }
 
     [Fact]
+    public async Task DescriptionOfWorkSubmittedAndApproved_ShowTheOrdersProgress()
+    {
+        var (submittedOrder, approvedOrder) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(_user);
+
+        await Given(
+        [
+            .. StartedAndSubmitted(Command1, submittedOrder, TestData.At.AddMinutes(3)),
+            .. StartedAndSubmitted(Command2, approvedOrder, TestData.At.AddMinutes(4)),
+            AssignOrderTestData.OrderAssigned1(submittedOrder, TestData.At.AddMinutes(5)),
+            AssignOrderTestData.OrderAssigned1(approvedOrder, TestData.At.AddMinutes(6)),
+            AcknowledgeOrderTestData.Acknowledged1(submittedOrder, TestData.At.AddMinutes(7)),
+            AcknowledgeOrderTestData.Acknowledged1(approvedOrder, TestData.At.AddMinutes(8)),
+            DescriptionOfWorkTestData.Submitted1(submittedOrder, occurredAt: TestData.At.AddMinutes(9)),
+            DescriptionOfWorkTestData.Submitted1(approvedOrder, occurredAt: TestData.At.AddMinutes(10)),
+            DescriptionOfWorkTestData.Approved(approvedOrder, occurredAt: TestData.At.AddMinutes(11))
+        ]);
+
+        Then(state =>
+        {
+            Assert.Equal(ClientOrderStatus.DescriptionOfWorkAwaitingApproval, state.Orders[submittedOrder].Status);
+            Assert.Equal(ClientOrderStatus.DescriptionOfWorkApproved, state.Orders[approvedOrder].Status);
+        });
+    }
+
+    [Fact]
     public async Task DraftStarted_IsNotAnOrderUntilItIsSubmitted()
     {
         var (submittedOrder, draftOrder) = (NewOrderId(), NewOrderId());

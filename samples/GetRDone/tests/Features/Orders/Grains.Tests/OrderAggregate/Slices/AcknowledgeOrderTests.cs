@@ -56,7 +56,8 @@ public sealed class AcknowledgeOrderTests
             OrderNumber = (long?)null,
             NewOrderNoticeSent = false,
             AssignedTo = (string?)RequestedByUsers.Director1.GetTenantUserId(),
-            DocumentRequests = new Dictionary<string, OrderDocumentRequest>()
+            DocumentRequests = new Dictionary<string, OrderDocumentRequest>(),
+            DescriptionOfWork = (OrderDescriptionOfWork?)null
         }, state, strict: true);
     }
 

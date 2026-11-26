@@ -67,7 +67,8 @@ public sealed class SendNewOrderNoticeTests
             OrderNumber = (long?)AssignOrderNumberTestData.FirstOrderNumber,
             NewOrderNoticeSent = true,
             AssignedTo = (string?)null,
-            DocumentRequests = new Dictionary<string, OrderDocumentRequest>()
+            DocumentRequests = new Dictionary<string, OrderDocumentRequest>(),
+            DescriptionOfWork = (OrderDescriptionOfWork?)null
         }, state, strict: true);
     }
 

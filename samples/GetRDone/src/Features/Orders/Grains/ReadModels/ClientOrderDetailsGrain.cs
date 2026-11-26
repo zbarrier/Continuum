@@ -53,10 +53,17 @@ public sealed class ClientOrderDetailsGrain(
                     names.UserName(State.AssignedTo),
                     State.OpenRequests.ToArray(),
                     State.Documents.ToArray(),
+                    State.DescriptionOfWork,
                     OrderTimeline.Describe(State.Timeline, names),
-                    State.OpenRequests.Count > 0 ? ClientOrderActions.UploadRequestedDocument : ClientOrderActions.None));
+                    GetAllowedActions()));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
     }
+
+    private ClientOrderActions GetAllowedActions()
+        => (State.OpenRequests.Count > 0 ? ClientOrderActions.UploadRequestedDocument : ClientOrderActions.None)
+            | (State.Status == ClientOrderStatus.DescriptionOfWorkAwaitingApproval
+                ? ClientOrderActions.ApproveDescriptionOfWork
+                : ClientOrderActions.None);
 }
 
 [GenerateSerializer]
@@ -74,6 +81,8 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
         On<OrderAcknowledged>(Apply);
         On<ClientDocumentRequested>(Apply);
         On<RequestedDocumentProvided>(Apply);
+        On<DescriptionOfWorkSubmitted>(Apply);
+        On<DescriptionOfWorkApproved>(Apply);
     }
 
     /// <summary>Whether the client submitted the order; drafts have their own page.</summary>
@@ -104,6 +113,9 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
 
     /// <summary>What happened to the order, oldest first, with the IDs the query turns into names.</summary>
     [Id(10)] public List<OrderTimelineItem> Timeline { get; init; } = [];
+
+    /// <summary>The latest version of the order's description of work, or null until one is submitted.</summary>
+    [Id(11)] public DescriptionOfWorkSummary? DescriptionOfWork { get; set; }
 
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
@@ -175,6 +187,25 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
         Documents.Add(new ClientOrderDocument(evt.DocumentId, evt.FileName, evt.DocumentTypeName));
         Timeline.Add(new OrderTimelineItem(
             evt.OccurredAt, OrderTimelineKind.DocumentProvided, evt.InitiatedBy, null, evt.DocumentTypeName));
+        return true;
+    }
+
+    private bool Apply(DescriptionOfWorkSubmitted evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = ClientOrderStatus.DescriptionOfWorkAwaitingApproval;
+        DescriptionOfWork = new DescriptionOfWorkSummary(
+            evt.DescriptionOfWorkId, evt.DescriptionOfWorkVersion, evt.DescriptionOfWorkHtml, Approved: false, evt.OccurredAt);
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.DescriptionOfWorkSubmitted, evt.InitiatedBy, null,
+            DescriptionOfWorkVersion: evt.DescriptionOfWorkVersion));
+        return true;
+    }
+
+    private bool Apply(DescriptionOfWorkApproved evt, IStreamedEvent<object> streamedEvent)
+    {
+        Status = ClientOrderStatus.DescriptionOfWorkApproved;
+        DescriptionOfWork = DescriptionOfWork is null ? null : DescriptionOfWork with { Approved = true };
+        Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.DescriptionOfWorkApproved, evt.InitiatedBy, null,
+            DescriptionOfWorkVersion: evt.DescriptionOfWorkVersion));
         return true;
     }
 }

@@ -63,7 +63,8 @@ public sealed class AssignOrderNumberTests
             OrderNumber = (long?)FirstOrderNumber,
             NewOrderNoticeSent = false,
             AssignedTo = (string?)null,
-            DocumentRequests = new Dictionary<string, OrderDocumentRequest>()
+            DocumentRequests = new Dictionary<string, OrderDocumentRequest>(),
+            DescriptionOfWork = (OrderDescriptionOfWork?)null
         }, state, strict: true);
     }
 

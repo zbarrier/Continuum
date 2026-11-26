@@ -106,6 +106,32 @@ public sealed class InProgressOrdersTests
     }
 
     [Fact]
+    public async Task DescriptionOfWorkSubmittedAndApproved_ShowTheOrdersProgress()
+    {
+        var (submittedOrder, approvedOrder) = (NewOrderId(), NewOrderId());
+        GivenSignedIn(RequestedByUsers.Director1);
+
+        await Given(
+        [
+            .. Submitted(Command1, submittedOrder),
+            AssignOrderTestData.OrderAssigned1(submittedOrder, TestData.At.AddMinutes(2)),
+            AcknowledgeOrderTestData.Acknowledged1(submittedOrder, TestData.At.AddMinutes(3)),
+            DescriptionOfWorkTestData.Submitted1(submittedOrder, occurredAt: TestData.At.AddMinutes(4)),
+            .. Submitted(Command1, approvedOrder),
+            AssignOrderTestData.OrderAssigned1(approvedOrder, TestData.At.AddMinutes(2)),
+            AcknowledgeOrderTestData.Acknowledged1(approvedOrder, TestData.At.AddMinutes(3)),
+            DescriptionOfWorkTestData.Submitted1(approvedOrder, occurredAt: TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Approved(approvedOrder, occurredAt: TestData.At.AddMinutes(5))
+        ]);
+
+        Then(state =>
+        {
+            Assert.Equal(StaffOrderStatus.DescriptionOfWorkAwaitingApproval, state.Orders[submittedOrder].Status);
+            Assert.Equal(StaffOrderStatus.DescriptionOfWorkApproved, state.Orders[approvedOrder].Status);
+        });
+    }
+
+    [Fact]
     public async Task Orders_ListTheOrdersDueFirstFirstWithTheirClientsAndAssigneesNames()
     {
         var (order1, order2) = (NewOrderId(), NewOrderId());

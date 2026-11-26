@@ -6,17 +6,20 @@ namespace GetRDone.Orders.Grains.ReadModels;
 /// <param name="OccurredAt">When it happened.</param>
 /// <param name="Kind">What happened.</param>
 /// <param name="UserId">
-///     Who submitted, was assigned, acknowledged the order or provided a document, as a tenant user ID.
+///     Who submitted, was assigned, acknowledged the order, provided a document, or submitted or approved the description
+///     of work, as a tenant user ID.
 /// </param>
 /// <param name="OrderNumber">The number the order was given.</param>
 /// <param name="DocumentTypeName">The type of document requested or provided.</param>
+/// <param name="DescriptionOfWorkVersion">The version of the description of work submitted or approved.</param>
 [GenerateSerializer, Immutable]
 public sealed record OrderTimelineItem(
     DateTimeOffset OccurredAt,
     OrderTimelineKind Kind,
     string? UserId,
     long? OrderNumber,
-    string? DocumentTypeName = null);
+    string? DocumentTypeName = null,
+    int? DescriptionOfWorkVersion = null);
 
 public enum OrderTimelineKind
 {
@@ -25,7 +28,9 @@ public enum OrderTimelineKind
     Assigned,
     Acknowledged,
     DocumentRequested,
-    DocumentProvided
+    DocumentProvided,
+    DescriptionOfWorkSubmitted,
+    DescriptionOfWorkApproved
 }
 
 /// <summary>Turns the timeline the projections store into what the staff and client order pages show.</summary>
@@ -51,6 +56,11 @@ internal static class OrderTimeline
             OrderTimelineKind.Acknowledged => $"Acknowledged by {userName}",
             OrderTimelineKind.DocumentRequested => $"Document requested: {item.DocumentTypeName}",
             OrderTimelineKind.DocumentProvided => $"{item.DocumentTypeName} provided by {userName}",
+            OrderTimelineKind.DescriptionOfWorkSubmitted when item.DescriptionOfWorkVersion > 1
+                => $"Description of work revised (version {item.DescriptionOfWorkVersion}) by {userName}",
+            OrderTimelineKind.DescriptionOfWorkSubmitted => $"Description of work submitted by {userName}",
+            OrderTimelineKind.DescriptionOfWorkApproved
+                => $"Description of work version {item.DescriptionOfWorkVersion} approved by {userName}",
             _ => item.Kind.ToString()
         };
     }

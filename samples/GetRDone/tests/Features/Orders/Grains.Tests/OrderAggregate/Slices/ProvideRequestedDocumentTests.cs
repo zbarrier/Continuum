@@ -71,7 +71,8 @@ public sealed class ProvideRequestedDocumentTests
                 [Command1.RequestId] = new(
                     RequestedByUsers.ClientUser1.GetTenantUserId(), Command1.DocumentTypeId, Command1.DocumentTypeVersion,
                     Command1.DocumentTypeName, NoticeSent: true, Provided: true)
-            }
+            },
+            DescriptionOfWork = (OrderDescriptionOfWork?)null
         }, state, strict: true);
     }
 

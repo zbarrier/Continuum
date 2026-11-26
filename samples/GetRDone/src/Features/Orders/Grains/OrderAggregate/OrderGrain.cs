@@ -89,7 +89,9 @@ public enum OrderStatus
     Draft,
     Submitted,
     Assigned,
-    Acknowledged
+    Acknowledged,
+    DescriptionOfWorkAwaitingApproval,
+    DescriptionOfWorkApproved
 }
 
 public enum OrderCommand
@@ -104,7 +106,9 @@ public enum OrderCommand
     AssignOrder,
     AcknowledgeOrder,
     RequestClientDocument,
-    ProvideRequestedDocument
+    ProvideRequestedDocument,
+    SubmitDescriptionOfWork,
+    ApproveDescriptionOfWork
 }
 
 [GenerateSerializer]
@@ -139,6 +143,9 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
     /// <summary>The documents the AMC requested from the client, by request ID.</summary>
     [Id(7)] public Dictionary<string, OrderDocumentRequest> DocumentRequests { get; private set; } = [];
 
+    /// <summary>The order's description of work and how far it is, or null until it is first submitted.</summary>
+    [Id(8)] public OrderDescriptionOfWork? DescriptionOfWork { get; private set; }
+
     protected override void ConfigureEventHandlers()
     {
         On<OrderDraftStarted>(Handle);
@@ -153,11 +160,17 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         On<ClientDocumentRequested>(Handle);
         On<DocumentRequestNoticeSent>(Handle);
         On<RequestedDocumentProvided>(Handle);
+        On<DescriptionOfWorkSubmitted>(Handle);
+        On<DescriptionOfWorkSubmittedNoticeSent>(Handle);
+        On<DescriptionOfWorkApproved>(Handle);
+        On<DescriptionOfWorkApprovedNoticeSent>(Handle);
     }
 
     /// <remarks>
     ///     The Order Number Assigner can give an order its number after staff have already assigned or acknowledged it, so
-    ///     every status after Submitted permits <see cref="OrderCommand.AssignOrderNumber"/>.
+    ///     every status after Submitted permits <see cref="OrderCommand.AssignOrderNumber"/>. Documents can be requested and
+    ///     provided once the order is acknowledged, whatever the state of its description of work, and the description of
+    ///     work can be revised until the client approves it.
     /// </remarks>
     protected override void ConfigureStateMachine()
     {
@@ -177,6 +190,17 @@ public sealed partial class OrderState : EventDrivenStateMachineState<OrderState
         StateMachine.Configure(OrderStatus.Acknowledged)
             .PermitReentry(OrderCommand.AssignOrderNumber)
             .PermitReentry(OrderCommand.RequestClientDocument)
+            .PermitReentry(OrderCommand.ProvideRequestedDocument)
+            .Permit(OrderCommand.SubmitDescriptionOfWork, OrderStatus.DescriptionOfWorkAwaitingApproval);
+        StateMachine.Configure(OrderStatus.DescriptionOfWorkAwaitingApproval)
+            .PermitReentry(OrderCommand.AssignOrderNumber)
+            .PermitReentry(OrderCommand.RequestClientDocument)
+            .PermitReentry(OrderCommand.ProvideRequestedDocument)
+            .PermitReentry(OrderCommand.SubmitDescriptionOfWork)
+            .Permit(OrderCommand.ApproveDescriptionOfWork, OrderStatus.DescriptionOfWorkApproved);
+        StateMachine.Configure(OrderStatus.DescriptionOfWorkApproved)
+            .PermitReentry(OrderCommand.AssignOrderNumber)
+            .PermitReentry(OrderCommand.RequestClientDocument)
             .PermitReentry(OrderCommand.ProvideRequestedDocument);
     }
 }
@@ -190,3 +214,14 @@ public sealed record OrderDocumentRequest(
     string DocumentTypeName,
     bool NoticeSent,
     bool Provided);
+
+/// <summary>The order's description of work: its latest version, who approves it, and how far it is.</summary>
+/// <param name="NoticeSentVersion">The latest version the client was emailed to approve, or null until the first is.</param>
+[GenerateSerializer, Immutable]
+public sealed record OrderDescriptionOfWork(
+    string Id,
+    int Version,
+    string ApproverUserId,
+    bool Approved,
+    int? NoticeSentVersion,
+    bool ApprovedNoticeSent);

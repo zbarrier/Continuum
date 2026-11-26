@@ -36,6 +36,14 @@ public sealed class AutomationUser
     /// <summary>Emails clients the documents the AMC requests from them.</summary>
     public static AutomationUser DocumentRequestNotifier { get; } = new("0a1b2c03-7f5a-4b9c-8d1e-3f4a5b6c7d8e", "Document Request Notifier");
 
+    /// <summary>Emails clients the descriptions of work that wait for their approval.</summary>
+    public static AutomationUser DescriptionOfWorkApprovalNotifier { get; } = new(
+        "0a1b2c04-8a6b-4c0d-9e2f-4a5b6c7d8e9f", "Description of Work Approval Notifier");
+
+    /// <summary>Tells the staff member an order is assigned to that the client approved its description of work.</summary>
+    public static AutomationUser DescriptionOfWorkApprovedNotifier { get; } = new(
+        "0a1b2c05-9b7c-4d1e-8f3a-5b6c7d8e9f0a", "Description of Work Approved Notifier");
+
     /// <summary>The account's user ID in the identity provider.</summary>
     public string UserGuid { get; }
 

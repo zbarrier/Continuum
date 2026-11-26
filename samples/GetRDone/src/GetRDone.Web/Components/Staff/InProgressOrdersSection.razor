@@ -30,7 +30,7 @@
         <MudTd DataLabel="Property">@context.PropertyAddress</MudTd>
         <MudTd DataLabel="Assigned to">@context.AssignedToName</MudTd>
         <MudTd DataLabel="Status">
-            <MudChip T="string" Size="Size.Small" Color="StaffOrderPage.StatusColor(context.Status)">@context.Status</MudChip>
+            <MudChip T="string" Size="Size.Small" Color="StaffOrderPage.StatusColor(context.Status)">@StaffOrderPage.StatusText(context.Status)</MudChip>
         </MudTd>
         <MudTd DataLabel="Due">@context.DueDate.ToString("MMM d")</MudTd>
         <MudTd Style="text-align:right">

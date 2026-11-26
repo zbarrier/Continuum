@@ -66,6 +66,8 @@ public sealed class ClientOrdersState : HandlerProjectionState<ClientOrdersState
         On<OrderNumberAssigned>(Apply);
         On<OrderAssigned>(Apply);
         On<OrderAcknowledged>(Apply);
+        On<DescriptionOfWorkSubmitted>(Apply);
+        On<DescriptionOfWorkApproved>(Apply);
     }
 
     /// <summary>
@@ -126,6 +128,12 @@ public sealed class ClientOrdersState : HandlerProjectionState<ClientOrdersState
 
     private bool Apply(OrderAcknowledged evt, IStreamedEvent<object> streamedEvent)
         => SetStatus(evt.OrderId, ClientOrderStatus.Acknowledged);
+
+    private bool Apply(DescriptionOfWorkSubmitted evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, ClientOrderStatus.DescriptionOfWorkAwaitingApproval);
+
+    private bool Apply(DescriptionOfWorkApproved evt, IStreamedEvent<object> streamedEvent)
+        => SetStatus(evt.OrderId, ClientOrderStatus.DescriptionOfWorkApproved);
 
     private bool SetStatus(string orderId, ClientOrderStatus status)
     {

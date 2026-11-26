@@ -1,7 +1,8 @@
 @* The client order page (event model chapter 2, Order screens): the ClientOrderDetails read model, where the client uploads
-   the documents the AMC requested. Like tab 3 of order entry, the file is uploaded to blob storage first and then provided;
-   when the order rejects it, the upload is deleted again. ClientOrderDetails is a projection, so after an upload the page
-   waits for it to show the document. *@
+   the documents the AMC requested and approves the description of work. Like tab 3 of order entry, the file is uploaded to
+   blob storage first and then provided; when the order rejects it, the upload is deleted again. The description of work is
+   sanitized again before it is shown. ClientOrderDetails is a projection, so after an action the page waits for it to show
+   the change. *@
 @page "/orders/{OrderGuid:guid}"
 @attribute [Authorize(Roles = "client")]
 @using Continuum.CSharpFunctionalExtensions
@@ -13,6 +14,7 @@
 @inject IClusterClient ClusterClient
 @inject SupportingDocumentStore DocumentStore
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject ILogger<ClientOrderPage> Logger
 
 <PageTitle>@Title · Get-R-Done</PageTitle>
@@ -22,7 +24,7 @@
         <MudText Typo="Typo.h5">@Title</MudText>
         @if (_details is not null)
         {
-            <MudChip T="string" Size="Size.Small" Color="StatusColor(_details.Status)">@_details.Status</MudChip>
+            <MudChip T="string" Size="Size.Small" Color="StatusColor(_details.Status)">@StatusText(_details.Status)</MudChip>
         }
         <MudSpacer />
         <MudButton Variant="Variant.Text" Href="/">Home</MudButton>
@@ -75,6 +77,28 @@
                     {
                         <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
                     }
+                }
+
+                @if (details.DescriptionOfWork is { } descriptionOfWork)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-6 mb-2">
+                        <MudText Typo="Typo.h6">Description of work</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="@(descriptionOfWork.Approved ? Color.Success : Color.Secondary)">
+                            Version @descriptionOfWork.Version @(descriptionOfWork.Approved ? "approved" : "awaiting your approval")
+                        </MudChip>
+                        <MudSpacer />
+                        @if (details.AllowedActions.HasFlag(ClientOrderActions.ApproveDescriptionOfWork))
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="@(() => ApproveAsync(descriptionOfWork))">Approve</MudButton>
+                        }
+                    </MudStack>
+                    @* MudHtmlViewer is height: 100%, which in a grid item is the whole row's height; a div of its own keeps it to its content. *@
+                    <div>
+                        <MudHtmlViewer Html="@DescriptionOfWorkHtml.Sanitize(descriptionOfWork.Html)" />
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Submitted @descriptionOfWork.SubmittedAt.ToLocalTime().ToString("MMM d, h:mm tt")
+                    </MudText>
                 }
 
                 <MudText Typo="Typo.h6" Class="mt-6 mb-2">Documents</MudText>
@@ -141,7 +165,16 @@
         ClientOrderStatus.Submitted => Color.Info,
         ClientOrderStatus.Assigned => Color.Warning,
         ClientOrderStatus.Acknowledged => Color.Success,
+        ClientOrderStatus.DescriptionOfWorkAwaitingApproval => Color.Secondary,
+        ClientOrderStatus.DescriptionOfWorkApproved => Color.Success,
         _ => Color.Default
+    };
+
+    public static string StatusText(ClientOrderStatus status) => status switch
+    {
+        ClientOrderStatus.DescriptionOfWorkAwaitingApproval => "Awaiting your approval",
+        ClientOrderStatus.DescriptionOfWorkApproved => "Description of work approved",
+        _ => status.ToString()
     };
 
     private string Title => _details?.OrderNumber is { } orderNumber ? $"Order {orderNumber}" : "Order";
@@ -179,6 +212,53 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    /// <summary>Approves the version shown, so a version revised since the page loaded isn't approved unseen.</summary>
+    private async Task ApproveAsync(DescriptionOfWorkSummary descriptionOfWork)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Approve the description of work", $"Approve version {descriptionOfWork.Version} of the description of work?",
+            yesText: "Approve", cancelText: "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+        try
+        {
+            var result = await ClusterClient.GetGrain<IOrderGrain>(_orderId).ApproveDescriptionOfWorkAsync(
+                new ApproveDescriptionOfWorkCommand(descriptionOfWork.DescriptionOfWorkId, descriptionOfWork.Version));
+            if (result.IsFailure)
+            {
+                _error = result.Error.GetFormattedMessage();
+                return;
+            }
+            Snackbar.Add("Description of work approved.", Severity.Success);
+
+            for (var attempt = 0; attempt < WaitAttempts; attempt++)
+            {
+                var details = await ClusterClient.GetClientOrderDetailsGrain(_orderId).GetClientOrderDetailsAsync();
+                if (details.IsSuccess && details.Value.DescriptionOfWork?.Approved == true)
+                {
+                    _details = details.Value;
+                    return;
+                }
+                await Task.Delay(WaitDelay);
+            }
+            _error = "The approval was saved, but the page is not showing it yet. Reload the page in a moment.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The description of work could not be approved for order {OrderId}.", _orderId);
+            _error = "The description of work could not be approved. Try again in a moment.";
+        }
+        finally
+        {
+            _busy = false;
         }
     }
 
