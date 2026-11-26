@@ -4,10 +4,11 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 
 ## Project Guidelines
 - Do not commit or push without explicit approval; stage all changes (`git add -A`) and leave them for review.
-- The system is designed with Event Modeling (screens/automations → commands → events → read models, organized into slices). The user will supply the event model; implement features slice by slice from it. The `Hello` feature
+- The system is designed with Event Modeling (screens/automations → commands → events → read models, organized into slices). The user will supply the event model; implement features slice by slice from it.
+
 
 ## Architecture
-- Aspire orchestrates everything (`GetRDone.AppHost`): Azurite tables for Orleans clustering and the `order-documents` blob container for supporting document files, KurrentDB for event storage (no data volume until the event model exists), SQL Server with a persistent data volume for the `identitydb` database, Mailpit for local email capture, plus the Identity, Silo, Subscriptions Worker (one replica), and Web projects.
+- Aspire orchestrates everything (`GetRDone.AppHost`): Azurite tables for Orleans clustering and the `order-documents` blob container for supporting document files, KurrentDB for event storage, SQL Server for the `identitydb` database (KurrentDB, Azurite and SQL Server keep their data in volumes across runs), Mailpit for local email capture, plus the Identity, Silo, Subscriptions Worker (one replica), and Web projects.
 - `GetRDone.Identity`: Duende IdentityServer + ASP.NET Core Identity (EF Core, SQL Server) with the standard Duende Razor Pages UI (Bootstrap 5, Get-R-Done branding). `ApplicationUser` has `DisplayName` and nullable `TenantId`; `GetRDoneUserClaimsPrincipalFactory` emits `name` and `tenant_id`. Migrations live in `Data/Migrations` (use the local `dotnet-ef` tool from `dotnet-tools.json`) and are applied at startup by `IdentitySeeder`, which also seeds roles and, in Development only, demo users (`ana.ruiz@carterbank.example`, `scott.riggsbee@elliott.example` (Client Services Director), `coordinator@`, `reviewer@` and `admin@getrdone.local` (tenant admin) in tenant `elliott`, all with fixed IDs matching the read-model seed data; `vendor@getrdone.local` with no tenant; password `Pass123$`; an existing demo user's role is synced on startup), plus the automations' service accounts (`automation` role, fixed IDs matching `AutomationUser`, no password). Emails (confirm, reset) are written by `AccountEmailSender` and sent through `GetRDone.Email` to Mailpit.
 - `GetRDone.Email`: the app's `IEmailSender` (`AddSmtpEmailSender`), which sends over SMTP using the `mailpit` connection string (`Endpoint=smtp://host:port`). Identity and the Silo (notifications) both use it; tests replace it with `RecordingEmailSender`.
 - Clients and AMC staff are invite-only (invitations are not built yet). Vendors self-register (`/Account/Register`) into the global vendor pool with no tenant; tenants add vendors to their fee panels later via the event model, so vendors can work for many tenants.
@@ -18,8 +19,8 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 - Planned: durable in-app notifications via Orleans streams + Blazor Server SignalR, with email through Mailpit.
 
 ## Multi-Tenancy
-- Uses Orleans.Multitenant. Web calls grains via `ClusterClient.ForTenant(tenantId).GetGrain<T>(key)`; the tenant comes from the `tenant_id` claim.
-- Event storage uses `AddMultitenantKurrentDBBasedLogConsistencyProvider` with provider name `EventLog` and connection name `kurrentdb` (see `GetRDoneStorage`). All tenants currently share the default connection.
+- Uses Orleans.Multitenant's key format: grain keys are `{TenantId}|{Key}`, built with `TenantKey.Create(tenantId, key)`; Web takes the tenant from the `tenant_id` claim. The Silo's `AddTenantIsolation()` keeps every call inside one tenant (`ClientCallTenantFilter` for client calls, Orleans.Multitenant communication separation for grain calls).
+- Event storage uses `AddMultitenantKurrentDBBasedLogConsistencyProvider` with provider name `EventLog` and connection name `kurrentdb` (see `GetRDoneStorage` in the Silo). All tenants currently share the default connection.
 
 ## Projections
 - Order events also target the per-user stream `clientUserOrders-{tenantId}|{userGuid}` of the user who started the order and the per-tenant stream `tenantOrders-{tenantId}|default` (`OrderGrain.GetStreamTargets`, transaction-scoped; names in `OrderProjections`). Targets are grain IDs; the provider maps them to the stream name the grain's own events would use. A transaction-scoped target gets every event of the transaction; an event-scoped one (`StreamTarget.Event`) gets only the events that name it.
@@ -71,11 +72,11 @@ Get-R-Done is a sample application built on the Continuum framework. Continuum s
 
 ## Local Development
 - Run `GetRDone.AppHost` (requires Docker).
-- KurrentDB is pinned to port 2113 (`esdb://localhost:2113?tls=false`) so the KurrentDB desktop app can connect. It has no data volume, so data is lost when the AppHost restarts.
+- KurrentDB is pinned to port 2113 (`esdb://localhost:2113?tls=false`) so the KurrentDB desktop app can connect. Its data is kept in a volume across AppHost runs (see the README's Run section to reset it).
 - Stop the AppHost before rebuilding; a running Silo or Subscriptions Worker locks its output files.
 
 ## Status
-Hello flow confirmed end to end after pinning Microsoft.Orleans.Streaming to $(OrleansVersion), Web UI moved to MudBlazor.
+Chapters 1-4 of the event model (order entry through shipping) are implemented.
 - Next (infrastructure, independent of the event model):
   - Replace the placeholder `GetRDone.Identity` UI
 - Next (domain): the user will create the event model; notifications are designed as part of it. After that, implement the model slice by slice.

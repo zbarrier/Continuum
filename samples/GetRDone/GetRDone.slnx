@@ -13,10 +13,6 @@
     <Project Path="src/GetRDone.Subscriptions.Worker/GetRDone.Subscriptions.Worker.csproj" />
   </Folder>
   <Folder Name="/src/Features/" />
-  <Folder Name="/src/Features/Hello/">
-    <Project Path="src/Features/Hello/GetRDone.Hello.Abstractions/GetRDone.Hello.Abstractions.csproj" />
-    <Project Path="src/Features/Hello/GetRDone.Hello.Grains/GetRDone.Hello.Grains.csproj" />
-  </Folder>
   <Folder Name="/src/Features/Orders/">
     <Project Path="src/Features/Orders/Abstractions/GetRDone.Orders.Abstractions.csproj" Id="c8c1fdda-90a4-4e4f-bb14-7a6f1bee7cb5" />
     <Project Path="src/Features/Orders/Automations/GetRDone.Orders.Automations.csproj" />

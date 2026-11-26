@@ -1,6 +1,9 @@
-namespace GetRDone;
+namespace GetRDone.Silo;
 
-/// <summary>Storage names shared by the Silo host and grain implementations.</summary>
+/// <summary>
+///     Storage names the silo configures. The event-sourced grains name the same provider and connection in their
+///     <c>[LogConsistencyProvider]</c> attributes and constructors.
+/// </summary>
 public static class GetRDoneStorage
 {
     /// <summary>Log-consistency provider used by event-sourced grains.</summary>

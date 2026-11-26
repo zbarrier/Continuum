@@ -4,7 +4,6 @@ using Continuum.Orleans.Hosting;
 using Continuum.Streaming.Orleans;
 using Continuum.TypeMapping;
 
-using GetRDone;
 using GetRDone.Email;
 using GetRDone.Orders.Grains;
 using GetRDone.Orders.Grains.Notifications;

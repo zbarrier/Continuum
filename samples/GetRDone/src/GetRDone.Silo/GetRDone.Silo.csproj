@@ -16,7 +16,6 @@
 	<ProjectReference Include="$(ContinuumSrc)Core.SourceGenerators\Continuum.Core.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	<ProjectReference Include="..\Features\Orders\Grains\GetRDone.Orders.Grains.csproj" />
 	<ProjectReference Include="..\GetRDone.ServiceDefaults\GetRDone.ServiceDefaults.csproj" />
-	<ProjectReference Include="..\Features\Hello\GetRDone.Hello.Grains\GetRDone.Hello.Grains.csproj" />
   </ItemGroup>
 
   <ItemGroup>
