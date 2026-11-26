@@ -39,12 +39,11 @@ public sealed class UnassignedOrdersGrain(
                 var names = await UserDirectoryNames.LoadAsync(GrainFactory, tenantId);
 
                 var orders = State.Orders.Values
-                    .OrderBy(order => order.DueDate)
-                    .ThenBy(order => order.OrderNumber)
+                    .OrderBy(order => order.OrderNumber)
                     .Skip(skip)
                     .Take(take)
                     .Select(order => new UnassignedOrder(order.OrderId, order.OrderNumber, names.ClientName(order.ClientId),
-                        order.PropertyAddress, order.FormTypeName, order.DueDate))
+                        order.PropertyAddress, order.FormTypeName))
                     .ToArray();
                 return Result.Success(new UnassignedOrdersPage(orders, State.Orders.Count));
             }, ex => GlobalGrainErrorHandler.Default(ex, logger));
@@ -75,7 +74,7 @@ public sealed class UnassignedOrdersState : HandlerProjectionState<UnassignedOrd
     {
         Drafts[evt.OrderId] = new TenantOrderDraftDetails(evt.ClientId,
             PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip),
-            evt.FormTypeName, evt.DueDate);
+            evt.FormTypeName);
         return true;
     }
 
@@ -89,8 +88,7 @@ public sealed class UnassignedOrdersState : HandlerProjectionState<UnassignedOrd
         Drafts[evt.OrderId] = draft with
         {
             PropertyAddress = PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip),
-            FormTypeName = evt.FormTypeName,
-            DueDate = evt.DueDate
+            FormTypeName = evt.FormTypeName
         };
         return true;
     }
@@ -103,7 +101,7 @@ public sealed class UnassignedOrdersState : HandlerProjectionState<UnassignedOrd
         }
 
         Orders[evt.OrderId] = new UnassignedOrderEntry(
-            evt.OrderId, evt.OrderNumber, draft.ClientId, draft.PropertyAddress, draft.FormTypeName, draft.DueDate);
+            evt.OrderId, evt.OrderNumber, draft.ClientId, draft.PropertyAddress, draft.FormTypeName);
         return true;
     }
 
@@ -116,14 +114,12 @@ public sealed class UnassignedOrdersState : HandlerProjectionState<UnassignedOrd
 /// <param name="ClientId">The client the order is for, as a tenant-qualified client ID.</param>
 /// <param name="PropertyAddress">The property address on one line.</param>
 /// <param name="FormTypeName">The form type ordered.</param>
-/// <param name="DueDate">When the client needs the report.</param>
 /// <param name="OrderNumber">The order number, once the order has it.</param>
 [GenerateSerializer, Immutable]
 public sealed record TenantOrderDraftDetails(
     string ClientId,
     string PropertyAddress,
     string FormTypeName,
-    DateOnly DueDate,
     long? OrderNumber = null);
 
 /// <summary>An order on the Unassigned list, with its client ID, which the query turns into the client's name.</summary>
@@ -133,5 +129,4 @@ public sealed record UnassignedOrderEntry(
     long OrderNumber,
     string ClientId,
     string PropertyAddress,
-    string FormTypeName,
-    DateOnly DueDate);
+    string FormTypeName);

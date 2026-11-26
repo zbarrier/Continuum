@@ -1,4 +1,5 @@
-@* The tenant's assigned orders (InProgressOrders) with who they are assigned to and their status, due soonest first. *@
+@* The tenant's assigned orders (InProgressOrders) with who they are assigned to and their status, due soonest first, then
+   the orders that have no due date until they are assigned to a vendor. *@
 @using GetRDone.Orders.Abstractions.ReadModels
 @inject IClusterClient ClusterClient
 
@@ -32,7 +33,7 @@
         <MudTd DataLabel="Status">
             <MudChip T="string" Size="Size.Small" Color="StaffOrderPage.StatusColor(context.Status)">@StaffOrderPage.StatusText(context.Status)</MudChip>
         </MudTd>
-        <MudTd DataLabel="Due">@context.DueDate.ToString("MMM d")</MudTd>
+        <MudTd DataLabel="Due">@context.DueDate?.ToString("MMM d")</MudTd>
         <MudTd Style="text-align:right">
             <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@StaffOrderPage.Url(context.OrderId)">View</MudButton>
         </MudTd>

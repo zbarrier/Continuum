@@ -107,7 +107,6 @@ public sealed class StartOrderDraftTests
     [InlineData(nameof(StartOrderDraftCommand.IntendedUseVersion))]
     [InlineData(nameof(StartOrderDraftCommand.IntendedUseName))]
     [InlineData(nameof(StartOrderDraftCommand.LoanNumber))]
-    [InlineData(nameof(StartOrderDraftCommand.DueDate))]
     public async Task StartDraft_RejectsAnInvalidDetail(string property)
     {
         var command = Command1;
@@ -129,7 +128,6 @@ public sealed class StartOrderDraftTests
             nameof(StartOrderDraftCommand.IntendedUseVersion) => command with { IntendedUseVersion = 0 },
             nameof(StartOrderDraftCommand.IntendedUseName) => command with { IntendedUseName = "" },
             nameof(StartOrderDraftCommand.LoanNumber) => command with { LoanNumber = "" },
-            nameof(StartOrderDraftCommand.DueDate) => command with { DueDate = default },
             _ => throw new ArgumentOutOfRangeException(nameof(property))
         };
         GivenSignedIn(RequestedByUsers.ClientUser1);

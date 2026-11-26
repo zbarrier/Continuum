@@ -47,7 +47,11 @@
                     <tbody>
                         <tr><th>Form type</th><td>@details.FormTypeName</td></tr>
                         <tr><th>Property</th><td>@details.PropertyAddress</td></tr>
-                        <tr><th>Due</th><td>@details.DueDate.ToString("MMM d, yyyy")</td></tr>
+                        <tr><th>Due</th><td>@(details.DueDate?.ToString("MMM d, yyyy") ?? "Set when an appraiser is assigned")</td></tr>
+                        @if (details.ServiceFee is { } serviceFee)
+                        {
+                            <tr><th>Service fee</th><td>@serviceFee.ToString("C", UnitedStates)</td></tr>
+                        }
                         <tr><th>Assigned to</th><td>@(details.AssignedToName ?? "Nobody yet")</td></tr>
                     </tbody>
                 </MudSimpleTable>
@@ -139,6 +143,9 @@
 @code {
     private const int WaitAttempts = 20;
     private static readonly TimeSpan WaitDelay = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>The sample's AMCs are in the United States, so fees are shown in dollars whatever the server's culture.</summary>
+    private static readonly System.Globalization.CultureInfo UnitedStates = System.Globalization.CultureInfo.GetCultureInfo("en-US");
 
     private bool _loading = true;
     private bool _busy;

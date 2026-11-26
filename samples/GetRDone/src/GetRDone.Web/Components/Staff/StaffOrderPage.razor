@@ -45,7 +45,11 @@
                         <tr><th>Entered by</th><td>@details.EnteredByName</td></tr>
                         <tr><th>Form type</th><td>@details.FormTypeName</td></tr>
                         <tr><th>Property</th><td>@details.PropertyAddress</td></tr>
-                        <tr><th>Due</th><td>@details.DueDate.ToString("MMM d, yyyy")</td></tr>
+                        <tr><th>Due</th><td>@(details.DueDate?.ToString("MMM d, yyyy") ?? "Set when a vendor is assigned")</td></tr>
+                        @if (details.ServiceFee is { } serviceFee)
+                        {
+                            <tr><th>Service fee</th><td>@serviceFee.ToString("C", UnitedStates)</td></tr>
+                        }
                         <tr>
                             <th>Access contact</th>
                             <td>@details.AccessContactName @DisplayFormat.Phone(details.AccessContactPhone)</td>
@@ -95,7 +99,12 @@
                         </MudSelect>
                         <MudNumericField T="decimal?" @bind-Value="_vendorFee" Label="Vendor fee" Adornment="Adornment.Start" AdornmentText="$"
                                          Min="VendorFee.MinValue" Max="VendorFee.MaxValue" Format="0.00" HideSpinButtons="true" Class="mt-2" />
-                        <MudDatePicker @bind-Date="_vendorDueDate" Label="Vendor due date" MinDate="DateTime.Today" Class="mt-2" />
+                        <MudDatePicker Date="_vendorDueDate" DateChanged="VendorDueDateChanged" Label="Vendor due date" MinDate="DateTime.Today" Class="mt-2" />
+                        <MudNumericField T="decimal?" @bind-Value="_serviceFee" Label="Service fee" Adornment="Adornment.Start" AdornmentText="$"
+                                         Min="ServiceFee.MinValue" Max="ServiceFee.MaxValue" Format="0.00" HideSpinButtons="true" Class="mt-2"
+                                         HelperText="What the client pays; the vendor doesn't see it." />
+                        <MudDatePicker @bind-Date="_dueDate" Label="Due date" MinDate="@(_vendorDueDate ?? DateTime.Today)" Class="mt-2"
+                                       HelperText="@($"When the client gets the report; {DueDatePaddingDays} days after the vendor's due date leaves time for review and revisions.")" />
                         <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="mt-4">
                             <MudButton Variant="Variant.Text" Disabled="_busy" OnClick="CancelVendorAssignment">Cancel</MudButton>
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="AssignVendorAsync">Assign</MudButton>
@@ -241,6 +250,14 @@
     private AssignableVendor? _vendor;
     private decimal? _vendorFee;
     private DateTime? _vendorDueDate;
+    private decimal? _serviceFee;
+    private DateTime? _dueDate;
+
+    /// <summary>
+    ///     How many days after the vendor's due date the order's due date defaults to, which leaves time to review the report
+    ///     and ask for revisions.
+    /// </summary>
+    private const int DueDatePaddingDays = 3;
 
     /// <summary>The sample's AMCs are in the United States, so fees are shown in dollars whatever the server's culture.</summary>
     private static readonly System.Globalization.CultureInfo UnitedStates = System.Globalization.CultureInfo.GetCultureInfo("en-US");
@@ -367,6 +384,8 @@
             _vendor = null;
             _vendorFee = null;
             _vendorDueDate = null;
+            _serviceFee = null;
+            _dueDate = null;
             _assigningVendor = true;
         }
         catch (Exception ex)
@@ -378,13 +397,22 @@
 
     private void CancelVendorAssignment() => _assigningVendor = false;
 
+    /// <summary>Moves the order's due date to the padded vendor's due date; staff can still change it.</summary>
+    private void VendorDueDateChanged(DateTime? vendorDueDate)
+    {
+        _vendorDueDate = vendorDueDate;
+        _dueDate = vendorDueDate?.AddDays(DueDatePaddingDays);
+    }
+
     /// <summary>Sends what was entered as is; the order grain reports a missing or invalid value.</summary>
     private async Task AssignVendorAsync()
     {
         var command = new AssignVendorCommand(
             _vendor?.VendorId ?? "",
             _vendorFee ?? 0,
-            _vendorDueDate is { } dueDate ? DateOnly.FromDateTime(dueDate) : default);
+            _vendorDueDate is { } vendorDueDate ? DateOnly.FromDateTime(vendorDueDate) : default,
+            _serviceFee ?? 0,
+            _dueDate is { } dueDate ? DateOnly.FromDateTime(dueDate) : default);
         var saved = await RunAsync(async order => (await order.AssignVendorAsync(command)).Map(_ => true),
             details => details.Vendor is not null);
         if (saved)

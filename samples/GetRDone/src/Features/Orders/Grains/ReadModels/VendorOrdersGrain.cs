@@ -80,7 +80,7 @@ public sealed class VendorOrdersState : HandlerProjectionState<VendorOrdersState
     {
         Drafts[evt.OrderId] = new TenantOrderDraftDetails(evt.ClientId,
             PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip),
-            evt.FormTypeName, evt.DueDate);
+            evt.FormTypeName);
         return true;
     }
 
@@ -94,8 +94,7 @@ public sealed class VendorOrdersState : HandlerProjectionState<VendorOrdersState
         Drafts[evt.OrderId] = draft with
         {
             PropertyAddress = PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip),
-            FormTypeName = evt.FormTypeName,
-            DueDate = evt.DueDate
+            FormTypeName = evt.FormTypeName
         };
         return true;
     }

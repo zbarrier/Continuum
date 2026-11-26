@@ -58,7 +58,8 @@ public sealed class ClientOrderDetailsTests
             ClientOrderStatus.Acknowledged,
             TestData.UniformResidentialAppraisal.FormTypeName,
             "48 Birch Hollow Rd, Asheville, NC 28803",
-            new DateOnly(2026, 12, 11),
+            DueDate: null,
+            ServiceFee: null,
             "Tommy Jones",
             [new ClientDocumentRequest(Command2.RequestId, "Purchase contract", Command2.Message, TestData.At.AddMinutes(7))],
             [
@@ -135,7 +136,7 @@ public sealed class ClientOrderDetailsTests
     }
 
     [Fact]
-    public async Task ClientOrderDetails_ShowThatAnAppraiserIsAssignedWithoutNamingTheVendor()
+    public async Task ClientOrderDetails_ShowThatAnAppraiserIsAssignedWithTheServiceFeeAndDueDateWithoutNamingTheVendor()
     {
         GivenSignedIn(RequestedByUsers.ClientUser1);
         await GivenAcknowledged(
@@ -148,6 +149,8 @@ public sealed class ClientOrderDetailsTests
         Then<ClientOrderDetails>(details =>
         {
             Assert.Equal(ClientOrderStatus.VendorAssigned, details.Status);
+            Assert.Equal(650.00m, details.ServiceFee);
+            Assert.Equal(VendorAssignmentTestData.DueDate, details.DueDate);
             Assert.Equal(new OrderTimelineEntry(TestData.At.AddMinutes(6), "Appraiser assigned"), details.Timeline[0]);
             Assert.Equal(ClientOrderActions.None, details.AllowedActions);
         });

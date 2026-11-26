@@ -38,7 +38,6 @@ public partial interface IOrderGrain : IEventDrivenStateMachineGrain
 /// <param name="IntendedUseVersion">The version of the intended use.</param>
 /// <param name="IntendedUseName">The name of the intended use.</param>
 /// <param name="LoanNumber">The client's loan number.</param>
-/// <param name="DueDate">When the appraisal is due.</param>
 /// <param name="BorrowerName">The borrower.</param>
 /// <param name="AccessContactName">The person who gives access to the property, if any.</param>
 /// <param name="AccessContactPhone">The access contact's 10-digit phone number, digits only.</param>
@@ -63,7 +62,6 @@ public sealed record OrderDraft(
     int IntendedUseVersion,
     string IntendedUseName,
     string LoanNumber,
-    DateOnly DueDate,
     string? BorrowerName,
     string? AccessContactName,
     string? AccessContactPhone,
@@ -92,7 +90,6 @@ public sealed record OrderDraft(
         started.IntendedUseVersion,
         started.IntendedUseName,
         started.LoanNumber,
-        started.DueDate,
         BorrowerName: null,
         AccessContactName: null,
         AccessContactPhone: null,
@@ -146,7 +143,6 @@ public sealed record OrderDraft(
             IntendedUseVersion = saved.IntendedUseVersion,
             IntendedUseName = saved.IntendedUseName,
             LoanNumber = saved.LoanNumber,
-            DueDate = saved.DueDate,
             LastSavedAt = saved.OccurredAt,
             Version = Version + 1
         },

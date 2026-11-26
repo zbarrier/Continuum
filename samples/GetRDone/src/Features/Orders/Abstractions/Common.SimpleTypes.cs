@@ -532,6 +532,10 @@ public sealed record AccessContactPhone : StringValueObject<AccessContactPhone>
     private AccessContactPhone(string value) : base(value) { }
 }
 
+/// <summary>
+///     The date the client gets the report by; the AMC sets it when it assigns the order to a vendor, on or after the
+///     vendor's due date.
+/// </summary>
 [Alias("Orders.DueDate.V1"), GenerateSerializer, Immutable]
 public sealed record DueDate : DateOnlyValueObject<DueDate>
 {
@@ -1122,6 +1126,59 @@ public sealed record VendorFee : DecimalValueObject<VendorFee>
     }
 
     private VendorFee(decimal value) : base(value) { }
+}
+
+/// <summary>The fee the client pays the AMC for an order, in dollars and cents; the vendor never sees it.</summary>
+[Alias("Orders.ServiceFee.V1"), GenerateSerializer, Immutable]
+public sealed record ServiceFee : DecimalValueObject<ServiceFee>
+{
+    public const decimal MinValue = 0.01m;
+    public const decimal MaxValue = 999_999.99m;
+    public const int Scale = 2;
+    public const int Precision = 8;
+
+    public static Result<ServiceFee> Create(string? value, string propertyName = nameof(ServiceFee))
+    {
+        return Result.IsDecimal(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .ScalePrecision(Scale, Precision, true, propertyName)
+            .Map(validatedValue => new ServiceFee(validatedValue));
+    }
+    public static Result<ServiceFee> Create(string? value, PropertyPath propertyPath, string member)
+    {
+        return Result.IsDecimal(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .ScalePrecision(Scale, Precision, true, propertyPath, member)
+            .Map(validatedValue => new ServiceFee(validatedValue));
+    }
+    public static Result<ServiceFee> Create(decimal? value, string propertyName = nameof(ServiceFee))
+    {
+        return Result.NotNull(value, propertyName)
+            .InclusiveBetween(MinValue, MaxValue, propertyName)
+            .ScalePrecision(Scale, Precision, true, propertyName)
+            .Map(validatedValue => new ServiceFee(validatedValue));
+    }
+    public static Result<ServiceFee> Create(decimal? value, PropertyPath propertyPath, string member)
+    {
+        return Result.NotNull(value, propertyPath, member)
+            .InclusiveBetween(MinValue, MaxValue, propertyPath, member)
+            .ScalePrecision(Scale, Precision, true, propertyPath, member)
+            .Map(validatedValue => new ServiceFee(validatedValue));
+    }
+    public static Result<ServiceFee> Create(decimal value, string propertyName = nameof(ServiceFee))
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyName)
+            .ScalePrecision(Scale, Precision, true, propertyName)
+            .Map(validatedValue => new ServiceFee(validatedValue));
+    }
+    public static Result<ServiceFee> Create(decimal value, PropertyPath propertyPath, string member)
+    {
+        return Result.InclusiveBetween(value, MinValue, MaxValue, propertyPath, member)
+            .ScalePrecision(Scale, Precision, true, propertyPath, member)
+            .Map(validatedValue => new ServiceFee(validatedValue));
+    }
+
+    private ServiceFee(decimal value) : base(value) { }
 }
 
 /// <summary>The date the vendor must deliver the completed report by; the AMC sets it before the client's due date.</summary>

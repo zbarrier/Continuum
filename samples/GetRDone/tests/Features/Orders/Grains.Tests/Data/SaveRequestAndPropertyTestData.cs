@@ -12,12 +12,11 @@ namespace GetRDone.Orders.Grains.Tests.Data;
 /// </summary>
 public static class SaveRequestAndPropertyTestData
 {
-    /// <summary>ClientUser1 corrects the street and the loan number of draft 1 and moves its due date.</summary>
+    /// <summary>ClientUser1 corrects the street and the loan number of draft 1.</summary>
     public static SaveRequestAndPropertyCommand Command1 { get; } = From(StartOrderDraftTestData.Command1) with
     {
         PropertyStreet = "84 Birch Hollow Rd",
-        LoanNumber = "LCU-2026-1178",
-        DueDate = new DateOnly(2026, 12, 15)
+        LoanNumber = "LCU-2026-1178"
     };
 
     /// <summary>ClientUser2 switches draft 2 to a narrative report for a refinance.</summary>
@@ -54,7 +53,7 @@ public static class SaveRequestAndPropertyTestData
 
     /// <summary>
     ///     The event the order grain records when <paramref name="initiatedBy"/> saves the tab with <paramref name="command"/>;
-    ///     use it directly for a one-off variation, such as <c>Command1 with { DueDate = ... }</c>.
+    ///     use it directly for a one-off variation, such as <c>Command1 with { LoanNumber = ... }</c>.
     /// </summary>
     public static RequestAndPropertySaved Saved(
         SaveRequestAndPropertyCommand command, string orderId, ClaimsPrincipal initiatedBy, DateTimeOffset? occurredAt = null) => new()
@@ -75,7 +74,6 @@ public static class SaveRequestAndPropertyTestData
         IntendedUseVersion = command.IntendedUseVersion,
         IntendedUseName = command.IntendedUseName,
         LoanNumber = command.LoanNumber,
-        DueDate = command.DueDate,
         InitiatedBy = initiatedBy.GetTenantUserId(),
         OccurredAt = occurredAt ?? TestData.At
     };
@@ -86,5 +84,5 @@ public static class SaveRequestAndPropertyTestData
         start.FormTypeId, start.FormTypeVersion, start.FormTypeName,
         start.PropertyStreet, start.PropertyCity, start.PropertyState, start.PropertyZip, start.PropertyType,
         start.IntendedUseId, start.IntendedUseVersion, start.IntendedUseName,
-        start.LoanNumber, start.DueDate);
+        start.LoanNumber);
 }

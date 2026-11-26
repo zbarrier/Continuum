@@ -30,8 +30,7 @@ public sealed record SaveRequestAndPropertyCommand(
     string IntendedUseId,
     int IntendedUseVersion,
     string IntendedUseName,
-    string LoanNumber,
-    DateOnly DueDate);
+    string LoanNumber);
 
 [Alias("Orders.SaveRequestAndPropertyResponse.V1"), GenerateSerializer, Immutable]
 public sealed class SaveRequestAndPropertyResponse(IReadOnlyList<IChange> changes, int version) : CommandResponseWithChangesBase(changes, version);
@@ -56,5 +55,4 @@ public sealed class RequestAndPropertySaved : OrderEvent
     [Id(13)] public required int IntendedUseVersion { get; init; }
     [Id(14)] public required string IntendedUseName { get; init; }
     [Id(15)] public required string LoanNumber { get; init; }
-    [Id(16)] public required DateOnly DueDate { get; init; }
 }

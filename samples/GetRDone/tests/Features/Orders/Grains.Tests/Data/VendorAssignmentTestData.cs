@@ -13,8 +13,11 @@ public static class VendorAssignmentTestData
     /// <summary>A due date that stays in the future, since the order grain rejects a vendor due date in the past.</summary>
     public static DateOnly VendorDueDate { get; } = new(2099, 12, 4);
 
-    /// <summary>Director1 assigns the order to Ridge Appraisal Group.</summary>
-    public static AssignVendorCommand Command1 { get; } = new(TestData.RidgeAppraisalGroupVendorId, 425.00m, VendorDueDate);
+    /// <summary>The client's due date: the vendor due date plus the three days staff usually allow for review and revisions.</summary>
+    public static DateOnly DueDate { get; } = VendorDueDate.AddDays(3);
+
+    /// <summary>Director1 assigns the order to Ridge Appraisal Group, charging the client a $650.00 service fee.</summary>
+    public static AssignVendorCommand Command1 { get; } = new(TestData.RidgeAppraisalGroupVendorId, 425.00m, VendorDueDate, 650.00m, DueDate);
 
     /// <summary>The event the order grain records when Director1 sends <see cref="Command1"/> for the approved first version.</summary>
     public static VendorAssigned Assigned1(string orderId, long? orderNumber = null, DateTimeOffset? occurredAt = null) => new()
@@ -23,6 +26,8 @@ public static class VendorAssignmentTestData
         VendorId = Command1.VendorId,
         VendorFee = Command1.VendorFee,
         VendorDueDate = Command1.VendorDueDate,
+        ServiceFee = Command1.ServiceFee,
+        DueDate = Command1.DueDate,
         DescriptionOfWorkId = DescriptionOfWorkTestData.DescriptionOfWorkId,
         DescriptionOfWorkVersion = 1,
         OrderNumber = orderNumber,

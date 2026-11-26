@@ -188,19 +188,53 @@ public sealed class AssignVendorTests
         ThenError<RequestError>(error => Assert.Equal(ErrorCodes.InvalidArgument, error.Code));
     }
 
+    [Fact]
+    public async Task Assign_RejectsADueDateBeforeTheVendorsDueDate()
+    {
+        GivenSignedIn(RequestedByUsers.Director1);
+        await GivenApproved();
+
+        await When(() => Order.AssignVendorAsync(Command1 with { DueDate = Command1.VendorDueDate.AddDays(-1) }));
+
+        ThenError<RequestError>(error =>
+        {
+            Assert.Equal(ErrorCodes.InvalidArgument, error.Code);
+            Assert.Equal("The due date can't be before the vendor's due date.", error.GetFormattedMessage());
+        });
+    }
+
+    [Fact]
+    public async Task Assign_AllowsADueDateOnTheVendorsDueDate()
+    {
+        GivenSignedIn(RequestedByUsers.Director1);
+        await GivenApproved();
+
+        await When(() => Order.AssignVendorAsync(Command1 with { DueDate = Command1.VendorDueDate }));
+
+        Then<AssignVendorResponse>(response =>
+            Assert.Equal(Command1.VendorDueDate, Assert.IsType<VendorAssigned>(SingleEvent(response.Changes)).DueDate));
+    }
+
     [Theory]
     [InlineData(nameof(AssignVendorCommand.VendorId), null)]
     [InlineData(nameof(AssignVendorCommand.VendorFee), "0")]
     [InlineData(nameof(AssignVendorCommand.VendorFee), "1000000")]
     [InlineData(nameof(AssignVendorCommand.VendorFee), "425.005")]
     [InlineData(nameof(AssignVendorCommand.VendorDueDate), null)]
+    [InlineData(nameof(AssignVendorCommand.ServiceFee), "0")]
+    [InlineData(nameof(AssignVendorCommand.ServiceFee), "1000000")]
+    [InlineData(nameof(AssignVendorCommand.ServiceFee), "650.005")]
+    [InlineData(nameof(AssignVendorCommand.DueDate), null)]
     public async Task Assign_RejectsAnInvalidDetail(string property, string? fee)
     {
         var command = property switch
         {
             nameof(AssignVendorCommand.VendorId) => Command1 with { VendorId = "other|5e1c9a37" },
             nameof(AssignVendorCommand.VendorFee) => Command1 with { VendorFee = decimal.Parse(fee!, System.Globalization.CultureInfo.InvariantCulture) },
-            _ => Command1 with { VendorDueDate = default }
+            nameof(AssignVendorCommand.VendorDueDate) => Command1 with { VendorDueDate = default },
+            nameof(AssignVendorCommand.ServiceFee) => Command1 with { ServiceFee = decimal.Parse(fee!, System.Globalization.CultureInfo.InvariantCulture) },
+            nameof(AssignVendorCommand.DueDate) => Command1 with { DueDate = default },
+            _ => throw new ArgumentOutOfRangeException(nameof(property))
         };
         GivenSignedIn(RequestedByUsers.Director1);
         await GivenApproved();

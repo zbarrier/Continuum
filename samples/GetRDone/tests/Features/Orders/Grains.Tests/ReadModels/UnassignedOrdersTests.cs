@@ -45,8 +45,7 @@ public sealed class UnassignedOrdersTests
         {
             Assert.Equal(
                 new UnassignedOrderEntry(orderId, 610_700, TestData.LakeviewCreditUnionClientId,
-                    "48 Birch Hollow Rd, Asheville, NC 28803", TestData.UniformResidentialAppraisal.FormTypeName,
-                    new DateOnly(2026, 12, 11)),
+                    "48 Birch Hollow Rd, Asheville, NC 28803", TestData.UniformResidentialAppraisal.FormTypeName),
                 state.Orders[orderId]);
             Assert.False(state.Drafts.ContainsKey(orderId));
         });
@@ -121,7 +120,7 @@ public sealed class UnassignedOrdersTests
     }
 
     [Fact]
-    public async Task Orders_ListTheOrdersDueFirstFirstWithTheirClientsNames()
+    public async Task Orders_ListTheOldestOrdersFirstWithTheirClientsNames()
     {
         var (order1, order2, order3) = (NewOrderId(), NewOrderId(), NewOrderId());
         GivenSignedIn(RequestedByUsers.Coordinator1);
@@ -136,17 +135,17 @@ public sealed class UnassignedOrdersTests
 
         Then<UnassignedOrdersPage>(page => Assert.Equal(
         [
-            new UnassignedOrder(order3, 610_712, "Lakeview Credit Union", "9 Laurel Ridge Ct, Black Mountain, NC 28711",
-                TestData.DesktopAppraisal.FormTypeName, new DateOnly(2026, 12, 4)),
             new UnassignedOrder(order1, 610_710, "Lakeview Credit Union", "48 Birch Hollow Rd, Asheville, NC 28803",
-                TestData.UniformResidentialAppraisal.FormTypeName, new DateOnly(2026, 12, 11)),
+                TestData.UniformResidentialAppraisal.FormTypeName),
             new UnassignedOrder(order2, 610_711, "Harbor National Bank", "715 Commerce Blvd, Greenville, SC 29601",
-                TestData.RestrictedAppraisal.FormTypeName, new DateOnly(2026, 12, 18))
+                TestData.RestrictedAppraisal.FormTypeName),
+            new UnassignedOrder(order3, 610_712, "Lakeview Credit Union", "9 Laurel Ridge Ct, Black Mountain, NC 28711",
+                TestData.DesktopAppraisal.FormTypeName)
         ], page.Orders.Where(order => order.OrderId == order1 || order.OrderId == order2 || order.OrderId == order3)));
     }
 
     [Fact]
-    public async Task Orders_WithTheSameDueDate_AreListedByOrderNumber()
+    public async Task Orders_AreListedByOrderNumber_NotByWhenTheyWereProjected()
     {
         var (later, earlier) = (NewOrderId(), NewOrderId());
         GivenSignedIn(RequestedByUsers.Director1);

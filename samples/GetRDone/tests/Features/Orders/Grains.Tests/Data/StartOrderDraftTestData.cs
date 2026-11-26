@@ -20,7 +20,7 @@ public static class StartOrderDraftTestData
         TestData.UniformResidentialAppraisal.FormTypeName,
         "48 Birch Hollow Rd", "Asheville", "NC", "28803", "Single Family",
         TestData.Refinance.IntendedUseId, TestData.Refinance.IntendedUseVersion, TestData.Refinance.Name,
-        "LCU-2026-1187", new DateOnly(2026, 12, 11));
+        "LCU-2026-1187");
 
     /// <summary>ClientUser2 orders a restricted commercial appraisal for Harbor National Bank, for a purchase.</summary>
     public static StartOrderDraftCommand Command2 { get; } = new(
@@ -31,7 +31,7 @@ public static class StartOrderDraftTestData
         TestData.RestrictedAppraisal.FormTypeName,
         "715 Commerce Blvd", "Greenville", "SC", "29601", "Office",
         TestData.Purchase.IntendedUseId, TestData.Purchase.IntendedUseVersion, TestData.Purchase.Name,
-        "HNB-2026-0442", new DateOnly(2026, 12, 18));
+        "HNB-2026-0442");
 
     /// <summary>ClientUser1 orders a desktop residential appraisal of another property for Lakeview Credit Union, for a purchase.</summary>
     public static StartOrderDraftCommand Command3 { get; } = new(
@@ -42,7 +42,7 @@ public static class StartOrderDraftTestData
         TestData.DesktopAppraisal.FormTypeName,
         "9 Laurel Ridge Ct", "Black Mountain", "NC", "28711", "Condominium",
         TestData.Purchase.IntendedUseId, TestData.Purchase.IntendedUseVersion, TestData.Purchase.Name,
-        "LCU-2026-1203", new DateOnly(2026, 12, 4));
+        "LCU-2026-1203");
 
     /// <summary>The draft <see cref="Command1"/> starts, by ClientUser1.</summary>
     public static OrderDraftStarted DraftStarted1(string orderId, DateTimeOffset? occurredAt = null)
@@ -58,7 +58,7 @@ public static class StartOrderDraftTestData
 
     /// <summary>
     ///     The event the order grain records when <paramref name="initiatedBy"/> starts a draft with <paramref name="command"/>;
-    ///     use it directly for a one-off variation, such as <c>Command1 with { DueDate = ... }</c>.
+    ///     use it directly for a one-off variation, such as <c>Command1 with { LoanNumber = ... }</c>.
     /// </summary>
     public static OrderDraftStarted DraftStarted(
         StartOrderDraftCommand command, string orderId, ClaimsPrincipal initiatedBy, DateTimeOffset? occurredAt = null) => new()
@@ -80,7 +80,6 @@ public static class StartOrderDraftTestData
         IntendedUseVersion = command.IntendedUseVersion,
         IntendedUseName = command.IntendedUseName,
         LoanNumber = command.LoanNumber,
-        DueDate = command.DueDate,
         InitiatedBy = initiatedBy.GetTenantUserId(),
         OccurredAt = occurredAt ?? TestData.At
     };

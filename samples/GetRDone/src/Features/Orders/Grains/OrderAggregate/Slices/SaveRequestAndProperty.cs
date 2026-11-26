@@ -28,8 +28,7 @@ public sealed partial class OrderGrain
                     PropertyType.Create(command.PropertyType).Deconstruct(out var propertyType),
                     IntendedUseRef.Create(command.IntendedUseId, command.IntendedUseVersion, command.IntendedUseName, tenantId)
                         .Deconstruct(out var intendedUse),
-                    LoanNumber.Create(command.LoanNumber).Deconstruct(out var loanNumber),
-                    DueDate.Create(command.DueDate).Deconstruct(out var dueDate))
+                    LoanNumber.Create(command.LoanNumber).Deconstruct(out var loanNumber))
                 .Ensure(() => State.Status != OrderStatus.None,
                     () => RequestErrors.NewNotFound("The order draft was not found."))
                 .Bind(() => _permissions.CanChangeOrder(initiatedBy!, State))
@@ -55,7 +54,6 @@ public sealed partial class OrderGrain
                     IntendedUseVersion = intendedUse.Version,
                     IntendedUseName = intendedUse.Name,
                     LoanNumber = loanNumber!,
-                    DueDate = dueDate!,
                     InitiatedBy = initiatedBy!,
                     OccurredAt = DateTimeOffset.UtcNow
                 }))

@@ -26,7 +26,8 @@ public interface IOrderDetailsGrain : IGrainWithStringKey
 /// <param name="EnteredByName">Their name, or null when the user directory doesn't know them.</param>
 /// <param name="FormTypeName">The form type ordered.</param>
 /// <param name="PropertyAddress">The property address on one line.</param>
-/// <param name="DueDate">When the client needs the report.</param>
+/// <param name="DueDate">When the client gets the report, or null until the order is assigned to a vendor.</param>
+/// <param name="ServiceFee">What the client pays the AMC, or null until the order is assigned to a vendor.</param>
 /// <param name="AccessContactName">Who gives access to the property, if the client named someone.</param>
 /// <param name="AccessContactPhone">Their phone number, digits only.</param>
 /// <param name="AssignedToUserId">The staff member the order is assigned to, or null until it is assigned.</param>
@@ -47,7 +48,8 @@ public sealed record OrderDetails(
     string? EnteredByName,
     string FormTypeName,
     string PropertyAddress,
-    DateOnly DueDate,
+    DateOnly? DueDate,
+    decimal? ServiceFee,
     string? AccessContactName,
     string? AccessContactPhone,
     string? AssignedToUserId,

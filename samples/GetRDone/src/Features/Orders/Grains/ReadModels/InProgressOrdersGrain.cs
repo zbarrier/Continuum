@@ -39,7 +39,8 @@ public sealed class InProgressOrdersGrain(
                 var names = await UserDirectoryNames.LoadAsync(GrainFactory, tenantId);
 
                 var orders = State.Orders.Values
-                    .OrderBy(order => order.DueDate)
+                    .OrderBy(order => order.DueDate is null)
+                    .ThenBy(order => order.DueDate)
                     .ThenBy(order => order.OrderNumber ?? long.MaxValue)
                     .ThenBy(order => order.OrderId, StringComparer.Ordinal)
                     .Skip(skip)
@@ -81,7 +82,7 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
     {
         Drafts[evt.OrderId] = new TenantOrderDraftDetails(evt.ClientId,
             PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip),
-            evt.FormTypeName, evt.DueDate);
+            evt.FormTypeName);
         return true;
     }
 
@@ -95,8 +96,7 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
         Drafts[evt.OrderId] = draft with
         {
             PropertyAddress = PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip),
-            FormTypeName = evt.FormTypeName,
-            DueDate = evt.DueDate
+            FormTypeName = evt.FormTypeName
         };
         return true;
     }
@@ -125,7 +125,7 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
         }
 
         Orders[evt.OrderId] = new InProgressOrderEntry(evt.OrderId, draft.OrderNumber, draft.ClientId, draft.PropertyAddress,
-            evt.AssignedToUserId, StaffOrderStatus.Assigned, draft.DueDate);
+            evt.AssignedToUserId, StaffOrderStatus.Assigned, DueDate: null);
         return true;
     }
 
@@ -139,7 +139,15 @@ public sealed class InProgressOrdersState : HandlerProjectionState<InProgressOrd
         => SetStatus(evt.OrderId, StaffOrderStatus.DescriptionOfWorkApproved);
 
     private bool Apply(VendorAssigned evt, IStreamedEvent<object> streamedEvent)
-        => SetStatus(evt.OrderId, StaffOrderStatus.VendorAssigned);
+    {
+        if (!Orders.TryGetValue(evt.OrderId, out var order))
+        {
+            return false;
+        }
+
+        Orders[evt.OrderId] = order with { Status = StaffOrderStatus.VendorAssigned, DueDate = evt.DueDate };
+        return true;
+    }
 
     private bool SetStatus(string orderId, StaffOrderStatus status)
     {
@@ -162,4 +170,4 @@ public sealed record InProgressOrderEntry(
     string PropertyAddress,
     string AssignedToUserId,
     StaffOrderStatus Status,
-    DateOnly DueDate);
+    DateOnly? DueDate);

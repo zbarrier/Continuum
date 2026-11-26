@@ -6,7 +6,8 @@ namespace GetRDone.Orders.Abstractions.ReadModels;
 
 /// <summary>
 ///     The In progress list on the staff dashboard (the InProgressOrders read model): every assigned order of the tenant, with
-///     who it is assigned to and its status, due soonest first. Each tenant has one instance, keyed <c>{tenantId}|default</c>,
+///     who it is assigned to and its status, due soonest first, then the orders without a due date yet by order number.
+///     Each tenant has one instance, keyed <c>{tenantId}|default</c>,
 ///     and only AMC staff (<see cref="StaffRoles.Staff"/>) can read it.
 /// </summary>
 public interface IInProgressOrdersGrain : IGrainWithStringKey
@@ -24,7 +25,7 @@ public interface IInProgressOrdersGrain : IGrainWithStringKey
 /// <param name="AssignedToUserId">The staff member the order is assigned to, as a tenant user ID.</param>
 /// <param name="AssignedToName">Their name, or null when the user directory doesn't know them.</param>
 /// <param name="Status">How far the order is.</param>
-/// <param name="DueDate">When the client needs the report.</param>
+/// <param name="DueDate">When the client gets the report, or null until the order is assigned to a vendor.</param>
 [GenerateSerializer, Immutable]
 public sealed record InProgressOrder(
     string OrderId,
@@ -34,7 +35,7 @@ public sealed record InProgressOrder(
     string AssignedToUserId,
     string? AssignedToName,
     StaffOrderStatus Status,
-    DateOnly DueDate);
+    DateOnly? DueDate);
 
 /// <summary>A page of <see cref="InProgressOrder"/>s.</summary>
 /// <param name="Orders">The orders on the page.</param>

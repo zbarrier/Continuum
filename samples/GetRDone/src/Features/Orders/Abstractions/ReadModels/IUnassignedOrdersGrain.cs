@@ -6,7 +6,7 @@ namespace GetRDone.Orders.Abstractions.ReadModels;
 
 /// <summary>
 ///     The Unassigned list on the staff dashboard (the UnassignedOrders read model): the tenant's submitted orders that have
-///     their number and nobody assigned yet, due soonest first. Each tenant has one instance, keyed <c>{tenantId}|default</c>,
+///     their number and nobody assigned yet, oldest order number first. Each tenant has one instance, keyed <c>{tenantId}|default</c>,
 ///     and only AMC staff (<see cref="StaffRoles.Staff"/>) can read it.
 /// </summary>
 public interface IUnassignedOrdersGrain : IGrainWithStringKey
@@ -22,15 +22,13 @@ public interface IUnassignedOrdersGrain : IGrainWithStringKey
 /// <param name="ClientName">The client's name, or null when the user directory doesn't know the client.</param>
 /// <param name="PropertyAddress">The property address on one line.</param>
 /// <param name="FormTypeName">The form type ordered.</param>
-/// <param name="DueDate">When the client needs the report.</param>
 [GenerateSerializer, Immutable]
 public sealed record UnassignedOrder(
     string OrderId,
     long OrderNumber,
     string? ClientName,
     string PropertyAddress,
-    string FormTypeName,
-    DateOnly DueDate);
+    string FormTypeName);
 
 /// <summary>A page of <see cref="UnassignedOrder"/>s.</summary>
 /// <param name="Orders">The orders on the page.</param>

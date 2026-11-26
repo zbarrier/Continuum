@@ -59,10 +59,6 @@
         <MudTextField @bind-Value="_loanNumber" Label="@FieldLabels[nameof(SaveRequestAndPropertyCommand.LoanNumber)]" MaxLength="LoanNumber.MaxLength"
                       Error="@_form.HasError(nameof(SaveRequestAndPropertyCommand.LoanNumber))" ErrorText="@_form.ErrorText(nameof(SaveRequestAndPropertyCommand.LoanNumber))" />
     </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudDatePicker @bind-Date="_dueDate" Label="@FieldLabels[nameof(SaveRequestAndPropertyCommand.DueDate)]" DateFormat="MMM d, yyyy" MinDate="DateTime.Today"
-                       Error="@_form.HasError(nameof(SaveRequestAndPropertyCommand.DueDate))" ErrorText="@_form.ErrorText(nameof(SaveRequestAndPropertyCommand.DueDate))" />
-    </MudItem>
 </MudGrid>
 <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
     <MudButton Variant="Variant.Text" Href="/">@(Draft is null ? "Cancel" : "Home")</MudButton>
@@ -103,8 +99,7 @@
         [nameof(SaveRequestAndPropertyCommand.PropertyZip)] = "ZIP",
         [nameof(SaveRequestAndPropertyCommand.PropertyType)] = "Property type",
         [IntendedUseField] = "Intended use",
-        [nameof(SaveRequestAndPropertyCommand.LoanNumber)] = "Loan number",
-        [nameof(SaveRequestAndPropertyCommand.DueDate)] = "Due date"
+        [nameof(SaveRequestAndPropertyCommand.LoanNumber)] = "Loan number"
     };
 
     private OrderEntryForm _form = default!;
@@ -119,7 +114,6 @@
     private string? _propertyType;
     private IntendedUse? _intendedUse;
     private string _loanNumber = "";
-    private DateTime? _dueDate;
 
     /// <summary>The tenant the order belongs to.</summary>
     [Parameter, EditorRequired]
@@ -174,7 +168,6 @@
         _propertyType = Draft.PropertyType;
         _intendedUse = new IntendedUse(Draft.IntendedUseId, Draft.IntendedUseVersion, Draft.IntendedUseName);
         _loanNumber = Draft.LoanNumber;
-        _dueDate = Draft.DueDate.ToDateTime(TimeOnly.MinValue);
     }
 
     private async Task SaveAsync()
@@ -184,7 +177,7 @@
             _serviceForm?.FormTypeId ?? "", _serviceForm?.FormTypeVersion ?? 0, _serviceForm?.FormTypeName ?? "",
             _street, _city, _state, _zip, _propertyType ?? "",
             _intendedUse?.IntendedUseId ?? "", _intendedUse?.IntendedUseVersion ?? 0, _intendedUse?.Name ?? "",
-            _loanNumber, _dueDate is { } dueDate ? DateOnly.FromDateTime(dueDate) : default);
+            _loanNumber);
 
         if (Draft is null)
         {
@@ -209,7 +202,7 @@
             tab.FormTypeId, tab.FormTypeVersion, tab.FormTypeName,
             tab.PropertyStreet, tab.PropertyCity, tab.PropertyState, tab.PropertyZip, tab.PropertyType,
             tab.IntendedUseId, tab.IntendedUseVersion, tab.IntendedUseName,
-            tab.LoanNumber, tab.DueDate);
+            tab.LoanNumber);
 
         var order = ClusterClient.GetGrain<IOrderGrain>(TenantKey.Create(TenantId, NewOrderGuid.ToString()));
         var draft = await _form.SaveDraftAsync(order, current: null, () => order.StartOrderDraftAsync(command));
@@ -238,7 +231,7 @@
         draft.FormTypeId, draft.FormTypeVersion, draft.FormTypeName,
         draft.PropertyStreet, draft.PropertyCity, draft.PropertyState, draft.PropertyZip, draft.PropertyType,
         draft.IntendedUseId, draft.IntendedUseVersion, draft.IntendedUseName,
-        draft.LoanNumber, draft.DueDate);
+        draft.LoanNumber);
 
     /// <summary>One choice of the combined Service · form type select.</summary>
     private sealed record ServiceFormOption(

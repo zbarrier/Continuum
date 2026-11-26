@@ -213,6 +213,8 @@ public sealed class VendorOrdersTests
             VendorId = vendorId,
             VendorFee = assigned.VendorFee,
             VendorDueDate = vendorDueDate,
+            ServiceFee = assigned.ServiceFee,
+            DueDate = vendorDueDate.AddDays(3),
             DescriptionOfWorkId = assigned.DescriptionOfWorkId,
             DescriptionOfWorkVersion = assigned.DescriptionOfWorkVersion,
             OrderNumber = assigned.OrderNumber,

@@ -1,4 +1,4 @@
-@* The tenant's submitted orders that have their number and nobody assigned yet (UnassignedOrders), due soonest first. *@
+@* The tenant's submitted orders that have their number and nobody assigned yet (UnassignedOrders), oldest first. *@
 @using GetRDone.Orders.Abstractions.ReadModels
 @inject IClusterClient ClusterClient
 
@@ -11,7 +11,6 @@
         <MudTh>Client</MudTh>
         <MudTh>Property</MudTh>
         <MudTh>Form type</MudTh>
-        <MudTh>Due</MudTh>
         <MudTh />
     </HeaderContent>
     <RowTemplate>
@@ -19,7 +18,6 @@
         <MudTd DataLabel="Client">@context.ClientName</MudTd>
         <MudTd DataLabel="Property">@context.PropertyAddress</MudTd>
         <MudTd DataLabel="Form type">@context.FormTypeName</MudTd>
-        <MudTd DataLabel="Due">@context.DueDate.ToString("MMM d")</MudTd>
         <MudTd Style="text-align:right">
             <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@StaffOrderPage.Url(context.OrderId)">View</MudButton>
         </MudTd>

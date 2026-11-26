@@ -27,8 +27,7 @@ public sealed record StartOrderDraftCommand(
     string IntendedUseId,
     int IntendedUseVersion,
     string IntendedUseName,
-    string LoanNumber,
-    DateOnly DueDate);
+    string LoanNumber);
 
 [Alias("Orders.StartOrderDraftResponse.V1"), GenerateSerializer, Immutable]
 public sealed class StartOrderDraftResponse(IReadOnlyList<IChange> changes, int version) : CommandResponseWithChangesBase(changes, version);
@@ -53,5 +52,4 @@ public sealed class OrderDraftStarted : OrderEvent
     [Id(14)] public required int IntendedUseVersion { get; init; }
     [Id(15)] public required string IntendedUseName { get; init; }
     [Id(16)] public required string LoanNumber { get; init; }
-    [Id(17)] public required DateOnly DueDate { get; init; }
 }

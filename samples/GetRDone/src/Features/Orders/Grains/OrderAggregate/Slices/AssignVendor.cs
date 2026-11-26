@@ -22,7 +22,9 @@ public sealed partial class OrderGrain
                     UserId.Create(this.GetCurrentTenantUserId(tenantId), tenantId, nameof(VendorAssigned.InitiatedBy)).Deconstruct(out var initiatedBy),
                     VendorId.Create(command.VendorId, tenantId, nameof(command.VendorId)).Deconstruct(out var vendorId),
                     VendorFee.Create(command.VendorFee, nameof(command.VendorFee)).Deconstruct(out var vendorFee),
-                    VendorDueDate.Create(command.VendorDueDate, nameof(command.VendorDueDate)).Deconstruct(out var vendorDueDate))
+                    VendorDueDate.Create(command.VendorDueDate, nameof(command.VendorDueDate)).Deconstruct(out var vendorDueDate),
+                    ServiceFee.Create(command.ServiceFee, nameof(command.ServiceFee)).Deconstruct(out var serviceFee),
+                    DueDate.Create(command.DueDate, nameof(command.DueDate)).Deconstruct(out var dueDate))
                 .Ensure(() => State.Status != OrderStatus.None,
                     () => RequestErrors.NewNotFound("The order was not found."))
                 .Bind(() => _permissions.CanAssignVendor(this.GetCurrentUser(), initiatedBy!, State))
@@ -32,6 +34,8 @@ public sealed partial class OrderGrain
                         : RequestErrors.NewFailedPrecondition("The client must approve the description of work before the order is assigned to a vendor."))
                 .Ensure(() => (DateOnly)vendorDueDate! >= DateOnly.FromDateTime(DateTime.UtcNow),
                     () => RequestErrors.NewInvalidArg("The vendor's due date can't be in the past."))
+                .Ensure(() => (DateOnly)dueDate! >= (DateOnly)vendorDueDate!,
+                    () => RequestErrors.NewInvalidArg("The due date can't be before the vendor's due date."))
                 .Bind(() => _permissions.CanBeAssignedVendorAsync(vendorId!))
                 .BindWithStreamTransaction(this, transaction => transaction.Apply(new VendorAssigned
                 {
@@ -39,6 +43,8 @@ public sealed partial class OrderGrain
                     VendorId = vendorId!,
                     VendorFee = vendorFee!,
                     VendorDueDate = vendorDueDate!,
+                    ServiceFee = serviceFee!,
+                    DueDate = dueDate!,
                     DescriptionOfWorkId = State.DescriptionOfWork!.Id,
                     DescriptionOfWorkVersion = State.DescriptionOfWork.Version,
                     OrderNumber = State.OrderNumber,

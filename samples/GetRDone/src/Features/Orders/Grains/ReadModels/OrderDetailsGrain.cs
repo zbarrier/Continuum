@@ -51,6 +51,7 @@ public sealed class OrderDetailsGrain(
                     State.FormTypeName!,
                     State.PropertyAddress!,
                     State.DueDate,
+                    State.ServiceFee,
                     State.AccessContactName,
                     State.AccessContactPhone,
                     State.AssignedTo,
@@ -123,7 +124,8 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
     /// <summary>The property address on one line.</summary>
     [Id(5)] public string? PropertyAddress { get; set; }
 
-    [Id(6)] public DateOnly DueDate { get; set; }
+    /// <summary>When the client gets the report, or null until the order is assigned to a vendor.</summary>
+    [Id(6)] public DateOnly? DueDate { get; set; }
 
     [Id(7)] public string? AccessContactName { get; set; }
 
@@ -149,12 +151,14 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
     /// <summary>The vendor the order is assigned to, or null until it is assigned to one.</summary>
     [Id(15)] public OrderVendorItem? Vendor { get; set; }
 
+    /// <summary>What the client pays the AMC, or null until the order is assigned to a vendor.</summary>
+    [Id(16)] public decimal? ServiceFee { get; set; }
+
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
         ClientId = evt.ClientId;
         FormTypeName = evt.FormTypeName;
         PropertyAddress = PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip);
-        DueDate = evt.DueDate;
         return true;
     }
 
@@ -162,7 +166,6 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
     {
         FormTypeName = evt.FormTypeName;
         PropertyAddress = PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip);
-        DueDate = evt.DueDate;
         return true;
     }
 
@@ -253,6 +256,8 @@ public sealed class OrderDetailsState : HandlerProjectionState<OrderDetailsState
     {
         Status = StaffOrderStatus.VendorAssigned;
         Vendor = new OrderVendorItem(evt.VendorId, evt.VendorFee, evt.VendorDueDate);
+        ServiceFee = evt.ServiceFee;
+        DueDate = evt.DueDate;
         Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.VendorAssigned, evt.InitiatedBy, null,
             VendorId: evt.VendorId));
         return true;

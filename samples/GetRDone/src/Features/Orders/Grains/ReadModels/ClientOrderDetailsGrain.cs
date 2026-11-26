@@ -50,6 +50,7 @@ public sealed class ClientOrderDetailsGrain(
                     State.FormTypeName!,
                     State.PropertyAddress!,
                     State.DueDate,
+                    State.ServiceFee,
                     names.UserName(State.AssignedTo),
                     State.OpenRequests.ToArray(),
                     State.Documents.ToArray(),
@@ -101,7 +102,8 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
     /// <summary>The property address on one line.</summary>
     [Id(5)] public string? PropertyAddress { get; set; }
 
-    [Id(6)] public DateOnly DueDate { get; set; }
+    /// <summary>When the client gets the report, or null until the order is assigned to an appraiser.</summary>
+    [Id(6)] public DateOnly? DueDate { get; set; }
 
     /// <summary>The staff member the order is assigned to, as a tenant user ID.</summary>
     [Id(7)] public string? AssignedTo { get; set; }
@@ -118,12 +120,14 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
     /// <summary>The latest version of the order's description of work, or null until one is submitted.</summary>
     [Id(11)] public DescriptionOfWorkSummary? DescriptionOfWork { get; set; }
 
+    /// <summary>What the client pays the AMC, or null until the order is assigned to an appraiser.</summary>
+    [Id(12)] public decimal? ServiceFee { get; set; }
+
     private bool Apply(OrderDraftStarted evt, IStreamedEvent<object> streamedEvent)
     {
         StartedBy = evt.InitiatedBy;
         FormTypeName = evt.FormTypeName;
         PropertyAddress = PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip);
-        DueDate = evt.DueDate;
         return true;
     }
 
@@ -131,7 +135,6 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
     {
         FormTypeName = evt.FormTypeName;
         PropertyAddress = PropertyAddressLine.Format(evt.PropertyStreet, evt.PropertyCity, evt.PropertyState, evt.PropertyZip);
-        DueDate = evt.DueDate;
         return true;
     }
 
@@ -213,6 +216,8 @@ public sealed class ClientOrderDetailsState : HandlerProjectionState<ClientOrder
     private bool Apply(VendorAssigned evt, IStreamedEvent<object> streamedEvent)
     {
         Status = ClientOrderStatus.VendorAssigned;
+        ServiceFee = evt.ServiceFee;
+        DueDate = evt.DueDate;
         Timeline.Add(new OrderTimelineItem(evt.OccurredAt, OrderTimelineKind.VendorAssigned, evt.InitiatedBy, null,
             VendorId: evt.VendorId));
         return true;

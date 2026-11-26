@@ -56,7 +56,8 @@ public sealed class OrderDetailsTests
             "John Doe",
             TestData.UniformResidentialAppraisal.FormTypeName,
             "48 Birch Hollow Rd, Asheville, NC 28803",
-            new DateOnly(2026, 12, 11),
+            DueDate: null,
+            ServiceFee: null,
             "Marcus Doyle",
             "8285550142",
             RequestedByUsers.Director1.GetTenantUserId(),
@@ -75,7 +76,7 @@ public sealed class OrderDetailsTests
     }
 
     [Fact]
-    public async Task RequestAndPropertySaved_ChangesTheOrdersAddressFormTypeAndDueDate()
+    public async Task RequestAndPropertySaved_ChangesTheOrdersAddressAndFormType()
     {
         GivenSignedIn(RequestedByUsers.Director1);
         await Given(
@@ -91,7 +92,6 @@ public sealed class OrderDetailsTests
         {
             Assert.Equal("11 Laurel Ridge Ct, Black Mountain, NC 28711", details.PropertyAddress);
             Assert.Equal(SaveRequestAndPropertyTestData.Command3.FormTypeName, details.FormTypeName);
-            Assert.Equal(SaveRequestAndPropertyTestData.Command3.DueDate, details.DueDate);
         });
     }
 
@@ -324,7 +324,7 @@ public sealed class OrderDetailsTests
     }
 
     [Fact]
-    public async Task OrderDetails_ShowTheVendorTheOrderIsAssignedTo()
+    public async Task OrderDetails_ShowTheVendorTheOrderIsAssignedToWithTheServiceFeeAndDueDate()
     {
         GivenSignedIn(RequestedByUsers.Director1);
         await GivenAcknowledged(
@@ -341,6 +341,8 @@ public sealed class OrderDetailsTests
                 new OrderVendorSummary(
                     TestData.RidgeAppraisalGroupVendorId, "Ridge Appraisal Group", 425.00m, VendorAssignmentTestData.VendorDueDate),
                 details.Vendor);
+            Assert.Equal(650.00m, details.ServiceFee);
+            Assert.Equal(VendorAssignmentTestData.DueDate, details.DueDate);
             Assert.Equal("Assigned to vendor Ridge Appraisal Group by Tommy Jones", details.Timeline[0].Entry);
             Assert.Equal(OrderActions.RequestDocument, details.AllowedActions);
         });

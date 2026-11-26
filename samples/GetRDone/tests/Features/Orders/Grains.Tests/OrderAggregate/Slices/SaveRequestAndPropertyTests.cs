@@ -119,7 +119,6 @@ public sealed class SaveRequestAndPropertyTests
     [InlineData(nameof(SaveRequestAndPropertyCommand.IntendedUseVersion))]
     [InlineData(nameof(SaveRequestAndPropertyCommand.IntendedUseName))]
     [InlineData(nameof(SaveRequestAndPropertyCommand.LoanNumber))]
-    [InlineData(nameof(SaveRequestAndPropertyCommand.DueDate))]
     public async Task Save_RejectsAnInvalidDetail(string property)
     {
         var command = Command1;
@@ -140,7 +139,6 @@ public sealed class SaveRequestAndPropertyTests
             nameof(SaveRequestAndPropertyCommand.IntendedUseVersion) => command with { IntendedUseVersion = 0 },
             nameof(SaveRequestAndPropertyCommand.IntendedUseName) => command with { IntendedUseName = "" },
             nameof(SaveRequestAndPropertyCommand.LoanNumber) => command with { LoanNumber = "" },
-            nameof(SaveRequestAndPropertyCommand.DueDate) => command with { DueDate = default },
             _ => throw new ArgumentOutOfRangeException(nameof(property))
         };
         GivenSignedIn(RequestedByUsers.ClientUser1);

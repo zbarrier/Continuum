@@ -52,7 +52,7 @@ public sealed class InProgressOrdersTests
         {
             Assert.Equal(
                 new InProgressOrderEntry(orderId, 610_800, TestData.LakeviewCreditUnionClientId,
-                    "48 Birch Hollow Rd, Asheville, NC 28803", Director1Id, StaffOrderStatus.Assigned, new DateOnly(2026, 12, 11)),
+                    "48 Birch Hollow Rd, Asheville, NC 28803", Director1Id, StaffOrderStatus.Assigned, DueDate: null),
                 state.Orders[orderId]);
             Assert.False(state.Drafts.ContainsKey(orderId));
         });
@@ -132,26 +132,22 @@ public sealed class InProgressOrdersTests
     }
 
     [Fact]
-    public async Task VendorAssigned_ShowsTheOrderIsAssignedToAVendor()
+    public async Task VendorAssigned_ShowsTheOrderIsAssignedToAVendorAndWhenItIsDue()
     {
         var orderId = NewOrderId();
         GivenSignedIn(RequestedByUsers.Director1);
 
-        await Given(
-        [
-            .. Submitted(Command1, orderId),
-            AssignOrderTestData.OrderAssigned1(orderId, TestData.At.AddMinutes(2)),
-            AcknowledgeOrderTestData.Acknowledged1(orderId, TestData.At.AddMinutes(3)),
-            DescriptionOfWorkTestData.Submitted1(orderId, occurredAt: TestData.At.AddMinutes(4)),
-            DescriptionOfWorkTestData.Approved(orderId, occurredAt: TestData.At.AddMinutes(5)),
-            VendorAssignmentTestData.Assigned1(orderId, occurredAt: TestData.At.AddMinutes(6))
-        ]);
+        await Given([.. VendorAssignedOrder(Command1, orderId, VendorAssignmentTestData.DueDate)]);
 
-        Then(state => Assert.Equal(StaffOrderStatus.VendorAssigned, state.Orders[orderId].Status));
+        Then(state =>
+        {
+            Assert.Equal(StaffOrderStatus.VendorAssigned, state.Orders[orderId].Status);
+            Assert.Equal(VendorAssignmentTestData.DueDate, state.Orders[orderId].DueDate);
+        });
     }
 
     [Fact]
-    public async Task Orders_ListTheOrdersDueFirstFirstWithTheirClientsAndAssigneesNames()
+    public async Task Orders_ListTheirClientsAndAssigneesNames()
     {
         var (order1, order2) = (NewOrderId(), NewOrderId());
         GivenSignedIn(RequestedByUsers.Coordinator1);
@@ -170,10 +166,34 @@ public sealed class InProgressOrdersTests
         Then<InProgressOrdersPage>(page => Assert.Equal(
         [
             new InProgressOrder(order1, 610_810, "Lakeview Credit Union", "48 Birch Hollow Rd, Asheville, NC 28803",
-                Director1Id, "Tommy Jones", StaffOrderStatus.Acknowledged, new DateOnly(2026, 12, 11)),
+                Director1Id, "Tommy Jones", StaffOrderStatus.Acknowledged, DueDate: null),
             new InProgressOrder(order2, null, "Harbor National Bank", "715 Commerce Blvd, Greenville, SC 29601",
-                RequestedByUsers.Coordinator1.GetTenantUserId(), "Maria Lopez", StaffOrderStatus.Assigned, new DateOnly(2026, 12, 18))
+                RequestedByUsers.Coordinator1.GetTenantUserId(), "Maria Lopez", StaffOrderStatus.Assigned, DueDate: null)
         ], page.Orders.Where(order => order.OrderId == order1 || order.OrderId == order2)));
+    }
+
+    [Fact]
+    public async Task Orders_ListTheOrdersDueFirstFirst_ThenTheOrdersWithoutADueDateByOrderNumber()
+    {
+        var (dueLater, dueSooner, numbered, notNumbered) = (NewOrderId(), NewOrderId(), NewOrderId(), NewOrderId());
+        GivenSignedIn(RequestedByUsers.Director1);
+        await Given(
+        [
+            .. Submitted(Command2, notNumbered),
+            AssignOrderTestData.OrderAssigned1(notNumbered, TestData.At.AddMinutes(2)),
+            .. Submitted(Command1, numbered),
+            AssignOrderNumberTestData.Assigned(Command1, numbered, 610_820, TestData.At.AddMinutes(2)),
+            AssignOrderTestData.OrderAssigned1(numbered, TestData.At.AddMinutes(3)),
+            .. VendorAssignedOrder(Command1, dueLater, VendorAssignmentTestData.DueDate.AddDays(3), 610_821),
+            .. VendorAssignedOrder(Command3, dueSooner, VendorAssignmentTestData.DueDate, 610_822)
+        ]);
+
+        await When(() => Grain.GetOrdersAsync(0, int.MaxValue));
+
+        Then<InProgressOrdersPage>(page => Assert.Equal(
+            [dueSooner, dueLater, numbered, notNumbered],
+            page.Orders.Select(order => order.OrderId)
+                .Where(orderId => orderId == dueLater || orderId == dueSooner || orderId == numbered || orderId == notNumbered)));
     }
 
     [Fact]
@@ -256,6 +276,41 @@ public sealed class InProgressOrdersTests
         DraftStarted(draft, orderId, RequestedByUsers.ClientUser1, TestData.At),
         SubmitOrderTestData.Submitted(draft, orderId, RequestedByUsers.ClientUser1, TestData.At.AddMinutes(1))
     ];
+
+    /// <summary>
+    ///     The events of a draft started with <paramref name="draft"/>, submitted, given <paramref name="orderNumber"/> when
+    ///     there is one, worked by Director1 and assigned to a vendor with the client's due date <paramref name="dueDate"/>.
+    /// </summary>
+    private static object[] VendorAssignedOrder(StartOrderDraftCommand draft, string orderId, DateOnly dueDate, long? orderNumber = null)
+    {
+        var assigned = VendorAssignmentTestData.Assigned1(orderId, orderNumber, TestData.At.AddMinutes(7));
+        object[] numbered = orderNumber is { } number
+            ? [AssignOrderNumberTestData.Assigned(draft, orderId, number, TestData.At.AddMinutes(2))]
+            : [];
+        return
+        [
+            .. Submitted(draft, orderId),
+            .. numbered,
+            AssignOrderTestData.OrderAssigned1(orderId, TestData.At.AddMinutes(3)),
+            AcknowledgeOrderTestData.Acknowledged1(orderId, TestData.At.AddMinutes(4)),
+            DescriptionOfWorkTestData.Submitted1(orderId, orderNumber, TestData.At.AddMinutes(5)),
+            DescriptionOfWorkTestData.Approved(orderId, orderNumber: orderNumber, occurredAt: TestData.At.AddMinutes(6)),
+            new VendorAssigned
+            {
+                OrderId = assigned.OrderId,
+                VendorId = assigned.VendorId,
+                VendorFee = assigned.VendorFee,
+                VendorDueDate = assigned.VendorDueDate,
+                ServiceFee = assigned.ServiceFee,
+                DueDate = dueDate,
+                DescriptionOfWorkId = assigned.DescriptionOfWorkId,
+                DescriptionOfWorkVersion = assigned.DescriptionOfWorkVersion,
+                OrderNumber = assigned.OrderNumber,
+                InitiatedBy = assigned.InitiatedBy,
+                OccurredAt = assigned.OccurredAt
+            }
+        ];
+    }
 
     /// <summary>An order event as the stream provider delivers it, read from the order's stream at <paramref name="revision"/>.</summary>
     private static StreamedEvent<object> OnOrderStream(

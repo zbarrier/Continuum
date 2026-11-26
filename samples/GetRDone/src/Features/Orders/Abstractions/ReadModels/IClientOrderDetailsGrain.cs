@@ -22,7 +22,8 @@ public interface IClientOrderDetailsGrain : IGrainWithStringKey
 /// <param name="Status">The order's status as the client sees it.</param>
 /// <param name="FormTypeName">The form type ordered.</param>
 /// <param name="PropertyAddress">The property address on one line.</param>
-/// <param name="DueDate">When the client needs the report.</param>
+/// <param name="DueDate">When the client gets the report, or null until the order is assigned to an appraiser.</param>
+/// <param name="ServiceFee">What the client pays the AMC, or null until the order is assigned to an appraiser.</param>
 /// <param name="AssignedToName">The AMC staff member working on the order, or null until it is assigned.</param>
 /// <param name="OpenRequests">The documents the AMC requested that the client has not provided yet, oldest first.</param>
 /// <param name="Documents">The order's supporting documents, in the order they were added.</param>
@@ -36,7 +37,8 @@ public sealed record ClientOrderDetails(
     ClientOrderStatus Status,
     string FormTypeName,
     string PropertyAddress,
-    DateOnly DueDate,
+    DateOnly? DueDate,
+    decimal? ServiceFee,
     string? AssignedToName,
     ClientDocumentRequest[] OpenRequests,
     ClientOrderDocument[] Documents,
