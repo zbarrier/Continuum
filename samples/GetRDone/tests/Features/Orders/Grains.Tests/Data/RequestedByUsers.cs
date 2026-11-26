@@ -58,6 +58,18 @@ public static class RequestedByUsers
     public static ClaimsPrincipal NewClientUser() => CreateUser(
         Guid.NewGuid().ToString(), "newClient", "New", "Client", "new.client@lakeviewcu.example", ClientRole);
 
+    /// <summary>
+    ///     Copies <paramref name="user"/> as a user of <paramref name="tenantId"/>, for tests of another tenant's grains, which
+    ///     only its own users can call.
+    /// </summary>
+    public static ClaimsPrincipal InTenant(ClaimsPrincipal user, string tenantId)
+    {
+        var identity = (ClaimsIdentity)user.Identity!;
+        return new ClaimsPrincipal(new ClaimsIdentity(
+            identity.Claims.Where(claim => claim.Type != TenantIdClaim).Append(new Claim(TenantIdClaim, tenantId)),
+            identity.AuthenticationType, identity.NameClaimType, identity.RoleClaimType));
+    }
+
     private static ClaimsPrincipal CreateUser(
         string subject, string userName, string givenName, string familyName, string email, string role)
     {

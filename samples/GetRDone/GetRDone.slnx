@@ -22,7 +22,9 @@
     <Project Path="src/Features/Orders/Automations/GetRDone.Orders.Automations.csproj" />
     <Project Path="src/Features/Orders/Grains/GetRDone.Orders.Grains.csproj" Id="83739dd6-41bf-4701-9f48-ad5c06317021" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/GetRDone.Silo.Tests/GetRDone.Silo.Tests.csproj" />
+  </Folder>
   <Folder Name="/tests/Features/" />
   <Folder Name="/tests/Features/Orders/">
     <Project Path="tests/Features/Orders/Abstractions.Tests/GetRDone.Orders.Abstractions.Tests.csproj" Id="bb35aea5-d6fe-4877-b927-f396cd1717ac" />

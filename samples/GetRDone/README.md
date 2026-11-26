@@ -22,7 +22,7 @@ Demo users (Development only, password `Pass123$`): `ana.ruiz@carterbank.example
 - `GetRDone.ServiceDefaults` - OpenTelemetry, health checks, service discovery.
 - `GetRDone.Identity` - Duende IdentityServer with ASP.NET Core Identity on SQL Server and the Duende Razor Pages UI (`role`, `tenant_id` claims).
 - `GetRDone.Email` - the app's `IEmailSender`, which sends over SMTP to Mailpit locally (the `mailpit` connection string); Identity's account emails and the Silo's notifications use it.
-- `GetRDone.Silo` - Orleans silo; multi-tenant KurrentDB event log; KurrentDB stream providers for projections, order reactions and notifications; ManagedCode.Orleans.Identity authorization.
+- `GetRDone.Silo` - Orleans silo; multi-tenant KurrentDB event log; KurrentDB stream providers for projections, order reactions and notifications; ManagedCode.Orleans.Identity authorization; tenant isolation of grain calls.
 - `GetRDone.Web` - Blazor Server; OIDC sign-in; forwards the circuit user to grains via an outgoing grain-call filter. A client user's Home has My drafts and My orders sections (paged lists). My drafts loads from the ClientOrderDrafts projection, and My orders from the ClientOrders projection. The AMC staff's Home has the staff dashboard (Unassigned, In progress and Shipped lists), and each order opens the staff order page (`/staff/orders/{orderGuid}`). A vendor user's Home lists the orders assigned to their vendor, and each opens the vendor order page (`/vendor/orders/{orderGuid}`).
 - `GetRDone.Subscriptions.Worker` - hosts the self-hosted KurrentDB catch-up subscriptions of automations that work in batches (one folder per feature) and calls the silo's grains as an Orleans cluster client. It runs as exactly one instance (`WithReplicas(1)`), since a catch-up subscription doesn't share its work with other instances. Its health check reports the subscriptions' state. `appsettings.json` lists every subscription under `Continuum:KurrentDB:Subscriptions:{Name}`; set `Enabled` to `false` to stop one without a code change (it keeps its checkpoint and catches up when turned back on).
 - `Features/<Domain>/GetRDone.<Domain>.Abstractions` / `.Grains` / `.Automations` - feature slices. `.Automations` holds the logic of the domain's automations, which the worker runs; like any client it references only `.Abstractions`. `Hello` is temporary and proves the round trip (the Hello page, `/hello`).
@@ -165,7 +165,14 @@ Only users with a `VendorId` in the user directory can read these projections, a
 
 The checkpoint and the projections are stored in memory, so after a silo restart the subscription replays from the start and rebuilds them.
 
-Tenant-qualified keys partition the sample's data, but the current silo does not enforce that a caller's `tenant_id` claim matches the requested grain key. Authentication alone is not tenant authorization; do not rely on this sample for tenant isolation until that enforcement is added.
+## Tenant isolation
+
+Grain keys are tenant-qualified (`{TenantId}|{Key}`), and the silo keeps every call inside one tenant. `AddTenantIsolation()` in GetRDone.Silo sets this up for every feature's grains, and GetRDone.Silo.Tests tests it:
+
+- Calls from cluster clients (GetRDone.Web and GetRDone.Subscriptions.Worker): `ClientCallTenantFilter` requires a signed-in user whose `tenant_id` claim is the tenant of the grain being called, and throws `UnauthorizedAccessException` otherwise. This also covers grains without `[Authorize]`. The worker's automation accounts sign in for one tenant at a time, so they pass the same check.
+- Calls from grains: Orleans.Multitenant's `AddMultitenantCommunicationSeparation()` rejects a call into another tenant. It does not check client calls, which is why the filter above is needed. No cross-tenant access is authorized.
+
+Calls to grains whose key has no tenant (such as the stream checkpoint grains) and to `Orleans.*` interfaces are not checked. Within a tenant, the grains still check the user's roles and, for client and vendor users, which orders they can see.
 
 ## Notes
 

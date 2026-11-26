@@ -150,7 +150,7 @@ public sealed class OrderNumberGeneratorTests
     [Fact]
     public async Task Issue_RejectsAUserWhoIsNotTheAutomation()
     {
-        GivenSignedIn(RequestedByUsers.ClientUser1);
+        GivenSignedIn(RequestedByUsers.InTenant(RequestedByUsers.ClientUser1, _tenantId));
         await Given();
 
         await When(() => Generator.IssueOrderNumbersAsync([NewOrderId()]));

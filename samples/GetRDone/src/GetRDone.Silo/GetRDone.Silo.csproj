@@ -19,4 +19,8 @@
 	<ProjectReference Include="..\Features\Hello\GetRDone.Hello.Grains\GetRDone.Hello.Grains.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+	<InternalsVisibleTo Include="GetRDone.Silo.Tests" />
+  </ItemGroup>
+
 </Project>

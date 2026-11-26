@@ -10,6 +10,7 @@ using GetRDone.Orders.Grains;
 using GetRDone.Orders.Grains.Notifications;
 using GetRDone.Orders.Grains.OrderAggregate;
 using GetRDone.Orders.Grains.ReadModels;
+using GetRDone.Silo;
 
 using KurrentDB.Client;
 
@@ -67,6 +68,8 @@ builder.UseOrleans(silo =>
     //silo.AddKurrentDBBasedLogConsistencyProviderAsDefault();
     silo.AddOrleansIdentity();
     silo.AddActivityPropagation();
+
+    silo.AddTenantIsolation();
 
     silo.AddMemoryGrainStorage(SubscriptionCheckpointGrain.StorageName);
     // Projection state is written with the Orleans serializer, which round-trips the [GenerateSerializer] state exactly.

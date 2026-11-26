@@ -10,7 +10,8 @@ internal static class GrainUserExtensions
 {
     /// <summary>
     ///     Gets the current user's ID qualified by <paramref name="tenantId"/>, as <c>{TenantId}|{UserGuid}</c>. The identity
-    ///     provider only knows the user GUID; a full application would also check the user's access to the tenant.
+    ///     provider only knows the user GUID; the silo's tenant isolation (GetRDone.Silo's <c>AddTenantIsolation</c>) has
+    ///     already checked that the user belongs to the tenant of the grain the client called, and keeps grain calls within it.
     /// </summary>
     public static string? GetCurrentTenantUserId(this Grain grain, string? tenantId)
     {
