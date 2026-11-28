@@ -11,7 +11,7 @@ using Continuum.Streaming.Orleans;
 
 using GetRDone.Orders.Abstractions;
 using GetRDone.Orders.Abstractions.OrderAggregate;
-using GetRDone.Orders.Abstractions.OrderNumbers;
+using GetRDone.Orders.Abstractions.OrderNumberGeneratorAggregate;
 using GetRDone.Orders.Abstractions.ReadModels;
 using GetRDone.Orders.Grains.OrderAggregate;
 using GetRDone.Orders.Grains.Tests.Data;

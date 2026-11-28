@@ -6,7 +6,7 @@ using Continuum.TypeMapping;
 
 using GetRDone.Orders.Abstractions.ReadModels;
 
-namespace GetRDone.Orders.Abstractions.OrderNumbers;
+namespace GetRDone.Orders.Abstractions.OrderNumberGeneratorAggregate;
 
 /// <summary>
 ///     Issues a tenant's order numbers, one after another, so no two orders of the tenant get the same number. Each

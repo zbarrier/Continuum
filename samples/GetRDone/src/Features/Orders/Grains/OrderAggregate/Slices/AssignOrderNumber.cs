@@ -4,7 +4,7 @@ using Continuum.Orleans.Tenancy;
 
 using GetRDone.Orders.Abstractions;
 using GetRDone.Orders.Abstractions.OrderAggregate;
-using GetRDone.Orders.Abstractions.OrderNumbers;
+using GetRDone.Orders.Abstractions.OrderNumberGeneratorAggregate;
 
 using ManagedCode.Orleans.Identity.Core.Constants;
 

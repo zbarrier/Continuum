@@ -7,13 +7,13 @@ using Continuum.Domain.Orleans.TestHarness;
 using Continuum.Orleans.Tenancy;
 
 using GetRDone.Orders.Abstractions;
-using GetRDone.Orders.Abstractions.OrderNumbers;
-using GetRDone.Orders.Grains.OrderNumbers;
+using GetRDone.Orders.Abstractions.OrderNumberGeneratorAggregate;
+using GetRDone.Orders.Grains.OrderNumberGeneratorAggregate;
 using GetRDone.Orders.Grains.Tests.Data;
 
 using ManagedCode.Orleans.Identity.Core.Constants;
 
-namespace GetRDone.Orders.Grains.Tests.OrderNumbers;
+namespace GetRDone.Orders.Grains.Tests.OrderNumberGeneratorAggregate;
 
 /// <summary>
 ///     Given/When/Then tests for issuing order numbers. A tenant has one generator, so each test uses a new tenant to

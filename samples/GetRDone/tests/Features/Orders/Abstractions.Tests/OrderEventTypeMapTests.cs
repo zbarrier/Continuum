@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using Continuum.TypeMapping;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
-using GetRDone.Orders.Abstractions.OrderNumbers;
+using GetRDone.Orders.Abstractions.OrderNumberGeneratorAggregate;
 
 namespace GetRDone.Orders.Tests;
 

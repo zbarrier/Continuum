@@ -1,7 +1,7 @@
 using Continuum.Orleans.Tenancy;
 
 using GetRDone.Orders.Abstractions;
-using GetRDone.Orders.Abstractions.OrderNumbers;
+using GetRDone.Orders.Abstractions.OrderNumberGeneratorAggregate;
 using GetRDone.Orders.Automations;
 using GetRDone.Orders.Grains.Tests.Data;
 

@@ -6,7 +6,7 @@ using Continuum.Orleans.Tenancy;
 
 using GetRDone.Orders.Abstractions;
 using GetRDone.Orders.Abstractions.OrderAggregate;
-using GetRDone.Orders.Abstractions.OrderNumbers;
+using GetRDone.Orders.Abstractions.OrderNumberGeneratorAggregate;
 using GetRDone.Orders.Grains.OrderAggregate;
 
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 using Orleans.Providers;
 
-namespace GetRDone.Orders.Grains.OrderNumbers;
+namespace GetRDone.Orders.Grains.OrderNumberGeneratorAggregate;
 
 [Authorize]
 [GrainType("orderNumberGenerator")]
