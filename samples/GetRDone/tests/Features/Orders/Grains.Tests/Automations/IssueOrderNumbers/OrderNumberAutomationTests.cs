@@ -3,11 +3,12 @@ using Continuum.Orleans.Tenancy;
 using GetRDone.Orders.Abstractions;
 using GetRDone.Orders.Abstractions.OrderNumberGeneratorAggregate;
 using GetRDone.Orders.Automations;
+using GetRDone.Orders.Automations.IssueOrderNumbers;
 using GetRDone.Orders.Grains.Tests.Data;
 
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace GetRDone.Orders.Grains.Tests.Automations;
+namespace GetRDone.Orders.Grains.Tests.Automations.IssueOrderNumbers;
 
 /// <summary>
 ///     Tests for the automation that has the generators issue submitted orders their numbers, called as its subscription

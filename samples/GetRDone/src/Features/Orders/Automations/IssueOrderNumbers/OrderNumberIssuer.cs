@@ -7,7 +7,7 @@ using GetRDone.Orders.Abstractions.OrderNumberGeneratorAggregate;
 
 using Microsoft.Extensions.Logging;
 
-namespace GetRDone.Orders.Automations;
+namespace GetRDone.Orders.Automations.IssueOrderNumbers;
 
 /// <summary>
 ///     The first step of giving submitted orders their numbers: asks each tenant's order number generator to issue

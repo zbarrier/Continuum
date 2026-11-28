@@ -1,6 +1,6 @@
 using GetRDone.Orders.Abstractions;
 
-namespace GetRDone.Orders.Automations;
+namespace GetRDone.Orders.Automations.IssueOrderNumbers;
 
 /// <summary>
 ///     Thrown when some orders of a batch are still waiting to be issued their order numbers because a call failed in a

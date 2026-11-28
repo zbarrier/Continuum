@@ -3,7 +3,7 @@ using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions;
 using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Configuration;
 
 using GetRDone.Orders.Abstractions.OrderAggregate;
-using GetRDone.Orders.Automations;
+using GetRDone.Orders.Automations.IssueOrderNumbers;
 
 using KurrentDB.Client;
 

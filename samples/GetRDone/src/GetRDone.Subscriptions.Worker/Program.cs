@@ -6,7 +6,7 @@ using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Configuratio
 using Continuum.Streaming.Orleans.KurrentDB.SelfHostedSubscriptions.Diagnostics;
 using Continuum.TypeMapping;
 
-using GetRDone.Orders.Automations;
+using GetRDone.Orders.Automations.IssueOrderNumbers;
 using GetRDone.Subscriptions.Worker.Orders;
 
 // The connection name (and Aspire resource name) of the shared KurrentDB database, as in the Silo.
